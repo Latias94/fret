@@ -158,6 +158,10 @@ owning views and mark them dirty, rather than requiring every leaf node to be in
 This does not remove explicit observation; it refines the target:
 
 - "data changed -> mark affected views dirty" is the default mechanism.
+- View-cache-owned layout/paint observations are recorded under boundary subscribers at observation
+  time. The old post-layout/post-paint cache-root observation collapse bridge is deleted; widening
+  the public API should continue from view/boundary subscriber fanout rather than descendant
+  `NodeId` ownership.
 
 ### 5) Diagnostics requirements
 
@@ -208,9 +212,11 @@ Cons:
 6) Replace scan-based live element resolution with an authoritative `ElementNodeIndex` plus
    `StableNodeHandle` validity checks, then delete the scan fallback from normal paths after
    keyed-reorder and stale-handle pressure gates prove zero fallback use after warmup.
-7) Replace the v1 boundary-node dirty bridge with entity-first `ViewId` subscriber fanout. Model
-   observations as subscriber sets scoped by window and view, with detach cleanup, rather than as a
-   single node owner.
+7) Replace the v1 boundary-node dirty bridge and cache-root observation collapse with entity-first
+   subscriber fanout. The current implementation records view-cache-owned layout/paint model/global
+   observations as `BoundaryId` subscribers with detach/final-removal cleanup while retaining
+   per-node records for non-cache roots. Public `cx.notify(view_id)` and broader ElementRuntime
+   view-subscriber fanout remain follow-up API work.
 
 ## References
 

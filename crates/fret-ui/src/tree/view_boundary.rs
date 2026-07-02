@@ -986,21 +986,29 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
-    pub(in crate::tree) fn remove_view_boundary_state(&mut self, node: NodeId) {
+    pub(in crate::tree) fn remove_view_boundary_state(
+        &mut self,
+        node: NodeId,
+    ) -> Option<BoundaryId> {
         let key = self.view_boundary_key_for_node(node);
         let view = self
             .view_boundaries
             .view_for_live_node(node)
             .or_else(|| key.and_then(|key| self.view_boundaries.view_for_key(key)));
-        if let Some(key) = key {
-            self.view_boundaries.remove_node(node, key);
+        let removed = if let Some(key) = key {
+            self.view_boundaries
+                .remove_node(node, key)
+                .map(|state| state.id)
         } else {
-            self.view_boundaries.remove_live_node(node);
-        }
+            self.view_boundaries
+                .remove_live_node(node)
+                .map(|state| state.id)
+        };
         self.retained_paint_cache_entries.remove(node);
         if let Some(view) = view {
             self.dirty_view_frontier.clear_view(view);
         }
+        removed
     }
 
     pub(in crate::tree) fn paint_cache_entry_for_node(
@@ -1301,6 +1309,16 @@ impl<H: UiHost> UiTree<H> {
     #[cfg(test)]
     pub(crate) fn test_view_id_for_boundary_node(&self, node: NodeId) -> Option<ViewId> {
         self.view_boundaries.view_for_live_node(node)
+    }
+
+    #[cfg(test)]
+    pub(in crate::tree) fn test_observation_subscriber_for_boundary_node(
+        &self,
+        node: NodeId,
+    ) -> Option<ObservationSubscriber> {
+        self.view_boundaries
+            .boundary_id_for_live_node(node)
+            .map(ObservationSubscriber::boundary)
     }
 
     #[cfg(test)]

@@ -350,22 +350,37 @@ impl<H: UiHost> UiTree<H> {
                 let model_items = observations.as_slice().len().min(u32::MAX as usize) as u32;
                 let global_items =
                     global_observations.as_slice().len().min(u32::MAX as usize) as u32;
+                let subscriber = self.observation_subscriber_for_node(node);
                 let (model_record_stats, global_record_stats) = if self.debug_enabled {
                     (
                         Some(
                             self.observed_in_layout
-                                .record_with_stats(node, observations.as_slice()),
+                                .record_node_for_subscriber_with_stats(
+                                    node,
+                                    subscriber,
+                                    observations.as_slice(),
+                                ),
                         ),
                         Some(
                             self.observed_globals_in_layout
-                                .record_with_stats(node, global_observations.as_slice()),
+                                .record_node_for_subscriber_with_stats(
+                                    node,
+                                    subscriber,
+                                    global_observations.as_slice(),
+                                ),
                         ),
                     )
                 } else {
-                    self.observed_in_layout
-                        .record(node, observations.as_slice());
-                    self.observed_globals_in_layout
-                        .record(node, global_observations.as_slice());
+                    self.observed_in_layout.record_node_for_subscriber(
+                        node,
+                        subscriber,
+                        observations.as_slice(),
+                    );
+                    self.observed_globals_in_layout.record_node_for_subscriber(
+                        node,
+                        subscriber,
+                        global_observations.as_slice(),
+                    );
                     (None, None)
                 };
                 if let Some(obs_started) = obs_started {
@@ -655,22 +670,37 @@ impl<H: UiHost> UiTree<H> {
             let obs_started = self.debug_enabled.then(Instant::now);
             let model_items = observations.as_slice().len().min(u32::MAX as usize) as u32;
             let global_items = global_observations.as_slice().len().min(u32::MAX as usize) as u32;
+            let subscriber = self.observation_subscriber_for_node(node);
             let (model_record_stats, global_record_stats) = if self.debug_enabled {
                 (
                     Some(
                         self.observed_in_layout
-                            .record_with_stats(node, observations.as_slice()),
+                            .record_node_for_subscriber_with_stats(
+                                node,
+                                subscriber,
+                                observations.as_slice(),
+                            ),
                     ),
                     Some(
                         self.observed_globals_in_layout
-                            .record_with_stats(node, global_observations.as_slice()),
+                            .record_node_for_subscriber_with_stats(
+                                node,
+                                subscriber,
+                                global_observations.as_slice(),
+                            ),
                     ),
                 )
             } else {
-                self.observed_in_layout
-                    .record(node, observations.as_slice());
-                self.observed_globals_in_layout
-                    .record(node, global_observations.as_slice());
+                self.observed_in_layout.record_node_for_subscriber(
+                    node,
+                    subscriber,
+                    observations.as_slice(),
+                );
+                self.observed_globals_in_layout.record_node_for_subscriber(
+                    node,
+                    subscriber,
+                    global_observations.as_slice(),
+                );
                 (None, None)
             };
             if let Some(obs_started) = obs_started {

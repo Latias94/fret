@@ -14,7 +14,7 @@ impl<H: UiHost> UiTree<H> {
     fn propagate_observation_masks(
         &mut self,
         app: &mut H,
-        masks: impl IntoIterator<Item = (NodeId, ObservationMask)>,
+        masks: impl IntoIterator<Item = (ObservationSubscriber, ObservationMask)>,
         source: UiDebugInvalidationSource,
     ) -> bool {
         self.propagation_depth_generation = self.propagation_depth_generation.wrapping_add(1);
@@ -25,7 +25,10 @@ impl<H: UiHost> UiTree<H> {
         self.propagation_chain.clear();
         self.propagation_entries.clear();
 
-        for (node, mask) in masks {
+        for (subscriber, mask) in masks {
+            let Some(node) = subscriber.live_node(&self.view_boundaries) else {
+                continue;
+            };
             if mask.is_empty() || !self.nodes.contains_key(node) {
                 continue;
             }
@@ -87,7 +90,7 @@ impl<H: UiHost> UiTree<H> {
 
         let changed: std::collections::HashSet<ModelId> = changed.iter().copied().collect();
         let frame_id = app.frame_id();
-        let mut combined: HashMap<NodeId, ObservationMask> = HashMap::new();
+        let mut combined: HashMap<ObservationSubscriber, ObservationMask> = HashMap::new();
 
         app.with_global_mut_untracked(crate::elements::ElementRuntime::new, |runtime, _app| {
             let Some(window_state) = runtime.for_window(window) else {
@@ -112,7 +115,7 @@ impl<H: UiHost> UiTree<H> {
                         return;
                     };
                     combined
-                        .entry(node)
+                        .entry(ObservationSubscriber::node(node))
                         .and_modify(|m| *m = m.union(mask))
                         .or_insert(mask);
                 },
@@ -135,7 +138,7 @@ impl<H: UiHost> UiTree<H> {
 
         let changed: std::collections::HashSet<TypeId> = changed.iter().copied().collect();
         let frame_id = app.frame_id();
-        let mut combined: HashMap<NodeId, ObservationMask> = HashMap::new();
+        let mut combined: HashMap<ObservationSubscriber, ObservationMask> = HashMap::new();
 
         app.with_global_mut_untracked(crate::elements::ElementRuntime::new, |runtime, _app| {
             let Some(window_state) = runtime.for_window(window) else {
@@ -160,7 +163,7 @@ impl<H: UiHost> UiTree<H> {
                         return;
                     };
                     combined
-                        .entry(node)
+                        .entry(ObservationSubscriber::node(node))
                         .and_modify(|m| *m = m.union(mask))
                         .or_insert(mask);
                 },
@@ -194,7 +197,7 @@ impl<H: UiHost> UiTree<H> {
             let paint_nodes = self.observed_in_paint.by_model.get(&model);
             if let (Some(nodes), None) | (None, Some(nodes)) = (layout_nodes, paint_nodes) {
                 // Copy out the observations so we don't hold a borrow across the invalidation walk.
-                let masks: Vec<(NodeId, ObservationMask)> =
+                let masks: Vec<(ObservationSubscriber, ObservationMask)> =
                     nodes.iter().map(|(&n, &m)| (n, m)).collect();
                 if self.debug_enabled {
                     self.debug_stats.model_change_invalidation_roots =
@@ -232,7 +235,7 @@ impl<H: UiHost> UiTree<H> {
         }
         combined_capacity = combined_capacity.min(self.nodes.len());
 
-        let mut combined: HashMap<NodeId, ObservationMask> =
+        let mut combined: HashMap<ObservationSubscriber, ObservationMask> =
             HashMap::with_capacity(combined_capacity.max(changed.len().saturating_mul(8)));
         let mut observation_edges_scanned = 0usize;
         let mut unobserved_models = 0usize;
@@ -241,9 +244,9 @@ impl<H: UiHost> UiTree<H> {
             if let Some(nodes) = self.observed_in_layout.by_model.get(&model) {
                 observation_edges_scanned = observation_edges_scanned.saturating_add(nodes.len());
                 edges = edges.saturating_add(nodes.len());
-                for (&node, &mask) in nodes {
+                for (&subscriber, &mask) in nodes {
                     combined
-                        .entry(node)
+                        .entry(subscriber)
                         .and_modify(|m| *m = m.union(mask))
                         .or_insert(mask);
                 }
@@ -251,9 +254,9 @@ impl<H: UiHost> UiTree<H> {
             if let Some(nodes) = self.observed_in_paint.by_model.get(&model) {
                 observation_edges_scanned = observation_edges_scanned.saturating_add(nodes.len());
                 edges = edges.saturating_add(nodes.len());
-                for (&node, &mask) in nodes {
+                for (&subscriber, &mask) in nodes {
                     combined
-                        .entry(node)
+                        .entry(subscriber)
                         .and_modify(|m| *m = m.union(mask))
                         .or_insert(mask);
                 }
@@ -323,7 +326,7 @@ impl<H: UiHost> UiTree<H> {
             let paint_nodes = self.observed_globals_in_paint.by_global.get(&global);
             if let (Some(nodes), None) | (None, Some(nodes)) = (layout_nodes, paint_nodes) {
                 // Copy out the observations so we don't hold a borrow across the invalidation walk.
-                let masks: Vec<(NodeId, ObservationMask)> =
+                let masks: Vec<(ObservationSubscriber, ObservationMask)> =
                     nodes.iter().map(|(&n, &m)| (n, m)).collect();
                 if self.debug_enabled {
                     self.debug_stats.global_change_invalidation_roots =
@@ -356,7 +359,7 @@ impl<H: UiHost> UiTree<H> {
         }
         combined_capacity = combined_capacity.min(self.nodes.len());
 
-        let mut combined: HashMap<NodeId, ObservationMask> =
+        let mut combined: HashMap<ObservationSubscriber, ObservationMask> =
             HashMap::with_capacity(combined_capacity.max(changed.len().saturating_mul(8)));
         let mut observation_edges_scanned = 0usize;
         let mut unobserved_globals = 0usize;
@@ -365,9 +368,9 @@ impl<H: UiHost> UiTree<H> {
             if let Some(nodes) = self.observed_globals_in_layout.by_global.get(&global) {
                 observation_edges_scanned = observation_edges_scanned.saturating_add(nodes.len());
                 edges = edges.saturating_add(nodes.len());
-                for (&node, &mask) in nodes {
+                for (&subscriber, &mask) in nodes {
                     combined
-                        .entry(node)
+                        .entry(subscriber)
                         .and_modify(|m| *m = m.union(mask))
                         .or_insert(mask);
                 }
@@ -375,9 +378,9 @@ impl<H: UiHost> UiTree<H> {
             if let Some(nodes) = self.observed_globals_in_paint.by_global.get(&global) {
                 observation_edges_scanned = observation_edges_scanned.saturating_add(nodes.len());
                 edges = edges.saturating_add(nodes.len());
-                for (&node, &mask) in nodes {
+                for (&subscriber, &mask) in nodes {
                     combined
-                        .entry(node)
+                        .entry(subscriber)
                         .and_modify(|m| *m = m.union(mask))
                         .or_insert(mask);
                 }

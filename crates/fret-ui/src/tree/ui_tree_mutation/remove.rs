@@ -396,7 +396,7 @@ impl<H: UiHost> UiTree<H> {
                 );
                 self.debug_clear_layout_dirty_source(node);
             }
-            self.remove_view_boundary_state(node);
+            let removed_boundary = self.remove_view_boundary_state(node);
             self.nodes.remove(node);
             let layout_model_removed = self.observed_in_layout.remove_node(node);
             let paint_model_removed = self.observed_in_paint.remove_node(node);
@@ -406,6 +406,17 @@ impl<H: UiHost> UiTree<H> {
             self.debug_record_model_observation_index_remove_stats(paint_model_removed);
             self.debug_record_global_observation_index_remove_stats(layout_global_removed);
             self.debug_record_global_observation_index_remove_stats(paint_global_removed);
+            if let Some(boundary) = removed_boundary {
+                let layout_model_removed = self.observed_in_layout.remove_boundary(boundary);
+                let paint_model_removed = self.observed_in_paint.remove_boundary(boundary);
+                let layout_global_removed =
+                    self.observed_globals_in_layout.remove_boundary(boundary);
+                let paint_global_removed = self.observed_globals_in_paint.remove_boundary(boundary);
+                self.debug_record_model_observation_index_remove_stats(layout_model_removed);
+                self.debug_record_model_observation_index_remove_stats(paint_model_removed);
+                self.debug_record_global_observation_index_remove_stats(layout_global_removed);
+                self.debug_record_global_observation_index_remove_stats(paint_global_removed);
+            }
             removed.push(node);
         }
         if removed.len() != removed_before {

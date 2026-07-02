@@ -88,6 +88,8 @@ Must-be-true outcomes for the next convergence pass:
   interchangeable.
 - Dirty work is attributable by entity-first `ViewId` / `ViewBoundary`, with cache-root-first and
   boundary-node behavior treated as compatibility mappings rather than the final runtime model.
+- View-cache-owned layout/paint observations are recorded directly under boundary subscribers;
+  cache-root observation collapse is no longer a normal-path bridge.
 - Prepaint products, boundary hit-testing inputs, reusable boundary semantics subtrees, text-layout
   indexes, and scene fragments are owned by boundaries where locality is proven.
 - Dispatch snapshots, command routing and availability, final semantics snapshots, hit-test path
@@ -103,6 +105,7 @@ High-risk compatibility paths that need either deletion or an explicit retention
 - the deleted `ViewId(pub NodeId)` wrapper returning through implicit conversions,
 - the deleted `BoundaryId(NodeId)` wrapper and raw `NodeId`-keyed boundary storage returning,
 - layout dirty iteration regressing from boundary candidates back to raw dirty `NodeId` ownership,
+- cache-root observation collapse returning as a post-layout/post-paint pass,
 - flat `Scene` bridges used as the normal renderer input or the only replay unit for local
   text/caret/selection changes,
 - full-blob text resource helpers in normal renderer chunk/resource paths,

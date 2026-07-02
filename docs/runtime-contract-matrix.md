@@ -71,6 +71,10 @@ The convergence target is GPUI-aligned but Fret-owned:
 - `ViewBoundary` owns phase products only when the product is boundary-local: layout results,
   prepaint state, boundary hitbox inputs, reusable boundary semantics subtrees, boundary text-layout
   indexes, boundary scene fragments, and boundary paint-cache entry metadata.
+- View-cache-owned layout/paint observations are attributed at record time through
+  `ObservationSubscriber::Boundary(BoundaryId)` while preserving per-node cleanup. The old
+  post-layout/post-paint cache-root observation collapse bridge and its current frame-stat exports
+  are deleted.
 - Window/layer-forest products stay window-owned: dispatch snapshots, command routing and
   availability, final semantics snapshots, hit-test path routing, focus/capture state, active layer
   roots, modal barriers, and tree-wide paint recording.
@@ -85,6 +89,8 @@ Compatibility bridge policy for the active plan:
   GC reachability expansion, flat `Scene` normal renderer input, chunk replay through temporary flat
   scenes, full-blob text resource helpers, and source-policy allowlist entries are remaining
   migration bridges.
+- The deleted cache-root observation collapse bridge must not return. If observation fanout widens,
+  it should widen from boundary/view subscribers rather than from descendant `NodeId` scans.
 - Every retained bridge needs an owner, reason, measurable deletion gate, and follow-up path. An
   unowned compatibility path is out of contract for this pre-launch refactor window.
 - Source-policy exceptions are not runtime mechanisms. They are public-surface quarantine records

@@ -15,7 +15,6 @@ struct LayoutAllProfileTimings {
     pending_barriers: Option<Duration>,
     repair_view_cache_bounds: Option<Duration>,
     layout_contained_view_cache_roots: Option<Duration>,
-    collapse_layout_observations: Option<Duration>,
     refresh_semantics: Option<Duration>,
     prepaint_after_layout: Option<Duration>,
     focus_repair: Option<Duration>,
@@ -80,8 +79,6 @@ impl LayoutAllProfileTimings {
             repair_view_cache_bounds_ms = self.repair_view_cache_bounds.map(|d| d.as_millis()),
             layout_contained_view_cache_roots_ms =
                 self.layout_contained_view_cache_roots.map(|d| d.as_millis()),
-            collapse_layout_observations_ms =
-                self.collapse_layout_observations.map(|d| d.as_millis()),
             refresh_semantics_ms = self.refresh_semantics.map(|d| d.as_millis()),
             prepaint_after_layout_ms = self.prepaint_after_layout.map(|d| d.as_millis()),
             focus_repair_ms = self.focus_repair.map(|d| d.as_millis()),
@@ -265,7 +262,6 @@ impl<H: UiHost> UiTree<H> {
             self.debug_stats.layout_pending_barrier_relayouts_time = Duration::default();
             self.debug_stats.layout_repair_view_cache_bounds_time = Duration::default();
             self.debug_stats.layout_contained_view_cache_roots_time = Duration::default();
-            self.debug_stats.layout_collapse_layout_observations_time = Duration::default();
             self.debug_stats.layout_observation_record_time = Duration::default();
             self.debug_stats.layout_observation_record_models_items = 0;
             self.debug_stats.layout_observation_record_globals_items = 0;
@@ -725,29 +721,6 @@ impl<H: UiHost> UiTree<H> {
                     {
                         self.debug_stats.layout_contained_view_cache_roots_time +=
                             contained_elapsed;
-                    }
-
-                    let (_, collapse_elapsed) = fret_perf::measure_span(
-                        layout_phase_time_enabled,
-                        trace_layout,
-                        || {
-                            tracing::trace_span!(
-                                "fret.ui.layout.view_cache.collapse_observations",
-                                window = ?window,
-                                frame_id = frame_id.0,
-                                pass_kind = ?pass_kind,
-                            )
-                        },
-                        || self.collapse_layout_observations_to_view_cache_roots_if_needed(),
-                    );
-                    if profile_layout_all {
-                        profile_timings.collapse_layout_observations = collapse_elapsed;
-                    }
-                    if self.debug_enabled
-                        && let Some(collapse_elapsed) = collapse_elapsed
-                    {
-                        self.debug_stats.layout_collapse_layout_observations_time +=
-                            collapse_elapsed;
                     }
                 },
             );

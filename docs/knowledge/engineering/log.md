@@ -205,6 +205,19 @@ timestamp: 2026-06-30
   `cargo nextest run -p fret-ui --no-fail-fast` (1182 passed),
   `cargo nextest run -p fret-bootstrap --lib --no-fail-fast`, `cargo fmt --all --check`,
   layering/surface/consumption profile gates, deleted-bridge static search, and `git diff --check`.
+- 2026-07-02: Phase 2 U5 observation boundary subscriber slice deletes the
+  post-layout/post-paint cache-root observation collapse bridge. Layout/measure/paint observation
+  recording now chooses `ObservationSubscriber::{Node, Boundary}` at record time, aggregates
+  view-cache-owned observations under `BoundaryId`, and keeps per-node records for cleanup.
+  Verification passed: `cargo check -p fret-ui --tests`, `cargo check -p fret-ui --features
+  diagnostics`, `cargo check -p fret-bootstrap --lib --features launch,ui-app-driver,diagnostics`,
+  `cargo check -p fret-diag`, focused observation/model/global/view-cache tests,
+  dispatch/command/semantics/modal-barrier guard tests, full `cargo nextest run -p fret-ui
+  --no-fail-fast` (1184 passed), `cargo nextest run -p fret-bootstrap --lib --no-fail-fast` (7
+  passed), `fret-diag` perf-key contract tests, formatting, layering, surface-policy,
+  consumption-profile, wiki validation, deleted-bridge static search, and `git diff --check`.
+- U5 observation boundary subscriber slice was committed on
+  `feat/ui-framework-phase2-refactor`; the working tree returned clean after the commit.
 - U3 deletion verification passed: `cargo check -p fret-ui`, `cargo check -p fret-bootstrap`,
   focused U3 identity and scroll-target nextest coverage,
   `cargo nextest run -p fret-ui --no-fail-fast` (1180 passed),

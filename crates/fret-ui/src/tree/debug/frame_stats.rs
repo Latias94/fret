@@ -188,7 +188,6 @@ pub struct UiDebugFrameStats {
     pub layout_pending_barrier_relayouts_time: Duration,
     pub layout_repair_view_cache_bounds_time: Duration,
     pub layout_contained_view_cache_roots_time: Duration,
-    pub layout_collapse_layout_observations_time: Duration,
     /// Total wall time spent recording layout observations (`observed_in_layout` + globals).
     pub layout_observation_record_time: Duration,
     /// Total observed-model edges recorded into `observed_in_layout` during this frame.
@@ -265,7 +264,6 @@ pub struct UiDebugFrameStats {
     pub paint_scroll_handle_invalidation_time: Duration,
     pub paint_collect_roots_time: Duration,
     pub paint_publish_text_input_snapshot_time: Duration,
-    pub paint_collapse_observations_time: Duration,
     pub layout_nodes_visited: u32,
     pub layout_nodes_performed: u32,
     pub prepaint_nodes_visited: u32,

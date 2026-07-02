@@ -10,22 +10,24 @@ related_plan: docs/plans/2026-07-02-001-refactor-ui-framework-phase2-plan.md
 
 - Goal: execute `docs/plans/2026-07-02-001-refactor-ui-framework-phase2-plan.md` as a breaking Phase 2 UI framework refactor.
 - Branch: `feat/ui-framework-phase2-refactor`.
-- Last verified: Phase 2 U5 boundary layout candidate slice passed `cargo check -p fret-ui --tests`,
-  `cargo check -p fret-ui --features diagnostics`,
-  `cargo check -p fret-bootstrap --lib --features launch,ui-app-driver,diagnostics`,
-  `cargo nextest run -p fret-ui --no-fail-fast` (1182 passed),
-  `cargo nextest run -p fret-bootstrap --lib --no-fail-fast`, formatting, layering,
-  surface-policy, consumption-profile, deleted-bridge static search, and whitespace checks on
-  2026-07-02.
+- Last verified: Phase 2 U5 observation boundary subscriber slice passed `cargo check -p fret-ui
+  --tests`, `cargo check -p fret-ui --features diagnostics`, `cargo check -p fret-bootstrap --lib
+  --features launch,ui-app-driver,diagnostics`, `cargo check -p fret-diag`, focused
+  observation/model/global/view-cache and window-owned guard tests, full
+  `cargo nextest run -p fret-ui --no-fail-fast` (1184 passed),
+  `cargo nextest run -p fret-bootstrap --lib --no-fail-fast` (7 passed), `fret-diag` perf-key
+  contract tests, formatting, layering, surface-policy, consumption-profile, wiki validation,
+  deleted-bridge static search, and `git diff --check` on 2026-07-02.
 - Done: local ADR/workstream research, crate/perf snapshots, GPUI/Zed comparison, architecture boundary audit, framework consumer audit, performance audit, implementation-ready plan, U1 convergence contract freeze, U2 source-policy gate, U3 first slice (`workbench-lite` public scaffold), U4 identity/dirty graph observability slices, U5 `ViewId` / boundary frame-product ownership slices, U6 policy vocabulary demotion/cleanup slices, U7 renderer scene/upload observability plus retained scene chunk and guarded quad resident upload lanes, U8 text/glyph/wasm budget work through web runtime evidence, U9 modular consumption profiles and `AppUi` facade split, workstream closeout audit, duplicate ADR ID `0324` resolution, and execution-surface allowlist alignment.
 - Latest done: Phase 2 U5 deletes the remaining `dirty_live_boundary_nodes_v1_quarantine` layout
-  projection bridge. Layout now consumes `DirtyBoundaryLayoutCandidate` values resolved through
-  `ViewBoundaryStore` instead of exposing dirty live boundary `NodeId`s.
-- In progress: commit the verified U5 boundary layout candidate slice, then continue toward moving
-  observation fanout away from v1 cache-root/`NodeId` ownership.
+  projection bridge and the post-layout/post-paint cache-root observation collapse bridge. Layout
+  now consumes `DirtyBoundaryLayoutCandidate` values resolved through `ViewBoundaryStore`, while
+  view-cache-owned layout/paint observations record under `BoundaryId` subscribers.
+- In progress: select and execute the next Phase 2 refactor unit. U6/U7/U8/U9 cover renderer/text
+  bridge deletion; U10/U11/U12/U13/U14 cover public app-surface cleanup.
 - Blocked: none known after the boundary store migration.
-- Next action: commit the U5 boundary layout candidate slice, then start the observation fanout
-  design/implementation slice.
+- Next action: pick the next dependency-ready Phase 2 unit and continue with focused research,
+  implementation, verification, and a conventional commit.
 
 # Citations
 
@@ -44,9 +46,11 @@ related_plan: docs/plans/2026-07-02-001-refactor-ui-framework-phase2-plan.md
 - [Phase 2 U4 boundary store migration](progress/2026-07-02-phase2-u4-boundary-store-migration.md)
 - [Phase 2 U4 durable ViewId lifecycle](progress/2026-07-02-phase2-u4-durable-viewid-lifecycle.md)
 - [Phase 2 U5 boundary layout candidates](progress/2026-07-02-phase2-u5-boundary-layout-candidates.md)
+- [Phase 2 U5 observation boundary subscribers](progress/2026-07-02-phase2-u5-observation-boundary-subscribers.md)
 - [Phase 2 U4 boundary store audit](subagents/2026-07-02-phase2-u4-boundary-store-audit.md)
 - [Phase 2 U4 durable ViewId audit](subagents/2026-07-02-phase2-u4-durable-viewid-audit.md)
 - [Phase 2 U5 boundary bridge audit](subagents/2026-07-02-phase2-u5-boundary-bridge-audit.md)
+- [Phase 2 U5 observation fanout audit](subagents/2026-07-02-phase2-u5-observation-fanout-audit.md)
 - Commit `020bb34a37 docs(architecture): freeze ui convergence contract`
 - Commit `84f60d8355 feat(tools): add ui surface policy gate`
 - Commit `df0d6620ff feat(ui): expose dirty frontier diagnostics`

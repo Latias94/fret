@@ -205,6 +205,11 @@ M4R validates the second, non-code-editor proof surface through
 `ui-gallery-view-cache-toggle-perf-steady`. That surface exercises shared view-cache reuse and
 paint-cache replay, emits canonical `debug.boundaries[]` plus cache-root `layout_dependency`
 diagnostics, and confirms the live `contained_layout` schema field was not reintroduced.
+M4S deletes the post-layout/post-paint cache-root observation collapse bridge. Layout and paint now
+choose an observation subscriber while recording: view-cache-owned observations aggregate under the
+owning `BoundaryId`, non-cache-root observations remain node subscribers, and per-node records still
+drive cleanup. The deleted collapse spans and current frame-stat exports must not return as normal
+runtime products.
 
 The next convergence step is to move remaining tree-wide or node-local side products under
 boundary ownership where feasible:

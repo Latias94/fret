@@ -90,7 +90,6 @@ impl<H: UiHost> UiTree<H> {
                     self.debug_stats.paint_scroll_handle_invalidation_time = Duration::default();
                     self.debug_stats.paint_collect_roots_time = Duration::default();
                     self.debug_stats.paint_publish_text_input_snapshot_time = Duration::default();
-                    self.debug_stats.paint_collapse_observations_time = Duration::default();
                     self.debug_stats.view_cache_active = self.view_cache_active();
                     self.debug_stats.focus = self.focus;
                     self.debug_stats.captured = self.captured_for(fret_core::PointerId(0));
@@ -328,28 +327,6 @@ impl<H: UiHost> UiTree<H> {
                         self.debug_stats.paint_cache_misses = stats.misses;
                         self.debug_stats.paint_cache_replayed_ops = stats.replayed_ops;
                     }
-                }
-
-                let (_, collapse_elapsed) = fret_perf::measure_span(
-                    self.debug_enabled,
-                    trace_paint,
-                    || {
-                        tracing::trace_span!(
-                            "fret.ui.paint.collapse_observations",
-                            window = ?window,
-                            frame_id = frame_id.0,
-                            paint_pass,
-                        )
-                    },
-                    || {
-                        self.collapse_paint_observations_to_view_cache_roots_if_needed();
-                    },
-                );
-                if let Some(collapse_elapsed) = collapse_elapsed {
-                    self.debug_stats.paint_collapse_observations_time = self
-                        .debug_stats
-                        .paint_collapse_observations_time
-                        .saturating_add(collapse_elapsed);
                 }
             },
         );

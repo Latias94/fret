@@ -100,7 +100,7 @@ use invalidation_dedup::{InvalidationDedupTable, InvalidationVisited};
 use measure::{DebugMeasureChildRecord, MeasureReentrancyDiagnostics, MeasureStackKey};
 use observation::{
     GlobalObservationIndex, ObservationIndex, ObservationIndexRecordStats,
-    ObservationIndexRemoveStats, ObservationMask,
+    ObservationIndexRemoveStats, ObservationMask, ObservationSubscriber,
 };
 use profiling::{
     LayoutNodeProfileConfig, LayoutNodeProfileState, MeasureNodeProfileConfig,

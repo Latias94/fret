@@ -49,14 +49,15 @@ Passed:
 
 # Remaining Edge
 
-Observation invalidation is still routed through the v1 cache-root collapse rather than an explicit
-view-subscriber fanout. That should be the next identity/boundary slice; it should not be mixed with
-renderer chunk work or public app facade work.
+Superseded by the follow-on observation subscriber slice. Observation invalidation for
+view-cache-owned layout/paint paths now records boundary subscribers directly instead of using the
+v1 cache-root collapse pass.
 
 # Citations
 
 - [Phase 2 plan](../../../plans/2026-07-02-001-refactor-ui-framework-phase2-plan.md)
 - [U5 boundary bridge audit](../subagents/2026-07-02-phase2-u5-boundary-bridge-audit.md)
+- [U5 observation boundary subscribers](2026-07-02-phase2-u5-observation-boundary-subscribers.md)
 - `crates/fret-ui/src/tree/view_boundary.rs`
 - `crates/fret-ui/src/tree/layout/entrypoints.rs`
 - `crates/fret-ui/src/tree/ui_tree_subtree_layout_dirty.rs`

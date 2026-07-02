@@ -125,8 +125,6 @@ pub struct UiFrameStatsV1 {
     #[serde(default)]
     pub layout_contained_view_cache_roots_time_us: u64,
     #[serde(default)]
-    pub layout_collapse_layout_observations_time_us: u64,
-    #[serde(default)]
     pub layout_observation_record_time_us: u64,
     #[serde(default)]
     pub layout_observation_record_models_items: u32,
@@ -219,8 +217,6 @@ pub struct UiFrameStatsV1 {
     pub paint_collect_roots_time_us: u64,
     #[serde(default)]
     pub paint_publish_text_input_snapshot_time_us: u64,
-    #[serde(default)]
-    pub paint_collapse_observations_time_us: u64,
     #[serde(default)]
     pub dispatch_time_us: u64,
     #[serde(default)]
@@ -1260,9 +1256,6 @@ impl UiFrameStatsV1 {
             layout_contained_view_cache_roots_time_us: stats
                 .layout_contained_view_cache_roots_time
                 .as_micros() as u64,
-            layout_collapse_layout_observations_time_us: stats
-                .layout_collapse_layout_observations_time
-                .as_micros() as u64,
             layout_observation_record_time_us: stats.layout_observation_record_time.as_micros()
                 as u64,
             layout_observation_record_models_items: stats.layout_observation_record_models_items,
@@ -1337,8 +1330,6 @@ impl UiFrameStatsV1 {
             paint_publish_text_input_snapshot_time_us: stats
                 .paint_publish_text_input_snapshot_time
                 .as_micros() as u64,
-            paint_collapse_observations_time_us: stats.paint_collapse_observations_time.as_micros()
-                as u64,
             dispatch_time_us: stats.dispatch_time.as_micros() as u64,
             dispatch_inner_body_time_us: stats.dispatch_inner_body_time.as_micros() as u64,
             dispatch_pointer_events: stats.dispatch_pointer_events,
