@@ -31,6 +31,15 @@ Related:
 - Portable retained scene fragments now have a core `SceneChunk` carrier. Existing baselines still observe flat
   `Scene` encoding and full stream uploads; chunk encode reuse, chunk dirty counts, and dirty GPU range upload
   thresholds should only be required after those renderer paths are intentionally wired and baselines are re-seeded.
+- Resident geometry upload partial writes are supported only for streams with explicit closure and fallback proof:
+
+  | Stream | Partial upload status | Required evidence |
+  | --- | --- | --- |
+  | `quad_instances` | Supported for resource-free quad chunks. | Payload-plan shape/fingerprint match, full-stream coverage, `renderer_geometry_upload_quad_instance_{bytes,write_count}`, and resident fallback counters. |
+  | `viewport_vertices` / `VertexColor` | Supported for resource-free `VertexColor` chunks only. | Payload-plan shape/fingerprint match, full-stream coverage, `renderer_geometry_upload_viewport_vertex_{bytes,write_count}`, and resident fallback counters. |
+  | `viewport_vertices` / `Image` or `ViewportSurface` | Full upload until resource/render-target closure is explicit. | Reassembly remains blocked and viewport bytes/write counts show full writes. |
+  | Text, path, mask, material, clip, and effect-dependent streams | Full upload until their side-table/resource closure is explicit. | Reassembly/fallback counters must explain why no partial write was accepted. |
+
 - `python tools/perf/audit_perf_baselines.py --matrix docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-contract-matrix.md --strict`
   enforces those payload fields for renderer-aware threshold surfaces; missing payload measurements, threshold seeds,
   or hard thresholds are contract failures.

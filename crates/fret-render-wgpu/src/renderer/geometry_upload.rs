@@ -75,6 +75,7 @@ struct ResidentGeometryUploadStreamState {
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 struct ResidentGeometryUploadFrameWritePlan {
     quad_instances: ResidentGeometryUploadStreamWritePlan,
+    viewport_vertices: ResidentGeometryUploadStreamWritePlan,
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
@@ -207,7 +208,7 @@ impl ResidentGeometryUploadState {
             estimate_range_bytes::<PaintGpu>,
             upload.as_deref_mut(),
         );
-        let _ = self.viewport_vertices.record_frame(
+        write_plan.viewport_vertices = self.viewport_vertices.record_frame(
             slots.viewport_vertices,
             invalidations.viewport_vertices,
             signatures.viewport_vertices,
@@ -268,7 +269,9 @@ impl ResidentGeometryUploadFrameSignatures {
             quad_instances.include(ranges.quad_instances);
             path_paints.include(ranges.path_paints);
             text_paints.include(ranges.text_paints);
-            viewport_vertices.include(ranges.viewport_vertices);
+            if segment_supports_viewport_vertex_partial_upload(segment) {
+                viewport_vertices.include(ranges.viewport_vertices);
+            }
             text_glyph_instances.include(ranges.text_glyph_instances);
             text_vertices.include(ranges.text_vertices);
             path_vertices.include(ranges.path_vertices);
@@ -284,6 +287,15 @@ impl ResidentGeometryUploadFrameSignatures {
             path_vertices: path_vertices.finish(streams.path_vertices),
         }
     }
+}
+
+fn segment_supports_viewport_vertex_partial_upload(segment: &RenderPlanSegment) -> bool {
+    segment.flags.has_vertex_color
+        && !segment.flags.has_viewport
+        && !segment.flags.has_image
+        && !segment.flags.has_mask
+        && !segment.flags.has_text
+        && !segment.flags.has_path
 }
 
 impl ResidentGeometryUploadStreamAccumulator {
@@ -867,17 +879,51 @@ impl GeometryUploadState {
 
         let viewport_vertex_buffer = self.viewport_vertices.next_buffer();
         if !viewport_vertices.is_empty() {
-            queue.write_buffer(
-                &viewport_vertex_buffer,
-                0,
-                bytemuck::cast_slice(viewport_vertices),
-            );
-            let bytes = std::mem::size_of_val(viewport_vertices) as u64;
-            record_vertex_upload(perf_enabled, frame_perf, bytes, |upload| {
-                upload.viewport_vertex_bytes = upload.viewport_vertex_bytes.saturating_add(bytes);
-                upload.viewport_vertex_write_count =
-                    upload.viewport_vertex_write_count.saturating_add(1);
-            });
+            let write_full_viewport_vertices = |frame_perf: &mut RenderPerfStats| {
+                queue.write_buffer(
+                    &viewport_vertex_buffer,
+                    0,
+                    bytemuck::cast_slice(viewport_vertices),
+                );
+                let bytes = std::mem::size_of_val(viewport_vertices) as u64;
+                record_vertex_upload(perf_enabled, frame_perf, bytes, |upload| {
+                    upload.viewport_vertex_bytes =
+                        upload.viewport_vertex_bytes.saturating_add(bytes);
+                    upload.viewport_vertex_write_count =
+                        upload.viewport_vertex_write_count.saturating_add(1);
+                });
+            };
+
+            match &resident_write_plan.viewport_vertices {
+                ResidentGeometryUploadStreamWritePlan::Full => {
+                    write_full_viewport_vertices(frame_perf);
+                }
+                ResidentGeometryUploadStreamWritePlan::Skip => {}
+                ResidentGeometryUploadStreamWritePlan::Partial(ranges) => {
+                    let upload_ranges = ranges
+                        .iter()
+                        .map(|range| pod_upload_range(viewport_vertices, *range))
+                        .collect::<Option<Vec<_>>>();
+                    if let Some(upload_ranges) = upload_ranges {
+                        for (offset, range_vertices) in upload_ranges {
+                            queue.write_buffer(
+                                &viewport_vertex_buffer,
+                                offset,
+                                bytemuck::cast_slice(range_vertices),
+                            );
+                            let bytes = std::mem::size_of_val(range_vertices) as u64;
+                            record_vertex_upload(perf_enabled, frame_perf, bytes, |upload| {
+                                upload.viewport_vertex_bytes =
+                                    upload.viewport_vertex_bytes.saturating_add(bytes);
+                                upload.viewport_vertex_write_count =
+                                    upload.viewport_vertex_write_count.saturating_add(1);
+                            });
+                        }
+                    } else {
+                        write_full_viewport_vertices(frame_perf);
+                    }
+                }
+            }
         }
 
         let text_glyph_instance_buffer = self.text_glyph_instances.next_buffer();
@@ -962,6 +1008,10 @@ mod tests {
         vec![bytemuck::Zeroable::zeroed(); count]
     }
 
+    fn viewport_vertices(count: usize) -> Vec<ViewportVertex> {
+        vec![bytemuck::Zeroable::zeroed(); count]
+    }
+
     fn safe_plan(indices: &[usize]) -> SceneChunkPayloadReassemblyPlan {
         SceneChunkPayloadReassemblyPlan::from_safe_segment_indices(indices.to_vec())
     }
@@ -1013,6 +1063,47 @@ mod tests {
                     },
                     stream_ranges: RenderPlanSegmentStreamRanges {
                         quad_instances: RenderPlanStreamRange::new(*start, *end),
+                        ..Default::default()
+                    },
+                })
+                .collect(),
+            passes: Vec::new(),
+            compile_stats: RenderPlanCompileStats::default(),
+            degradations: Vec::new(),
+        }
+    }
+
+    fn plan_with_viewport_ranges(ranges: &[(u32, u32, u64)]) -> RenderPlan {
+        plan_with_viewport_ranges_and_flags(
+            ranges,
+            RenderPlanSegmentFlags {
+                has_vertex_color: true,
+                ..Default::default()
+            },
+        )
+    }
+
+    fn plan_with_viewport_ranges_and_flags(
+        ranges: &[(u32, u32, u64)],
+        flags: RenderPlanSegmentFlags,
+    ) -> RenderPlan {
+        RenderPlan {
+            segments: ranges
+                .iter()
+                .enumerate()
+                .map(|(index, (start, end, fingerprint))| RenderPlanSegment {
+                    id: SceneSegmentId(index),
+                    draw_range: index..index + 1,
+                    start_uniform_index: None,
+                    start_uniform_fingerprint: 0,
+                    flags,
+                    scene_chunk_candidate: RenderPlanSceneChunkCandidate {
+                        eligible: true,
+                        draw_count: 1,
+                        fingerprint: *fingerprint,
+                    },
+                    stream_ranges: RenderPlanSegmentStreamRanges {
+                        viewport_vertices: RenderPlanStreamRange::new(*start, *end),
                         ..Default::default()
                     },
                 })
@@ -1615,5 +1706,262 @@ mod tests {
             quad_instance_bytes
         );
         assert_eq!(changed_perf.instance_bytes, quad_instance_bytes);
+    }
+
+    #[test]
+    fn resident_viewport_partial_upload_writes_only_changed_range() {
+        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+        let mut upload_state = GeometryUploadState::new(&ctx.device);
+        let plan = plan_with_viewport_ranges(&[(0, 1, 7), (1, 2, 8)]);
+        let alignment = payload_alignment(&[0, 1]);
+        let first_vertices = viewport_vertices(2);
+        let mut changed_vertices = viewport_vertices(2);
+        changed_vertices[1].pos_px[0] = 1.0;
+
+        for _ in 0..3 {
+            let mut frame_perf = RenderPerfStats::default();
+            let _ = upload_state.upload_frame_geometry(
+                &ctx.device,
+                &ctx.queue,
+                &plan,
+                &alignment,
+                &[],
+                &[],
+                &[],
+                &first_vertices,
+                &[],
+                &[],
+                &[],
+                true,
+                &mut frame_perf,
+            );
+        }
+
+        let mut changed_perf = RenderPerfStats::default();
+        let _ = upload_state.upload_frame_geometry(
+            &ctx.device,
+            &ctx.queue,
+            &plan,
+            &alignment,
+            &[],
+            &[],
+            &[],
+            &changed_vertices,
+            &[],
+            &[],
+            &[],
+            true,
+            &mut changed_perf,
+        );
+
+        let viewport_vertex_bytes = std::mem::size_of::<ViewportVertex>() as u64;
+        assert_eq!(changed_perf.geometry_upload.resident_stream_misses, 1);
+        assert_eq!(
+            changed_perf
+                .geometry_upload
+                .resident_partial_write_dry_run_write_count_estimate,
+            1
+        );
+        assert_eq!(changed_perf.geometry_upload.viewport_vertex_write_count, 1);
+        assert_eq!(
+            changed_perf.geometry_upload.viewport_vertex_bytes,
+            viewport_vertex_bytes
+        );
+        assert_eq!(changed_perf.vertex_bytes, viewport_vertex_bytes);
+    }
+
+    #[test]
+    fn resident_viewport_partial_upload_skips_stable_slot_after_warmup() {
+        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+        let mut upload_state = GeometryUploadState::new(&ctx.device);
+        let plan = plan_with_viewport_ranges(&[(0, 1, 7), (1, 2, 8)]);
+        let alignment = payload_alignment(&[0, 1]);
+        let vertices = viewport_vertices(2);
+
+        for _ in 0..3 {
+            let mut frame_perf = RenderPerfStats::default();
+            let _ = upload_state.upload_frame_geometry(
+                &ctx.device,
+                &ctx.queue,
+                &plan,
+                &alignment,
+                &[],
+                &[],
+                &[],
+                &vertices,
+                &[],
+                &[],
+                &[],
+                true,
+                &mut frame_perf,
+            );
+        }
+
+        let mut stable_perf = RenderPerfStats::default();
+        let _ = upload_state.upload_frame_geometry(
+            &ctx.device,
+            &ctx.queue,
+            &plan,
+            &alignment,
+            &[],
+            &[],
+            &[],
+            &vertices,
+            &[],
+            &[],
+            &[],
+            true,
+            &mut stable_perf,
+        );
+
+        assert_eq!(stable_perf.geometry_upload.resident_stream_hits, 1);
+        assert_eq!(stable_perf.geometry_upload.resident_stream_misses, 0);
+        assert_eq!(stable_perf.geometry_upload.viewport_vertex_write_count, 0);
+        assert_eq!(stable_perf.geometry_upload.viewport_vertex_bytes, 0);
+        assert_eq!(stable_perf.vertex_bytes, 0);
+    }
+
+    #[test]
+    fn resident_viewport_partial_upload_blocks_incomplete_stream_coverage() {
+        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+        let mut upload_state = GeometryUploadState::new(&ctx.device);
+        let plan = plan_with_viewport_ranges(&[(1, 2, 8)]);
+        let alignment = payload_alignment(&[0]);
+        let first_vertices = viewport_vertices(2);
+        let mut changed_vertices = viewport_vertices(2);
+        changed_vertices[1].pos_px[0] = 1.0;
+
+        for _ in 0..3 {
+            let mut frame_perf = RenderPerfStats::default();
+            let _ = upload_state.upload_frame_geometry(
+                &ctx.device,
+                &ctx.queue,
+                &plan,
+                &alignment,
+                &[],
+                &[],
+                &[],
+                &first_vertices,
+                &[],
+                &[],
+                &[],
+                true,
+                &mut frame_perf,
+            );
+        }
+
+        let mut changed_perf = RenderPerfStats::default();
+        let _ = upload_state.upload_frame_geometry(
+            &ctx.device,
+            &ctx.queue,
+            &plan,
+            &alignment,
+            &[],
+            &[],
+            &[],
+            &changed_vertices,
+            &[],
+            &[],
+            &[],
+            true,
+            &mut changed_perf,
+        );
+
+        let full_viewport_vertex_bytes = std::mem::size_of_val(changed_vertices.as_slice()) as u64;
+        assert_eq!(changed_perf.geometry_upload.resident_stream_misses, 1);
+        assert_eq!(
+            changed_perf.geometry_upload.resident_stream_coverage_gaps,
+            1
+        );
+        assert_eq!(
+            changed_perf
+                .geometry_upload
+                .resident_partial_write_dry_run_streams,
+            0
+        );
+        assert_eq!(changed_perf.geometry_upload.viewport_vertex_write_count, 1);
+        assert_eq!(
+            changed_perf.geometry_upload.viewport_vertex_bytes,
+            full_viewport_vertex_bytes
+        );
+        assert_eq!(changed_perf.vertex_bytes, full_viewport_vertex_bytes);
+    }
+
+    #[test]
+    fn resident_viewport_partial_upload_blocks_image_and_viewport_surface_flags() {
+        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+        let mut upload_state = GeometryUploadState::new(&ctx.device);
+        let image_plan = plan_with_viewport_ranges_and_flags(
+            &[(0, 1, 7), (1, 2, 8)],
+            RenderPlanSegmentFlags {
+                has_image: true,
+                ..Default::default()
+            },
+        );
+        let viewport_surface_plan = plan_with_viewport_ranges_and_flags(
+            &[(0, 1, 7), (1, 2, 8)],
+            RenderPlanSegmentFlags {
+                has_viewport: true,
+                ..Default::default()
+            },
+        );
+        let alignment = payload_alignment(&[0, 1]);
+        let first_vertices = viewport_vertices(2);
+        let mut changed_vertices = viewport_vertices(2);
+        changed_vertices[1].pos_px[0] = 1.0;
+
+        for plan in [&image_plan, &viewport_surface_plan] {
+            for _ in 0..3 {
+                let mut frame_perf = RenderPerfStats::default();
+                let _ = upload_state.upload_frame_geometry(
+                    &ctx.device,
+                    &ctx.queue,
+                    plan,
+                    &alignment,
+                    &[],
+                    &[],
+                    &[],
+                    &first_vertices,
+                    &[],
+                    &[],
+                    &[],
+                    true,
+                    &mut frame_perf,
+                );
+            }
+
+            let mut changed_perf = RenderPerfStats::default();
+            let _ = upload_state.upload_frame_geometry(
+                &ctx.device,
+                &ctx.queue,
+                plan,
+                &alignment,
+                &[],
+                &[],
+                &[],
+                &changed_vertices,
+                &[],
+                &[],
+                &[],
+                true,
+                &mut changed_perf,
+            );
+
+            let full_viewport_vertex_bytes =
+                std::mem::size_of_val(changed_vertices.as_slice()) as u64;
+            assert_eq!(changed_perf.geometry_upload.resident_stream_misses, 0);
+            assert_eq!(
+                changed_perf
+                    .geometry_upload
+                    .resident_partial_write_dry_run_streams,
+                0
+            );
+            assert_eq!(changed_perf.geometry_upload.viewport_vertex_write_count, 1);
+            assert_eq!(
+                changed_perf.geometry_upload.viewport_vertex_bytes,
+                full_viewport_vertex_bytes
+            );
+            assert_eq!(changed_perf.vertex_bytes, full_viewport_vertex_bytes);
+        }
     }
 }

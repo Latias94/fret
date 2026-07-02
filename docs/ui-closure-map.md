@@ -97,6 +97,10 @@ Must-be-true outcomes for the next convergence pass:
   stay window/layer-forest owned unless a later ADR proves a narrower owner.
 - Renderer/text costs for local edits are bounded by scene chunks with explicit closure metadata,
   render-plan reuse, dirty upload ranges, and explicit text/glyph/wasm cache budgets.
+- Renderer dirty upload expansion is stream-class gated. Resource-free quad instances and
+  `VertexColor`-only viewport vertices may use partial writes after payload-plan alignment and
+  coverage gates pass; image, viewport-surface, text, path, mask, material, clip, and effect streams
+  stay on full upload until their closure metadata is complete.
 
 High-risk compatibility paths that need either deletion or an explicit retention gate:
 
@@ -113,6 +117,8 @@ High-risk compatibility paths that need either deletion or an explicit retention
   diagnostics unless passed through an explicit authoritative chunk source,
 - full-blob text resource helpers returning to normal renderer chunk/resource paths; chunk keys use
   visible glyph residency, while shaping-aware cluster/run closure remains a gated follow-up,
+- non-quad stream partial uploads broadening without a per-stream closure owner, fallback reason,
+  write-count/byte counter, and coverage-gap proof,
 - `fret-ui` public names that encode Dialog/Popover/Menu/Tooltip/dismissal policy,
 - first-party examples that make advanced/manual assembly look like the default app path,
 - source-policy allowlist entries that do not name an owner, reason, allowed seams, and retirement

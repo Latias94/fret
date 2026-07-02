@@ -261,3 +261,10 @@ timestamp: 2026-06-30
   fail instead of silently falling back through an unprepared debug scene. Verification passed:
   renderer/facade/launch checks, focused U8 chunk-source tests, and full `cargo nextest run -p
   fret-render-wgpu --no-fail-fast` (343 passed).
+- 2026-07-02: Phase 2 U9 opens the first non-quad partial upload slice for resource-free
+  `VertexColor` viewport vertices only. Payload-plan alignment now admits `OrderedDraw::VertexColor`
+  when shape/fingerprint gates match, resident geometry upload planning includes
+  `viewport_vertices` only for VertexColor-only segments, and Image/ViewportSurface/text/path/mask
+  streams remain full upload. Verification passed: renderer checks, focused U9 tests, full
+  `cargo nextest run -p fret-render-wgpu --no-fail-fast` (349 passed), formatting, layering,
+  source-policy, consumption-profile, perf-matrix, wiki, and whitespace gates.

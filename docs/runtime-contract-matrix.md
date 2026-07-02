@@ -88,6 +88,11 @@ The convergence target is GPUI-aligned but Fret-owned:
   diagnostic chunks, while `RenderSceneSource::ResourceFreeQuadChunks` is the only authoritative
   chunk-native source and is currently limited to resource-free quad manifests whose payloads can be
   assembled without flat-scene replay.
+- Dirty geometry uploads are enabled stream-by-stream, not by buffer type alone. The supported
+  partial-upload streams are resource-free quad instances and `viewport_vertices` for
+  `VertexColor`-only chunks whose payload-plan shape, stream fingerprint, and full-stream coverage
+  gates pass. `Image`, `ViewportSurface`, text, path, mask, material, clip, and effect-dependent
+  streams remain full upload until their resource and side-table closure gates are explicit.
 
 Compatibility bridge policy for the active plan:
 
@@ -98,6 +103,9 @@ Compatibility bridge policy for the active plan:
   temporary flat scenes is deleted for the closure-supported quad payload path and must not return.
   Full-blob text resource helpers are test-only/debug-only and must not return to normal renderer
   chunk/resource paths.
+- Non-quad partial uploads are not a broad bridge deletion yet. The only supported non-quad slice is
+  `VertexColor` viewport vertices; all other streams must continue to report full-upload fallback
+  reasons rather than silently accepting dirty-range writes.
 - The deleted cache-root observation collapse bridge must not return. If observation fanout widens,
   it should widen from boundary/view subscribers rather than from descendant `NodeId` scans.
 - Every retained bridge needs an owner, reason, measurable deletion gate, and follow-up path. An

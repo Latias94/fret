@@ -44,6 +44,11 @@ frame-pipeline contract while freezing stricter migration rules:
   as a parity oracle while chunk-native payload classes are proven. Renderer callers must declare
   whether a manifest is diagnostic evidence beside a flat scene or an authoritative resource-free
   quad chunk source; the old ambiguous `scene_chunks: Option<_>` input is not a valid contract.
+- Dirty GPU uploads expand by stream class only after chunk closure and payload-plan evidence. The
+  current non-quad support is limited to `VertexColor`-only `viewport_vertices` whose payload shape,
+  stream fingerprint, and complete stream coverage match the render plan. `Image`,
+  `ViewportSurface`, text, path, mask, material, clip, and effect-dependent streams remain full
+  upload until their resource and side-table closure gates are proven.
 - Public/source-policy compatibility exceptions are not frame products. They may be referenced by
   this plan because they protect adoption during the same breaking window, but they belong to the
   app facade/source-policy contract and must carry owner, reason, and retirement criteria there.

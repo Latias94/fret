@@ -123,6 +123,10 @@ impl SceneChunkDrawStreamSummary {
     pub fn is_quad_only(self) -> bool {
         self.quad_ops > 0 && self.draw_ops() == self.quad_ops
     }
+
+    pub fn is_vertex_color_only(self) -> bool {
+        self.vertex_color_ops > 0 && self.draw_ops() == self.vertex_color_ops
+    }
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
@@ -236,6 +240,12 @@ impl SceneChunkClosureMetadata {
 
     pub fn is_resource_free_quad_only(&self) -> bool {
         self.is_scope_closed() && self.resources.is_empty() && self.draw_streams.is_quad_only()
+    }
+
+    pub fn is_resource_free_vertex_color_only(&self) -> bool {
+        self.is_scope_closed()
+            && self.resources.is_empty()
+            && self.draw_streams.is_vertex_color_only()
     }
 
     fn from_ops(ops: &[SceneOp], text_blob_ids: &[TextBlobId]) -> Self {

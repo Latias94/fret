@@ -165,7 +165,7 @@ impl CachedSceneChunkEncoding {
             .encoding
             .ordered_draws
             .iter()
-            .any(|draw| !matches!(draw, OrderedDraw::Quad(_)))
+            .any(|draw| !matches!(draw, OrderedDraw::Quad(_) | OrderedDraw::VertexColor(_)))
         {
             return Some(SceneChunkPayloadReassemblyBlocker::NonQuadDraws);
         }
@@ -672,7 +672,9 @@ impl Renderer {
         output_is_srgb: bool,
     ) -> CachedSceneChunkEncoding {
         let mut encoding = SceneEncoding::default();
-        if !entry.chunk().closure().is_resource_free_quad_only() {
+        if !entry.chunk().closure().is_resource_free_quad_only()
+            && !entry.chunk().closure().is_resource_free_vertex_color_only()
+        {
             return CachedSceneChunkEncoding::new(encoding);
         }
 
@@ -877,6 +879,101 @@ mod tests {
         }
     }
 
+    fn vertex_color_quad_scene_op() -> SceneOp {
+        SceneOp::VertexColorQuad {
+            order: DrawOrder(0),
+            points: [
+                Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
+                Point::new(fret_core::Px(10.0), fret_core::Px(0.0)),
+                Point::new(fret_core::Px(10.0), fret_core::Px(10.0)),
+                Point::new(fret_core::Px(0.0), fret_core::Px(10.0)),
+            ],
+            colors: [
+                Color {
+                    r: 1.0,
+                    g: 0.0,
+                    b: 0.0,
+                    a: 1.0,
+                },
+                Color {
+                    r: 0.0,
+                    g: 1.0,
+                    b: 0.0,
+                    a: 1.0,
+                },
+                Color {
+                    r: 0.0,
+                    g: 0.0,
+                    b: 1.0,
+                    a: 1.0,
+                },
+                Color {
+                    r: 1.0,
+                    g: 1.0,
+                    b: 1.0,
+                    a: 1.0,
+                },
+            ],
+        }
+    }
+
+    fn viewport_vertex_payload_encoding(draw: OrderedDraw) -> SceneEncoding {
+        let mut encoding = SceneEncoding::default();
+        encoding
+            .viewport_vertices
+            .push(bytemuck::Zeroable::zeroed());
+        encoding.ordered_draws.push(draw);
+        encoding
+    }
+
+    fn image_viewport_payload_encoding() -> SceneEncoding {
+        viewport_vertex_payload_encoding(OrderedDraw::Image(ImageDraw {
+            scissor: ScissorRect::full(64, 64),
+            uniform_index: 0,
+            first_vertex: 0,
+            vertex_count: 1,
+            image: Default::default(),
+            sampling: fret_core::scene::ImageSamplingHint::Default,
+        }))
+    }
+
+    fn viewport_surface_payload_encoding() -> SceneEncoding {
+        viewport_vertex_payload_encoding(OrderedDraw::Viewport(ViewportDraw {
+            scissor: ScissorRect::full(64, 64),
+            uniform_index: 0,
+            first_vertex: 0,
+            vertex_count: 1,
+            target: Default::default(),
+        }))
+    }
+
+    fn single_viewport_segment_plan(
+        flags: RenderPlanSegmentFlags,
+        vertex_count: u32,
+    ) -> RenderPlan {
+        RenderPlan {
+            segments: vec![RenderPlanSegment {
+                id: SceneSegmentId(0),
+                draw_range: 0..1,
+                start_uniform_index: Some(0),
+                start_uniform_fingerprint: 0,
+                flags,
+                scene_chunk_candidate: RenderPlanSceneChunkCandidate {
+                    eligible: true,
+                    draw_count: 1,
+                    fingerprint: 0,
+                },
+                stream_ranges: RenderPlanSegmentStreamRanges {
+                    viewport_vertices: RenderPlanStreamRange::new(0, vertex_count),
+                    ..Default::default()
+                },
+            }],
+            passes: Vec::new(),
+            compile_stats: RenderPlanCompileStats::default(),
+            degradations: Vec::new(),
+        }
+    }
+
     fn text_scene_op(origin: Point, text: TextBlobId) -> SceneOp {
         SceneOp::Text {
             order: DrawOrder(0),
@@ -948,6 +1045,113 @@ mod tests {
             payload.stream_fingerprint,
             SceneChunkPayloadStreamFingerprint::from_payload_encoding(&flat_encoding).fingerprint
         );
+    }
+
+    #[test]
+    fn vertex_color_chunk_payload_alignment_allows_viewport_vertex_reassembly() {
+        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+        let mut renderer = Renderer::new(&ctx.adapter, &ctx.device);
+        let chunk = SceneChunk::from_ops(Arc::from([vertex_color_quad_scene_op()]));
+        assert!(chunk.closure().is_resource_free_vertex_color_only());
+        let entry = SceneChunkManifestEntry::new(
+            chunk.clone(),
+            Rect::new(
+                Point::default(),
+                Size::new(fret_core::Px(10.0), fret_core::Px(10.0)),
+            ),
+            Point::new(fret_core::Px(2.0), fret_core::Px(3.0)),
+        );
+        let frame = manifest(std::slice::from_ref(&entry));
+
+        let preview_payload =
+            renderer.encode_scene_chunk_entry_payload(&entry, 1.0, (64, 64), true);
+        assert!(!preview_payload.encoding.viewport_vertices.is_empty());
+        assert!(matches!(
+            preview_payload.encoding.ordered_draws.as_slice(),
+            [OrderedDraw::VertexColor(_)]
+        ));
+        let mut payload_for_cache =
+            Some(renderer.encode_scene_chunk_entry_payload(&entry, 1.0, (64, 64), true));
+
+        let mut state = SceneChunkEncodingState::default();
+        state.begin_frame_with_payloads(Some(&frame), context(1), &[0], |_| {
+            payload_for_cache.take().expect("single payload build")
+        });
+
+        let mut flat_scene = Scene::default();
+        chunk.replay_translated_into(&mut flat_scene, entry.scene_origin());
+        let mut flat_encoding = SceneEncoding::default();
+        let mut ignored_perf = RenderPerfStats::default();
+        renderer.encode_scene_ops_into(
+            &flat_scene,
+            1.0,
+            (64, 64),
+            true,
+            &mut flat_encoding,
+            false,
+            false,
+            &mut ignored_perf,
+        );
+        let plan = single_viewport_segment_plan(
+            RenderPlanSegmentFlags {
+                has_vertex_color: true,
+                ..Default::default()
+            },
+            u32::try_from(flat_encoding.viewport_vertices.len()).expect("viewport vertex count"),
+        );
+
+        let alignment = state.record_payload_plan_alignment(&plan, &flat_encoding);
+        let stats = alignment.stats;
+
+        assert_eq!(stats.payload_plan_candidate_segments, 1);
+        assert_eq!(stats.payload_plan_shape_matches, 1);
+        assert_eq!(stats.payload_plan_stream_fingerprint_matches, 1);
+        assert_eq!(stats.payload_reassembly_dry_run_candidates, 1);
+        assert_eq!(stats.payload_reassembly_append_only_matches, 1);
+        assert_eq!(stats.payload_reassembly_blocked_by_non_quad_draws, 0);
+        assert_eq!(alignment.reassembly_plan.safe_segment_indices(), &[0]);
+    }
+
+    #[test]
+    fn image_and_viewport_surface_payloads_remain_blocked_until_resource_closure() {
+        let cases: [(RenderPlanSegmentFlags, fn() -> SceneEncoding); 2] = [
+            (
+                RenderPlanSegmentFlags {
+                    has_image: true,
+                    ..Default::default()
+                },
+                image_viewport_payload_encoding,
+            ),
+            (
+                RenderPlanSegmentFlags {
+                    has_viewport: true,
+                    ..Default::default()
+                },
+                viewport_surface_payload_encoding,
+            ),
+        ];
+
+        for (flags, payload_encoding) in cases {
+            let mut state = SceneChunkEncodingState::default();
+            let frame = manifest(&[entry(0.0)]);
+            let flat_encoding = payload_encoding();
+            let mut payload_for_cache = Some(payload_encoding());
+            state.begin_frame_with_payloads(Some(&frame), context(1), &[0], |_| {
+                CachedSceneChunkEncoding::new(payload_for_cache.take().expect("single payload"))
+            });
+            let plan = single_viewport_segment_plan(flags, 1);
+
+            let alignment = state.record_payload_plan_alignment(&plan, &flat_encoding);
+
+            assert_eq!(alignment.stats.payload_plan_shape_matches, 1);
+            assert_eq!(alignment.stats.payload_plan_stream_fingerprint_matches, 1);
+            assert_eq!(alignment.stats.payload_reassembly_append_only_matches, 0);
+            assert_eq!(
+                alignment.stats.payload_reassembly_blocked_by_non_quad_draws,
+                1
+            );
+            assert!(alignment.reassembly_plan.is_empty());
+        }
     }
 
     #[test]
