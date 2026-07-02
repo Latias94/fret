@@ -55,6 +55,7 @@ It is a sidecar for session recovery and subagent synthesis, not a replacement f
 - [Phase 2 U2 stable element node index](progress/2026-07-02-phase2-u2-stable-element-index.md)
 - [Phase 2 U3 live fallback scan deletion](progress/2026-07-02-phase2-u3-live-fallback-scan-deletion.md)
 - [Phase 2 U4 ViewId bridge split](progress/2026-07-02-phase2-u4-viewid-bridge-split.md)
+- [Phase 2 U4 boundary store migration](progress/2026-07-02-phase2-u4-boundary-store-migration.md)
 - [Phase 2 U4 boundary store audit](subagents/2026-07-02-phase2-u4-boundary-store-audit.md)
 - [ADR numbering and pre-release smoke restored](progress/2026-07-02-adr-numbering-pre-release-smoke.md)
 - [U9 view context split](progress/2026-07-01-u9-view-context-split.md)

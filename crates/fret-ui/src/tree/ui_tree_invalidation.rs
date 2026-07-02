@@ -181,7 +181,7 @@ impl<H: UiHost> UiTree<H> {
 
     pub(crate) fn prepaint_output<T: Any>(&self, node: NodeId) -> Option<&T> {
         self.view_boundaries
-            .get(node)?
+            .get_live(node)?
             .frame_products
             .prepaint
             .output::<T>()
@@ -189,7 +189,7 @@ impl<H: UiHost> UiTree<H> {
 
     pub(crate) fn prepaint_output_mut<T: Any>(&mut self, node: NodeId) -> Option<&mut T> {
         self.view_boundaries
-            .get_mut(node)?
+            .get_live_mut(node)?
             .frame_products
             .prepaint
             .output_mut::<T>()
@@ -197,7 +197,7 @@ impl<H: UiHost> UiTree<H> {
 
     pub(crate) fn prepaint_output_any(&self, node: NodeId, ty: TypeId) -> Option<&dyn Any> {
         self.view_boundaries
-            .get(node)?
+            .get_live(node)?
             .frame_products
             .prepaint
             .output_any(ty)
@@ -209,7 +209,7 @@ impl<H: UiHost> UiTree<H> {
         ty: TypeId,
     ) -> Option<&mut dyn Any> {
         self.view_boundaries
-            .get_mut(node)?
+            .get_live_mut(node)?
             .frame_products
             .prepaint
             .output_any_mut(ty)
@@ -281,7 +281,7 @@ impl<H: UiHost> UiTree<H> {
 
     pub(crate) fn scene_fragment<T: Any>(&self, node: NodeId) -> Option<&T> {
         self.view_boundaries
-            .get(node)?
+            .get_live(node)?
             .frame_products
             .scene_fragment
             .fragment::<T>()
@@ -289,7 +289,7 @@ impl<H: UiHost> UiTree<H> {
 
     pub(crate) fn scene_fragment_mut<T: Any>(&mut self, node: NodeId) -> Option<&mut T> {
         self.view_boundaries
-            .get_mut(node)?
+            .get_live_mut(node)?
             .frame_products
             .scene_fragment
             .fragment_mut::<T>()
@@ -297,7 +297,7 @@ impl<H: UiHost> UiTree<H> {
 
     pub(crate) fn scene_fragment_any(&self, node: NodeId, ty: TypeId) -> Option<&dyn Any> {
         self.view_boundaries
-            .get(node)?
+            .get_live(node)?
             .frame_products
             .scene_fragment
             .fragment_any(ty)
@@ -309,7 +309,7 @@ impl<H: UiHost> UiTree<H> {
         ty: TypeId,
     ) -> Option<&mut dyn Any> {
         self.view_boundaries
-            .get_mut(node)?
+            .get_live_mut(node)?
             .frame_products
             .scene_fragment
             .fragment_any_mut(ty)
@@ -326,7 +326,7 @@ impl<H: UiHost> UiTree<H> {
     ) -> Option<super::view_boundary::BoundarySceneChunkManifest> {
         Some(
             self.view_boundaries
-                .get(node)?
+                .get_live(node)?
                 .frame_products
                 .scene_fragment
                 .chunk_manifest(),
@@ -338,7 +338,7 @@ impl<H: UiHost> UiTree<H> {
     }
 
     pub(crate) fn record_scene_fragment_used_entries(&mut self, node: NodeId, count: usize) {
-        let Some(boundary) = self.view_boundaries.get_mut(node) else {
+        let Some(boundary) = self.view_boundaries.get_live_mut(node) else {
             return;
         };
         boundary
@@ -353,7 +353,7 @@ impl<H: UiHost> UiTree<H> {
         count: usize,
         reason: &'static str,
     ) {
-        let Some(boundary) = self.view_boundaries.get_mut(node) else {
+        let Some(boundary) = self.view_boundaries.get_live_mut(node) else {
             return;
         };
         boundary

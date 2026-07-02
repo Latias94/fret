@@ -183,6 +183,11 @@ timestamp: 2026-06-30
   independent raw token with `from_raw` / `as_raw`, debug dirty-view code uses explicit v1 bridge
   helpers, and docs/ADR alignment record that `BoundaryId(NodeId)` plus
   `SecondaryMap<NodeId, ViewBoundaryState>` remain the next U4 deletion target.
+- 2026-07-02: Phase 2 U4 boundary store migration replaces `BoundaryId(NodeId)` and raw
+  `SecondaryMap<NodeId, ViewBoundaryState>` ownership with `ViewBoundaryStore`, backed by
+  `SlotMap<BoundaryId, ViewBoundaryState>`, a live-node projection index, and a `ViewId` lookup.
+  Dirty frontier normal APIs are now view-native; live-node projection is centralized behind
+  `dirty_live_boundary_nodes_v1_quarantine`.
 - U3 deletion verification passed: `cargo check -p fret-ui`, `cargo check -p fret-bootstrap`,
   focused U3 identity and scroll-target nextest coverage,
   `cargo nextest run -p fret-ui --no-fail-fast` (1180 passed),

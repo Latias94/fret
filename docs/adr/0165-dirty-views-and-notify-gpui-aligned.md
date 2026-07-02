@@ -86,8 +86,9 @@ The runtime provides:
 - `ViewId` is the dirty-view target and is converging to an entity-first, window-scoped identity.
   The old `ViewId(pub NodeId)` wrapper is deleted; current v1 cache-root projection must go through
   explicitly named bridge helpers until the boundary store owns entity-first lookup.
-- `BoundaryId` is cache/execution boundary identity. `BoundaryId(NodeId)` and boundary-node bridge
-  helpers are migration bridges, not the target contract.
+- `BoundaryId` is cache/execution boundary identity. The old `BoundaryId(NodeId)` wrapper is
+  deleted; remaining live-boundary-node projection helpers are named with `v1_quarantine` until
+  layout and diagnostics consume the entity-first store directly.
 - Live element lookup MUST converge on an authoritative window-local `ElementNodeIndex` that maps a
   resolved declarative identity scope to a valid `StableNodeHandle`. Duplicate live
   `GlobalElementId` entries in one window must fail or enter an explicit diagnostic quarantine

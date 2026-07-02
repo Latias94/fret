@@ -15,9 +15,9 @@ implicitly converts from `NodeId`. The runtime now treats `ViewId` as an indepen
 window-scoped token and keeps the old cache-root mapping behind explicit v1 bridge helpers in
 `crates/fret-ui/src/tree/view_boundary.rs`.
 
-This is deliberately not the full U4 completion. The remaining U4 contract still needs an
-entity-first `ViewBoundaryStore`: `BoundaryId(NodeId)` and `UiTree::view_boundaries:
-SecondaryMap<NodeId, ViewBoundaryState>` are still present and should be deleted in the next slice.
+This was deliberately not the full U4 completion. The follow-up
+[boundary store migration](2026-07-02-phase2-u4-boundary-store-migration.md) has since deleted
+`BoundaryId(NodeId)` and `UiTree::view_boundaries: SecondaryMap<NodeId, ViewBoundaryState>`.
 
 # Verification
 
@@ -37,9 +37,9 @@ Passed:
 
 # Remaining U4 Edge
 
-The next slice should introduce a boundary store keyed by independent boundary/view identity and
-make live node lookup a projection, not the storage key. Detached boundaries should remain records
-with `live_node = None`, and layout candidates must filter them out.
+The boundary store slice has now introduced independent boundary/view identity and made live node
+lookup a projection, not the storage key. Remaining U4 work is true durable `ViewId` allocation and
+runtime detach/rebind semantics.
 
 Do not reintroduce `impl From<NodeId> for ViewId`, `impl From<ViewId> for NodeId`, direct
 `dirty.view.0`, or `NodeId::from(view)`. If a `NodeId` projection is still required during

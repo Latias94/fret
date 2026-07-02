@@ -395,7 +395,7 @@ impl<H: UiHost> UiTree<H> {
                             && !has_declarative_semantics_relations
                             && subtree_semantics_dirty_count == 0
                         {
-                            if self.view_boundaries.get(id).is_some_and(|boundary| {
+                            if self.view_boundaries.get_live(id).is_some_and(|boundary| {
                                 boundary
                                     .frame_products
                                     .semantics
@@ -702,7 +702,7 @@ impl<H: UiHost> UiTree<H> {
         can_reuse_previous_snapshot: bool,
     ) {
         if !can_reuse_previous_snapshot {
-            for (_, boundary) in self.view_boundaries.iter_mut() {
+            for boundary in self.view_boundaries.values_mut() {
                 boundary.frame_products.semantics.clear();
             }
         }
@@ -712,7 +712,7 @@ impl<H: UiHost> UiTree<H> {
         }
 
         let ranges = semantics_subtree_ranges(&snapshot);
-        for (id, boundary) in self.view_boundaries.iter_mut() {
+        for (id, boundary) in self.view_boundaries.iter_live_mut() {
             if let Some((start, end)) = ranges.get(&id).copied() {
                 boundary
                     .frame_products

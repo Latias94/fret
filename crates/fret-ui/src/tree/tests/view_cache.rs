@@ -576,7 +576,7 @@ fn detached_dirty_view_cache_root_is_pruned_before_layout_followups() {
     assert!(
         ui.debug_dirty_views()
             .iter()
-            .all(|dirty| boundary_node_for_view_id_v1(dirty.view) != boundary),
+            .all(|dirty| live_boundary_node_for_view_id_v1_quarantine(dirty.view) != boundary),
         "detached cache roots must not survive in dirty-view diagnostics"
     );
 
@@ -643,14 +643,14 @@ fn view_cache_mark_nearest_root_needs_rerender_propagates_to_ancestor_roots() {
     let dirty = ui.debug_dirty_views();
     assert!(
         dirty.iter().any(|d| {
-            boundary_node_for_view_id_v1(d.view) == inner
+            live_boundary_node_for_view_id_v1_quarantine(d.view) == inner
                 && d.detail == UiDebugInvalidationDetail::ScrollHandleLayout
         }),
         "expected dirty views to include inner cache root with ScrollHandleLayout detail"
     );
     assert!(
         dirty.iter().any(|d| {
-            boundary_node_for_view_id_v1(d.view) == outer
+            live_boundary_node_for_view_id_v1_quarantine(d.view) == outer
                 && d.detail == UiDebugInvalidationDetail::ScrollHandleLayout
         }),
         "expected dirty views to include outer cache root with ScrollHandleLayout detail"

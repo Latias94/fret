@@ -10,19 +10,22 @@ related_plan: docs/plans/2026-07-02-001-refactor-ui-framework-phase2-plan.md
 
 - Goal: execute `docs/plans/2026-07-02-001-refactor-ui-framework-phase2-plan.md` as a breaking Phase 2 UI framework refactor.
 - Branch: `feat/ui-framework-phase2-refactor`.
-- Last verified: Phase 2 U4 ViewId bridge split passed `cargo check -p fret-ui`,
-  `cargo check -p fret-ui --features diagnostics`, bootstrap diagnostics check, focused
-  dirty-view/view-cache/layout nextest coverage, full `cargo nextest run -p fret-ui --no-fail-fast`
-  (1180 passed), `cargo nextest run -p fret-bootstrap --lib --no-fail-fast`, formatting, layering,
-  surface-policy, wiki-memory validation, and whitespace checks on 2026-07-02.
+- Last verified: Phase 2 U4 boundary store migration passed `cargo check -p fret-ui`,
+  `cargo check -p fret-ui --tests`, bootstrap diagnostics check, focused
+  boundary-store/dirty-frontier/view-cache/semantics/canvas nextest coverage, full
+  `cargo nextest run -p fret-ui --no-fail-fast` (1181 passed), `cargo nextest run -p fret-bootstrap
+  --lib --no-fail-fast`, formatting, layering, surface-policy, wiki-memory validation, and
+  whitespace checks on 2026-07-02.
 - Done: local ADR/workstream research, crate/perf snapshots, GPUI/Zed comparison, architecture boundary audit, framework consumer audit, performance audit, implementation-ready plan, U1 convergence contract freeze, U2 source-policy gate, U3 first slice (`workbench-lite` public scaffold), U4 identity/dirty graph observability slices, U5 `ViewId` / boundary frame-product ownership slices, U6 policy vocabulary demotion/cleanup slices, U7 renderer scene/upload observability plus retained scene chunk and guarded quad resident upload lanes, U8 text/glyph/wasm budget work through web runtime evidence, U9 modular consumption profiles and `AppUi` facade split, workstream closeout audit, duplicate ADR ID `0324` resolution, and execution-surface allowlist alignment.
-- Latest done: Phase 2 U4 first cut removed implicit `ViewId`/`NodeId` conversion. `ViewId` is now an
-  independent raw token, and cache-root projection is isolated behind explicit v1 bridge helpers.
-- In progress: Phase 2 U4 remaining cut: replace `BoundaryId(NodeId)` and
-  `SecondaryMap<NodeId, ViewBoundaryState>` with an entity-first `ViewBoundaryStore`.
-- Blocked: none known after the ViewId bridge split.
-- Next action: introduce entity-first `ViewBoundaryStore` and delete `BoundaryId(NodeId)` storage
-  keys.
+- Latest done: Phase 2 U4 replaced raw `BoundaryId(NodeId)` and
+  `SecondaryMap<NodeId, ViewBoundaryState>` with `ViewBoundaryStore`, which owns independent
+  `BoundaryId` records and live-node projection indexes.
+- In progress: Phase 2 U4 remaining identity/lifecycle cut: allocate durable `ViewId`s without
+  deriving them from live `NodeId`, and separate temporary detach (`live_node = None`) from final
+  boundary removal.
+- Blocked: none known after the boundary store migration.
+- Next action: finish U4 verification gates, commit the store migration, then decide whether to
+  continue into durable `ViewId` allocation or U5 bridge deletion.
 
 # Citations
 
@@ -38,6 +41,7 @@ related_plan: docs/plans/2026-07-02-001-refactor-ui-framework-phase2-plan.md
 - [Phase 2 U2 stable element node index](progress/2026-07-02-phase2-u2-stable-element-index.md)
 - [Phase 2 U3 live fallback scan deletion](progress/2026-07-02-phase2-u3-live-fallback-scan-deletion.md)
 - [Phase 2 U4 ViewId bridge split](progress/2026-07-02-phase2-u4-viewid-bridge-split.md)
+- [Phase 2 U4 boundary store migration](progress/2026-07-02-phase2-u4-boundary-store-migration.md)
 - [Phase 2 U4 boundary store audit](subagents/2026-07-02-phase2-u4-boundary-store-audit.md)
 - Commit `020bb34a37 docs(architecture): freeze ui convergence contract`
 - Commit `84f60d8355 feat(tools): add ui surface policy gate`

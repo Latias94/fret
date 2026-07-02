@@ -327,7 +327,9 @@ impl<H: UiHost> UiTree<H> {
         let mut dirty_views: Vec<ViewId> = self.dirty_view_frontier.iter_views().collect();
         dirty_views.sort_by_key(|view| view.as_raw());
         for view in dirty_views {
-            let root = boundary_node_for_view_id_v1(view);
+            let Some(root) = self.view_boundaries.live_node_for_view(view) else {
+                continue;
+            };
             let element = self.nodes.get(root).and_then(|n| n.element);
             let (source, detail) = self.boundary_layout_dirty_reason(root).unwrap_or((
                 UiDebugInvalidationSource::Other,

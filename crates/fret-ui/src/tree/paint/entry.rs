@@ -366,7 +366,7 @@ impl<H: UiHost> UiTree<H> {
             .filter_map(|layer| self.layers.get(layer).map(|layer| layer.root))
             .collect::<Vec<_>>();
         let mut manifest = fret_core::SceneChunkManifest::default();
-        for (node, boundary) in &self.view_boundaries {
+        for (node, boundary) in self.view_boundaries.iter_live() {
             if !self.is_reachable_from_any_root_via_children(node, &roots) {
                 continue;
             }

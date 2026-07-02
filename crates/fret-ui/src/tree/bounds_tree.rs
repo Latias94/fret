@@ -216,7 +216,7 @@ impl HitTestBoundsTrees {
 impl<H: UiHost> UiTree<H> {
     pub(in crate::tree) fn clear_hit_test_bounds_frame_products(&mut self) {
         self.hit_test_bounds_trees.clear();
-        for (_, boundary) in self.view_boundaries.iter_mut() {
+        for boundary in self.view_boundaries.values_mut() {
             boundary.frame_products.hit_test_bounds.clear();
         }
     }
@@ -227,7 +227,7 @@ impl<H: UiHost> UiTree<H> {
             return;
         }
 
-        for (_, boundary) in self.view_boundaries.iter_mut() {
+        for boundary in self.view_boundaries.values_mut() {
             boundary.frame_products.hit_test_bounds.mark_unused();
         }
     }
@@ -242,7 +242,7 @@ impl<H: UiHost> UiTree<H> {
             return;
         }
 
-        let has_existing_boundary = self.view_boundaries.contains_key(layer_root);
+        let has_existing_boundary = self.view_boundaries.contains_live_node(layer_root);
         let is_rebuild_candidate = {
             let records = &self.interaction_cache.records[start..end];
             records.len() >= hit_test_bounds_tree_min_records()
@@ -258,7 +258,7 @@ impl<H: UiHost> UiTree<H> {
         let records = &self.interaction_cache.records[start..end];
         let nodes = &self.nodes;
         let hit_test_bounds_trees = &mut self.hit_test_bounds_trees;
-        let Some(boundary) = self.view_boundaries.get_mut(layer_root) else {
+        let Some(boundary) = self.view_boundaries.get_live_mut(layer_root) else {
             return;
         };
         hit_test_bounds_trees.rebuild_for_layer_from_records(
@@ -274,7 +274,7 @@ impl<H: UiHost> UiTree<H> {
             return;
         }
 
-        let Some(boundary) = self.view_boundaries.get_mut(layer_root) else {
+        let Some(boundary) = self.view_boundaries.get_live_mut(layer_root) else {
             return;
         };
         let hit_test_bounds_trees = &mut self.hit_test_bounds_trees;
@@ -284,7 +284,7 @@ impl<H: UiHost> UiTree<H> {
     pub(in crate::tree) fn hit_test_bounds_tree_layer_enabled(&self, layer_root: NodeId) -> bool {
         let layer = self
             .view_boundaries
-            .get(layer_root)
+            .get_live(layer_root)
             .map(|boundary| &boundary.frame_products.hit_test_bounds);
         self.hit_test_bounds_trees.layer_enabled(layer)
     }
@@ -297,7 +297,7 @@ impl<H: UiHost> UiTree<H> {
     ) -> (HitTestBoundsTreeQuery, HitTestBoundsTreeQueryStats) {
         let layer = self
             .view_boundaries
-            .get(layer_root)
+            .get_live(layer_root)
             .map(|boundary| &boundary.frame_products.hit_test_bounds);
         let hit_test_bounds_trees = &mut self.hit_test_bounds_trees;
         hit_test_bounds_trees.query(layer, position, collect_stats)

@@ -220,7 +220,7 @@ impl<H: UiHost> UiTree<H> {
         }
 
         let mut contained_roots: Vec<NodeId> = Vec::new();
-        for root in self.dirty_view_frontier.iter_boundary_nodes_v1() {
+        for root in self.dirty_live_boundary_nodes_v1_quarantine() {
             let Some(entry) = self.nodes.get(root) else {
                 continue;
             };

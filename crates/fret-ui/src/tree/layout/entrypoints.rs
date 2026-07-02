@@ -1707,8 +1707,8 @@ impl<H: UiHost> UiTree<H> {
 
     fn prune_detached_layout_followups(&mut self) {
         let detached: Vec<NodeId> = self
-            .dirty_view_frontier
-            .iter_boundary_nodes_v1()
+            .dirty_live_boundary_nodes_v1_quarantine()
+            .into_iter()
             .filter(|&root| !self.node_is_attached_to_layer_tree(root))
             .collect();
         for root in detached {
@@ -2001,7 +2001,7 @@ impl<H: UiHost> UiTree<H> {
         // Hot path: avoid scanning the whole node store. Boundary invalidations are tracked in
         // the dirty view frontier, so we can restrict this pass to the subset that actually changed.
         let mut candidates: Vec<NodeId> = Vec::with_capacity(16);
-        for id in self.dirty_view_frontier.iter_boundary_nodes_v1() {
+        for id in self.dirty_live_boundary_nodes_v1_quarantine() {
             let Some(node) = self.nodes.get(id) else {
                 continue;
             };

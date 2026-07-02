@@ -136,12 +136,12 @@ use shortcuts::{
     KeydownShortcutParams, PendingShortcut, PointerDownOutsideOutcome, PointerDownOutsideParams,
 };
 use small_list::{SmallCopyList, SmallNodeList};
+#[cfg(test)]
+use view_boundary::live_boundary_node_for_view_id_v1_quarantine;
 pub use view_boundary::{
     BoundarySceneChunkManifest, BoundarySceneFragmentChunk, BoundarySceneFragmentDebug,
 };
-use view_boundary::{
-    DirtyViewFrontier, PaintCacheEntryState, ViewBoundaryState, boundary_node_for_view_id_v1,
-};
+use view_boundary::{DirtyViewFrontier, PaintCacheEntryState, ViewBoundaryStore};
 
 use dispatch_snapshot::DispatchSnapshotFrameProductState;
 pub(crate) use dispatch_snapshot::UiDispatchSnapshot;
@@ -519,7 +519,7 @@ pub struct UiTree<H: UiHost> {
     inspection_active: bool,
     window_paint_replay: WindowPaintReplayState,
     interaction_cache: prepaint::InteractionCacheState,
-    view_boundaries: slotmap::SecondaryMap<NodeId, ViewBoundaryState>,
+    view_boundaries: ViewBoundaryStore,
     retained_paint_cache_entries: slotmap::SecondaryMap<NodeId, PaintCacheEntryState>,
     last_paint_scene_chunk_manifest: fret_core::SceneChunkManifest,
 

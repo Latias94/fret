@@ -38,4 +38,6 @@ Make the next U4 slice an entity store plus live projection:
 
 # Disposition
 
-Accepted as the next implementation direction after the `ViewId` bridge split checkpoint.
+Implemented as the next U4 slice. `ViewBoundaryStore` now owns independent `BoundaryId` records plus
+live-node and `ViewId` lookup indexes, and `DirtyViewFrontier` normal mutation is view-native. The
+remaining follow-up is true durable `ViewId` allocation plus runtime detach/rebind semantics.
