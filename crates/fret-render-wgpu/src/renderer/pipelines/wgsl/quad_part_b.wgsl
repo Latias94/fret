@@ -739,22 +739,22 @@ fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
   if (FRET_SHADOW_MODE != 0u) {
     let base_rect = input.rect;
     let source_rect = shadow_source_rect(inst, base_rect);
-    if (source_rect.z <= 0.0 || source_rect.w <= 0.0) {
-      return vec4<f32>(0.0);
-    }
+    let source_valid = source_rect.z > 0.0 && source_rect.w > 0.0;
+    let source_rect_safe = vec4<f32>(source_rect.xy, max(source_rect.zw, vec2<f32>(1e-3)));
 
     let spread = inst.shadow_params.z;
     let blur_radius = max(inst.shadow_params.w, 0.0);
-    let source_radii = shadow_source_radii(input.corner_radii, source_rect.zw, spread);
-    let source_sdf = quad_sdf(input.local_pos, source_rect.xy, source_rect.zw, source_radii);
+    let source_radii = shadow_source_radii(input.corner_radii, source_rect_safe.zw, spread);
+    let source_sdf = quad_sdf(input.local_pos, source_rect_safe.xy, source_rect_safe.zw, source_radii);
     let hard_source_alpha = sdf_coverage_smooth(source_sdf);
     let blurred_alpha = shadow_blurred_alpha(
       input.local_pos,
-      source_rect,
+      source_rect_safe,
       source_radii,
       max(blur_radius, 1e-3)
     );
-    let shadow_alpha = select(blurred_alpha, hard_source_alpha, blur_radius <= 1e-3);
+    let shadow_alpha = select(blurred_alpha, hard_source_alpha, blur_radius <= 1e-3) *
+      select(0.0, 1.0, source_valid);
 
     let content_sdf = quad_sdf(input.local_pos, base_rect.xy, base_rect.zw, input.corner_radii);
     let content_alpha = sdf_coverage_smooth(content_sdf);

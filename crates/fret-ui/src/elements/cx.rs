@@ -3391,8 +3391,10 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     /// prefer [`Self::timer_add_on_timer_for`] so it does not silently clobber previously
     /// installed handlers.
     pub fn timer_on_timer_for(&mut self, element: GlobalElementId, handler: OnTimer) {
+        let frame_id = self.frame_id;
         self.state_for(element, TimerActionHooks::default, |hooks| {
             hooks.on_timer = Some(handler);
+            hooks.on_timer_frame = Some(frame_id);
         });
     }
 
@@ -3402,7 +3404,12 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     /// This is the safer choice for layered policy/helper surfaces that do not exclusively own the
     /// element's timer routing.
     pub fn timer_add_on_timer_for(&mut self, element: GlobalElementId, handler: OnTimer) {
+        let frame_id = self.frame_id;
         self.state_for(element, TimerActionHooks::default, |hooks| {
+            if hooks.on_timer_frame != Some(frame_id) {
+                hooks.on_timer = None;
+                hooks.on_timer_frame = Some(frame_id);
+            }
             hooks.on_timer = chain_timer_handlers(hooks.on_timer.clone(), handler);
         });
     }
@@ -3410,6 +3417,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     pub fn timer_clear_on_timer_for(&mut self, element: GlobalElementId) {
         self.state_for(element, TimerActionHooks::default, |hooks| {
             hooks.on_timer = None;
+            hooks.on_timer_frame = None;
         });
     }
 
@@ -4926,11 +4934,15 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
 
 #[cfg(test)]
 mod tests {
+    use std::any::TypeId;
+
+    use super::ElementContext;
+    use super::ElementRuntime;
     use super::GlobalElementId;
     use super::chain_timer_handlers;
-    use crate::action::{ActionCx, UiActionHost, UiFocusActionHost};
+    use crate::action::{ActionCx, TimerActionHooks, UiActionHost, UiFocusActionHost};
     use crate::test_host::TestHost;
-    use fret_core::AppWindowId;
+    use fret_core::{AppWindowId, Point, Px, Rect, Size};
     use fret_runtime::{TimeHost, TimerToken};
     use std::sync::{Arc, Mutex};
 
@@ -5046,6 +5058,110 @@ mod tests {
         assert_eq!(
             calls.lock().unwrap_or_else(|e| e.into_inner()).as_slice(),
             &["first"]
+        );
+    }
+
+    #[test]
+    fn additive_timer_handlers_rebuild_across_frames() {
+        fn render_timer_handler(
+            app: &mut TestHost,
+            runtime: &mut ElementRuntime,
+            window: AppWindowId,
+            element: GlobalElementId,
+            label: &'static str,
+            calls: Arc<Mutex<Vec<&'static str>>>,
+        ) {
+            let mut cx = ElementContext::new(
+                app,
+                runtime,
+                window,
+                Rect::new(
+                    Point::new(Px(0.0), Px(0.0)),
+                    Size::new(Px(100.0), Px(100.0)),
+                ),
+                element,
+            );
+            cx.timer_add_on_timer_for(
+                element,
+                Arc::new(move |_host, _cx, _token| {
+                    calls.lock().unwrap_or_else(|e| e.into_inner()).push(label);
+                    true
+                }),
+            );
+        }
+
+        fn timer_handler(
+            runtime: &ElementRuntime,
+            window: AppWindowId,
+            element: GlobalElementId,
+        ) -> crate::action::OnTimer {
+            let key = (element, TypeId::of::<TimerActionHooks>());
+            runtime
+                .for_window(window)
+                .and_then(|state| state.state_any_ref(&key))
+                .and_then(|state| state.downcast_ref::<TimerActionHooks>())
+                .and_then(|hooks| hooks.on_timer.clone())
+                .expect("timer handler")
+        }
+
+        let window = AppWindowId::default();
+        let element = GlobalElementId(42);
+        let token = TimerToken(7);
+        let calls = Arc::new(Mutex::new(Vec::<&'static str>::new()));
+        let mut app = TestHost::new();
+        let mut runtime = ElementRuntime::default();
+
+        render_timer_handler(
+            &mut app,
+            &mut runtime,
+            window,
+            element,
+            "frame0",
+            calls.clone(),
+        );
+        let mut host = TestTimerHost {
+            app: &mut app,
+            requested_focus: None,
+        };
+        assert!(timer_handler(&runtime, window, element)(
+            &mut host,
+            ActionCx {
+                window,
+                target: element,
+            },
+            token,
+        ));
+        assert_eq!(
+            calls.lock().unwrap_or_else(|e| e.into_inner()).as_slice(),
+            &["frame0"]
+        );
+
+        app.advance_frame();
+        render_timer_handler(
+            &mut app,
+            &mut runtime,
+            window,
+            element,
+            "frame1",
+            calls.clone(),
+        );
+        let mut host = TestTimerHost {
+            app: &mut app,
+            requested_focus: None,
+        };
+        assert!(timer_handler(&runtime, window, element)(
+            &mut host,
+            ActionCx {
+                window,
+                target: element,
+            },
+            token,
+        ));
+
+        assert_eq!(
+            calls.lock().unwrap_or_else(|e| e.into_inner()).as_slice(),
+            &["frame0", "frame1"],
+            "additive timer handlers must not keep wrapping the previous frame's chain"
         );
     }
 }

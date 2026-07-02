@@ -8,7 +8,7 @@ use super::{TextFrameResidency, TextPrepareScenePerf, TextSystem};
 use fret_core::TextBlobId;
 #[cfg(test)]
 use fret_core::scene::Scene;
-use std::time::Instant;
+use fret_core::time::Instant;
 
 impl TextSystem {
     pub fn atlas_bind_group_layout(&self) -> &wgpu::BindGroupLayout {

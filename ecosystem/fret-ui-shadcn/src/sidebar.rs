@@ -205,8 +205,16 @@ fn sidebar_open_from_cookie_header(cookie_header: &str) -> Option<bool> {
 }
 
 #[cfg(target_arch = "wasm32")]
-fn read_sidebar_open_cookie() -> Option<bool> {
+fn sidebar_html_document() -> Option<web_sys::HtmlDocument> {
+    use wasm_bindgen::JsCast as _;
+
     let document = web_sys::window()?.document()?;
+    document.dyn_into::<web_sys::HtmlDocument>().ok()
+}
+
+#[cfg(target_arch = "wasm32")]
+fn read_sidebar_open_cookie() -> Option<bool> {
+    let document = sidebar_html_document()?;
     let cookies = document.cookie().ok()?;
     sidebar_open_from_cookie_header(&cookies)
 }
@@ -218,7 +226,7 @@ fn read_sidebar_open_cookie() -> Option<bool> {
 
 #[cfg(target_arch = "wasm32")]
 fn persist_sidebar_open_cookie(open: bool) {
-    if let Some(document) = web_sys::window().and_then(|window| window.document()) {
+    if let Some(document) = sidebar_html_document() {
         let _ = document.set_cookie(&sidebar_cookie_assignment(open));
     }
 }

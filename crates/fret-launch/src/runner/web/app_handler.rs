@@ -249,6 +249,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     surface_state,
                     renderer,
                     last_surface_error: None,
+                    renderer_perf_enabled: diag_flags.renderer_perf_enabled,
                     diag_keepalive_redraw: diag_flags.devtools_ws_configured,
                 });
                 if let Some(proxy) = proxy {

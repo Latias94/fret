@@ -28,6 +28,7 @@ fn present_mode_from_env(caps: &wgpu::SurfaceCapabilities) -> Option<wgpu::Prese
     caps.present_modes.iter().copied().find(|m| *m == desired)
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn configure_surface_checked(
     surface: &wgpu::Surface<'_>,
     device: &wgpu::Device,
@@ -44,20 +45,31 @@ fn configure_surface_checked(
     Ok(())
 }
 
+#[cfg(target_arch = "wasm32")]
+fn configure_surface_checked(
+    surface: &wgpu::Surface<'_>,
+    device: &wgpu::Device,
+    config: &wgpu::SurfaceConfiguration,
+) -> Result<(), RenderError> {
+    // WebGPU error scopes resolve asynchronously in browsers. The web runner must not block the
+    // single-threaded wasm main loop while configuring or resizing a surface.
+    surface.configure(device, config);
+    Ok(())
+}
+
 pub struct SurfaceState<'window> {
     pub surface: wgpu::Surface<'window>,
     pub config: wgpu::SurfaceConfiguration,
 }
 
 impl<'window> SurfaceState<'window> {
-    pub fn new_with_usage(
+    fn build_config(
         adapter: &wgpu::Adapter,
-        device: &wgpu::Device,
-        surface: wgpu::Surface<'window>,
+        surface: &wgpu::Surface<'window>,
         width: u32,
         height: u32,
         usage: wgpu::TextureUsages,
-    ) -> Result<Self, RenderError> {
+    ) -> Result<wgpu::SurfaceConfiguration, RenderError> {
         let capabilities = surface.get_capabilities(adapter);
         if capabilities.formats.is_empty() {
             return Err(RenderError::SurfaceNoFormats);
@@ -83,7 +95,7 @@ impl<'window> SurfaceState<'window> {
                 .unwrap_or(2)
                 .clamp(1, 8);
 
-        let config = wgpu::SurfaceConfiguration {
+        Ok(wgpu::SurfaceConfiguration {
             usage,
             format,
             width: width.max(1),
@@ -92,8 +104,18 @@ impl<'window> SurfaceState<'window> {
             desired_maximum_frame_latency,
             alpha_mode: capabilities.alpha_modes[0],
             view_formats: vec![],
-        };
+        })
+    }
 
+    pub fn new_with_usage(
+        adapter: &wgpu::Adapter,
+        device: &wgpu::Device,
+        surface: wgpu::Surface<'window>,
+        width: u32,
+        height: u32,
+        usage: wgpu::TextureUsages,
+    ) -> Result<Self, RenderError> {
+        let config = Self::build_config(adapter, &surface, width, height, usage)?;
         configure_surface_checked(&surface, device, &config)?;
 
         Ok(Self { surface, config })

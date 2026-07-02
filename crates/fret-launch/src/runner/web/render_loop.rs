@@ -529,6 +529,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             std::env::var_os("FRET_RENDER_TEXT_DEBUG").is_some_and(|v| !v.is_empty());
         let render_text_diag_enabled = std::env::var_os("FRET_DIAG_DIR")
             .is_some_and(|v| !v.is_empty())
+            || gfx.renderer_perf_enabled
             || render_text_debug_enabled;
         enter_web_frame_phase(
             WebFramePhase::Render {

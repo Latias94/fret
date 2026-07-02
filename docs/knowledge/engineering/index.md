@@ -48,6 +48,8 @@ It is a sidecar for session recovery and subagent synthesis, not a replacement f
 - [U8 code-editor text/cache diagnostics](progress/2026-07-01-u8-code-editor-text-cache-diagnostics.md)
 - [U8 editor paint cache artifact gate](progress/2026-07-01-u8-editor-paint-cache-artifact-gate.md)
 - [U8 text budget gate wrapper](progress/2026-07-01-u8-text-budget-gate-wrapper.md)
+- [U8 web wasm runtime evidence closeout](progress/2026-07-02-u8-web-wasm-runtime-evidence.md)
+- [U8 web gallery-dev page availability audit](subagents/2026-07-02-u8-web-gallery-dev-page-audit.md)
 - [U9 view context split](progress/2026-07-01-u9-view-context-split.md)
 - [U9 consumption profile gate hardening](progress/2026-07-01-u9-consumption-profile-gate.md)
 - [U9 view runtime split](progress/2026-07-01-u9-view-runtime-split.md)

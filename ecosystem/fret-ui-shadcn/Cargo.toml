@@ -37,7 +37,8 @@ serde_json.workspace = true
 time.workspace = true
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-web-sys = { version = "0.3", features = ["Document", "Window"] }
+wasm-bindgen = "0.2"
+web-sys = { version = "0.3", features = ["Document", "HtmlDocument", "Window"] }
 
 [dev-dependencies]
 fret-app = { version = "0.1.0", path = "../../crates/fret-app" }

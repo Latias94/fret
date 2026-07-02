@@ -4,7 +4,7 @@ use fret_core::{
     PointerId, PointerType, Rect, UiServices,
 };
 use fret_runtime::{
-    ActionId, CommandId, DefaultAction, DragHost, DragKindId, DragSession, Effect, Model,
+    ActionId, CommandId, DefaultAction, DragHost, DragKindId, DragSession, Effect, FrameId, Model,
     ModelStore, PlatformTextInputQuery, PlatformTextInputQueryResult, TickId, TimerToken,
     Utf16Range, WeakModel,
 };
@@ -1119,6 +1119,7 @@ pub type OnTimer = Arc<dyn Fn(&mut dyn UiFocusActionHost, ActionCx, TimerToken) 
 #[derive(Default)]
 pub(crate) struct TimerActionHooks {
     pub on_timer: Option<OnTimer>,
+    pub on_timer_frame: Option<FrameId>,
 }
 
 #[derive(Debug, Clone)]

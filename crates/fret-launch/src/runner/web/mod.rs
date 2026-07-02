@@ -46,6 +46,7 @@ struct GfxState {
     surface_state: SurfaceState<'static>,
     renderer: Renderer,
     last_surface_error: Option<fret_render::SurfaceAcquireError>,
+    renderer_perf_enabled: bool,
     diag_keepalive_redraw: bool,
 }
 

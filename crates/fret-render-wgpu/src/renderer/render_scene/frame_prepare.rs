@@ -1,5 +1,6 @@
 use super::super::*;
 use super::visible_text::visible_text_residency_for_scene;
+use fret_core::time::Instant;
 
 impl Renderer {
     pub(super) fn prepare_text_for_frame(
@@ -29,7 +30,7 @@ impl Renderer {
                     frame_index,
                     perf_enabled,
                 );
-                let flush_start = perf_enabled.then(std::time::Instant::now);
+                let flush_start = perf_enabled.then(Instant::now);
                 self.text_system.flush_uploads(queue);
                 if let Some(start) = flush_start {
                     text_prepare_perf.flush_uploads += start.elapsed();
