@@ -933,6 +933,9 @@ fn build_flow_subtree_impl<H: UiHost>(
             engine.set_style(node, style);
             engine.set_children(node, &[]);
             set_measured_and_dirty_if_layout_invalidated(engine, tree, node, measured);
+            if measured && wrap != fret_core::TextWrap::None {
+                engine.mark_measured_node_dirty(node);
+            }
             engine.set_measure_min_content_width_as_max(node, min_content_width_as_max);
         }
         Some(ElementInstance::StyledText(props)) => {
@@ -998,6 +1001,9 @@ fn build_flow_subtree_impl<H: UiHost>(
             engine.set_style(node, style);
             engine.set_children(node, &[]);
             set_measured_and_dirty_if_layout_invalidated(engine, tree, node, measured);
+            if measured && wrap != fret_core::TextWrap::None {
+                engine.mark_measured_node_dirty(node);
+            }
             engine.set_measure_min_content_width_as_max(node, min_content_width_as_max);
         }
         Some(ElementInstance::SelectableText(props)) => {
@@ -1063,6 +1069,9 @@ fn build_flow_subtree_impl<H: UiHost>(
             engine.set_style(node, style);
             engine.set_children(node, &[]);
             set_measured_and_dirty_if_layout_invalidated(engine, tree, node, measured);
+            if measured && wrap != fret_core::TextWrap::None {
+                engine.mark_measured_node_dirty(node);
+            }
             engine.set_measure_min_content_width_as_max(node, min_content_width_as_max);
         }
         Some(ElementInstance::Scroll(_)) => {

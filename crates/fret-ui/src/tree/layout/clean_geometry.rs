@@ -1635,6 +1635,7 @@ impl<H: UiHost> UiTree<H> {
                             return self.clean_wrapped_text_cached_metrics_supported(
                                 node,
                                 bounds,
+                                prev_bounds,
                                 instance,
                                 element_kind,
                                 fingerprint,
@@ -1788,6 +1789,7 @@ impl<H: UiHost> UiTree<H> {
         &self,
         node: NodeId,
         bounds: Rect,
+        prev_bounds: Rect,
         instance: &crate::declarative::frame::ElementInstance,
         element_kind: &'static str,
         fingerprint: u64,
@@ -1838,6 +1840,14 @@ impl<H: UiHost> UiTree<H> {
                 element_kind,
             )
             .with_detail(CleanGeometrySolveSkipRejectionDetail::TextCachedSizeMismatch)
+            .at_node(node));
+        }
+        if (clamped_size.height.0 - prev_bounds.size.height.0).abs() > 0.01 {
+            return Err(CleanGeometrySolveSkipRejection::for_kind(
+                CleanGeometrySolveSkipRejectionReason::TextReflow,
+                element_kind,
+            )
+            .with_detail(CleanGeometrySolveSkipRejectionDetail::TextHeightDelta)
             .at_node(node));
         }
 
@@ -2530,6 +2540,13 @@ impl<H: UiHost> UiTree<H> {
                 }
                 _ => unreachable!("unsupported vertical flex cross-axis alignment rejected above"),
             };
+            if (width.0 - prev_child.size.width.0).abs() > 0.01
+                && matches!(child_style.size.height, crate::element::Length::Auto)
+                && let Some(rejection) =
+                    self.clean_width_delta_wrapped_text_auto_height_rejection(app, window, child)
+            {
+                return Err(rejection);
+            }
             let origin_x = if horizontal_auto_margin {
                 Px(bounds.origin.x.0 + pad_left + (next_inner_width - width.0).max(0.0) * 0.5)
             } else {
@@ -2765,6 +2782,13 @@ impl<H: UiHost> UiTree<H> {
             } else {
                 prev_child.size.height
             };
+            if (next_width.0 - prev_child.size.width.0).abs() > 0.01
+                && matches!(child_style.size.height, crate::element::Length::Auto)
+                && let Some(rejection) =
+                    self.clean_width_delta_wrapped_text_auto_height_rejection(app, window, child)
+            {
+                return Err(rejection);
+            }
             out.push((
                 child,
                 Rect::new(
@@ -2928,6 +2952,13 @@ impl<H: UiHost> UiTree<H> {
             } else {
                 prev_child.size.width
             };
+            if (width.0 - prev_child.size.width.0).abs() > 0.01
+                && matches!(child_style.size.height, crate::element::Length::Auto)
+                && let Some(rejection) =
+                    self.clean_width_delta_wrapped_text_auto_height_rejection(app, window, child)
+            {
+                return Err(rejection);
+            }
             out.push((
                 child,
                 Rect::new(
@@ -2941,6 +2972,68 @@ impl<H: UiHost> UiTree<H> {
         }
 
         Ok(out)
+    }
+
+    fn clean_width_delta_wrapped_text_auto_height_rejection(
+        &self,
+        app: &mut H,
+        window: AppWindowId,
+        root: NodeId,
+    ) -> Option<CleanGeometrySolveSkipRejection> {
+        let mut stack = vec![root];
+        while let Some(node) = stack.pop() {
+            if let Some(record) =
+                crate::declarative::frame::element_record_for_node(app, window, node)
+            {
+                match &record.instance {
+                    crate::declarative::frame::ElementInstance::Text(props)
+                        if props.wrap != TextWrap::None
+                            && matches!(props.layout.size.height, crate::element::Length::Auto) =>
+                    {
+                        return Some(
+                            CleanGeometrySolveSkipRejection::for_kind(
+                                CleanGeometrySolveSkipRejectionReason::TextReflow,
+                                record.instance.kind_name(),
+                            )
+                            .with_detail(CleanGeometrySolveSkipRejectionDetail::TextWrapNotNone)
+                            .at_node(node),
+                        );
+                    }
+                    crate::declarative::frame::ElementInstance::StyledText(props)
+                        if props.wrap != TextWrap::None
+                            && matches!(props.layout.size.height, crate::element::Length::Auto) =>
+                    {
+                        return Some(
+                            CleanGeometrySolveSkipRejection::for_kind(
+                                CleanGeometrySolveSkipRejectionReason::TextReflow,
+                                record.instance.kind_name(),
+                            )
+                            .with_detail(CleanGeometrySolveSkipRejectionDetail::TextWrapNotNone)
+                            .at_node(node),
+                        );
+                    }
+                    crate::declarative::frame::ElementInstance::SelectableText(props)
+                        if props.wrap != TextWrap::None
+                            && matches!(props.layout.size.height, crate::element::Length::Auto) =>
+                    {
+                        return Some(
+                            CleanGeometrySolveSkipRejection::for_kind(
+                                CleanGeometrySolveSkipRejectionReason::TextReflow,
+                                record.instance.kind_name(),
+                            )
+                            .with_detail(CleanGeometrySolveSkipRejectionDetail::TextWrapNotNone)
+                            .at_node(node),
+                        );
+                    }
+                    _ => {}
+                }
+            }
+
+            if let Some(entry) = self.nodes.get(node) {
+                stack.extend(entry.children.iter().rev().copied());
+            }
+        }
+        None
     }
 
     fn clean_grid_explicit_auto_or_px_track_count(

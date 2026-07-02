@@ -278,6 +278,7 @@ impl<H: UiHost> UiTree<H> {
                             is_focusable,
                             traverse_children,
                             before_child,
+                            has_declarative_semantics_relations,
                             node_semantics_dirty,
                             subtree_semantics_dirty_count,
                         ) = {
@@ -353,6 +354,13 @@ impl<H: UiHost> UiTree<H> {
                             let is_focusable = widget.is_some_and(|w| w.is_focusable());
                             let traverse_children =
                                 widget.map(|w| w.semantics_children()).unwrap_or(true);
+                            let has_declarative_semantics_relations =
+                                crate::declarative::frame::element_record_for_node(app, window, id)
+                                    .is_some_and(|record| {
+                                        Self::element_record_has_declarative_semantics_relations(
+                                            &record,
+                                        )
+                                    });
                             let child_transform = prepaint
                                 .as_ref()
                                 .and_then(|p| p.children_render_transform_inv)
@@ -375,6 +383,7 @@ impl<H: UiHost> UiTree<H> {
                                 is_focusable,
                                 traverse_children,
                                 before_child,
+                                has_declarative_semantics_relations,
                                 node.semantics_dirty,
                                 node.subtree_semantics_dirty_count,
                             )
@@ -383,6 +392,7 @@ impl<H: UiHost> UiTree<H> {
                         let mut node_geometry_changed = false;
                         if can_reuse_previous_snapshot
                             && !ancestor_rebuilt
+                            && !has_declarative_semantics_relations
                             && subtree_semantics_dirty_count == 0
                         {
                             if self.view_boundaries.get(id).is_some_and(|boundary| {
@@ -711,6 +721,46 @@ impl<H: UiHost> UiTree<H> {
             } else {
                 boundary.frame_products.semantics.clear();
             }
+        }
+    }
+
+    fn element_record_has_declarative_semantics_relations(
+        record: &crate::declarative::frame::ElementRecord,
+    ) -> bool {
+        if record
+            .semantics_decoration
+            .as_ref()
+            .is_some_and(|decoration| {
+                decoration.active_descendant_element.is_some()
+                    || decoration.labelled_by_element.is_some()
+                    || decoration.described_by_element.is_some()
+                    || decoration.controls_element.is_some()
+            })
+        {
+            return true;
+        }
+
+        match &record.instance {
+            crate::declarative::frame::ElementInstance::Semantics(props) => {
+                props.labelled_by_element.is_some()
+                    || props.described_by_element.is_some()
+                    || props.controls_element.is_some()
+            }
+            crate::declarative::frame::ElementInstance::TextInput(props) => {
+                props.active_descendant_element.is_some()
+                    || props.labelled_by_element.is_some()
+                    || props.described_by_element.is_some()
+                    || props.controls_element.is_some()
+            }
+            crate::declarative::frame::ElementInstance::TextArea(props) => {
+                props.labelled_by_element.is_some() || props.described_by_element.is_some()
+            }
+            crate::declarative::frame::ElementInstance::Pressable(props) => {
+                props.a11y.labelled_by_element.is_some()
+                    || props.a11y.described_by_element.is_some()
+                    || props.a11y.controls_element.is_some()
+            }
+            _ => false,
         }
     }
 

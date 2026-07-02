@@ -35,7 +35,7 @@ impl<H: UiHost> UiTree<H> {
                 crate::layout_engine::ViewportRootOverride::from_available(root_size, available),
                 scale_factor,
             );
-            self.mark_layout_engine_seen_subtree_from_ui_children(engine, root);
+            self.mark_layout_engine_seen_subtree_from_ui_children(app, window, engine, root, true);
         } else {
             crate::layout_engine::build_viewport_flow_subtree_for_available(
                 engine,

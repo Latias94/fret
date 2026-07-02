@@ -585,8 +585,8 @@ fn canvas_prepaint_can_prepare_text_scene_fragment_before_paint() {
         manifest.chunks()[0].chunk().ops_len()
     );
     assert_eq!(
-        frame_manifest.entries()[0].fingerprint(),
-        manifest.chunks()[0].fingerprint()
+        frame_manifest.entries()[0].chunk().fingerprint(),
+        manifest.chunks()[0].chunk().fingerprint()
     );
     assert_eq!(frame_manifest.entries()[0].local_bounds(), bounds);
     assert_eq!(frame_manifest.entries()[0].scene_origin(), bounds.origin);

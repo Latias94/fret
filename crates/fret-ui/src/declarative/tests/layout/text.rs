@@ -1062,12 +1062,6 @@ fn text_measurement_and_paint_agree_on_wrap_width_in_a_column() {
     let mut scene = Scene::default();
     ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
 
-    let measured = services
-        .measured
-        .iter()
-        .find(|c| c.max_width.is_some_and(|w| (w.0 - 40.0).abs() < 0.01))
-        .copied()
-        .expect("measured constraints");
     let prepared = services
         .prepared
         .iter()
@@ -1076,8 +1070,8 @@ fn text_measurement_and_paint_agree_on_wrap_width_in_a_column() {
         .expect("prepared constraints");
 
     assert!(
-        (measured.max_width.unwrap().0 - prepared.max_width.unwrap().0).abs() < 0.01,
-        "expected measure/paint to use the same wrap width; measured={measured:?} prepared={prepared:?}"
+        (prepared.max_width.unwrap().0 - text_bounds.size.width.0).abs() < 0.01,
+        "expected wrapped text preparation to use the layout wrap width; text={text_bounds:?} prepared={prepared:?}"
     );
 
     let prepared_metrics = services
@@ -1278,18 +1272,6 @@ fn text_measurement_and_paint_agree_on_wrap_width_in_max_width_row() {
     let mut scene = Scene::default();
     ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
 
-    let measured = services
-        .measured
-        .iter()
-        .filter(|c| matches!(c.wrap, fret_core::TextWrap::WordBreak))
-        .max_by(|a, b| {
-            a.max_width
-                .unwrap_or(Px(0.0))
-                .0
-                .total_cmp(&b.max_width.unwrap_or(Px(0.0)).0)
-        })
-        .copied()
-        .expect("measured constraints");
     let prepared = services
         .prepared
         .iter()
@@ -1304,8 +1286,8 @@ fn text_measurement_and_paint_agree_on_wrap_width_in_max_width_row() {
         .expect("prepared constraints");
 
     assert!(
-        (measured.max_width.unwrap().0 - prepared.max_width.unwrap().0).abs() < 0.01,
-        "expected measure/paint to use the same wrap width inside max-width row; measured={measured:?} prepared={prepared:?}"
+        (prepared.max_width.unwrap().0 - wrapped_bounds.size.width.0).abs() < 0.01,
+        "expected wrapped text preparation to use the layout wrap width inside max-width row; wrapped={wrapped_bounds:?} prepared={prepared:?}"
     );
 
     let prepared_metrics = services

@@ -1730,8 +1730,11 @@ impl<H: UiHost> UiTree<H> {
 
     pub(super) fn mark_layout_engine_seen_subtree_from_ui_children(
         &mut self,
+        app: &mut H,
+        window: AppWindowId,
         engine: &mut crate::layout_engine::TaffyLayoutEngine,
         root: NodeId,
+        mark_wrapped_text_dirty: bool,
     ) -> u32 {
         if engine.layout_id_for_node(root).is_none() {
             return 0;
@@ -1743,6 +1746,23 @@ impl<H: UiHost> UiTree<H> {
         while let Some(node) = self.scratch_node_stack.pop() {
             if engine.mark_seen_if_present(node) {
                 marked = marked.saturating_add(1);
+            }
+            if mark_wrapped_text_dirty
+                && crate::declarative::frame::element_record_for_node(app, window, node)
+                    .is_some_and(|record| match &record.instance {
+                        crate::declarative::frame::ElementInstance::Text(props) => {
+                            props.wrap != fret_core::TextWrap::None
+                        }
+                        crate::declarative::frame::ElementInstance::StyledText(props) => {
+                            props.wrap != fret_core::TextWrap::None
+                        }
+                        crate::declarative::frame::ElementInstance::SelectableText(props) => {
+                            props.wrap != fret_core::TextWrap::None
+                        }
+                        _ => false,
+                    })
+            {
+                engine.mark_measured_node_dirty(node);
             }
             if let Some(entry) = self.nodes.get(node) {
                 if entry.layout_dirty_children_suppressed {
@@ -2248,8 +2268,13 @@ impl<H: UiHost> UiTree<H> {
             }
 
             if had_layout_engine_node && (!needs_layout || is_translation_only) {
-                let nodes_marked_seen =
-                    self.mark_layout_engine_seen_subtree_from_ui_children(&mut engine, root);
+                let nodes_marked_seen = self.mark_layout_engine_seen_subtree_from_ui_children(
+                    app,
+                    window,
+                    &mut engine,
+                    root,
+                    false,
+                );
                 self.debug_record_layout_request_build_root_if_enabled(
                     app,
                     window,
@@ -2274,8 +2299,13 @@ impl<H: UiHost> UiTree<H> {
             {
                 engine.set_viewport_root_override_size(root, bounds.size, sf);
                 self.note_interactive_resize_cached_flow_reuse();
-                let nodes_marked_seen =
-                    self.mark_layout_engine_seen_subtree_from_ui_children(&mut engine, root);
+                let nodes_marked_seen = self.mark_layout_engine_seen_subtree_from_ui_children(
+                    app,
+                    window,
+                    &mut engine,
+                    root,
+                    true,
+                );
                 self.debug_record_layout_request_build_root_if_enabled(
                     app,
                     window,
@@ -2621,8 +2651,11 @@ impl<H: UiHost> UiTree<H> {
                     if had_layout_engine_node && (!item.needs_layout || item.is_translation_only) {
                         let nodes_marked_seen = self
                             .mark_layout_engine_seen_subtree_from_ui_children(
+                                app,
+                                window,
                                 &mut engine,
                                 item.root,
+                                false,
                             );
                         self.debug_record_layout_request_build_root_if_enabled(
                             app,
@@ -2650,8 +2683,11 @@ impl<H: UiHost> UiTree<H> {
                         self.note_interactive_resize_cached_flow_reuse();
                         let nodes_marked_seen = self
                             .mark_layout_engine_seen_subtree_from_ui_children(
+                                app,
+                                window,
                                 &mut engine,
                                 item.root,
+                                true,
                             );
                         self.debug_record_layout_request_build_root_if_enabled(
                             app,

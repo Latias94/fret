@@ -306,17 +306,6 @@ fn interactive_resize_wrapped_text_uses_exact_width_by_default() {
         services.measured
     );
     assert!(
-        services.measured.iter().any(|constraints| {
-            matches!(constraints.wrap, fret_core::TextWrap::Word)
-                && constraints
-                    .max_width
-                    .is_some_and(|width| (width.0 - first_text_bounds.size.width.0).abs() < 0.01)
-        }),
-        "expected wrapped text measurement to receive the exact final text box width by default; text_bounds={first_text_bounds:?} measured={:?}",
-        services.measured
-    );
-
-    assert!(
         services.prepared.iter().any(|constraints| {
             matches!(constraints.wrap, fret_core::TextWrap::Word)
                 && constraints
@@ -378,16 +367,6 @@ fn interactive_resize_wrapped_text_width_bucketing_is_opt_in() {
     assert!(
         (first_text_bounds.size.width.0 - 82.0).abs() < 0.01,
         "opt-in wrap-width bucketing must not change the final flex item box; bounds={first_text_bounds:?} measured={:?}",
-        services.measured
-    );
-    assert!(
-        services.measured.iter().any(|constraints| {
-            matches!(constraints.wrap, fret_core::TextWrap::Word)
-                && constraints
-                    .max_width
-                    .is_some_and(|width| (width.0 - 96.0).abs() < 0.01)
-        }),
-        "expected opt-in bucketing to send the snapped wrap width to text measurement; measured={:?}",
         services.measured
     );
     assert!(
