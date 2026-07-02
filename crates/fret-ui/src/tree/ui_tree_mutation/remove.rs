@@ -385,6 +385,9 @@ impl<H: UiHost> UiTree<H> {
             if let Some(n) = self.nodes.get(node) {
                 self.update_invalidation_counters(n.invalidation, InvalidationFlags::default());
             }
+            if let Some(element) = self.nodes.get(node).and_then(|n| n.element) {
+                self.unindex_node_element_binding(node, element);
+            }
             if layout_invalidated {
                 record_layout_invalidation_transition(
                     &mut self.layout_invalidations_count,

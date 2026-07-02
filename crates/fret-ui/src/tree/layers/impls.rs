@@ -159,6 +159,7 @@ impl<H: UiHost> UiTree<H> {
         self.invalidate_dispatch_snapshot_cache();
         self.mark_semantics_dirty();
         self.request_post_layout_window_runtime_snapshot_refine_if_layout_active();
+        self.index_live_subtree(root);
         id
     }
 
@@ -190,6 +191,7 @@ impl<H: UiHost> UiTree<H> {
         self.invalidate_dispatch_snapshot_cache();
         self.mark_semantics_dirty();
         self.request_post_layout_window_runtime_snapshot_refine_if_layout_active();
+        self.index_live_subtree(root);
 
         if options.blocks_underlay_input {
             let (active_roots, _barrier_root) = self.active_input_layers();
@@ -233,6 +235,7 @@ impl<H: UiHost> UiTree<H> {
         if !removed.is_empty() {
             self.invalidate_dispatch_snapshot_cache();
         }
+        self.rebuild_live_element_index();
         self.mark_semantics_dirty();
 
         Some(root)
@@ -662,5 +665,6 @@ impl<H: UiHost> UiTree<H> {
         self.prune_interaction_state_outside_active_layers("layers: update_layer_root");
         self.mark_semantics_dirty();
         self.request_post_layout_window_runtime_snapshot_refine_if_layout_active();
+        self.rebuild_live_element_index();
     }
 }

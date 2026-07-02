@@ -318,6 +318,46 @@ impl<H: UiHost> UiTree<H> {
             .saturating_add(1);
     }
 
+    pub(crate) fn debug_record_identity_index_hit(&mut self) {
+        if !self.debug_enabled {
+            return;
+        }
+        self.debug_stats.identity_resolve_index_hits = self
+            .debug_stats
+            .identity_resolve_index_hits
+            .saturating_add(1);
+    }
+
+    pub(crate) fn debug_record_identity_index_stale(&mut self) {
+        if !self.debug_enabled {
+            return;
+        }
+        self.debug_stats.identity_resolve_index_stale = self
+            .debug_stats
+            .identity_resolve_index_stale
+            .saturating_add(1);
+    }
+
+    pub(crate) fn debug_record_identity_index_miss(&mut self) {
+        if !self.debug_enabled {
+            return;
+        }
+        self.debug_stats.identity_resolve_index_misses = self
+            .debug_stats
+            .identity_resolve_index_misses
+            .saturating_add(1);
+    }
+
+    pub(crate) fn debug_record_identity_index_duplicate_live(&mut self) {
+        if !self.debug_enabled {
+            return;
+        }
+        self.debug_stats.identity_resolve_index_duplicate_live = self
+            .debug_stats
+            .identity_resolve_index_duplicate_live
+            .saturating_add(1);
+    }
+
     pub(crate) fn debug_record_identity_fallback_scan(&mut self, nodes_scanned: u64, hit: bool) {
         if !self.debug_enabled {
             return;

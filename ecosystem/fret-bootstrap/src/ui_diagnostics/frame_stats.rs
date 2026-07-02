@@ -16,6 +16,14 @@ pub struct UiFrameStatsV1 {
     #[serde(default)]
     pub identity_resolve_seeded_stale: u32,
     #[serde(default)]
+    pub identity_resolve_index_hits: u32,
+    #[serde(default)]
+    pub identity_resolve_index_stale: u32,
+    #[serde(default)]
+    pub identity_resolve_index_misses: u32,
+    #[serde(default)]
+    pub identity_resolve_index_duplicate_live: u32,
+    #[serde(default)]
     pub identity_resolve_fallback_scans: u32,
     #[serde(default)]
     pub identity_resolve_fallback_scan_nodes: u64,
@@ -1138,6 +1146,10 @@ impl UiFrameStatsV1 {
             element_children_vec_pool_grow_events: stats.element_children_vec_pool_grow_events,
             identity_resolve_seeded_hits: stats.identity_resolve_seeded_hits,
             identity_resolve_seeded_stale: stats.identity_resolve_seeded_stale,
+            identity_resolve_index_hits: stats.identity_resolve_index_hits,
+            identity_resolve_index_stale: stats.identity_resolve_index_stale,
+            identity_resolve_index_misses: stats.identity_resolve_index_misses,
+            identity_resolve_index_duplicate_live: stats.identity_resolve_index_duplicate_live,
             identity_resolve_fallback_scans: stats.identity_resolve_fallback_scans,
             identity_resolve_fallback_scan_nodes: stats.identity_resolve_fallback_scan_nodes,
             identity_resolve_fallback_hits: stats.identity_resolve_fallback_hits,

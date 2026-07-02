@@ -325,6 +325,11 @@ impl<H: UiHost> UiTree<H> {
             .is_some_and(|n| n.children.as_slice() == children.as_slice());
         if same_children {
             self.repair_same_children_parent_pointers_and_reconnect_layout(parent, &children);
+            if self.node_is_reachable_from_layer_forest(parent) {
+                for &child in &children {
+                    self.index_live_subtree(child);
+                }
+            }
             return;
         }
 
@@ -360,6 +365,12 @@ impl<H: UiHost> UiTree<H> {
         else {
             return;
         };
+        let parent_was_live = self.node_is_reachable_from_layer_forest(parent);
+        if parent_was_live {
+            for &old in &old_children {
+                self.unindex_detached_child_subtree(old);
+            }
+        }
 
         for old in old_children {
             if let Some(n) = self.nodes.get_mut(old)
@@ -390,6 +401,7 @@ impl<H: UiHost> UiTree<H> {
             }
         }
 
+        let new_children_for_index = children.clone();
         let mut propagate = false;
         let mut counter_update: Option<(InvalidationFlags, InvalidationFlags)> = None;
         let mut layout_transition: Option<(bool, bool)> = None;
@@ -425,6 +437,12 @@ impl<H: UiHost> UiTree<H> {
 
         self.invalidate_dispatch_snapshot_cache();
         self.recompute_node_subtree_layout_dirty_count_and_propagate(parent);
+
+        if parent_was_live {
+            for child in new_children_for_index {
+                self.index_live_subtree(child);
+            }
+        }
 
         if propagate {
             // Structural changes must invalidate ancestors so the next layout pass walks far

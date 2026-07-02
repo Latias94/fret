@@ -1380,6 +1380,13 @@ pub(crate) const REGISTERED_FRAME_STATS_KEYS: &[PerfKey] = &[
     count_key("hover_pressable_target_changes", PerfKeyAggregate::Max),
     count_key("identity_resolve_seeded_hits", PerfKeyAggregate::Max),
     count_key("identity_resolve_seeded_stale", PerfKeyAggregate::Max),
+    count_key("identity_resolve_index_hits", PerfKeyAggregate::Max),
+    count_key("identity_resolve_index_stale", PerfKeyAggregate::Max),
+    count_key("identity_resolve_index_misses", PerfKeyAggregate::Max),
+    count_key(
+        "identity_resolve_index_duplicate_live",
+        PerfKeyAggregate::Max,
+    ),
     count_key("identity_resolve_fallback_scans", PerfKeyAggregate::Max),
     count_key(
         "identity_resolve_fallback_scan_nodes",
@@ -2643,6 +2650,8 @@ mod tests {
             "layout_time_us",
             "frame_arena_capacity_estimate_bytes",
             "element_children_vec_pool_grow_events",
+            "identity_resolve_index_hits",
+            "identity_resolve_index_duplicate_live",
             "identity_resolve_fallback_scans",
             "identity_resolve_fallback_scan_nodes",
             "parent_pointer_repairs",

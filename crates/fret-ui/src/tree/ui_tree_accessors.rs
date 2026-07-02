@@ -46,8 +46,25 @@ impl<H: UiHost> UiTree<H> {
     }
 
     pub(crate) fn set_node_element(&mut self, node: NodeId, element: Option<GlobalElementId>) {
-        if let Some(n) = self.nodes.get_mut(node) {
+        let Some((old_element, new_element)) = self.nodes.get_mut(node).and_then(|n| {
+            if n.element == element {
+                return None;
+            }
+            let old = n.element;
             n.element = element;
+            n.element_binding_generation = n.element_binding_generation.saturating_add(1);
+            Some((old, n.element))
+        }) else {
+            return;
+        };
+
+        if let Some(old_element) = old_element {
+            self.unindex_node_element_binding(node, old_element);
+        }
+        if let Some(new_element) = new_element
+            && self.node_is_reachable_from_layer_forest(node)
+        {
+            self.index_node_element_binding(node, new_element);
         }
     }
 

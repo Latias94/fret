@@ -37,6 +37,10 @@ impl<H: UiHost> UiTree<H> {
         self.debug_stats.element_children_vec_pool_misses = 0;
         self.debug_stats.identity_resolve_seeded_hits = 0;
         self.debug_stats.identity_resolve_seeded_stale = 0;
+        self.debug_stats.identity_resolve_index_hits = 0;
+        self.debug_stats.identity_resolve_index_stale = 0;
+        self.debug_stats.identity_resolve_index_misses = 0;
+        self.debug_stats.identity_resolve_index_duplicate_live = 0;
         self.debug_stats.identity_resolve_fallback_scans = 0;
         self.debug_stats.identity_resolve_fallback_scan_nodes = 0;
         self.debug_stats.identity_resolve_fallback_hits = 0;

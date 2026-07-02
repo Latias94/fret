@@ -93,13 +93,11 @@ fn seeded_live_node_resolution_ignores_stale_detached_node_entry() {
 
     let stats = ui.debug_stats();
     assert_eq!(stats.identity_resolve_seeded_stale, 1);
-    assert_eq!(stats.identity_resolve_fallback_scans, 1);
-    assert_eq!(stats.identity_resolve_fallback_hits, 1);
+    assert_eq!(stats.identity_resolve_index_hits, 1);
+    assert_eq!(stats.identity_resolve_fallback_scans, 0);
+    assert_eq!(stats.identity_resolve_fallback_hits, 0);
     assert_eq!(stats.identity_resolve_fallback_misses, 0);
-    assert!(
-        stats.identity_resolve_fallback_scan_nodes >= 1,
-        "fallback scan pressure must be visible before stable-handle migration"
-    );
+    assert_eq!(stats.identity_resolve_fallback_scan_nodes, 0);
 }
 
 #[test]

@@ -163,3 +163,14 @@ timestamp: 2026-06-30
 - U4-U6 closeout audit subagent `019f20c8-a395-7b02-82e0-d7ed9a71c5c4` confirmed U6 is closed, U5 is closed for the staged convergence slice with a retained v1 boundary-node bridge, and U4 is closed only for identity/dirty diagnostics, not stable-handle deletion. Its retained/deferred findings were folded into the closeout: stable-handle facade/deletion, entity-first `ViewId`, per-boundary ownership of currently window/layer-forest products only when proven, and retained mechanism vocabulary scope for `Roving*` / explicit resizable module paths.
 - UI convergence closeout verification passed: `cargo fmt --all --check`, `python3 tools/check_workstream_catalog.py`, `python3 tools/check_layering.py`, `python3 tools/check_surface_policy.py`, `python3 tools/check_consumption_profiles.py`, `python3 -m unittest tools/test_check_surface_policy.py tools/test_check_consumption_profiles.py`, strict perf-baseline audit, U8 web text-budget gate, wiki-memory validation, and `git diff --check`.
 - ADR numbering follow-on resolved duplicate ID `0324` by preserving the older window hit-testing ADR at `0324` and renumbering the later a11y state-description ADR to `0332`; `check_adr_numbers` and the skip-heavy pre-release smoke now pass.
+- 2026-07-02: Phase 2 U2 stable element node index is partially implemented on
+  `feat/ui-framework-phase2-refactor`. Focused identity, diagnostics, bootstrap, fmt, layering, and
+  diff-check gates pass. Full `cargo nextest run -p fret-ui --no-fail-fast` remains red with 23
+  scroll/layout/text/prepaint failures; explorer `019f21e5-3622-7111-a55e-0d7cddb35d15` is auditing
+  whether they are baseline or U2-triggered. See
+  [Phase 2 U2 stable element node index](progress/2026-07-02-phase2-u2-stable-element-index.md).
+- 2026-07-02: Explorer `019f21e5-3622-7111-a55e-0d7cddb35d15` concluded the 23 `fret-ui` package
+  failures are current-branch scroll/layout/text/prepaint regressions rather than direct U2 index
+  failures. Main-thread reverse-patch baseline experiment reproduced the anchored scroll-transform
+  failure without tracked U2 changes. U2 fixed the remaining stale-index risk by revalidating
+  attachment on indexed hits and adding focused coverage.

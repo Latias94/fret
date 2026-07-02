@@ -4,6 +4,7 @@ impl<H: UiHost> Default for UiTree<H> {
     fn default() -> Self {
         Self {
             nodes: SlotMap::with_key(),
+            element_node_index: ElementNodeIndex::default(),
             layers: SlotMap::with_key(),
             layer_order: Vec::new(),
             root_to_layer: HashMap::new(),

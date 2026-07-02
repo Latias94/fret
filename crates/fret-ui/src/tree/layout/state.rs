@@ -193,12 +193,19 @@ impl<H: UiHost> UiTree<H> {
             && self.nodes.get(node).and_then(|entry| entry.element) == Some(element)
             && self.node_is_attached_to_layer_tree(node)
         {
+            self.debug_record_index_duplicate_if_present(element);
             self.debug_record_identity_seeded_hit();
             return Some(node);
         }
 
         if seeded.is_some() {
             self.debug_record_identity_seeded_stale();
+        }
+
+        match self.resolve_indexed_live_attached_node_for_element(element) {
+            ElementNodeIndexLiveLookup::Hit(node) => return Some(node),
+            ElementNodeIndexLiveLookup::DuplicateLive => return None,
+            ElementNodeIndexLiveLookup::Missing | ElementNodeIndexLiveLookup::Stale => {}
         }
 
         let mut nodes_scanned: u64 = 0;

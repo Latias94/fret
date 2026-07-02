@@ -1838,6 +1838,34 @@
       "unit": "count"
     },
     {
+      "key": "identity_resolve_index_hits",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "identity_resolve_index_stale",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "identity_resolve_index_misses",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "identity_resolve_index_duplicate_live",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
       "key": "identity_resolve_fallback_scans",
       "kind": "counter",
       "scope": "frame",

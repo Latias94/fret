@@ -29,6 +29,11 @@ impl<H: UiHost> UiTree<H> {
                     n.parent = Some(parent);
                 }
             }
+            if self.node_is_reachable_from_layer_forest(parent) {
+                for &child in &children {
+                    self.index_live_subtree(child);
+                }
+            }
             // `set_children_barrier` is used by explicit layout barriers (scroll/virtualization)
             // that may be remounted without changing the child list. Ensure the subtree dirty
             // aggregation stays consistent even when the structural list is identical.
@@ -97,10 +102,14 @@ impl<H: UiHost> UiTree<H> {
         else {
             return;
         };
+        let parent_was_live = self.node_is_reachable_from_layer_forest(parent);
 
         for old in old_children {
             if children.contains(&old) {
                 continue;
+            }
+            if parent_was_live {
+                self.unindex_detached_child_subtree(old);
             }
             if let Some(n) = self.nodes.get_mut(old)
                 && n.parent == Some(parent)
@@ -130,6 +139,7 @@ impl<H: UiHost> UiTree<H> {
             }
         }
 
+        let new_children_for_index = children.clone();
         let mut counter_update: Option<(InvalidationFlags, InvalidationFlags)> = None;
         let mut layout_transition: Option<(bool, bool)> = None;
         if let Some(n) = self.nodes.get_mut(parent) {
@@ -174,6 +184,12 @@ impl<H: UiHost> UiTree<H> {
 
         // Keep subtree layout-dirty aggregation in sync with barrier child changes.
         self.recompute_node_subtree_layout_dirty_count_and_propagate(parent);
+
+        if parent_was_live {
+            for child in new_children_for_index {
+                self.index_live_subtree(child);
+            }
+        }
 
         self.pending_barrier_relayouts.push(parent);
     }

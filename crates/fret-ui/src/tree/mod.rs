@@ -30,6 +30,7 @@ mod dispatch;
 mod dispatch_snapshot;
 mod frame_arena;
 mod hit_test;
+mod identity;
 mod invalidation_dedup;
 mod layers;
 mod layout;
@@ -94,6 +95,7 @@ pub(crate) use debug::{
     fallback_virtual_list_window_shift_detail,
 };
 use frame_arena::FrameArenaScratch;
+use identity::{ElementNodeIndex, ElementNodeIndexLiveLookup};
 use invalidation_dedup::{InvalidationDedupTable, InvalidationVisited};
 use measure::{DebugMeasureChildRecord, MeasureReentrancyDiagnostics, MeasureStackKey};
 use observation::{
@@ -386,6 +388,7 @@ impl CommandRoutingSnapshotState {
 /// ticked and provide host services via the [`UiHost`] trait.
 pub struct UiTree<H: UiHost> {
     nodes: SlotMap<NodeId, Node<H>>,
+    element_node_index: ElementNodeIndex,
     layers: SlotMap<UiLayerId, UiLayer>,
     layer_order: Vec<UiLayerId>,
     root_to_layer: HashMap<NodeId, UiLayerId>,

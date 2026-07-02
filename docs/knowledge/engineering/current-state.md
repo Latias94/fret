@@ -3,20 +3,19 @@ type: Current State
 title: Fret architecture planning current state
 tags: fret,architecture,planning
 timestamp: 2026-07-02
-related_plan: docs/plans/2026-06-30-001-refactor-ui-framework-architecture-plan.md
+related_plan: docs/plans/2026-07-02-001-refactor-ui-framework-phase2-plan.md
 ---
 
 # Current State
 
-- Goal: execute the implementation-ready fearless refactor plan for Fret's UI framework architecture convergence.
-- Branch: `feat/ui-framework-convergence` from local `main` after the planning commit.
-- Last verified: ADR numbering and release-policy smoke passed on 2026-07-02: `python3 tools/check_adr_numbers.py`, `python3 tools/check_execution_surface.py`, `python3 tools/pre_release.py --skip-fmt --skip-clippy --skip-nextest --skip-icons --skip-release-closure --skip-portable-time --skip-diff-check`, workstream catalog, wiki-memory validation, and `git diff --check`.
+- Goal: execute `docs/plans/2026-07-02-001-refactor-ui-framework-phase2-plan.md` as a breaking Phase 2 UI framework refactor.
+- Branch: `feat/ui-framework-phase2-refactor`.
+- Last verified: Phase 2 U2 focused identity/diagnostics gates passed on 2026-07-02; full `cargo nextest run -p fret-ui --no-fail-fast` still has 23 scroll/layout/text/prepaint failures attributed to current-branch baseline regressions.
 - Done: local ADR/workstream research, crate/perf snapshots, GPUI/Zed comparison, architecture boundary audit, framework consumer audit, performance audit, implementation-ready plan, U1 convergence contract freeze, U2 source-policy gate, U3 first slice (`workbench-lite` public scaffold), U4 identity/dirty graph observability slices, U5 `ViewId` / boundary frame-product ownership slices, U6 policy vocabulary demotion/cleanup slices, U7 renderer scene/upload observability plus retained scene chunk and guarded quad resident upload lanes, U8 text/glyph/wasm budget work through web runtime evidence, U9 modular consumption profiles and `AppUi` facade split, workstream closeout audit, duplicate ADR ID `0324` resolution, and execution-surface allowlist alignment.
 - Latest done: ADR numbering and skip-heavy pre-release smoke restoration.
-- In progress: no active work in the closed convergence coordinator.
-- Blocked: no blocking issue.
-- Next action: start a narrow follow-on from the closeout retained/deferred table, or run the full
-  aggregate pre-release gate when release scope needs it.
+- In progress: Phase 2 U2 stable element node index implementation is ready to commit with focused evidence.
+- Blocked: package-level `fret-ui` gate is red with 23 failures that explorer `019f21e5-3622-7111-a55e-0d7cddb35d15` and a reverse-patch baseline experiment attribute to current-branch scroll/layout/text/prepaint regressions, not direct U2 identity-index behavior.
+- Next action: commit the focused U2 slice, then start the next fix from the scroll/layout extent cluster before higher-level scroll-into-view or combobox retained-active failures.
 
 # Citations
 
@@ -28,6 +27,7 @@ related_plan: docs/plans/2026-06-30-001-refactor-ui-framework-architecture-plan.
 - [UI convergence closeout audits](subagents/2026-07-02-ui-convergence-closeout-audits.md)
 - [UI convergence plan closeout](progress/2026-07-02-ui-convergence-closeout.md)
 - [ADR numbering and pre-release smoke restored](progress/2026-07-02-adr-numbering-pre-release-smoke.md)
+- [Phase 2 U2 stable element node index](progress/2026-07-02-phase2-u2-stable-element-index.md)
 - Commit `020bb34a37 docs(architecture): freeze ui convergence contract`
 - Commit `84f60d8355 feat(tools): add ui surface policy gate`
 - Commit `df0d6620ff feat(ui): expose dirty frontier diagnostics`

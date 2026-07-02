@@ -152,6 +152,7 @@ impl TextWrappedMeasureCaches {
 pub(super) struct Node<H: UiHost> {
     pub(super) widget: Option<Box<dyn Widget<H>>>,
     pub(super) element: Option<GlobalElementId>,
+    pub(super) element_binding_generation: u64,
     pub(super) parent: Option<NodeId>,
     pub(super) children: Vec<NodeId>,
     pub(super) children_write_policy: ChildrenWritePolicy,
@@ -264,6 +265,7 @@ impl<H: UiHost> Node<H> {
         Self {
             widget: Some(Box::new(widget)),
             element: None,
+            element_binding_generation: 0,
             parent: None,
             children: Vec::new(),
             children_write_policy: ChildrenWritePolicy::Standard,
@@ -301,6 +303,7 @@ impl<H: UiHost> Node<H> {
     ) -> Self {
         Self {
             element: Some(element),
+            element_binding_generation: 1,
             ..Self::new(widget)
         }
     }

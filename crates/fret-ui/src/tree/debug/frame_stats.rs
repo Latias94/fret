@@ -27,6 +27,14 @@ pub struct UiDebugFrameStats {
     pub identity_resolve_seeded_hits: u32,
     /// Seeded element-to-node resolves where the seed was missing, stale, or detached.
     pub identity_resolve_seeded_stale: u32,
+    /// Element-to-node resolves satisfied by the authoritative element index.
+    pub identity_resolve_index_hits: u32,
+    /// Element index lookups with handles that were missing, stale, rebound, or detached.
+    pub identity_resolve_index_stale: u32,
+    /// Element index lookups with no indexed handle for the element.
+    pub identity_resolve_index_misses: u32,
+    /// Element index lookups where more than one live node carried the same declarative id.
+    pub identity_resolve_index_duplicate_live: u32,
     /// Element-to-node resolves that fell back to scanning retained nodes.
     pub identity_resolve_fallback_scans: u32,
     /// Retained nodes inspected by element-to-node fallback scans.
