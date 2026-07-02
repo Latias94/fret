@@ -36,7 +36,8 @@ Keep the broad coordinator closed. Future work should start as narrow follow-ons
 - non-quad resident partial uploads,
 - flat `Scene` bridge replacement,
 - full-blob text helper deletion,
-- duplicate ADR ID `0324` resolution before aggregate pre-release.
+- duplicate ADR ID `0324` resolution before aggregate pre-release. This was resolved after the
+  closeout audit by renumbering the later a11y state-description ADR to `0332`.
 
 # Disposition
 

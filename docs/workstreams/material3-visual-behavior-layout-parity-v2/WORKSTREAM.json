@@ -147,7 +147,7 @@
     "docs/adr/0067-overlay-policy-architecture-dismissal-focus-portal.md",
     "docs/adr/0166-interactivity-pseudoclasses-and-structural-stability.md",
     "docs/adr/0226-material3-state-layer-and-ripple-primitives.md",
-    "docs/adr/0324-a11y-state-description-semantics-v1.md"
+    "docs/adr/0332-a11y-state-description-semantics-v1.md"
   ],
   "continue_policy": {
     "default_action": "stay_closed",

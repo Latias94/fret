@@ -76,4 +76,5 @@ follow-ons named by the closeout are:
 - renderer output migration beyond the flat `Scene` compatibility bridge,
 - non-quad resident partial uploads,
 - full-blob text helper deletion after chunk-local text closure,
-- duplicate ADR ID `0324` resolution for the aggregate pre-release gate.
+- full aggregate pre-release runs when release scope needs them; the duplicate ADR ID `0324`
+  blocker was resolved by renumbering the later a11y state-description ADR to `0332`.

@@ -46,7 +46,7 @@ publish the expanded suggestions state.
 
 ## Artifacts
 
-- `docs/adr/0324-a11y-state-description-semantics-v1.md`
+- `docs/adr/0332-a11y-state-description-semantics-v1.md`
 - `crates/fret-core/src/semantics.rs`
 - `crates/fret-ui/src/widget.rs`
 - `crates/fret-ui/src/element.rs`

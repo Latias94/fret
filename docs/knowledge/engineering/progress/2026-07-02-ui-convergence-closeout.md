@@ -46,8 +46,8 @@ follow-ons.
   quad instances.
 - U8 keeps full-blob text helpers for chunk/test compatibility while visible glyph residency is the
   runtime frame path.
-- U9 pre-release aggregate remains blocked by duplicate ADR ID `0324`, even though individual
-  consumption-profile and policy gates pass.
+- U9 pre-release aggregate is no longer blocked by duplicate ADR IDs after the follow-on
+  renumbered the later a11y state-description ADR to `0332`.
 
 # Next Action
 

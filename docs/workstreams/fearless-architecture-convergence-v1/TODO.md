@@ -105,5 +105,5 @@ Last updated: 2026-07-02
 - Renderer output migration beyond the flat `Scene` compatibility bridge.
 - Non-quad resident partial uploads after side-table/material/text closure proofs.
 - Full-blob text helper deletion after chunk-local text resource closure.
-- Duplicate ADR ID `0324` resolution so `tools/pre_release.py` can run through the wired
-  consumption-profile gate.
+- Full aggregate pre-release runs when release scope needs them; duplicate ADR ID `0324` was
+  resolved by renumbering the later a11y state-description ADR to `0332`.

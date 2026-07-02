@@ -31,12 +31,13 @@ with positive/native-backend/web-backend fixture cases. `docs/repo-structure.md`
 - `git diff --check`
 - `rg -n "Consumption profiles|check_consumption_profiles" tools/pre_release.py tools/check_consumption_profiles.py`
 
-# Known External Blocker
+# External Blocker Disposition
 
 `python3 tools/pre_release.py --skip-fmt --skip-clippy --skip-nextest --skip-icons --skip-release-closure --skip-portable-time --skip-diff-check`
-currently stops before the new consumption-profile step because the existing ADR ID uniqueness gate
-finds duplicate ID `0324` in `docs/adr/0324-a11y-state-description-semantics-v1.md` and
-`docs/adr/0324-window-input-hit-testing-and-passthrough-v1.md`. This slice does not renumber ADRs.
+stopped before the new consumption-profile step because the existing ADR ID uniqueness gate found
+duplicate ID `0324` in the then-current a11y state-description ADR and
+`docs/adr/0324-window-input-hit-testing-and-passthrough-v1.md`. This was resolved on 2026-07-02 by
+renumbering the later a11y ADR to `docs/adr/0332-a11y-state-description-semantics-v1.md`.
 
 # Next Action
 

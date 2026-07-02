@@ -73,11 +73,11 @@ Fresh validation:
   - `python3 tools/perf/audit_perf_baselines.py --matrix docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-contract-matrix.md --strict`
   - `git diff --check`
 
-Known aggregate blocker:
+Resolved aggregate blocker:
 
-- `python3 tools/check_adr_numbers.py` fails on duplicate ADR ID `0324`, so the full
-  `tools/pre_release.py` aggregate cannot yet run through to the U9 consumption-profile step.
-  Individual architecture gates listed above passed independently.
+- The duplicate ADR ID `0324` blocker was resolved after this closeout by preserving the older
+  window input hit-testing ADR at `0324` and renumbering the later a11y state-description ADR to
+  `0332`. `python3 tools/check_adr_numbers.py` and the skip-heavy pre-release smoke pass.
 
 ## 2026-06-30 - UI framework convergence contract freeze
 

@@ -1,4 +1,4 @@
-# ADR 0324: A11y State Description Semantics (v1)
+# ADR 0332: A11y State Description Semantics (v1)
 
 Status: Accepted
 

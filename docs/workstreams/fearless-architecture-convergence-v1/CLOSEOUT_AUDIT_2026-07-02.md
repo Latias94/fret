@@ -75,7 +75,7 @@ condition is satisfied because each remaining item has a named owner, reason, an
 | Non-quad resident partial uploads | Renderer resident upload follow-on | Real partial writes are safe only for quad instances today. Text/path/material/side-table streams still fall back to full upload because dependency closure is not proven. | Start with a side-table-free non-quad subset and require negative tests for clip masks, text paint closure gaps, resource generation changes, and coverage fallback. |
 | Full-blob text helper paths | Text/glyph residency follow-on | Runtime frame prepare now uses visible glyph residency, but compatibility helpers remain for chunk/test paths and should not be deleted until chunk-local text closure is complete. | Add per-chunk text-resource closure gates, then remove full-blob helper dependence where no longer needed. |
 | U8 web evidence under `target/` | Evidence note, not committed artifact | The bundle and summaries are large generated outputs. This audit preserves exact metrics and paths without committing target artifacts. | Re-run `tools/perf/diag_u8_text_budget_gate.py` for fresh bundle evidence before future release gates. |
-| `tools/pre_release.py` full-chain smoke | ADR numbering follow-on | Pre-release currently stops before the consumption-profile step because `tools/check_adr_numbers.py` finds duplicate ADR ID `0324`. U9 did wire the profile gate into pre-release, but the aggregate gate cannot run through until the ADR duplicate is resolved. | Resolve duplicate ADR ID `0324`, then run the pre-release skip-heavy policy chain through the consumption-profile gate. |
+| `tools/pre_release.py` full-chain smoke | Resolved ADR numbering follow-on | The duplicate ADR ID `0324` blocker was resolved after closeout by preserving the older window input hit-testing ADR at `0324` and renumbering the later a11y state-description ADR to `0332`. | `python3 tools/check_adr_numbers.py` and the skip-heavy pre-release smoke pass; run the full aggregate chain when release scope needs it. |
 | `ecosystem/fret/src/view.rs` line count | U9 facade maintenance | `view.rs` is now mostly re-export and source-shape test host, but remains large because tests aggregate split modules. `view/data.rs` and `view/local_state.rs` are still about 1000 lines each. | Future U9 follow-on may split source-shape tests and data/local-state internals without changing the public facade. |
 
 ## U8 Evidence Snapshot
@@ -103,14 +103,13 @@ Web/wasm budget summary:
 - mask/color/subpixel atlas `max_pages=1`
 - `renderer_text_atlas_evicted_pages=0`
 
-## Known Blockers Outside This Closeout
+## Resolved Blocker After This Closeout
 
-- `python3 tools/check_adr_numbers.py` fails on duplicate ADR ID `0324`:
-  `0324-a11y-state-description-semantics-v1.md` and
-  `0324-window-input-hit-testing-and-passthrough-v1.md`.
-- The blocker predates this closeout and prevents `tools/pre_release.py` from reaching later policy
-  gates in a single aggregate run. The individual layering, source-policy, consumption-profile,
-  perf-baseline, and U8 text-budget gates have passed independently.
+- The duplicate ADR ID `0324` blocker was resolved after closeout by keeping
+  `0324-window-input-hit-testing-and-passthrough-v1.md` at its historical number and renumbering
+  `0324-a11y-state-description-semantics-v1.md` to
+  `0332-a11y-state-description-semantics-v1.md`.
+- `python3 tools/check_adr_numbers.py` and the skip-heavy `tools/pre_release.py` smoke now pass.
 
 ## Final State
 

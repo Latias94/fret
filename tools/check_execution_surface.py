@@ -89,6 +89,8 @@ def main(argv: list[str]) -> int:
                 "crates/fret-diag/",
                 "crates/fret-diag-ws/",
                 "apps/fret-diag-export/",
+                "apps/fret-devtools/",
+                "apps/fret-devtools-mcp/",
                 "crates/fret-launch/src/runner/desktop/runner/hotpatch.rs",
                 # Explicit compare / control harnesses intentionally use wall-clock sampling.
                 "apps/fret-demo/src/bin/wgpu_hello_world_control.rs",
@@ -127,6 +129,7 @@ def main(argv: list[str]) -> int:
                 "apps/fret-devtools-mcp/",
                 # These examples intentionally exercise async query integration against Tokio or a
                 # sync-vs-async comparison harness; they are not the default UI timer story.
+                "apps/fret-cookbook/examples/mutation_toast_feedback_basics.rs",
                 "apps/fret-examples/src/async_playground_demo.rs",
                 "apps/fret-examples/src/query_async_tokio_demo.rs",
             ),
