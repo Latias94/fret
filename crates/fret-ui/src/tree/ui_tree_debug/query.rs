@@ -92,6 +92,10 @@ impl<H: UiHost> UiTree<H> {
             let target = self
                 .nearest_view_cache_root(caller_node)
                 .unwrap_or(caller_node);
+            let target_view = self
+                .view_boundaries
+                .view_for_live_node(target)
+                .unwrap_or_default();
 
             if self.debug_notify_requests.len() >= 256 {
                 return;
@@ -100,7 +104,7 @@ impl<H: UiHost> UiTree<H> {
             self.debug_notify_requests.push(UiDebugNotifyRequest {
                 frame_id,
                 caller_node,
-                target_view: crate::tree::view_boundary::view_id_for_live_boundary_node_v1_quarantine(target),
+                target_view,
                 file: location.file,
                 line: location.line,
                 column: location.column,

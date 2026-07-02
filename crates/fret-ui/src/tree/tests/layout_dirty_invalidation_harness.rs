@@ -412,11 +412,11 @@ fn append_metrics(
                 observed,
                 prefix,
                 format!("node.{}.dirty_view", node.id),
-                bool_metric(
-                    ui.debug_dirty_views().iter().any(|dirty| {
-                        live_boundary_node_for_view_id_v1_quarantine(dirty.view) == id
-                    }),
-                ),
+                bool_metric(ui.test_view_id_for_boundary_node(id).is_some_and(|view| {
+                    ui.debug_dirty_views()
+                        .iter()
+                        .any(|dirty| dirty.view == view)
+                })),
             );
             set_metric(
                 observed,

@@ -102,8 +102,8 @@ High-risk compatibility paths that need either deletion or an explicit retention
 - parent repair and GC reachability work that can scale with the active retained tree,
 - the deleted `ViewId(pub NodeId)` wrapper returning through implicit conversions,
 - the deleted `BoundaryId(NodeId)` wrapper and raw `NodeId`-keyed boundary storage returning,
-- explicit `*_v1_quarantine` live-boundary-node projection helpers escaping their current layout
-  bridge call sites,
+- the remaining `dirty_live_boundary_nodes_v1_quarantine` live-boundary-node projection escaping
+  its current layout bridge call sites,
 - flat `Scene` bridges used as the normal renderer input or the only replay unit for local
   text/caret/selection changes,
 - full-blob text resource helpers in normal renderer chunk/resource paths,

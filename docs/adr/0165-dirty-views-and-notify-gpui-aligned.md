@@ -83,9 +83,10 @@ The runtime provides:
 - `NodeId` is the current retained tree placement. It may be used for layout, dispatch, focus,
   hit-test, and paint mechanisms that operate on the current tree, but it MUST NOT substitute for
   declarative element identity, stable node liveness, or view/entity identity.
-- `ViewId` is the dirty-view target and is converging to an entity-first, window-scoped identity.
-  The old `ViewId(pub NodeId)` wrapper is deleted; current v1 cache-root projection must go through
-  explicitly named bridge helpers until the boundary store owns entity-first lookup.
+- `ViewId` is the dirty-view target and is now allocated by the entity-first boundary store from
+  stable boundary keys. The old `ViewId(pub NodeId)` wrapper and the live-`NodeId` derived `ViewId`
+  helper are deleted; the remaining v1 bridge projects dirty views to live layout candidates only
+  at layout boundaries.
 - `BoundaryId` is cache/execution boundary identity. The old `BoundaryId(NodeId)` wrapper is
   deleted; remaining live-boundary-node projection helpers are named with `v1_quarantine` until
   layout and diagnostics consume the entity-first store directly.

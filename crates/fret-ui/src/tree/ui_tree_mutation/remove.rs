@@ -396,8 +396,8 @@ impl<H: UiHost> UiTree<H> {
                 );
                 self.debug_clear_layout_dirty_source(node);
             }
-            self.nodes.remove(node);
             self.remove_view_boundary_state(node);
+            self.nodes.remove(node);
             let layout_model_removed = self.observed_in_layout.remove_node(node);
             let paint_model_removed = self.observed_in_paint.remove_node(node);
             let layout_global_removed = self.observed_globals_in_layout.remove_node(node);

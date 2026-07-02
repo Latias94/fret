@@ -188,6 +188,11 @@ timestamp: 2026-06-30
   `SlotMap<BoundaryId, ViewBoundaryState>`, a live-node projection index, and a `ViewId` lookup.
   Dirty frontier normal APIs are now view-native; live-node projection is centralized behind
   `dirty_live_boundary_nodes_v1_quarantine`.
+- 2026-07-02: Phase 2 U4 durable ViewId lifecycle deletes the live-`NodeId` derived ViewId helper.
+  `ViewBoundaryStore` now allocates `ViewId`s from stable `ViewBoundaryKey` values, prefers
+  `GlobalElementId` for declarative roots, preserves temporary detach with `live_node = None`, and
+  removes boundary records only on final removal. Remaining bridge: layout-only
+  `dirty_live_boundary_nodes_v1_quarantine`.
 - U3 deletion verification passed: `cargo check -p fret-ui`, `cargo check -p fret-bootstrap`,
   focused U3 identity and scroll-target nextest coverage,
   `cargo nextest run -p fret-ui --no-fail-fast` (1180 passed),

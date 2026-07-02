@@ -23,12 +23,12 @@ frame-pipeline contract while freezing stricter migration rules:
 
 - `ViewId` and `BoundaryId` are independent window-scoped/runtime identities, not durable aliases
   for retained `NodeId` placement. The old `ViewId(pub NodeId)` and `BoundaryId(NodeId)` wrappers
-  are deleted. `dirty_live_boundary_nodes_v1_quarantine` and
-  `view_id_for_live_boundary_node_v1_quarantine` are remaining live-node projection bridges with
-  deletion gates.
-- `ViewBoundaryState` and the next `ViewBoundaryStore` should be keyed by `ViewId` and/or
-  `BoundaryId`, then resolve the current live node through explicit liveness metadata. A detached
-  or retained boundary may exist without a live node.
+  are deleted. The live-`NodeId` derived `ViewId` helper is also deleted; the remaining
+  `dirty_live_boundary_nodes_v1_quarantine` bridge only projects dirty `ViewId`s to current live
+  layout candidates.
+- `ViewBoundaryStore` owns independent `BoundaryId` records, stable boundary keys, durable
+  `ViewId` allocation, and explicit live-node projection metadata. A temporarily detached boundary
+  may exist with `live_node: None`; final removal deletes its boundary record.
 - Boundary-owned products are valid only when their correctness is local to that boundary. Layout
   dirty bits, boundary prepaint products, cache-root interaction replay entries, reusable boundary
   semantics subtrees, boundary scene fragments, and boundary paint-cache entry metadata remain the

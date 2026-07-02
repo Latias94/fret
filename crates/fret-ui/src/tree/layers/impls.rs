@@ -160,6 +160,7 @@ impl<H: UiHost> UiTree<H> {
         self.mark_semantics_dirty();
         self.request_post_layout_window_runtime_snapshot_refine_if_layout_active();
         self.index_live_subtree(root);
+        self.sync_live_view_boundary_state_for_subtree(root);
         id
     }
 
@@ -192,6 +193,7 @@ impl<H: UiHost> UiTree<H> {
         self.mark_semantics_dirty();
         self.request_post_layout_window_runtime_snapshot_refine_if_layout_active();
         self.index_live_subtree(root);
+        self.sync_live_view_boundary_state_for_subtree(root);
 
         if options.blocks_underlay_input {
             let (active_roots, _barrier_root) = self.active_input_layers();
@@ -656,6 +658,7 @@ impl<H: UiHost> UiTree<H> {
         }
 
         self.root_to_layer.remove(&old_root);
+        self.detach_view_boundary_state_for_subtree(old_root);
         let Some(layer_entry) = self.layers.get_mut(layer) else {
             return;
         };
@@ -666,5 +669,6 @@ impl<H: UiHost> UiTree<H> {
         self.mark_semantics_dirty();
         self.request_post_layout_window_runtime_snapshot_refine_if_layout_active();
         self.rebuild_live_element_index();
+        self.sync_live_view_boundary_state_for_subtree(root);
     }
 }

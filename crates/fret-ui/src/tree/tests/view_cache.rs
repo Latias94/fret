@@ -561,6 +561,9 @@ fn detached_dirty_view_cache_root_is_pruned_before_layout_followups() {
     ui.test_clear_node_invalidations(root);
     ui.test_clear_node_invalidations(boundary);
     ui.test_set_layout_invalidation(boundary, true);
+    let boundary_view = ui
+        .test_view_id_for_boundary_node(boundary)
+        .expect("dirty boundary view id");
 
     ui.set_children(root, Vec::new());
     assert_eq!(ui.node_parent(boundary), None);
@@ -576,7 +579,7 @@ fn detached_dirty_view_cache_root_is_pruned_before_layout_followups() {
     assert!(
         ui.debug_dirty_views()
             .iter()
-            .all(|dirty| live_boundary_node_for_view_id_v1_quarantine(dirty.view) != boundary),
+            .all(|dirty| dirty.view != boundary_view),
         "detached cache roots must not survive in dirty-view diagnostics"
     );
 
@@ -630,6 +633,12 @@ fn view_cache_mark_nearest_root_needs_rerender_propagates_to_ancestor_roots() {
         ui.nodes[outer].view_cache_needs_rerender,
         "expected ancestor cache roots to be marked for rerender"
     );
+    let inner_view = ui
+        .test_view_id_for_boundary_node(inner)
+        .expect("inner boundary view id");
+    let outer_view = ui
+        .test_view_id_for_boundary_node(outer)
+        .expect("outer boundary view id");
 
     // Ensure the dirty-view list is surfaced in debug snapshots.
     let mut services = FakeUiServices;
@@ -642,17 +651,17 @@ fn view_cache_mark_nearest_root_needs_rerender_propagates_to_ancestor_roots() {
 
     let dirty = ui.debug_dirty_views();
     assert!(
-        dirty.iter().any(|d| {
-            live_boundary_node_for_view_id_v1_quarantine(d.view) == inner
-                && d.detail == UiDebugInvalidationDetail::ScrollHandleLayout
-        }),
+        dirty
+            .iter()
+            .any(|d| d.view == inner_view
+                && d.detail == UiDebugInvalidationDetail::ScrollHandleLayout),
         "expected dirty views to include inner cache root with ScrollHandleLayout detail"
     );
     assert!(
-        dirty.iter().any(|d| {
-            live_boundary_node_for_view_id_v1_quarantine(d.view) == outer
-                && d.detail == UiDebugInvalidationDetail::ScrollHandleLayout
-        }),
+        dirty
+            .iter()
+            .any(|d| d.view == outer_view
+                && d.detail == UiDebugInvalidationDetail::ScrollHandleLayout),
         "expected dirty views to include outer cache root with ScrollHandleLayout detail"
     );
 }

@@ -16,8 +16,8 @@ new_key_type! {
 
 /// Window-scoped view identifier used for "dirty view" tracking (GPUI-aligned).
 ///
-/// The current runtime still maps cache-root nodes into `ViewId` through an explicit v1 bridge, but
-/// `ViewId` itself is not a retained `NodeId` alias.
+/// Runtime view-boundary stores allocate this from stable boundary keys. It is not a retained
+/// `NodeId` alias.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ViewId(u64);
 

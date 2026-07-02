@@ -136,8 +136,6 @@ use shortcuts::{
     KeydownShortcutParams, PendingShortcut, PointerDownOutsideOutcome, PointerDownOutsideParams,
 };
 use small_list::{SmallCopyList, SmallNodeList};
-#[cfg(test)]
-use view_boundary::live_boundary_node_for_view_id_v1_quarantine;
 pub use view_boundary::{
     BoundarySceneChunkManifest, BoundarySceneFragmentChunk, BoundarySceneFragmentDebug,
 };

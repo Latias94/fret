@@ -20,6 +20,7 @@ impl<H: UiHost> UiTree<H> {
             if self.node_is_reachable_from_layer_forest(parent) {
                 for &child in &children {
                     self.index_live_subtree(child);
+                    self.sync_live_view_boundary_state_for_subtree(child);
                 }
             }
             return;
@@ -78,6 +79,7 @@ impl<H: UiHost> UiTree<H> {
             }
             if parent_was_live {
                 self.unindex_detached_child_subtree(old);
+                self.detach_view_boundary_state_for_subtree(old);
             }
             if let Some(n) = self.nodes.get_mut(old)
                 && n.parent == Some(parent)
@@ -147,6 +149,7 @@ impl<H: UiHost> UiTree<H> {
         if parent_was_live {
             for child in new_children_for_index {
                 self.index_live_subtree(child);
+                self.sync_live_view_boundary_state_for_subtree(child);
             }
         }
 

@@ -26,7 +26,7 @@ Passed:
 - `cargo check -p fret-ui`
 - `cargo check -p fret-ui --features diagnostics`
 - `cargo check -p fret-bootstrap --lib --features launch,ui-app-driver,diagnostics`
-- `cargo nextest run -p fret-ui dirty_view_frontier_coalesces_views_and_keeps_v1_node_bridge_explicit view_cache_mark_nearest_root_needs_rerender_propagates_to_ancestor_roots detached_dirty_view_cache_root_is_pruned_before_layout_followups mechanism_harness_layout_dirty_invalidation_matches_oracles --no-fail-fast`
+- `cargo nextest run -p fret-ui dirty_view_frontier_coalesces_views_without_node_bridge view_cache_mark_nearest_root_needs_rerender_propagates_to_ancestor_roots detached_dirty_view_cache_root_is_pruned_before_layout_followups mechanism_harness_layout_dirty_invalidation_matches_oracles --no-fail-fast`
 - `cargo nextest run -p fret-ui --no-fail-fast` (1180 passed)
 - `cargo nextest run -p fret-bootstrap --lib --no-fail-fast`
 - `cargo fmt --all --check`

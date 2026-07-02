@@ -96,13 +96,13 @@ slotmap::new_key_type! {
     pub(crate) struct BoundaryId;
 }
 
-pub(in crate::tree) fn view_id_for_live_boundary_node_v1_quarantine(node: NodeId) -> ViewId {
-    ViewId::from_raw(node.data().as_ffi())
-}
+const GENERATED_VIEW_ID_BASE: u64 = 1 << 63;
+const GENERATED_VIEW_ID_MAX_ORDINAL: u64 = GENERATED_VIEW_ID_BASE - 1;
 
-#[cfg(test)]
-pub(in crate::tree) fn live_boundary_node_for_view_id_v1_quarantine(view: ViewId) -> NodeId {
-    NodeId::from(slotmap::KeyData::from_ffi(view.as_raw()))
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub(super) enum ViewBoundaryKey {
+    Element(GlobalElementId),
+    RuntimeNode(NodeId),
 }
 
 #[derive(Debug, Default, Clone)]
@@ -122,15 +122,6 @@ impl DirtyViewFrontier {
     #[cfg(test)]
     pub(super) fn contains_view(&self, view: ViewId) -> bool {
         self.views.contains(&view)
-    }
-
-    pub(super) fn clear_live_boundary_node_v1_quarantine(&mut self, node: NodeId) -> bool {
-        self.clear_view(view_id_for_live_boundary_node_v1_quarantine(node))
-    }
-
-    #[cfg(test)]
-    pub(super) fn contains_live_boundary_node_v1_quarantine(&self, node: NodeId) -> bool {
-        self.contains_view(view_id_for_live_boundary_node_v1_quarantine(node))
     }
 
     pub(super) fn is_empty(&self) -> bool {
@@ -194,6 +185,7 @@ impl BoundaryLayoutDependencies {
 
 pub(super) struct ViewBoundaryState {
     pub(super) id: BoundaryId,
+    pub(super) key: ViewBoundaryKey,
     pub(super) view: ViewId,
     pub(super) live_node: Option<NodeId>,
     pub(super) parent: Option<BoundaryId>,
@@ -202,11 +194,24 @@ pub(super) struct ViewBoundaryState {
     pub(super) frame_products: BoundaryFrameProducts,
 }
 
-#[derive(Default)]
 pub(super) struct ViewBoundaryStore {
     entries: SlotMap<BoundaryId, ViewBoundaryState>,
     by_live_node: slotmap::SecondaryMap<NodeId, BoundaryId>,
+    by_key: HashMap<ViewBoundaryKey, BoundaryId>,
     by_view: HashMap<ViewId, BoundaryId>,
+    next_view_ordinal: u64,
+}
+
+impl Default for ViewBoundaryStore {
+    fn default() -> Self {
+        Self {
+            entries: SlotMap::default(),
+            by_live_node: slotmap::SecondaryMap::default(),
+            by_key: HashMap::default(),
+            by_view: HashMap::default(),
+            next_view_ordinal: 1,
+        }
+    }
 }
 
 impl ViewBoundaryStore {
@@ -220,6 +225,10 @@ impl ViewBoundaryStore {
 
     pub(super) fn boundary_id_for_view(&self, view: ViewId) -> Option<BoundaryId> {
         self.by_view.get(&view).copied()
+    }
+
+    pub(super) fn boundary_id_for_key(&self, key: ViewBoundaryKey) -> Option<BoundaryId> {
+        self.by_key.get(&key).copied()
     }
 
     pub(super) fn live_node_for_boundary(&self, id: BoundaryId) -> Option<NodeId> {
@@ -236,6 +245,11 @@ impl ViewBoundaryStore {
 
     pub(super) fn view_for_live_node(&self, node: NodeId) -> Option<ViewId> {
         let id = self.boundary_id_for_live_node(node)?;
+        self.entries.get(id).map(|state| state.view)
+    }
+
+    pub(super) fn view_for_key(&self, key: ViewBoundaryKey) -> Option<ViewId> {
+        let id = self.boundary_id_for_key(key)?;
         self.entries.get(id).map(|state| state.view)
     }
 
@@ -260,45 +274,61 @@ impl ViewBoundaryStore {
     pub(super) fn ensure_live(
         &mut self,
         node: NodeId,
-        view: ViewId,
+        key: ViewBoundaryKey,
         parent: Option<BoundaryId>,
         flags: ViewCacheFlags,
     ) -> Option<&mut ViewBoundaryState> {
-        if let Some(id) = self.boundary_id_for_live_node(node) {
-            let old_view = self.entries.get(id)?.view;
-            if old_view != view {
-                self.by_view.remove(&old_view);
-                self.by_view.insert(view, id);
-            }
-            let state = self.entries.get_mut(id)?;
-            state.refresh_runtime(view, Some(node), parent, flags);
-            return Some(state);
+        let id = self.ensure_boundary_for_key(key, parent, flags);
+        if let Some(old_id) = self.boundary_id_for_live_node(node)
+            && old_id != id
+        {
+            self.detach_boundary_node(old_id, node);
         }
 
-        if let Some(id) = self.by_view.get(&view).copied() {
-            let old_node = self.entries.get(id)?.live_node;
-            if let Some(old_node) = old_node
-                && old_node != node
-            {
-                self.by_live_node.remove(old_node);
-            }
-            self.by_live_node.insert(node, id);
-            let state = self.entries.get_mut(id)?;
-            state.refresh_runtime(view, Some(node), parent, flags);
-            return Some(state);
+        if let Some(old_node) = self.entries.get(id)?.live_node
+            && old_node != node
+        {
+            self.by_live_node.remove(old_node);
         }
-
-        let id = self.entries.insert_with_key(|id| {
-            ViewBoundaryState::new_runtime(id, view, Some(node), parent, flags)
-        });
         self.by_live_node.insert(node, id);
-        self.by_view.insert(view, id);
+        let state = self.entries.get_mut(id)?;
+        state.refresh_runtime(Some(node), parent, flags);
         self.entries.get_mut(id)
+    }
+
+    pub(super) fn detach_live_node(&mut self, node: NodeId) -> Option<BoundaryId> {
+        let id = self.by_live_node.remove(node)?;
+        self.detach_boundary_node(id, node);
+        Some(id)
     }
 
     pub(super) fn remove_live_node(&mut self, node: NodeId) -> Option<ViewBoundaryState> {
         let id = self.by_live_node.remove(node)?;
         let state = self.entries.remove(id)?;
+        self.by_key.remove(&state.key);
+        self.by_view.remove(&state.view);
+        Some(state)
+    }
+
+    pub(super) fn remove_node(
+        &mut self,
+        node: NodeId,
+        key: ViewBoundaryKey,
+    ) -> Option<ViewBoundaryState> {
+        let id = self
+            .boundary_id_for_live_node(node)
+            .or_else(|| self.boundary_id_for_key(key))?;
+        if self
+            .entries
+            .get(id)
+            .and_then(|state| state.live_node)
+            .is_some_and(|live_node| live_node != node)
+        {
+            return None;
+        }
+        self.by_live_node.remove(node);
+        let state = self.entries.remove(id)?;
+        self.by_key.remove(&state.key);
         self.by_view.remove(&state.view);
         Some(state)
     }
@@ -320,6 +350,47 @@ impl ViewBoundaryStore {
     pub(super) fn values_mut(&mut self) -> impl Iterator<Item = &mut ViewBoundaryState> + '_ {
         self.entries.iter_mut().map(|(_, state)| state)
     }
+
+    fn ensure_boundary_for_key(
+        &mut self,
+        key: ViewBoundaryKey,
+        parent: Option<BoundaryId>,
+        flags: ViewCacheFlags,
+    ) -> BoundaryId {
+        if let Some(id) = self.boundary_id_for_key(key) {
+            return id;
+        }
+
+        let view = self.allocate_view_id();
+        let id = self.entries.insert_with_key(|id| {
+            ViewBoundaryState::new_runtime(id, key, view, None, parent, flags)
+        });
+        self.by_key.insert(key, id);
+        self.by_view.insert(view, id);
+        id
+    }
+
+    fn allocate_view_id(&mut self) -> ViewId {
+        assert!(
+            self.next_view_ordinal <= GENERATED_VIEW_ID_MAX_ORDINAL,
+            "exhausted generated ViewId ordinals"
+        );
+        let ordinal = self.next_view_ordinal;
+        self.next_view_ordinal = self
+            .next_view_ordinal
+            .checked_add(1)
+            .expect("generated ViewId ordinal overflow");
+        ViewId::from_raw(GENERATED_VIEW_ID_BASE | ordinal)
+    }
+
+    fn detach_boundary_node(&mut self, id: BoundaryId, node: NodeId) {
+        if let Some(state) = self.entries.get_mut(id)
+            && state.live_node == Some(node)
+        {
+            state.live_node = None;
+            state.parent = None;
+        }
+    }
 }
 
 #[derive(Default)]
@@ -336,6 +407,7 @@ pub(super) struct BoundaryFrameProducts {
 impl ViewBoundaryState {
     fn new_runtime(
         id: BoundaryId,
+        key: ViewBoundaryKey,
         view: ViewId,
         live_node: Option<NodeId>,
         parent: Option<BoundaryId>,
@@ -343,6 +415,7 @@ impl ViewBoundaryState {
     ) -> Self {
         Self {
             id,
+            key,
             view,
             live_node,
             parent,
@@ -358,12 +431,10 @@ impl ViewBoundaryState {
 
     fn refresh_runtime(
         &mut self,
-        view: ViewId,
         live_node: Option<NodeId>,
         parent: Option<BoundaryId>,
         flags: ViewCacheFlags,
     ) {
-        self.view = view;
         self.live_node = live_node;
         self.parent = parent;
         self.kind = if flags.enabled {
@@ -809,11 +880,20 @@ impl BoundaryTypedOutputs {
 }
 
 impl<H: UiHost> UiTree<H> {
+    fn view_boundary_key_for_node(&self, node: NodeId) -> Option<ViewBoundaryKey> {
+        let entry = self.nodes.get(node)?;
+        Some(match entry.element {
+            Some(element) => ViewBoundaryKey::Element(element),
+            None => ViewBoundaryKey::RuntimeNode(node),
+        })
+    }
+
     pub(in crate::tree) fn ensure_view_boundary_state(
         &mut self,
         node: NodeId,
     ) -> Option<&mut ViewBoundaryState> {
         let flags = self.nodes.get(node)?.view_cache;
+        let key = self.view_boundary_key_for_node(node)?;
         let parent_node = self.nearest_parent_view_boundary_node(node);
         let parent = if let Some(parent_node) = parent_node {
             if self
@@ -827,11 +907,8 @@ impl<H: UiHost> UiTree<H> {
         } else {
             None
         };
-        let view = view_id_for_live_boundary_node_v1_quarantine(node);
 
-        let state = self
-            .view_boundaries
-            .ensure_live(node, view, parent, flags)?;
+        let state = self.view_boundaries.ensure_live(node, key, parent, flags)?;
         if let Some(entry) = self
             .retained_paint_cache_entries
             .remove(node)
@@ -859,15 +936,54 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
+    pub(in crate::tree) fn detach_view_boundary_state_for_subtree(&mut self, root: NodeId) {
+        self.scratch_node_stack.clear();
+        self.scratch_node_stack.push(root);
+        while let Some(node) = self.scratch_node_stack.pop() {
+            if node != root && self.root_to_layer.contains_key(&node) {
+                continue;
+            }
+            if let Some(view) = self.view_boundaries.view_for_live_node(node) {
+                self.dirty_view_frontier.clear_view(view);
+            }
+            self.view_boundaries.detach_live_node(node);
+            if let Some(entry) = self.nodes.get(node) {
+                self.scratch_node_stack
+                    .extend(entry.children.iter().copied());
+            }
+        }
+        self.debug_refresh_dirty_frontier_max();
+    }
+
+    pub(in crate::tree) fn sync_live_view_boundary_state_for_subtree(&mut self, root: NodeId) {
+        self.scratch_node_stack.clear();
+        self.scratch_node_stack.push(root);
+        while let Some(node) = self.scratch_node_stack.pop() {
+            if node != root && self.root_to_layer.contains_key(&node) {
+                continue;
+            }
+            self.sync_view_boundary_state_for_node(node);
+            if let Some(entry) = self.nodes.get(node) {
+                self.scratch_node_stack
+                    .extend(entry.children.iter().copied());
+            }
+        }
+    }
+
     pub(in crate::tree) fn remove_view_boundary_state(&mut self, node: NodeId) {
-        let view = self.view_boundaries.view_for_live_node(node);
-        self.view_boundaries.remove_live_node(node);
+        let key = self.view_boundary_key_for_node(node);
+        let view = self
+            .view_boundaries
+            .view_for_live_node(node)
+            .or_else(|| key.and_then(|key| self.view_boundaries.view_for_key(key)));
+        if let Some(key) = key {
+            self.view_boundaries.remove_node(node, key);
+        } else {
+            self.view_boundaries.remove_live_node(node);
+        }
         self.retained_paint_cache_entries.remove(node);
         if let Some(view) = view {
             self.dirty_view_frontier.clear_view(view);
-        } else {
-            self.dirty_view_frontier
-                .clear_live_boundary_node_v1_quarantine(node);
         }
     }
 
@@ -969,9 +1085,6 @@ impl<H: UiHost> UiTree<H> {
         }
         if let Some(view) = view.or_else(|| self.view_boundaries.view_for_live_node(node)) {
             self.dirty_view_frontier.clear_view(view);
-        } else {
-            self.dirty_view_frontier
-                .clear_live_boundary_node_v1_quarantine(node);
         }
         self.debug_refresh_dirty_frontier_max();
     }
@@ -1164,6 +1277,11 @@ impl<H: UiHost> UiTree<H> {
     }
 
     #[cfg(test)]
+    pub(crate) fn test_view_id_for_boundary_node(&self, node: NodeId) -> Option<ViewId> {
+        self.view_boundaries.view_for_live_node(node)
+    }
+
+    #[cfg(test)]
     pub(crate) fn test_view_boundary_paint_cache_has_entry(&self, node: NodeId) -> bool {
         self.view_boundaries
             .get_live(node)
@@ -1205,43 +1323,25 @@ impl<H: UiHost> UiTree<H> {
 #[cfg(test)]
 mod dirty_view_frontier_tests {
     use super::*;
-    use slotmap::Key;
-
-    fn node(id: u64) -> NodeId {
-        NodeId::from(slotmap::KeyData::from_ffi(id))
-    }
 
     #[test]
-    fn dirty_view_frontier_coalesces_views_and_keeps_v1_node_bridge_explicit() {
-        let first = node(1);
-        let second = node(2);
+    fn dirty_view_frontier_coalesces_views_without_node_bridge() {
+        let first = ViewId::from_raw(101);
+        let second = ViewId::from_raw(202);
         let mut frontier = DirtyViewFrontier::default();
 
-        assert!(frontier.mark_view(view_id_for_live_boundary_node_v1_quarantine(first)));
-        assert!(!frontier.mark_view(view_id_for_live_boundary_node_v1_quarantine(first)));
-        assert!(frontier.mark_view(view_id_for_live_boundary_node_v1_quarantine(second)));
+        assert!(frontier.mark_view(first));
+        assert!(!frontier.mark_view(first));
+        assert!(frontier.mark_view(second));
 
         assert_eq!(frontier.len(), 2);
-        assert!(frontier.contains_live_boundary_node_v1_quarantine(first));
+        assert!(frontier.contains_view(first));
         let mut views: Vec<ViewId> = frontier.iter_views().collect();
         views.sort_by_key(|view| view.as_raw());
-        assert_eq!(
-            views,
-            vec![
-                view_id_for_live_boundary_node_v1_quarantine(first),
-                view_id_for_live_boundary_node_v1_quarantine(second)
-            ]
-        );
+        assert_eq!(views, vec![first, second]);
 
-        let mut bridge_nodes: Vec<NodeId> = frontier
-            .iter_views()
-            .map(live_boundary_node_for_view_id_v1_quarantine)
-            .collect();
-        bridge_nodes.sort_by_key(|id| id.data().as_ffi());
-        assert_eq!(bridge_nodes, vec![first, second]);
-
-        assert!(frontier.clear_live_boundary_node_v1_quarantine(first));
-        assert!(!frontier.clear_live_boundary_node_v1_quarantine(first));
+        assert!(frontier.clear_view(first));
+        assert!(!frontier.clear_view(first));
         assert_eq!(frontier.len(), 1);
     }
 }
@@ -1255,10 +1355,10 @@ mod view_boundary_store_tests {
     }
 
     #[test]
-    fn view_boundary_store_rebinds_view_without_treating_node_as_boundary_identity() {
+    fn view_boundary_store_rebinds_element_view_without_treating_node_as_boundary_identity() {
         let first = node(1);
         let second = node(2);
-        let view = ViewId::from_raw(10_001);
+        let key = ViewBoundaryKey::Element(GlobalElementId(10_001));
         let mut store = ViewBoundaryStore::default();
         let flags = ViewCacheFlags {
             enabled: true,
@@ -1267,14 +1367,20 @@ mod view_boundary_store_tests {
         };
 
         let first_boundary = store
-            .ensure_live(first, view, None, flags)
+            .ensure_live(first, key, None, flags)
             .expect("first live boundary")
             .id;
+        let view = store.view_for_live_node(first).expect("first live view");
+        assert_ne!(view.as_raw(), first.data().as_ffi());
         assert_eq!(store.boundary_id_for_live_node(first), Some(first_boundary));
         assert_eq!(store.live_node_for_view(view), Some(first));
 
+        assert_eq!(store.detach_live_node(first), Some(first_boundary));
+        assert_eq!(store.live_node_for_view(view), None);
+        assert_eq!(store.boundary_id_for_view(view), Some(first_boundary));
+
         let second_boundary = store
-            .ensure_live(second, view, None, flags)
+            .ensure_live(second, key, None, flags)
             .expect("rebound live boundary")
             .id;
         assert_eq!(second_boundary, first_boundary);
@@ -1284,6 +1390,36 @@ mod view_boundary_store_tests {
             Some(first_boundary)
         );
         assert_eq!(store.live_node_for_view(view), Some(second));
+    }
+
+    #[test]
+    fn view_boundary_store_rebinding_same_node_to_new_element_allocates_new_view() {
+        let node = node(1);
+        let first_key = ViewBoundaryKey::Element(GlobalElementId(10_001));
+        let second_key = ViewBoundaryKey::Element(GlobalElementId(10_002));
+        let mut store = ViewBoundaryStore::default();
+        let flags = ViewCacheFlags {
+            enabled: true,
+            layout_definite: true,
+            ..Default::default()
+        };
+
+        let first_boundary = store
+            .ensure_live(node, first_key, None, flags)
+            .expect("first boundary")
+            .id;
+        let first_view = store.view_for_live_node(node).expect("first view");
+
+        let second_boundary = store
+            .ensure_live(node, second_key, None, flags)
+            .expect("second boundary")
+            .id;
+        let second_view = store.view_for_live_node(node).expect("second view");
+
+        assert_ne!(second_boundary, first_boundary);
+        assert_ne!(second_view, first_view);
+        assert_eq!(store.live_node_for_view(first_view), None);
+        assert_eq!(store.live_node_for_view(second_view), Some(node));
     }
 }
 
@@ -1313,7 +1449,8 @@ mod boundary_frame_products_tests {
     {
         let mut state = ViewBoundaryState::new_runtime(
             BoundaryId::null(),
-            view_id_for_live_boundary_node_v1_quarantine(node(1)),
+            ViewBoundaryKey::RuntimeNode(node(1)),
+            ViewId::from_raw(10_001),
             Some(node(1)),
             None,
             ViewCacheFlags {

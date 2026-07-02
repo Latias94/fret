@@ -61,9 +61,10 @@ The convergence target is GPUI-aligned but Fret-owned:
 - `NodeId` is the current retained tree placement used by mechanisms that operate on the current
   tree. It does not substitute for declarative element identity, stable node liveness, or view
   identity.
-- `ViewId` is the primary maintainer vocabulary for dirty views. It is now an independent
-  window-scoped token; the old `ViewId(pub NodeId)` wrapper is deleted. The current runtime still
-  has explicit v1 cache-root node bridge helpers until entity-first view lookup is complete.
+- `ViewId` is the primary maintainer vocabulary for dirty views. It is an independent
+  window-scoped token allocated by `ViewBoundaryStore` from stable boundary keys, preferring
+  `GlobalElementId` for declarative roots. The old `ViewId(pub NodeId)` wrapper and live-`NodeId`
+  derived `ViewId` helper are deleted.
 - `BoundaryId` is cache/execution boundary identity. The old `BoundaryId(NodeId)` wrapper and
   `SecondaryMap<NodeId, ViewBoundaryState>` storage are deleted; the boundary store now owns
   independent boundary records plus explicit live-node projection indexes.
@@ -81,10 +82,10 @@ The convergence target is GPUI-aligned but Fret-owned:
 Compatibility bridge policy for the active plan:
 
 - The deleted `ViewId(pub NodeId)` and `BoundaryId(NodeId)` wrappers must not return. Parent repair,
-  GC reachability expansion, explicit v1 live-boundary-node projection helpers
-  (`*_v1_quarantine`), flat `Scene` normal renderer input, chunk replay through temporary flat
-  scenes, full-blob text resource helpers, and source-policy allowlist entries are remaining
-  migration bridges.
+  GC reachability expansion, the remaining `dirty_live_boundary_nodes_v1_quarantine` layout
+  projection, flat `Scene` normal renderer input, chunk replay through temporary flat scenes,
+  full-blob text resource helpers, and source-policy allowlist entries are remaining migration
+  bridges.
 - Every retained bridge needs an owner, reason, measurable deletion gate, and follow-up path. An
   unowned compatibility path is out of contract for this pre-launch refactor window.
 - Source-policy exceptions are not runtime mechanisms. They are public-surface quarantine records

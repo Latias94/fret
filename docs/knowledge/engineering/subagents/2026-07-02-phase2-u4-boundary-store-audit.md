@@ -40,4 +40,6 @@ Make the next U4 slice an entity store plus live projection:
 
 Implemented as the next U4 slice. `ViewBoundaryStore` now owns independent `BoundaryId` records plus
 live-node and `ViewId` lookup indexes, and `DirtyViewFrontier` normal mutation is view-native. The
-remaining follow-up is true durable `ViewId` allocation plus runtime detach/rebind semantics.
+remaining follow-up was true durable `ViewId` allocation plus runtime detach/rebind semantics; that
+follow-up is now implemented in the durable ViewId lifecycle slice. The remaining bridge is the
+layout-only dirty-view live-node projection.
