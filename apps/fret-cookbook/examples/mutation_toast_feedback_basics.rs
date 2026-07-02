@@ -10,7 +10,6 @@ use fret::mutation::{
     MutationPolicy, MutationState, MutationStatus,
 };
 use fret::style::Space;
-use fret_ui::action::UiActionHostAdapter;
 
 mod act {
     fret::actions!([
@@ -100,13 +99,11 @@ impl MutationToastFeedbackLocals {
     }
 }
 
-struct MutationToastFeedbackBasicsView {
-    window: WindowId,
-}
+struct MutationToastFeedbackBasicsView;
 
 impl View for MutationToastFeedbackBasicsView {
-    fn init(_app: &mut App, window: WindowId) -> Self {
-        Self { window }
+    fn init(_app: &mut App, _window: WindowId) -> Self {
+        Self
     }
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
@@ -114,16 +111,31 @@ impl View for MutationToastFeedbackBasicsView {
         let handle = cx
             .data()
             .mutation_async(MutationPolicy::default(), save_request_preset);
-        bind_actions(cx, &locals, &handle, self.window);
+        bind_actions(cx, &locals, &handle);
 
         let state = handle.read_layout(cx);
-        let _ = cx
-            .data()
-            .update_after_mutation_completion(EFFECT_APPLY_PROJECTION, &handle, {
-                let locals = locals.clone();
-                move |models, state| apply_save_projection(models, &locals, state)
-            });
-        emit_save_feedback_toasts(cx, self.window, &handle, &state);
+        let _ =
+            cx.data()
+                .update_locals_after_mutation_completion(EFFECT_APPLY_PROJECTION, &handle, {
+                    let locals = locals.clone();
+                    move |tx, state| {
+                        let mut changed = false;
+                        let note = if let Some(saved) = state.data.as_ref() {
+                            changed = tx.set(&locals.last_saved_summary, saved.summary.to_string())
+                                || changed;
+                            format!("Saved \"{}\" to the request preset catalog.", saved.name)
+                        } else {
+                            let message = state
+                                .error
+                                .as_ref()
+                                .map(ToString::to_string)
+                                .unwrap_or_else(|| "Unknown save failure".to_string());
+                            format!("Save failed: {message}")
+                        };
+                        tx.set(&locals.projection_note, note) || changed
+                    }
+                });
+        emit_save_feedback_toasts(cx, &handle, &state);
 
         let method_label = locals
             .method
@@ -315,109 +327,39 @@ fn bind_actions(
     cx: &mut AppUi<'_, '_>,
     locals: &MutationToastFeedbackLocals,
     handle: &MutationHandle<RequestPresetDraft, SavedRequestPreset>,
-    window: WindowId,
 ) {
-    cx.actions().models::<act::SavePreset>({
-        let locals = locals.clone();
-        let handle = handle.clone();
-        move |models| submit_preset(models, window, &locals, &handle)
-    });
-    cx.actions().models::<act::RetryLastSave>({
-        let locals = locals.clone();
-        let handle = handle.clone();
-        move |models| retry_last_save(models, window, &locals, &handle)
-    });
-}
-
-fn submit_preset(
-    models: &mut fret_runtime::ModelStore,
-    window: WindowId,
-    locals: &MutationToastFeedbackLocals,
-    handle: &MutationHandle<RequestPresetDraft, SavedRequestPreset>,
-) -> bool {
-    let draft = build_draft(models, locals);
-    let mut handled = false;
-    handled = locals.projection_note.set_in(
-        models,
-        "Submitting the current request preset...".to_string(),
-    ) || handled;
-    handled = handle.submit(models, window, draft) || handled;
-    handled
-}
-
-fn retry_last_save(
-    models: &mut fret_runtime::ModelStore,
-    window: WindowId,
-    locals: &MutationToastFeedbackLocals,
-    handle: &MutationHandle<RequestPresetDraft, SavedRequestPreset>,
-) -> bool {
-    if !can_retry_last_save(models, handle) {
-        return false;
-    }
-
-    let mut handled = false;
-    handled = locals
-        .projection_note
-        .set_in(models, "Retrying the last submitted preset...".to_string())
-        || handled;
-    handled = handle.retry_last(models, window) || handled;
-    handled
-}
-
-fn can_retry_last_save(
-    models: &mut fret_runtime::ModelStore,
-    handle: &MutationHandle<RequestPresetDraft, SavedRequestPreset>,
-) -> bool {
-    models
-        .read(handle.model(), |state| {
-            state.input.is_some() && !state.is_running()
-        })
-        .ok()
-        .unwrap_or(false)
-}
-
-fn build_draft(
-    models: &mut fret_runtime::ModelStore,
-    locals: &MutationToastFeedbackLocals,
-) -> RequestPresetDraft {
-    RequestPresetDraft {
-        name: Arc::from(locals.name.value_in_or_default(models)),
-        method: locals
-            .method
-            .value_in(models)
-            .flatten()
-            .unwrap_or_else(|| Arc::<str>::from("POST")),
-        endpoint: Arc::from(locals.endpoint.value_in_or_default(models)),
-    }
-}
-
-fn apply_save_projection(
-    models: &mut fret_runtime::ModelStore,
-    locals: &MutationToastFeedbackLocals,
-    state: MutationState<RequestPresetDraft, SavedRequestPreset>,
-) -> bool {
-    let mut changed = false;
-    let note = if let Some(saved) = state.data.as_ref() {
-        changed = locals
-            .last_saved_summary
-            .set_in(models, saved.summary.to_string())
-            || changed;
-        format!("Saved \"{}\" to the request preset catalog.", saved.name)
-    } else {
-        let message = state
-            .error
-            .as_ref()
-            .map(ToString::to_string)
-            .unwrap_or_else(|| "Unknown save failure".to_string());
-        format!("Save failed: {message}")
-    };
-    changed = locals.projection_note.set_in(models, note) || changed;
-    changed
+    cx.actions()
+        .mutation_submit::<act::SavePreset, _, _>(handle, {
+            let locals = locals.clone();
+            move |tx| {
+                let draft = RequestPresetDraft {
+                    name: Arc::from(tx.value_or(&locals.name, String::new())),
+                    method: tx
+                        .value_or(&locals.method, Some(Arc::<str>::from("POST")))
+                        .unwrap_or_else(|| Arc::<str>::from("POST")),
+                    endpoint: Arc::from(tx.value_or(&locals.endpoint, String::new())),
+                };
+                let _ = tx.set(
+                    &locals.projection_note,
+                    "Submitting the current request preset...".to_string(),
+                );
+                Some(draft)
+            }
+        });
+    cx.actions()
+        .mutation_retry_last::<act::RetryLastSave, _, _>(handle, {
+            let locals = locals.clone();
+            move |tx| {
+                tx.set(
+                    &locals.projection_note,
+                    "Retrying the last submitted preset...".to_string(),
+                )
+            }
+        });
 }
 
 fn emit_save_feedback_toasts(
     cx: &mut AppUi<'_, '_>,
-    window: WindowId,
     handle: &MutationHandle<RequestPresetDraft, SavedRequestPreset>,
     state: &MutationState<RequestPresetDraft, SavedRequestPreset>,
 ) {
@@ -431,11 +373,7 @@ fn emit_save_feedback_toasts(
         let Some(saved) = state.data.as_ref() else {
             return;
         };
-        let sonner = shadcn::Sonner::global(cx.app());
-        let mut host = UiActionHostAdapter { app: cx.app_mut() };
-        sonner.toast_success_message(
-            &mut host,
-            window,
+        cx.effects().toast_success(
             "Preset saved",
             shadcn::ToastMessageOptions::new().description(format!(
                 "{} {} -> {}",
@@ -455,11 +393,7 @@ fn emit_save_feedback_toasts(
             .as_ref()
             .map(ToString::to_string)
             .unwrap_or_else(|| "Unknown save failure".to_string());
-        let sonner = shadcn::Sonner::global(cx.app());
-        let mut host = UiActionHostAdapter { app: cx.app_mut() };
-        sonner.toast_error_message(
-            &mut host,
-            window,
+        cx.effects().toast_error(
             "Save failed",
             shadcn::ToastMessageOptions::new().description(description),
         );

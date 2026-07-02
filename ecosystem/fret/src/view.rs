@@ -2341,11 +2341,18 @@ mod tests {
             api_source
                 .contains("pub fn update_after_mutation_completion<TIn: 'static, TOut: 'static>(")
         );
+        assert!(api_source.contains(
+            "pub fn update_locals_after_mutation_completion<TIn: 'static, TOut: 'static>("
+        ));
         assert!(api_source.contains("pub fn take_mutation_success<TIn: 'static, TOut: 'static>("));
         assert!(api_source.contains("pub fn invalidate_query_after_mutation_success<"));
         assert!(api_source.contains(
             "pub fn invalidate_query_namespace_after_mutation_success<TIn: 'static, TOut: 'static>("
         ));
+        assert!(api_source.contains("pub fn mutation_submit<A, TIn, TOut>("));
+        assert!(api_source.contains("pub fn mutation_retry_last<A, TIn, TOut>("));
+        assert!(api_source.contains("pub fn toast_success("));
+        assert!(api_source.contains("pub fn toast_error("));
         assert!(api_source.contains("pub trait AppActivateSurface"));
         assert!(api_source.contains("pub trait AppActivateExt"));
         assert!(!api_source.contains("pub trait AppActivateCxMarker"));

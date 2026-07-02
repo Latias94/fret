@@ -320,6 +320,73 @@ impl<'view, 'cx, 'a, H: UiHost> AppUiActions<'view, 'cx, 'a, H> {
             .on_action_notify::<A>(move |host, _action_cx| f(host.models_mut()));
     }
 
+    /// Register a typed action that builds a mutation input from app-local state and submits it.
+    ///
+    /// The closure receives a `LocalStateTxn` so public app code can read/write ordinary
+    /// `LocalState<T>` values without naming `ModelStore` or the lower-level mutation action host.
+    #[cfg(feature = "state-mutation")]
+    pub fn mutation_submit<A, TIn, TOut>(
+        self,
+        handle: &fret_mutation::MutationHandle<TIn, TOut>,
+        input: impl for<'m> Fn(&mut LocalStateTxn<'m>) -> Option<TIn> + 'static,
+    ) where
+        A: crate::TypedAction,
+        TIn: Any + Send + Sync + 'static,
+        TOut: Any + Send + Sync + 'static,
+    {
+        let handle = (*handle).clone();
+        self.cx
+            .register_action_handler::<A>(move |host, action_cx| {
+                let input = {
+                    let mut tx = LocalStateTxn {
+                        models: host.models_mut(),
+                    };
+                    input(&mut tx)
+                };
+                let Some(input) = input else {
+                    return false;
+                };
+                let changed = handle.submit(host.models_mut(), action_cx.window, input);
+                if changed {
+                    host.request_redraw(action_cx.window);
+                    host.notify(action_cx);
+                }
+                changed
+            });
+    }
+
+    /// Register a typed action that explicitly retries the last mutation input.
+    ///
+    /// `before_retry` is for small app-local projections such as setting a status note. Returning
+    /// `false` does not cancel the retry; it only reports whether that projection changed state.
+    #[cfg(feature = "state-mutation")]
+    pub fn mutation_retry_last<A, TIn, TOut>(
+        self,
+        handle: &fret_mutation::MutationHandle<TIn, TOut>,
+        before_retry: impl for<'m> Fn(&mut LocalStateTxn<'m>) -> bool + 'static,
+    ) where
+        A: crate::TypedAction,
+        TIn: Any + Clone + Send + Sync + 'static,
+        TOut: Any + Send + Sync + 'static,
+    {
+        let handle = (*handle).clone();
+        self.cx
+            .register_action_handler::<A>(move |host, action_cx| {
+                let projected = {
+                    let mut tx = LocalStateTxn {
+                        models: host.models_mut(),
+                    };
+                    before_retry(&mut tx)
+                };
+                let changed = handle.retry_last(host.models_mut(), action_cx.window) || projected;
+                if changed {
+                    host.request_redraw(action_cx.window);
+                    host.notify(action_cx);
+                }
+                changed
+            });
+    }
+
     /// Coordinate shared `Model<T>` graphs through a typed payload action without reopening the
     /// raw payload-carrier namespace.
     ///

@@ -231,10 +231,18 @@ impl<TIn, TOut> MutationState<TIn, TOut> {
     }
 }
 
-#[derive(Clone)]
 enum MutationRuntimeHandle<TIn: 'static, TOut: 'static> {
     Ready(Arc<MutationRuntime<TIn, TOut>>),
     MissingDispatcher(Arc<str>),
+}
+
+impl<TIn: 'static, TOut: 'static> Clone for MutationRuntimeHandle<TIn, TOut> {
+    fn clone(&self) -> Self {
+        match self {
+            Self::Ready(runtime) => Self::Ready(runtime.clone()),
+            Self::MissingDispatcher(message) => Self::MissingDispatcher(message.clone()),
+        }
+    }
 }
 
 enum MutationSubmitter<TIn: 'static, TOut: 'static> {
@@ -251,13 +259,24 @@ impl<TIn: 'static, TOut: 'static> Clone for MutationSubmitter<TIn, TOut> {
     }
 }
 
-#[derive(Clone)]
 pub struct MutationHandle<TIn: 'static, TOut: 'static> {
     model: Model<MutationState<TIn, TOut>>,
     runtime: MutationRuntimeHandle<TIn, TOut>,
     spawner: Option<FutureSpawnerHandle>,
     policy: MutationPolicy,
     submitter: MutationSubmitter<TIn, TOut>,
+}
+
+impl<TIn: 'static, TOut: 'static> Clone for MutationHandle<TIn, TOut> {
+    fn clone(&self) -> Self {
+        Self {
+            model: self.model.clone(),
+            runtime: self.runtime.clone(),
+            spawner: self.spawner.clone(),
+            policy: self.policy.clone(),
+            submitter: self.submitter.clone(),
+        }
+    }
 }
 
 impl<TIn: 'static, TOut: 'static> MutationHandle<TIn, TOut> {
@@ -1335,5 +1354,15 @@ mod tests {
             |_token, input| Box::pin(async move { Ok(*input) }),
         );
         assert!(!handle.cancel(app.models_mut()));
+    }
+
+    #[test]
+    fn mutation_handle_clone_does_not_require_input_or_output_clone() {
+        fn assert_clone<T: Clone>() {}
+
+        struct NonCloneInput;
+        struct NonCloneOutput;
+
+        assert_clone::<MutationHandle<NonCloneInput, NonCloneOutput>>();
     }
 }

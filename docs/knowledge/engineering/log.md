@@ -273,3 +273,8 @@ timestamp: 2026-06-30
   settings label/close selectors. The public script caught modal overlay command routing failing to
   reach the base `AppUi` action root; `UiTree::dispatch_command` now applies explicit base
   action-route fallback roots under modal barriers without arbitrary underlay subtree dispatch.
+- 2026-07-02: Phase 2 U11 adds narrow public `AppUi` wrappers for mutation submit/retry,
+  terminal-state local projection, and shadcn/Sonner success/error toast feedback. The mutation
+  toast cookbook no longer imports `UiActionHostAdapter` or names `fret_runtime::ModelStore`.
+  `MutationHandle` clone is now manual so app-facing handles do not require input/output payloads to
+  implement `Clone`.

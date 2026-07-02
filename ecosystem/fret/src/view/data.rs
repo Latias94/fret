@@ -17,6 +17,8 @@ use fret_ui::{ElementContext, UiHost};
 
 #[cfg(feature = "state-selector")]
 use super::LocalState;
+#[cfg(feature = "state-mutation")]
+use super::LocalStateTxn;
 #[cfg(any(
     feature = "state-mutation",
     feature = "state-query",
@@ -610,6 +612,31 @@ impl<'view, 'cx, 'a, H: UiHost> AppUiData<'view, 'cx, 'a, H> {
         changed
     }
 
+    /// Project a fresh terminal mutation completion into app-local state without exposing
+    /// `ModelStore` in public app code.
+    #[cfg(feature = "state-mutation")]
+    pub fn update_locals_after_mutation_completion<TIn: 'static, TOut: 'static>(
+        self,
+        effect_key: u64,
+        handle: &fret_mutation::MutationHandle<TIn, TOut>,
+        apply: impl for<'m> FnOnce(
+            &mut LocalStateTxn<'m>,
+            fret_mutation::MutationState<TIn, TOut>,
+        ) -> bool,
+    ) -> bool {
+        let Some(state) = take_mutation_completion_state_in(self.cx.cx, effect_key, handle) else {
+            return false;
+        };
+        let mut tx = LocalStateTxn {
+            models: self.cx.cx.app.models_mut(),
+        };
+        let changed = apply(&mut tx, state);
+        if changed {
+            self.cx.cx.app.request_redraw(self.cx.cx.window);
+        }
+        changed
+    }
+
     /// Consume a mutation success exactly once for one `(effect_key, handle)` pair on the default
     /// app data lane.
     ///
@@ -901,6 +928,31 @@ impl<'cx, 'a> AppRenderData<'cx, 'a> {
             return false;
         };
         let changed = apply(self.cx.app.models_mut(), state);
+        if changed {
+            self.cx.app.request_redraw(self.cx.window);
+        }
+        changed
+    }
+
+    /// Project a fresh terminal mutation completion into app-local state without exposing
+    /// `ModelStore` in extracted app-render helpers.
+    #[cfg(feature = "state-mutation")]
+    pub fn update_locals_after_mutation_completion<TIn: 'static, TOut: 'static>(
+        self,
+        effect_key: u64,
+        handle: &fret_mutation::MutationHandle<TIn, TOut>,
+        apply: impl for<'m> FnOnce(
+            &mut LocalStateTxn<'m>,
+            fret_mutation::MutationState<TIn, TOut>,
+        ) -> bool,
+    ) -> bool {
+        let Some(state) = take_mutation_completion_state_in(self.cx, effect_key, handle) else {
+            return false;
+        };
+        let mut tx = LocalStateTxn {
+            models: self.cx.app.models_mut(),
+        };
+        let changed = apply(&mut tx, state);
         if changed {
             self.cx.app.request_redraw(self.cx.window);
         }
