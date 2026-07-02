@@ -460,6 +460,23 @@ impl<H: UiHost> UiTree<H> {
             .child_layout_rect_if_solved(parent, child)
     }
 
+    pub(crate) fn layout_engine_root_local_rect_if_solved(
+        &self,
+        root: NodeId,
+        available: crate::layout_constraints::LayoutSize<crate::layout_constraints::AvailableSpace>,
+        scale_factor: f32,
+    ) -> Option<Rect> {
+        if !self
+            .layout_engine
+            .root_is_solved_for(root, available, scale_factor)
+        {
+            return None;
+        }
+        self.layout_engine
+            .layout_id_for_node(root)
+            .map(|id| self.layout_engine.layout_rect(id))
+    }
+
     pub(crate) fn layout_engine_child_local_rect_profiled(
         &mut self,
         parent: NodeId,

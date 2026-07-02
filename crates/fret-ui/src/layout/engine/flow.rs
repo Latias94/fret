@@ -4,6 +4,7 @@ use crate::declarative::frame::{
     layout_direction_for_node, layout_style_for_node, ordered_flex_children,
     with_element_record_for_node,
 };
+use crate::layout_constraints::{AvailableSpace, LayoutSize};
 use crate::layout_engine::TaffyLayoutEngine;
 use crate::tree::UiTree;
 use crate::widget::LayoutCx;
@@ -28,6 +29,82 @@ pub(crate) enum ParentLayoutKind {
     Grid,
     PassthroughOverlayNoStretch,
     Overlay,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct ViewportRootOverride {
+    size: LayoutSize<Option<Px>>,
+    min_size: LayoutSize<Option<Px>>,
+    max_size: LayoutSize<Option<Px>>,
+}
+
+impl ViewportRootOverride {
+    pub(crate) const fn none() -> Self {
+        Self {
+            size: LayoutSize::new(None, None),
+            min_size: LayoutSize::new(None, None),
+            max_size: LayoutSize::new(None, None),
+        }
+    }
+
+    pub(crate) fn fixed(size: Size) -> Self {
+        Self {
+            size: LayoutSize::new(Some(size.width), Some(size.height)),
+            min_size: LayoutSize::new(None, None),
+            max_size: LayoutSize::new(Some(size.width), Some(size.height)),
+        }
+    }
+
+    pub(crate) fn from_available(
+        viewport_size: Size,
+        available: LayoutSize<AvailableSpace>,
+    ) -> Self {
+        fn axis(viewport: Px, available: AvailableSpace) -> (Option<Px>, Option<Px>, Option<Px>) {
+            match available {
+                AvailableSpace::Definite(_) => (Some(viewport), None, Some(viewport)),
+                AvailableSpace::MinContent | AvailableSpace::MaxContent => {
+                    (None, Some(viewport), None)
+                }
+            }
+        }
+
+        let (size_w, min_w, max_w) = axis(viewport_size.width, available.width);
+        let (size_h, min_h, max_h) = axis(viewport_size.height, available.height);
+        Self {
+            size: LayoutSize::new(size_w, size_h),
+            min_size: LayoutSize::new(min_w, min_h),
+            max_size: LayoutSize::new(max_w, max_h),
+        }
+    }
+
+    pub(crate) const fn has_fixed_width(self) -> bool {
+        self.size.width.is_some()
+    }
+
+    pub(crate) const fn has_fixed_height(self) -> bool {
+        self.size.height.is_some()
+    }
+
+    pub(crate) fn apply_to_style(self, style: &mut Style, scale_factor: f32) {
+        if let Some(width) = self.size.width {
+            style.size.width = Dimension::length(scale_nonneg(width.0, scale_factor));
+        }
+        if let Some(height) = self.size.height {
+            style.size.height = Dimension::length(scale_nonneg(height.0, scale_factor));
+        }
+        if let Some(width) = self.min_size.width {
+            style.min_size.width = Dimension::length(scale_nonneg(width.0, scale_factor));
+        }
+        if let Some(height) = self.min_size.height {
+            style.min_size.height = Dimension::length(scale_nonneg(height.0, scale_factor));
+        }
+        if let Some(width) = self.max_size.width {
+            style.max_size.width = Dimension::length(scale_nonneg(width.0, scale_factor));
+        }
+        if let Some(height) = self.max_size.height {
+            style.max_size.height = Dimension::length(scale_nonneg(height.0, scale_factor));
+        }
+    }
 }
 
 fn should_promote_auto_wrapper_for_fill(
@@ -129,7 +206,7 @@ pub(crate) fn build_flow_subtree<H: UiHost>(
         scale_factor,
         parent_kind,
         node,
-        None,
+        ViewportRootOverride::none(),
     );
 }
 
@@ -150,7 +227,29 @@ pub(crate) fn build_viewport_flow_subtree<H: UiHost>(
         scale_factor,
         ParentLayoutKind::Root,
         viewport_root,
-        Some(viewport_size),
+        ViewportRootOverride::fixed(viewport_size),
+    );
+}
+
+pub(crate) fn build_viewport_flow_subtree_for_available<H: UiHost>(
+    engine: &mut TaffyLayoutEngine,
+    app: &mut H,
+    tree: &UiTree<H>,
+    window: AppWindowId,
+    scale_factor: f32,
+    viewport_root: NodeId,
+    viewport_size: Size,
+    available: LayoutSize<AvailableSpace>,
+) {
+    build_flow_subtree_impl(
+        engine,
+        app,
+        tree,
+        window,
+        scale_factor,
+        ParentLayoutKind::Root,
+        viewport_root,
+        ViewportRootOverride::from_available(viewport_size, available),
     );
 }
 
@@ -187,7 +286,7 @@ fn build_flow_subtree_impl<H: UiHost>(
     scale_factor: f32,
     parent_kind: ParentLayoutKind,
     node: NodeId,
-    root_override_size: Option<Size>,
+    root_override_size: ViewportRootOverride,
 ) {
     let sf = sanitize_scale_factor(scale_factor);
     let _ = engine.request_layout_node(node);
@@ -452,9 +551,9 @@ fn build_flow_subtree_impl<H: UiHost>(
             set_measured_and_dirty_if_layout_invalidated(engine, tree, node, false);
             let parent_kind_for_children = ParentLayoutKind::Flex {
                 direction: props.direction,
-                definite_width: root_override_size.is_some()
+                definite_width: root_override_size.has_fixed_width()
                     || size_style_is_definite_or_fill(props.layout.size.width),
-                definite_height: root_override_size.is_some()
+                definite_height: root_override_size.has_fixed_height()
                     || size_style_is_definite_or_fill(props.layout.size.height),
             };
             for &child in children.as_ref() {
@@ -508,9 +607,9 @@ fn build_flow_subtree_impl<H: UiHost>(
             set_measured_and_dirty_if_layout_invalidated(engine, tree, node, false);
             let parent_kind_for_children = ParentLayoutKind::Flex {
                 direction: props.direction,
-                definite_width: root_override_size.is_some()
+                definite_width: root_override_size.has_fixed_width()
                     || size_style_is_definite_or_fill(props.layout.size.width),
-                definite_height: root_override_size.is_some()
+                definite_height: root_override_size.has_fixed_height()
                     || size_style_is_definite_or_fill(props.layout.size.height),
             };
             for &child in children.as_ref() {
@@ -564,9 +663,9 @@ fn build_flow_subtree_impl<H: UiHost>(
             set_measured_and_dirty_if_layout_invalidated(engine, tree, node, false);
             let parent_kind_for_children = ParentLayoutKind::Flex {
                 direction: props.direction,
-                definite_width: root_override_size.is_some()
+                definite_width: root_override_size.has_fixed_width()
                     || size_style_is_definite_or_fill(props.layout.size.width),
-                definite_height: root_override_size.is_some()
+                definite_height: root_override_size.has_fixed_height()
                     || size_style_is_definite_or_fill(props.layout.size.height),
             };
             for &child in children.as_ref() {
@@ -1107,7 +1206,7 @@ fn style_for_item_in_parent<H: UiHost>(
     parent_kind: ParentLayoutKind,
     node: NodeId,
     display: Display,
-    root_override_size: Option<Size>,
+    root_override_size: ViewportRootOverride,
 ) -> Style {
     let sf = sanitize_scale_factor(scale_factor);
     let layout_style = layout_style_for_node(app, window, node);
@@ -1243,12 +1342,7 @@ fn style_for_item_in_parent<H: UiHost>(
         // intrinsic sizing.
     }
 
-    if let Some(size) = root_override_size {
-        style.size.width = Dimension::length(scale_nonneg(size.width.0, scale_factor));
-        style.size.height = Dimension::length(scale_nonneg(size.height.0, scale_factor));
-        style.max_size.width = Dimension::length(scale_nonneg(size.width.0, scale_factor));
-        style.max_size.height = Dimension::length(scale_nonneg(size.height.0, scale_factor));
-    }
+    root_override_size.apply_to_style(&mut style, scale_factor);
 
     style
 }

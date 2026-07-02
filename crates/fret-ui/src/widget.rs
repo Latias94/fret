@@ -10,7 +10,7 @@ use fret_runtime::{
 use std::any::{Any, TypeId};
 use std::collections::HashMap;
 
-use crate::layout_constraints::LayoutConstraints;
+use crate::layout_constraints::{AvailableSpace, LayoutConstraints, LayoutSize};
 use crate::layout_pass::LayoutPassKind;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -719,6 +719,25 @@ impl<'a, H: UiHost> LayoutCx<'a, H> {
         ))
     }
 
+    pub fn layout_engine_root_bounds_for_available(
+        &mut self,
+        root: NodeId,
+        available: LayoutSize<AvailableSpace>,
+    ) -> Option<Rect> {
+        let local = self.tree.layout_engine_root_local_rect_if_solved(
+            root,
+            available,
+            self.scale_factor,
+        )?;
+        Some(Rect::new(
+            Point::new(
+                fret_core::Px(self.bounds.origin.x.0 + local.origin.x.0),
+                fret_core::Px(self.bounds.origin.y.0 + local.origin.y.0),
+            ),
+            local.size,
+        ))
+    }
+
     pub fn layout_viewport_root(&mut self, child: NodeId, bounds: Rect) -> Size {
         if self.pass_kind == LayoutPassKind::Probe {
             return bounds.size;
@@ -747,6 +766,25 @@ impl<'a, H: UiHost> LayoutCx<'a, H> {
         );
     }
 
+    pub fn solve_barrier_child_root_with_available(
+        &mut self,
+        child: NodeId,
+        bounds: Rect,
+        available: LayoutSize<AvailableSpace>,
+    ) {
+        if self.pass_kind != LayoutPassKind::Final {
+            return;
+        }
+        self.tree.solve_barrier_flow_root_with_available(
+            self.app,
+            self.services,
+            child,
+            bounds,
+            available,
+            self.scale_factor,
+        );
+    }
+
     pub fn solve_barrier_child_root_if_needed(&mut self, child: NodeId, bounds: Rect) {
         if self.pass_kind != LayoutPassKind::Final {
             return;
@@ -756,6 +794,25 @@ impl<'a, H: UiHost> LayoutCx<'a, H> {
             self.services,
             child,
             bounds,
+            self.scale_factor,
+        );
+    }
+
+    pub fn solve_barrier_child_root_if_needed_with_available(
+        &mut self,
+        child: NodeId,
+        bounds: Rect,
+        available: LayoutSize<AvailableSpace>,
+    ) {
+        if self.pass_kind != LayoutPassKind::Final {
+            return;
+        }
+        self.tree.solve_barrier_flow_root_if_needed_with_available(
+            self.app,
+            self.services,
+            child,
+            bounds,
+            available,
             self.scale_factor,
         );
     }
@@ -771,6 +828,22 @@ impl<'a, H: UiHost> LayoutCx<'a, H> {
             self.scale_factor,
         );
     }
+
+    pub fn solve_barrier_child_roots_if_needed_with_available(
+        &mut self,
+        roots: &[(NodeId, Rect, LayoutSize<AvailableSpace>)],
+    ) {
+        if self.pass_kind != LayoutPassKind::Final {
+            return;
+        }
+        self.tree.solve_barrier_flow_roots_if_needed_with_available(
+            self.app,
+            self.services,
+            roots,
+            self.scale_factor,
+        );
+    }
+
     pub fn measure_in(&mut self, child: NodeId, constraints: LayoutConstraints) -> Size {
         self.tree.measure_in(
             self.app,

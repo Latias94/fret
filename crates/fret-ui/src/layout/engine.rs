@@ -12,7 +12,10 @@ use taffy::{TaffyTree, prelude::NodeId as TaffyNodeId};
 
 use crate::layout_constraints::{AvailableSpace, LayoutConstraints, LayoutSize};
 mod flow;
-pub(crate) use flow::{build_viewport_flow_subtree, layout_children_from_engine_if_solved};
+pub(crate) use flow::{
+    ViewportRootOverride, build_viewport_flow_subtree, build_viewport_flow_subtree_for_available,
+    layout_children_from_engine_if_solved,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct NodeContext {
@@ -1184,19 +1187,24 @@ impl TaffyLayoutEngine {
         viewport_size: Size,
         scale_factor: f32,
     ) {
+        self.set_viewport_root_override(
+            root,
+            ViewportRootOverride::fixed(viewport_size),
+            scale_factor,
+        );
+    }
+
+    pub(crate) fn set_viewport_root_override(
+        &mut self,
+        root: NodeId,
+        root_override: ViewportRootOverride,
+        scale_factor: f32,
+    ) {
         let Some(mut style) = self.styles.get(root).cloned() else {
             return;
         };
 
-        let sf = Self::sanitized_scale_factor(scale_factor);
-
-        let w = viewport_size.width.0.max(0.0) * sf;
-        let h = viewport_size.height.0.max(0.0) * sf;
-        style.size.width = taffy::style::Dimension::length(w);
-        style.size.height = taffy::style::Dimension::length(h);
-        style.max_size.width = taffy::style::Dimension::length(w);
-        style.max_size.height = taffy::style::Dimension::length(h);
-
+        root_override.apply_to_style(&mut style, scale_factor);
         self.set_style(root, style);
     }
 
