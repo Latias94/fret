@@ -23,7 +23,7 @@ It is **non-normative**: the ADR itself remains the source of truth; this file i
 
 ## Summary
 
-- Last updated: 2026-06-30
+- Last updated: 2026-07-02
 - ADR count (numbered): 328
 
 - Aligned: 119
@@ -36,15 +36,18 @@ It is **non-normative**: the ADR itself remains the source of truth; this file i
 ## 2026 Convergence Overlay
 
 The current fearless convergence plan is
-`docs/plans/2026-06-30-001-refactor-ui-framework-architecture-plan.md`.
-It does not supersede the matrix rows below; it narrows the next implementation cut for accepted
-contracts whose broad workstreams are already closed or partially aligned.
+`docs/plans/2026-07-02-001-refactor-ui-framework-phase2-plan.md`. The prior convergence plan
+`docs/plans/2026-06-30-001-refactor-ui-framework-architecture-plan.md` is closed by
+`docs/workstreams/fearless-architecture-convergence-v1/CLOSEOUT_AUDIT_2026-07-02.md`.
+The Phase 2 plan does not supersede the matrix rows below; it freezes the next deletion-biased
+implementation cut for accepted contracts whose broad workstreams are already closed or partially
+aligned.
 
 | ADR | Current convergence interpretation |
 | --- | --- |
-| [`0066-fret-ui-runtime-contract-surface.md`](0066-fret-ui-runtime-contract-surface.md) | Still aligned with known gaps. The new breakable surface is public vocabulary responsibility: policy-coded runtime names and default app imports of raw runtime seams should be blocked by source-policy gates before more ecosystem breadth lands. The U6 convergence slice removes the `ResizablePanelGroupStyle` `fret-ui` root export and the source-policy transitional classification, keeping the style type on the explicit `fret_ui::resizable_panel_group` mechanism path while ecosystem recipes provide component defaults. The roving/typeahead audit keeps `RovingFlex` / `Roving*` runtime hook contexts as composite focus mechanisms because matching, disabled-item navigation, entry fallback, and selection writes are component/headless policy in `fret-ui-kit`; source-policy now locks that these policy-coded names stay off the `fret-ui` root/default authoring surface. |
-| [`0165-dirty-views-and-notify-gpui-aligned.md`](0165-dirty-views-and-notify-gpui-aligned.md) | Still partially aligned. v1 cache-root-first `notify` remains implemented, but dirty frontier ownership now uses `DirtyViewFrontier` with `ViewId` storage plus an explicit v1 boundary-node bridge while entity-first `ViewId` remains a follow-on. |
-| [`0327-frame-pipeline-v2-and-view-boundaries.md`](0327-frame-pipeline-v2-and-view-boundaries.md) | Still aligned with known gaps. The broad lane is closed; layout dirty frontier ownership now sits next to `ViewBoundaryState::dirty`, cache-root interaction replay entries, hit-test bounds tree indexes, and reusable semantics subtree products now live in `BoundaryFrameProducts`; dispatch snapshot generation/cache has a named window/layer-forest frame-product owner state; command dispatch source starts plus command dispatch/availability bubbling now use the current `UiDispatchSnapshot` membership and parent map; touch-drag scroll owner resolution also uses the current dispatch snapshot parent map instead of retained parent pointers; command/focus routing availability caches now sit behind a named window/layer-forest routing owner state; and hit-test path routing cache now has a named window-owned input-routing owner state that is explicitly not a boundary product. A portable `SceneChunk` carrier now exists for retained scene fragments; input snapshots, paint recording, boundary-owned chunk identity, renderer chunk encode reuse, renderer dirty uploads, and text/glyph budget gates remain narrow follow-ons. |
+| [`0066-fret-ui-runtime-contract-surface.md`](0066-fret-ui-runtime-contract-surface.md) | Still aligned with known gaps. Phase 2 keeps the mechanism/policy split intact while making source-policy exceptions temporary records: public starters and default app authoring must not import raw runtime seams, and every advanced/manual exception needs owner, reason, allowed seams, and retirement criteria before it can remain. |
+| [`0165-dirty-views-and-notify-gpui-aligned.md`](0165-dirty-views-and-notify-gpui-aligned.md) | Still partially aligned. v1 cache-root-first `notify` remains implemented, but Phase 2 now freezes the target split: `GlobalElementId` is declarative identity, `StableNodeHandle` is window-local liveness, `NodeId` is retained placement, and entity-first `ViewId` is dirty-view ownership. Scan fallback, parent repair, and GC reachability paths are migration bridges with metrics and deletion gates. |
+| [`0327-frame-pipeline-v2-and-view-boundaries.md`](0327-frame-pipeline-v2-and-view-boundaries.md) | Still aligned with known gaps. The broad lane is closed, and Phase 2 freezes which products can move to boundary ownership versus which remain window/layer-forest owned. `ViewId(pub NodeId)`, `BoundaryId(NodeId)`, and v1 boundary-node bridge helpers are migration bridges; dispatch snapshots, command routing, final semantics, hit-test path routing, focus/capture state, active layer roots, modal barriers, and tree-wide paint recording stay window-owned unless a later ADR proves a narrower owner. Renderer flat-scene and full-blob text helpers are also migration bridges that require parity/resource-closure gates before deletion. |
 
 ## Matrix
 

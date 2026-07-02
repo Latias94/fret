@@ -66,8 +66,11 @@ Key invariants:
 ## Current Convergence Closure Target
 
 The active fearless-refactor plan is
+`docs/plans/2026-07-02-001-refactor-ui-framework-phase2-plan.md`. It builds on the closed
+Phase 1 convergence plan
 `docs/plans/2026-06-30-001-refactor-ui-framework-architecture-plan.md`.
-This closure map should be read through that plan when deciding what to break, delete, or gate.
+This closure map should be read through the active plan when deciding what to break, delete, or
+gate.
 
 Must-be-true outcomes for the next convergence pass:
 
@@ -80,21 +83,31 @@ Must-be-true outcomes for the next convergence pass:
 - Runtime mechanism submodules may expose low-level configuration types when component layers need
   them, but `crates/fret-ui` root exports stay narrower: resizable split chrome is available via
   `fret_ui::resizable_panel_group::ResizablePanelGroupStyle`, not as a root policy-style export.
-- Dirty work is attributable by `ViewId` / `ViewBoundary`, with cache-root-first behavior treated as
-  a compatibility mapping rather than the final runtime model.
-- Prepaint products, hit-testing inputs, dispatch snapshots, semantics bounds, text-layout indexes,
-  and scene fragments are owned by boundaries where the current code still keeps them tree-wide or
-  node-local.
+- Declarative identity, stable node liveness, retained placement, and view/entity identity are
+  separate: `GlobalElementId`, `StableNodeHandle`, `NodeId`, `ViewId`, and `BoundaryId` are not
+  interchangeable.
+- Dirty work is attributable by entity-first `ViewId` / `ViewBoundary`, with cache-root-first and
+  boundary-node behavior treated as compatibility mappings rather than the final runtime model.
+- Prepaint products, boundary hit-testing inputs, reusable boundary semantics subtrees, text-layout
+  indexes, and scene fragments are owned by boundaries where locality is proven.
+- Dispatch snapshots, command routing and availability, final semantics snapshots, hit-test path
+  routing, focus/capture state, active layer roots, modal barriers, and tree-wide paint recording
+  stay window/layer-forest owned unless a later ADR proves a narrower owner.
 - Renderer/text costs for local edits are bounded by scene chunks, render-plan reuse, dirty upload
   ranges, and explicit text/glyph/wasm cache budgets.
 
 High-risk compatibility paths that need either deletion or an explicit retention gate:
 
-- hash-keyed retained identity fallback scans without stable-handle diagnostics,
+- hash-keyed retained identity fallback scans after stable-handle diagnostics exist,
 - parent repair and GC reachability work that can scale with the active retained tree,
-- flat `Scene` bridges used as the only replay unit for local text/caret/selection changes,
+- `ViewId(pub NodeId)`, `BoundaryId(NodeId)`, and v1 boundary-node bridge helpers in normal paths,
+- flat `Scene` bridges used as the normal renderer input or the only replay unit for local
+  text/caret/selection changes,
+- full-blob text resource helpers in normal renderer chunk/resource paths,
 - `fret-ui` public names that encode Dialog/Popover/Menu/Tooltip/dismissal policy,
-- first-party examples that make advanced/manual assembly look like the default app path.
+- first-party examples that make advanced/manual assembly look like the default app path,
+- source-policy allowlist entries that do not name an owner, reason, allowed seams, and retirement
+  criteria.
 
 ---
 

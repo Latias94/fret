@@ -33,8 +33,11 @@ For a closure-oriented, module-by-module index (contracts → code → tests →
 ## 2026 convergence addendum
 
 The active convergence plan is
-`docs/plans/2026-06-30-001-refactor-ui-framework-architecture-plan.md`.
-This addendum defines the runtime contract posture that plan implements.
+`docs/plans/2026-07-02-001-refactor-ui-framework-phase2-plan.md`. It follows the closed
+Phase 1 convergence plan
+`docs/plans/2026-06-30-001-refactor-ui-framework-architecture-plan.md` and turns the retained
+bridges from that closeout into explicit deletion work.
+This addendum defines the runtime contract posture that the active plan implements.
 
 `crates/fret-ui` should stay broad internally but narrow publicly:
 
@@ -50,14 +53,41 @@ This addendum defines the runtime contract posture that plan implements.
 
 The convergence target is GPUI-aligned but Fret-owned:
 
-- `ViewId` is the primary maintainer vocabulary for dirty views; cache-root IDs are a compatibility
-  mapping until entity-first view identity is complete.
-- `ViewBoundary` owns phase products: layout results, prepaint state, hitbox inputs, dispatch
-  slices, semantics bounds, text-layout indexes, and `SceneFragment` records.
-- `GlobalElementId` remains useful for authoring/debug identity, but retained-node repair must be
-  measured through stable-handle diagnostics before hash fallback paths are deleted.
+- `GlobalElementId` is declarative path identity for state, diagnostics, and authoring selectors.
+  It is not a liveness oracle.
+- `StableNodeHandle` is the window-local live binding handle and must include enough slot plus
+  binding or attachment generation information to reject stale detached nodes and deleted-slot
+  reuse. It is not a `NodeId` wrapper.
+- `NodeId` is the current retained tree placement used by mechanisms that operate on the current
+  tree. It does not substitute for declarative element identity, stable node liveness, or view
+  identity.
+- `ViewId` is the primary maintainer vocabulary for dirty views and is converging to an
+  entity-first, window-scoped identity. Cache-root IDs and `ViewId(pub NodeId)` are compatibility
+  mappings until entity-first view identity is complete.
+- `BoundaryId` is cache/execution boundary identity. `BoundaryId(NodeId)` and v1 boundary-node
+  bridge helpers are compatibility mappings until the boundary store is entity-first.
+- `ViewBoundary` owns phase products only when the product is boundary-local: layout results,
+  prepaint state, boundary hitbox inputs, reusable boundary semantics subtrees, boundary text-layout
+  indexes, boundary scene fragments, and boundary paint-cache entry metadata.
+- Window/layer-forest products stay window-owned: dispatch snapshots, command routing and
+  availability, final semantics snapshots, hit-test path routing, focus/capture state, active layer
+  roots, modal barriers, and tree-wide paint recording.
+- `GlobalElementId`-seeded retained-node repair must be measured through stable-handle diagnostics
+  before hash fallback paths are deleted.
 - Renderer-facing work should prefer retained scene chunks, resource-generation keys, render-plan
   reuse, and dirty upload ranges over whole-scene encode/upload when a local edit is observable.
+
+Compatibility bridge policy for the active plan:
+
+- Scan-based live element lookup, parent repair, GC reachability expansion, `ViewId(pub NodeId)`,
+  `BoundaryId(NodeId)`, `iter_boundary_nodes_v1`, `mark_boundary_node_v1`,
+  `clear_boundary_node_v1`, flat `Scene` normal renderer input, chunk replay through temporary flat
+  scenes, full-blob text resource helpers, and source-policy allowlist entries are migration
+  bridges.
+- Every retained bridge needs an owner, reason, measurable deletion gate, and follow-up path. An
+  unowned compatibility path is out of contract for this pre-launch refactor window.
+- Source-policy exceptions are not runtime mechanisms. They are public-surface quarantine records
+  that must shrink as app-facing wrappers and generated starters land.
 
 Source-policy gates are part of this contract. Passing dependency layering is necessary but not
 sufficient: default tutorials, scaffold templates, and first-contact app examples must not import

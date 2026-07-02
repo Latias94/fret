@@ -17,6 +17,32 @@ v2 lane. The active convergence plan
 contract anchor for narrower follow-ons: ViewId-first dirty ownership, boundary-owned frame
 products, retained scene chunks, renderer dirty uploads, and text/glyph budget gates.
 
+Phase 2 convergence note (2026-07-02): the active deletion-biased follow-on is
+`docs/plans/2026-07-02-001-refactor-ui-framework-phase2-plan.md`. It preserves this ADR as the
+frame-pipeline contract while freezing stricter migration rules:
+
+- `ViewId` and `BoundaryId` are independent window-scoped/runtime identities, not durable aliases
+  for retained `NodeId` placement. `ViewId(pub NodeId)`, `BoundaryId(NodeId)`, and
+  `iter_boundary_nodes_v1` / `mark_boundary_node_v1` / `clear_boundary_node_v1` style helpers are
+  migration bridges with deletion gates.
+- `ViewBoundaryState` and the next `ViewBoundaryStore` should be keyed by `ViewId` and/or
+  `BoundaryId`, then resolve the current live node through explicit liveness metadata. A detached
+  or retained boundary may exist without a live node.
+- Boundary-owned products are valid only when their correctness is local to that boundary. Layout
+  dirty bits, boundary prepaint products, cache-root interaction replay entries, reusable boundary
+  semantics subtrees, boundary scene fragments, and boundary paint-cache entry metadata remain the
+  primary candidates.
+- Window/layer-forest products stay window-owned unless a later ADR proves a narrower owner:
+  dispatch snapshots, command routing and availability, final semantics snapshots, hit-test path
+  routing, focus/capture state, active layer roots, modal barrier state, and tree-wide paint
+  recording.
+- Renderer migration bridges (`Scene` as the normal semantic render input, chunk replay through
+  temporary flat scenes, full-blob text resource helpers, and stream classes without chunk closure)
+  must carry parity or resource-closure gates before deletion.
+- Public/source-policy compatibility exceptions are not frame products. They may be referenced by
+  this plan because they protect adoption during the same breaking window, but they belong to the
+  app facade/source-policy contract and must carry owner, reason, and retirement criteria there.
+
 ## Context
 
 Fret currently combines several valid but partially overlapping runtime ideas:
@@ -189,6 +215,11 @@ boundary ownership where feasible:
 - semantics bounds and accessibility reachability inputs,
 - text-layout indexes used by editor-like surfaces,
 - `SceneFragment` records that can be replayed or encoded independently.
+
+The next convergence step MUST NOT move cross-layer products into a boundary merely to reduce
+storage breadth. If a product observes active layers, modal barriers, focus/capture, command
+registries, relation normalization, pointer occlusion, or multiple roots in one frame, its owner is
+the window/layer forest until a separate proof shows an equivalent boundary-local contract.
 
 ### 3. Layout containment is a dependency contract
 

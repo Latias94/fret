@@ -72,6 +72,30 @@ The runtime provides:
 - Any hash-keyed retained identity fallback, parent repair, or node-level invalidation path that
   survives the migration needs explicit metrics and a retention reason.
 
+2026 Phase 2 identity contract update:
+
+- `GlobalElementId` is declarative path identity. It is valid for state slots, diagnostics,
+  author-facing selectors, and as an input to the live element index, but it MUST NOT be treated as
+  proof that a retained node is currently live.
+- `StableNodeHandle` is the runtime's window-local liveness handle. It MUST include enough slot and
+  binding or attachment generation information to reject stale detached nodes and deleted-slot reuse;
+  it is not a `NodeId` newtype.
+- `NodeId` is the current retained tree placement. It may be used for layout, dispatch, focus,
+  hit-test, and paint mechanisms that operate on the current tree, but it MUST NOT substitute for
+  declarative element identity, stable node liveness, or view/entity identity.
+- `ViewId` is the dirty-view target and is converging to an entity-first, window-scoped identity.
+  `ViewId(pub NodeId)` is a migration bridge, not the target contract.
+- `BoundaryId` is cache/execution boundary identity. `BoundaryId(NodeId)` and boundary-node bridge
+  helpers are migration bridges, not the target contract.
+- Live element lookup MUST converge on an authoritative window-local `ElementNodeIndex` that maps a
+  resolved declarative identity scope to a valid `StableNodeHandle`. Duplicate live
+  `GlobalElementId` entries in one window must fail or enter an explicit diagnostic quarantine
+  instead of silently overwriting another binding.
+- Scan-based live element fallback, parent-pointer repair, and GC reachability expansion are
+  retained only as instrumented migration paths. They may remain while replacing call sites, but
+  normal-path use must have a deletion gate with fallback-scan, stale-handle, scanned-node,
+  parent-repair, and reachability counters.
+
 Semantics:
 
 - Calling `notify` indicates the view's rendered output may have changed.
@@ -178,6 +202,12 @@ Cons:
 5) Add architecture metrics before replacing identity paths: fallback scan count, seeded-handle hit
    rate, stale-handle repairs, parent repair count, GC reachability breadth, dirty frontier size,
    and dispatch snapshot reuse/miss reasons.
+6) Replace scan-based live element resolution with an authoritative `ElementNodeIndex` plus
+   `StableNodeHandle` validity checks, then delete the scan fallback from normal paths after
+   keyed-reorder and stale-handle pressure gates prove zero fallback use after warmup.
+7) Replace the v1 boundary-node dirty bridge with entity-first `ViewId` subscriber fanout. Model
+   observations as subscriber sets scoped by window and view, with detach cleanup, rather than as a
+   single node owner.
 
 ## References
 
