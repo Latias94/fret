@@ -415,7 +415,7 @@ fn append_metrics(
                 bool_metric(
                     ui.debug_dirty_views()
                         .iter()
-                        .any(|dirty| dirty.view.0 == id),
+                        .any(|dirty| boundary_node_for_view_id_v1(dirty.view) == id),
                 ),
             );
             set_metric(

@@ -37,7 +37,7 @@ pub struct UiDirtyViewV1 {
 impl UiDirtyViewV1 {
     fn from_dirty_view(dirty: &fret_ui::tree::UiDebugDirtyView) -> Self {
         Self {
-            root_node: key_to_u64(dirty.view.0),
+            root_node: dirty.view.as_raw(),
             root_element: dirty.element.map(|e| e.0),
             source: Some(invalidation_source_as_str(dirty.source).to_string()),
             detail: dirty.detail.as_str().map(|s| s.to_string()),
@@ -60,7 +60,7 @@ impl UiNotifyRequestV1 {
         Self {
             frame_id: req.frame_id.0,
             caller_node: key_to_u64(req.caller_node),
-            target_view: key_to_u64(req.target_view.0),
+            target_view: req.target_view.as_raw(),
             file: req.file.to_string(),
             line: req.line,
             column: req.column,

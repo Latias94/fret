@@ -10,16 +10,24 @@ related_plan: docs/plans/2026-07-02-001-refactor-ui-framework-phase2-plan.md
 
 - Goal: execute `docs/plans/2026-07-02-001-refactor-ui-framework-phase2-plan.md` as a breaking Phase 2 UI framework refactor.
 - Branch: `feat/ui-framework-phase2-refactor`.
-- Last verified: Phase 2 U3 live fallback scan deletion passed full `cargo nextest run -p fret-ui --no-fail-fast` on 2026-07-02, plus focused `fret-diag`, `fret-bootstrap`, formatting, layering, surface-policy, and whitespace gates.
+- Last verified: Phase 2 U4 ViewId bridge split passed `cargo check -p fret-ui`,
+  `cargo check -p fret-ui --features diagnostics`, bootstrap diagnostics check, focused
+  dirty-view/view-cache/layout nextest coverage, full `cargo nextest run -p fret-ui --no-fail-fast`
+  (1180 passed), `cargo nextest run -p fret-bootstrap --lib --no-fail-fast`, formatting, layering,
+  surface-policy, wiki-memory validation, and whitespace checks on 2026-07-02.
 - Done: local ADR/workstream research, crate/perf snapshots, GPUI/Zed comparison, architecture boundary audit, framework consumer audit, performance audit, implementation-ready plan, U1 convergence contract freeze, U2 source-policy gate, U3 first slice (`workbench-lite` public scaffold), U4 identity/dirty graph observability slices, U5 `ViewId` / boundary frame-product ownership slices, U6 policy vocabulary demotion/cleanup slices, U7 renderer scene/upload observability plus retained scene chunk and guarded quad resident upload lanes, U8 text/glyph/wasm budget work through web runtime evidence, U9 modular consumption profiles and `AppUi` facade split, workstream closeout audit, duplicate ADR ID `0324` resolution, and execution-surface allowlist alignment.
-- Latest done: Phase 2 U3 removed normal-path live element fallback scans, identity fallback diagnostics, and the semantics `element_id_map_for_window` lazy `WindowFrame.instances` map; live element and semantics relation resolution are now seed/index-derived only, with retained detached reuse kept as an explicit retained-cache path.
-- In progress: Phase 2 U4 design cut: move `ViewId` and boundary storage to entity-first identities.
-- Blocked: none known after the U3 deletion slice.
-- Next action: start U4 `ViewId` / boundary storage migration.
+- Latest done: Phase 2 U4 first cut removed implicit `ViewId`/`NodeId` conversion. `ViewId` is now an
+  independent raw token, and cache-root projection is isolated behind explicit v1 bridge helpers.
+- In progress: Phase 2 U4 remaining cut: replace `BoundaryId(NodeId)` and
+  `SecondaryMap<NodeId, ViewBoundaryState>` with an entity-first `ViewBoundaryStore`.
+- Blocked: none known after the ViewId bridge split.
+- Next action: introduce entity-first `ViewBoundaryStore` and delete `BoundaryId(NodeId)` storage
+  keys.
 
 # Citations
 
-- [Plan](../../plans/2026-06-30-001-refactor-ui-framework-architecture-plan.md)
+- [Phase 2 plan](../../plans/2026-07-02-001-refactor-ui-framework-phase2-plan.md)
+- [Phase 1 convergence plan](../../plans/2026-06-30-001-refactor-ui-framework-architecture-plan.md)
 - [Subagent Findings](subagents/2026-06-30-ui-framework-architecture-audit-findings.md)
 - [U9 AppUi shell split audit](subagents/2026-07-02-u9-appui-shell-split-audit.md)
 - [U8 web wasm runtime evidence closeout](progress/2026-07-02-u8-web-wasm-runtime-evidence.md)
@@ -29,6 +37,8 @@ related_plan: docs/plans/2026-07-02-001-refactor-ui-framework-phase2-plan.md
 - [ADR numbering and pre-release smoke restored](progress/2026-07-02-adr-numbering-pre-release-smoke.md)
 - [Phase 2 U2 stable element node index](progress/2026-07-02-phase2-u2-stable-element-index.md)
 - [Phase 2 U3 live fallback scan deletion](progress/2026-07-02-phase2-u3-live-fallback-scan-deletion.md)
+- [Phase 2 U4 ViewId bridge split](progress/2026-07-02-phase2-u4-viewid-bridge-split.md)
+- [Phase 2 U4 boundary store audit](subagents/2026-07-02-phase2-u4-boundary-store-audit.md)
 - Commit `020bb34a37 docs(architecture): freeze ui convergence contract`
 - Commit `84f60d8355 feat(tools): add ui surface policy gate`
 - Commit `df0d6620ff feat(ui): expose dirty frontier diagnostics`

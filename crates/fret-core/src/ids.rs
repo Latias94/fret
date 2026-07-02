@@ -16,20 +16,18 @@ new_key_type! {
 
 /// Window-scoped view identifier used for "dirty view" tracking (GPUI-aligned).
 ///
-/// v1: a view is defined at cache boundary granularity (a `ViewCache` root), so `ViewId` wraps the
-/// runtime `NodeId` for that cache root.
+/// The current runtime still maps cache-root nodes into `ViewId` through an explicit v1 bridge, but
+/// `ViewId` itself is not a retained `NodeId` alias.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct ViewId(pub NodeId);
+pub struct ViewId(u64);
 
-impl From<NodeId> for ViewId {
-    fn from(value: NodeId) -> Self {
-        Self(value)
+impl ViewId {
+    pub const fn from_raw(raw: u64) -> Self {
+        Self(raw)
     }
-}
 
-impl From<ViewId> for NodeId {
-    fn from(value: ViewId) -> Self {
-        value.0
+    pub const fn as_raw(self) -> u64 {
+        self.0
     }
 }
 

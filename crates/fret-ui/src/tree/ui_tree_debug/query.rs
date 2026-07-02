@@ -100,7 +100,7 @@ impl<H: UiHost> UiTree<H> {
             self.debug_notify_requests.push(UiDebugNotifyRequest {
                 frame_id,
                 caller_node,
-                target_view: ViewId(target),
+                target_view: crate::tree::view_boundary::view_id_for_boundary_node_v1(target),
                 file: location.file,
                 line: location.line,
                 column: location.column,

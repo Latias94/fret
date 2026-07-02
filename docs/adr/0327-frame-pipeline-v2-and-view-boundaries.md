@@ -22,9 +22,9 @@ Phase 2 convergence note (2026-07-02): the active deletion-biased follow-on is
 frame-pipeline contract while freezing stricter migration rules:
 
 - `ViewId` and `BoundaryId` are independent window-scoped/runtime identities, not durable aliases
-  for retained `NodeId` placement. `ViewId(pub NodeId)`, `BoundaryId(NodeId)`, and
-  `iter_boundary_nodes_v1` / `mark_boundary_node_v1` / `clear_boundary_node_v1` style helpers are
-  migration bridges with deletion gates.
+  for retained `NodeId` placement. The old `ViewId(pub NodeId)` wrapper is deleted. `BoundaryId(NodeId)`
+  and `iter_boundary_nodes_v1` / `mark_boundary_node_v1` / `clear_boundary_node_v1` style helpers are
+  remaining migration bridges with deletion gates.
 - `ViewBoundaryState` and the next `ViewBoundaryStore` should be keyed by `ViewId` and/or
   `BoundaryId`, then resolve the current live node through explicit liveness metadata. A detached
   or retained boundary may exist without a live node.

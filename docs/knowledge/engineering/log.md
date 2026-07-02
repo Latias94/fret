@@ -179,6 +179,10 @@ timestamp: 2026-06-30
   bootstrap diagnostics fields, and `fret-diag` perf keys. Live element resolution is now
   seed-or-index only; retained detached reuse remains explicit through
   `resolve_reusable_node_for_element_seeded`.
+- 2026-07-02: Phase 2 U4 first cut removes implicit `ViewId`/`NodeId` conversion. `ViewId` is now an
+  independent raw token with `from_raw` / `as_raw`, debug dirty-view code uses explicit v1 bridge
+  helpers, and docs/ADR alignment record that `BoundaryId(NodeId)` plus
+  `SecondaryMap<NodeId, ViewBoundaryState>` remain the next U4 deletion target.
 - U3 deletion verification passed: `cargo check -p fret-ui`, `cargo check -p fret-bootstrap`,
   focused U3 identity and scroll-target nextest coverage,
   `cargo nextest run -p fret-ui --no-fail-fast` (1180 passed),

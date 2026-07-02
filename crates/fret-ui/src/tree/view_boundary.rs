@@ -1,4 +1,5 @@
 use super::*;
+use slotmap::Key;
 use std::any::{Any, TypeId};
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -104,6 +105,14 @@ impl BoundaryId {
     }
 }
 
+pub(in crate::tree) fn view_id_for_boundary_node_v1(node: NodeId) -> ViewId {
+    ViewId::from_raw(node.data().as_ffi())
+}
+
+pub(in crate::tree) fn boundary_node_for_view_id_v1(view: ViewId) -> NodeId {
+    NodeId::from(slotmap::KeyData::from_ffi(view.as_raw()))
+}
+
 #[derive(Debug, Default, Clone)]
 pub(super) struct DirtyViewFrontier {
     views: HashSet<ViewId>,
@@ -111,16 +120,16 @@ pub(super) struct DirtyViewFrontier {
 
 impl DirtyViewFrontier {
     pub(super) fn mark_boundary_node_v1(&mut self, node: NodeId) -> bool {
-        self.views.insert(ViewId::from(node))
+        self.views.insert(view_id_for_boundary_node_v1(node))
     }
 
     pub(super) fn clear_boundary_node_v1(&mut self, node: NodeId) -> bool {
-        self.views.remove(&ViewId::from(node))
+        self.views.remove(&view_id_for_boundary_node_v1(node))
     }
 
     #[cfg(test)]
     pub(super) fn contains_boundary_node_v1(&self, node: NodeId) -> bool {
-        self.views.contains(&ViewId::from(node))
+        self.views.contains(&view_id_for_boundary_node_v1(node))
     }
 
     pub(super) fn is_empty(&self) -> bool {
@@ -136,7 +145,7 @@ impl DirtyViewFrontier {
     }
 
     pub(super) fn iter_boundary_nodes_v1(&self) -> impl Iterator<Item = NodeId> + '_ {
-        self.iter_views().map(NodeId::from)
+        self.iter_views().map(boundary_node_for_view_id_v1)
     }
 }
 
@@ -1050,8 +1059,14 @@ mod dirty_view_frontier_tests {
         assert_eq!(frontier.len(), 2);
         assert!(frontier.contains_boundary_node_v1(first));
         let mut views: Vec<ViewId> = frontier.iter_views().collect();
-        views.sort_by_key(|view| view.0.data().as_ffi());
-        assert_eq!(views, vec![ViewId::from(first), ViewId::from(second)]);
+        views.sort_by_key(|view| view.as_raw());
+        assert_eq!(
+            views,
+            vec![
+                view_id_for_boundary_node_v1(first),
+                view_id_for_boundary_node_v1(second)
+            ]
+        );
 
         let mut bridge_nodes: Vec<NodeId> = frontier.iter_boundary_nodes_v1().collect();
         bridge_nodes.sort_by_key(|id| id.data().as_ffi());

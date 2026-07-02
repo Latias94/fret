@@ -100,7 +100,8 @@ High-risk compatibility paths that need either deletion or an explicit retention
 
 - hash-keyed retained identity fallback scans after stable-handle diagnostics exist,
 - parent repair and GC reachability work that can scale with the active retained tree,
-- `ViewId(pub NodeId)`, `BoundaryId(NodeId)`, and v1 boundary-node bridge helpers in normal paths,
+- the deleted `ViewId(pub NodeId)` wrapper returning through implicit conversions,
+- `BoundaryId(NodeId)` and explicit v1 boundary-node bridge helpers in normal paths,
 - flat `Scene` bridges used as the normal renderer input or the only replay unit for local
   text/caret/selection changes,
 - full-blob text resource helpers in normal renderer chunk/resource paths,

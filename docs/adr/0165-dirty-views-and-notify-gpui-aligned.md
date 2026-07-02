@@ -84,7 +84,8 @@ The runtime provides:
   hit-test, and paint mechanisms that operate on the current tree, but it MUST NOT substitute for
   declarative element identity, stable node liveness, or view/entity identity.
 - `ViewId` is the dirty-view target and is converging to an entity-first, window-scoped identity.
-  `ViewId(pub NodeId)` is a migration bridge, not the target contract.
+  The old `ViewId(pub NodeId)` wrapper is deleted; current v1 cache-root projection must go through
+  explicitly named bridge helpers until the boundary store owns entity-first lookup.
 - `BoundaryId` is cache/execution boundary identity. `BoundaryId(NodeId)` and boundary-node bridge
   helpers are migration bridges, not the target contract.
 - Live element lookup MUST converge on an authoritative window-local `ElementNodeIndex` that maps a

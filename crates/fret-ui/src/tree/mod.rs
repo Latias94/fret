@@ -139,7 +139,9 @@ use small_list::{SmallCopyList, SmallNodeList};
 pub use view_boundary::{
     BoundarySceneChunkManifest, BoundarySceneFragmentChunk, BoundarySceneFragmentDebug,
 };
-use view_boundary::{DirtyViewFrontier, PaintCacheEntryState, ViewBoundaryState};
+use view_boundary::{
+    DirtyViewFrontier, PaintCacheEntryState, ViewBoundaryState, boundary_node_for_view_id_v1,
+};
 
 use dispatch_snapshot::DispatchSnapshotFrameProductState;
 pub(crate) use dispatch_snapshot::UiDispatchSnapshot;

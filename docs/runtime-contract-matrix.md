@@ -61,9 +61,9 @@ The convergence target is GPUI-aligned but Fret-owned:
 - `NodeId` is the current retained tree placement used by mechanisms that operate on the current
   tree. It does not substitute for declarative element identity, stable node liveness, or view
   identity.
-- `ViewId` is the primary maintainer vocabulary for dirty views and is converging to an
-  entity-first, window-scoped identity. Cache-root IDs and `ViewId(pub NodeId)` are compatibility
-  mappings until entity-first view identity is complete.
+- `ViewId` is the primary maintainer vocabulary for dirty views. It is now an independent
+  window-scoped token; the old `ViewId(pub NodeId)` wrapper is deleted. The current runtime still
+  has explicit v1 cache-root node bridge helpers until entity-first view lookup is complete.
 - `BoundaryId` is cache/execution boundary identity. `BoundaryId(NodeId)` and v1 boundary-node
   bridge helpers are compatibility mappings until the boundary store is entity-first.
 - `ViewBoundary` owns phase products only when the product is boundary-local: layout results,
@@ -79,11 +79,11 @@ The convergence target is GPUI-aligned but Fret-owned:
 
 Compatibility bridge policy for the active plan:
 
-- Scan-based live element lookup, parent repair, GC reachability expansion, `ViewId(pub NodeId)`,
-  `BoundaryId(NodeId)`, `iter_boundary_nodes_v1`, `mark_boundary_node_v1`,
-  `clear_boundary_node_v1`, flat `Scene` normal renderer input, chunk replay through temporary flat
-  scenes, full-blob text resource helpers, and source-policy allowlist entries are migration
-  bridges.
+- The deleted `ViewId(pub NodeId)` wrapper must not return. Parent repair, GC reachability
+  expansion, `BoundaryId(NodeId)`, explicit v1 cache-root `ViewId` bridge helpers,
+  `iter_boundary_nodes_v1`, `mark_boundary_node_v1`, `clear_boundary_node_v1`, flat `Scene` normal
+  renderer input, chunk replay through temporary flat scenes, full-blob text resource helpers, and
+  source-policy allowlist entries are remaining migration bridges.
 - Every retained bridge needs an owner, reason, measurable deletion gate, and follow-up path. An
   unowned compatibility path is out of contract for this pre-launch refactor window.
 - Source-policy exceptions are not runtime mechanisms. They are public-surface quarantine records
