@@ -2,6 +2,7 @@ use super::{
     GlyphInstance, TextDecoration, TextFontFaceUsage, TextFrameResidency, TextLine, TextShape,
     TextSystem,
 };
+#[cfg(test)]
 use fret_core::TextBlobId;
 use slotmap::Key;
 use std::{
@@ -191,6 +192,7 @@ impl TextSystem {
         self.text_resource_snapshot_for_blobs(scene.text_blob_ids())
     }
 
+    #[cfg(test)]
     pub(crate) fn text_resource_snapshot_for_blobs(
         &self,
         text_blob_ids: &[TextBlobId],

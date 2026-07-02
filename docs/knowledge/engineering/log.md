@@ -244,3 +244,12 @@ timestamp: 2026-06-30
   --tests`, `cargo nextest run -p fret-core scene_chunk --no-fail-fast`, `cargo nextest run -p
   fret-render-wgpu scene_chunk_encoding_cache --no-fail-fast`, and existing chunk
   manifest/text-resource/resident-upload focused renderer tests.
+- 2026-07-02: Phase 2 U7 first text-resource-closure slice deletes the normal retained-chunk
+  cache-key dependence on full-blob text resource snapshots. `visible_text_residency_for_chunk_entry`
+  reuses the visible-text prepass with chunk scene-origin translation, retained chunk keys now use
+  `TextSystem::text_resource_snapshot_for_residency`, and full-blob helpers are test-only. The
+  red/green proof is `text_chunk_key_ignores_offscreen_suffix_glyph_residency`: it failed with a
+  second-frame chunk key miss under the old full-blob key and passes after the chunk-local visible
+  glyph key. Remaining U7 work is shaping-aware cluster/run closure for ligatures, RTL, combining
+  marks, fallback fonts, decorations, selection, and caret dependencies before text payload
+  reassembly or text partial uploads.

@@ -109,7 +109,8 @@ High-risk compatibility paths that need either deletion or an explicit retention
 - flat `Scene` bridges used as the normal renderer input or the only replay unit for local
   text/caret/selection changes; production chunk payload replay through temporary flat scenes must
   not return after the closure-supported native payload path,
-- full-blob text resource helpers in normal renderer chunk/resource paths,
+- full-blob text resource helpers returning to normal renderer chunk/resource paths; chunk keys use
+  visible glyph residency, while shaping-aware cluster/run closure remains a gated follow-up,
 - `fret-ui` public names that encode Dialog/Popover/Menu/Tooltip/dismissal policy,
 - first-party examples that make advanced/manual assembly look like the default app path,
 - source-policy allowlist entries that do not name an owner, reason, allowed seams, and retirement

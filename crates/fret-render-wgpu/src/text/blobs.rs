@@ -49,6 +49,7 @@ impl TextSystem {
         Some(self.blob(id)?.shape())
     }
 
+    #[cfg(test)]
     pub(crate) fn text_residency_for_blobs(
         &self,
         text_blob_ids: &[TextBlobId],

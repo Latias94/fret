@@ -36,11 +36,12 @@ frame-pipeline contract while freezing stricter migration rules:
   dispatch snapshots, command routing and availability, final semantics snapshots, hit-test path
   routing, focus/capture state, active layer roots, modal barrier state, and tree-wide paint
   recording.
-- Renderer migration bridges (`Scene` as the normal semantic render input, full-blob text resource
-  helpers, and stream classes without chunk closure) must carry parity or resource-closure gates
-  before deletion. Production chunk payload replay through temporary flat scenes is no longer a
-  valid bridge for closure-supported payloads; flat replay may remain only as a parity oracle while
-  chunk-native payload classes are proven.
+- Renderer migration bridges (`Scene` as the normal semantic render input, shaping-aware text
+  chunk closure gaps, and stream classes without chunk closure) must carry parity or
+  resource-closure gates before deletion. Production chunk payload replay through temporary flat
+  scenes is no longer a valid bridge for closure-supported payloads, and full-blob text resource
+  helpers are no longer valid on normal renderer chunk/resource paths; flat replay may remain only
+  as a parity oracle while chunk-native payload classes are proven.
 - Public/source-policy compatibility exceptions are not frame products. They may be referenced by
   this plan because they protect adoption during the same breaking window, but they belong to the
   app facade/source-policy contract and must carry owner, reason, and retirement criteria there.

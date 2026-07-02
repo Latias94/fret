@@ -10,22 +10,23 @@ related_plan: docs/plans/2026-07-02-001-refactor-ui-framework-phase2-plan.md
 
 - Goal: execute `docs/plans/2026-07-02-001-refactor-ui-framework-phase2-plan.md` as a breaking Phase 2 UI framework refactor.
 - Branch: `feat/ui-framework-phase2-refactor`.
-- Last verified: Phase 2 U6 first chunk-closure slice passed `cargo check -p fret-core --tests`,
-  `cargo check -p fret-render-wgpu --tests`, `cargo nextest run -p fret-core --no-fail-fast`
-  (108 passed), `cargo nextest run -p fret-render-wgpu --no-fail-fast` (340 passed), focused
-  scene chunk gates, formatting, layering, wiki validation, static bridge search, and
+- Last verified: Phase 2 U7 first text-resource-closure slice passed `cargo check -p
+  fret-render-wgpu --tests`, full `cargo nextest run -p fret-render-wgpu --no-fail-fast` (341
+  passed), focused U7/scene-chunk cache tests, static normal-path search for deleted full-blob chunk
+  keys, `cargo fmt --all --check`, layering, wiki validation, text budget gate CLI help, and
   `git diff --check` on 2026-07-02.
 - Done: local ADR/workstream research, crate/perf snapshots, GPUI/Zed comparison, architecture boundary audit, framework consumer audit, performance audit, implementation-ready plan, U1 convergence contract freeze, U2 source-policy gate, U3 first slice (`workbench-lite` public scaffold), U4 identity/dirty graph observability slices, U5 `ViewId` / boundary frame-product ownership slices, U6 policy vocabulary demotion/cleanup slices, U7 renderer scene/upload observability plus retained scene chunk and guarded quad resident upload lanes, U8 text/glyph/wasm budget work through web runtime evidence, U9 modular consumption profiles and `AppUi` facade split, workstream closeout audit, duplicate ADR ID `0324` resolution, and execution-surface allowlist alignment.
-- Latest done: Phase 2 U6 adds `SceneChunk` closure metadata and removes the production temporary
-  flat-`Scene` replay bridge from closure-supported quad chunk payload encoding. Flat replay remains
-  a test parity oracle, normal renderer input still uses flat `Scene`, and text chunk keys still use
-  the full-blob helper until U7.
+- Latest done: Phase 2 U7 adds chunk-local visible glyph residency for retained chunk text resource
+  keys and hides full-blob text resource helpers behind test-only APIs. Flat replay remains a test
+  parity oracle, normal renderer input still uses flat `Scene`, and shaping-aware text
+  cluster/run closure remains a gated follow-up.
 - In progress: continue the renderer/text bridge deletion sequence. U6 still has broader chunk
-  parity classes if kept in this plan unit; U7 is the next dependency-ready text resource closure
-  unit.
+  parity classes if kept in this plan unit; U7 still needs shaping-aware closure gates before text
+  payload reassembly or text partial uploads are allowed.
 - Blocked: none known after the boundary store migration.
-- Next action: finish U6 verification/docs/commit for the current slice, then continue to U7 text
-  resource closure or split remaining U6 parity gaps with owner and deletion gates.
+- Next action: commit the U7 chunk-local visible glyph residency slice, then continue to
+  shaping-aware text closure gates or split remaining renderer parity gaps with owner and deletion
+  gates.
 
 # Citations
 
@@ -46,11 +47,13 @@ related_plan: docs/plans/2026-07-02-001-refactor-ui-framework-phase2-plan.md
 - [Phase 2 U5 boundary layout candidates](progress/2026-07-02-phase2-u5-boundary-layout-candidates.md)
 - [Phase 2 U5 observation boundary subscribers](progress/2026-07-02-phase2-u5-observation-boundary-subscribers.md)
 - [Phase 2 U6 chunk closure native payload](progress/2026-07-02-phase2-u6-chunk-closure-native-payload.md)
+- [Phase 2 U7 chunk-local text resource closure](progress/2026-07-02-phase2-u7-chunk-local-text-resource-closure.md)
 - [Phase 2 U4 boundary store audit](subagents/2026-07-02-phase2-u4-boundary-store-audit.md)
 - [Phase 2 U4 durable ViewId audit](subagents/2026-07-02-phase2-u4-durable-viewid-audit.md)
 - [Phase 2 U5 boundary bridge audit](subagents/2026-07-02-phase2-u5-boundary-bridge-audit.md)
 - [Phase 2 U5 observation fanout audit](subagents/2026-07-02-phase2-u5-observation-fanout-audit.md)
 - [Phase 2 U6 chunk closure audit](subagents/2026-07-02-phase2-u6-chunk-closure-audit.md)
+- [Phase 2 U7 text resource closure audit](subagents/2026-07-02-phase2-u7-text-closure-audit.md)
 - Commit `020bb34a37 docs(architecture): freeze ui convergence contract`
 - Commit `84f60d8355 feat(tools): add ui surface policy gate`
 - Commit `df0d6620ff feat(ui): expose dirty frontier diagnostics`

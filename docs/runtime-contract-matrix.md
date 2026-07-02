@@ -88,10 +88,11 @@ The convergence target is GPUI-aligned but Fret-owned:
 Compatibility bridge policy for the active plan:
 
 - The deleted `ViewId(pub NodeId)` and `BoundaryId(NodeId)` wrappers must not return. Parent repair,
-  GC reachability expansion, flat `Scene` normal renderer input, full-blob text resource helpers,
-  stream classes without chunk closure, and source-policy allowlist entries are remaining migration
-  bridges. Production chunk payload replay through temporary flat scenes is deleted for the
-  closure-supported quad payload path and must not return.
+  GC reachability expansion, flat `Scene` normal renderer input, shaping-aware text chunk closure
+  gaps, stream classes without chunk closure, and source-policy allowlist entries are remaining
+  migration bridges. Production chunk payload replay through temporary flat scenes is deleted for
+  the closure-supported quad payload path and must not return. Full-blob text resource helpers are
+  test-only/debug-only and must not return to normal renderer chunk/resource paths.
 - The deleted cache-root observation collapse bridge must not return. If observation fanout widens,
   it should widen from boundary/view subscribers rather than from descendant `NodeId` scans.
 - Every retained bridge needs an owner, reason, measurable deletion gate, and follow-up path. An

@@ -513,21 +513,28 @@ impl Renderer {
         perf_enabled: bool,
         frame_perf: &mut RenderPerfStats,
     ) {
+        let viewport_size = context.viewport_size;
         let entry_text_resource_keys = scene_chunks
             .map(|manifest| {
                 manifest
                     .entries()
                     .iter()
                     .map(|entry| {
+                        let residency =
+                            render_scene::visible_text::visible_text_residency_for_chunk_entry(
+                                entry,
+                                &self.text_system,
+                                scale_factor,
+                                viewport_size,
+                            );
                         self.text_system
-                            .text_resource_snapshot_for_blobs(entry.chunk().text_blob_ids())
+                            .text_resource_snapshot_for_residency(&residency)
                             .fingerprint
                     })
                     .collect::<Vec<_>>()
             })
             .unwrap_or_default();
         let mut state = std::mem::take(&mut self.scene_chunk_encoding_state);
-        let viewport_size = context.viewport_size;
         let output_is_srgb = context.format.is_srgb();
         let stats = state.begin_frame_with_payloads(
             scene_chunks,
@@ -673,8 +680,8 @@ fn hash_pod_range<T: bytemuck::Pod>(
 mod tests {
     use super::*;
     use fret_core::{
-        Color, DrawOrder, Point, Rect, Scene, SceneChunk, SceneChunkManifest,
-        SceneChunkManifestEntry, SceneOp, Size,
+        Color, DrawOrder, Paint, Point, Rect, Scene, SceneChunk, SceneChunkManifest,
+        SceneChunkManifestEntry, SceneOp, Size, TextBlobId, TextConstraints, TextStyle,
     };
     use std::sync::Arc;
 
@@ -768,6 +775,37 @@ mod tests {
         }
     }
 
+    fn text_scene_op(origin: Point, text: TextBlobId) -> SceneOp {
+        SceneOp::Text {
+            order: DrawOrder(0),
+            origin,
+            text,
+            paint: Paint::Solid(Color {
+                r: 1.0,
+                g: 1.0,
+                b: 1.0,
+                a: 1.0,
+            })
+            .into(),
+            outline: None,
+            shadow: None,
+        }
+    }
+
+    fn text_chunk_entry(text: TextBlobId) -> SceneChunkManifestEntry {
+        SceneChunkManifestEntry::new(
+            SceneChunk::from_ops(Arc::from([text_scene_op(
+                Point::new(fret_core::Px(0.0), fret_core::Px(32.0)),
+                text,
+            )])),
+            Rect::new(
+                Point::default(),
+                Size::new(fret_core::Px(320.0), fret_core::Px(48.0)),
+            ),
+            Point::default(),
+        )
+    }
+
     #[test]
     fn quad_chunk_payload_encodes_native_ops_with_scene_origin() {
         let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
@@ -848,6 +886,94 @@ mod tests {
             SceneChunkPayloadStreamFingerprint::from_payload_encoding(&SceneEncoding::default())
                 .fingerprint
         );
+    }
+
+    #[test]
+    fn text_chunk_key_ignores_offscreen_suffix_glyph_residency() {
+        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+        let mut renderer = Renderer::new(&ctx.adapter, &ctx.device);
+        let style = TextStyle {
+            size: fret_core::Px(24.0),
+            ..Default::default()
+        };
+        let (blob, _) = renderer.text_system.prepare(
+            "abcdefghijklmnopqrstuvwxyz",
+            &style,
+            TextConstraints::default(),
+        );
+        let frame = manifest(&[text_chunk_entry(blob)]);
+
+        let mut visible_residency = crate::text::TextFrameResidency::new();
+        assert!(renderer.text_system.push_glyph_residency_for_blob(
+            &mut visible_residency,
+            blob,
+            |rect| rect[0] < 36.0
+        ));
+        let visible_prepare =
+            renderer
+                .text_system
+                .prepare_for_text_residency_with_perf(&visible_residency, 0, true);
+        assert!(visible_prepare.added_glyph_keys > 0);
+        let visible_snapshot = renderer
+            .text_system
+            .text_resource_snapshot_for_residency(&visible_residency);
+        assert!(visible_snapshot.glyphs > 0);
+        assert_eq!(visible_snapshot.missing_glyph_resources, 0);
+
+        let full_before = renderer
+            .text_system
+            .text_resource_snapshot_for_blobs(&[blob]);
+        assert!(
+            full_before.glyphs > visible_snapshot.glyphs,
+            "test setup expects the narrow viewport to leave a suffix outside chunk residency"
+        );
+        assert!(
+            full_before.missing_glyph_resources > 0,
+            "test setup expects the offscreen suffix to remain absent before full-blob residency"
+        );
+
+        let context = renderer.build_scene_chunk_encoding_context(
+            wgpu::TextureFormat::Bgra8UnormSrgb,
+            (36, 80),
+            1.0,
+        );
+        let mut first_perf = RenderPerfStats::default();
+        renderer.record_scene_chunk_encoding_key_cache_for_frame(
+            Some(&frame),
+            context,
+            1.0,
+            true,
+            &mut first_perf,
+        );
+        assert_eq!(first_perf.scene_chunk_encoding_key_cache_misses, 1);
+
+        let full_prepare = renderer
+            .text_system
+            .prepare_for_text_blobs_with_perf(&[blob], 1, true);
+        assert!(full_prepare.added_glyph_keys > 0);
+        let full_after = renderer
+            .text_system
+            .text_resource_snapshot_for_blobs(&[blob]);
+        assert_eq!(full_after.missing_glyph_resources, 0);
+        assert_ne!(
+            full_before.fingerprint, full_after.fingerprint,
+            "full-blob keys would churn when offscreen suffix glyphs become resident"
+        );
+
+        let mut second_perf = RenderPerfStats::default();
+        renderer.record_scene_chunk_encoding_key_cache_for_frame(
+            Some(&frame),
+            context,
+            1.0,
+            true,
+            &mut second_perf,
+        );
+
+        assert_eq!(
+            second_perf.scene_chunk_encoding_key_cache_hits, 1,
+            "chunk keys must depend on visible glyph residency, not the full text blob"
+        );
+        assert_eq!(second_perf.scene_chunk_encoding_key_cache_misses, 0);
     }
 
     #[test]

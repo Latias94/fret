@@ -17,6 +17,24 @@ pub(super) fn visible_text_residency_for_scene(
     residency
 }
 
+pub(in crate::renderer) fn visible_text_residency_for_chunk_entry(
+    entry: &fret_core::SceneChunkManifestEntry,
+    text_system: &TextSystem,
+    scale_factor: f32,
+    viewport_size: (u32, u32),
+) -> TextFrameResidency {
+    let mut state = VisibleTextState::new_with_initial_transform(
+        scale_factor,
+        viewport_size,
+        Transform2D::translation(entry.scene_origin()),
+    );
+    let mut residency = TextFrameResidency::new();
+    for op in entry.chunk().ops() {
+        state.handle_op(op, text_system, &mut residency);
+    }
+    residency
+}
+
 struct VisibleTextState {
     scale_factor: f32,
     viewport_size: (u32, u32),
@@ -28,13 +46,21 @@ struct VisibleTextState {
 
 impl VisibleTextState {
     fn new(scale_factor: f32, viewport_size: (u32, u32)) -> Self {
+        Self::new_with_initial_transform(scale_factor, viewport_size, Transform2D::IDENTITY)
+    }
+
+    fn new_with_initial_transform(
+        scale_factor: f32,
+        viewport_size: (u32, u32),
+        initial_transform: Transform2D,
+    ) -> Self {
         let current_scissor = ScissorRect::full(viewport_size.0, viewport_size.1);
         Self {
             scale_factor,
             viewport_size,
             current_scissor,
             scissor_stack: vec![current_scissor],
-            transform_stack: vec![Transform2D::IDENTITY],
+            transform_stack: vec![initial_transform],
             opacity_stack: vec![1.0],
         }
     }
