@@ -217,4 +217,27 @@ impl<H: UiHost> UiTree<H> {
             }
         }
     }
+
+    pub(in crate::tree) fn live_element_id_map(&self) -> HashMap<u64, NodeId> {
+        let mut out = HashMap::with_capacity(self.element_node_index.by_element.len());
+        for (&element, handles) in self.element_node_index.by_element.iter() {
+            let mut live = None;
+            let mut live_count: u32 = 0;
+            for &handle in handles {
+                if let Some(node) = self.stable_handle_matches_live_element(element, handle) {
+                    live_count = live_count.saturating_add(1);
+                    live.get_or_insert(node);
+                    if live_count > 1 {
+                        break;
+                    }
+                }
+            }
+            if live_count == 1
+                && let Some(node) = live
+            {
+                out.insert(element.0, node);
+            }
+        }
+        out
+    }
 }

@@ -1503,8 +1503,8 @@ pub struct SemanticsCx<'a, H: UiHost> {
 
 impl<'a, H: UiHost> SemanticsCx<'a, H> {
     pub fn resolve_declarative_element(&mut self, element: u64) -> Option<NodeId> {
-        if let Some(node) = self.element_id_map.and_then(|m| m.get(&element).copied()) {
-            return Some(node);
+        if let Some(map) = self.element_id_map {
+            return map.get(&element).copied();
         }
 
         let window = self.window?;

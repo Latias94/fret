@@ -132,12 +132,12 @@ impl<H: UiHost> UiTree<H> {
             trace_semantics,
             || {
                 tracing::trace_span!(
-                    "fret.ui.semantics.element_id_map",
+                    "fret.ui.semantics.live_element_id_map",
                     window = ?window,
                     frame_id = frame_id.0,
                 )
             },
-            || crate::declarative::frame::element_id_map_for_window(app, window),
+            || self.live_element_id_map(),
         );
         let t_element_id_map = element_id_elapsed;
 
@@ -485,7 +485,7 @@ impl<H: UiHost> UiTree<H> {
                                 app,
                                 node: id,
                                 window: Some(window),
-                                element_id_map: Some(element_id_map.as_ref()),
+                                element_id_map: Some(&element_id_map),
                                 bounds,
                                 children: scratch_children.as_slice(),
                                 focus,

@@ -12,10 +12,10 @@ related_plan: docs/plans/2026-07-02-001-refactor-ui-framework-phase2-plan.md
 - Branch: `feat/ui-framework-phase2-refactor`.
 - Last verified: Phase 2 U3 live fallback scan deletion passed full `cargo nextest run -p fret-ui --no-fail-fast` on 2026-07-02, plus focused `fret-diag`, `fret-bootstrap`, formatting, layering, surface-policy, and whitespace gates.
 - Done: local ADR/workstream research, crate/perf snapshots, GPUI/Zed comparison, architecture boundary audit, framework consumer audit, performance audit, implementation-ready plan, U1 convergence contract freeze, U2 source-policy gate, U3 first slice (`workbench-lite` public scaffold), U4 identity/dirty graph observability slices, U5 `ViewId` / boundary frame-product ownership slices, U6 policy vocabulary demotion/cleanup slices, U7 renderer scene/upload observability plus retained scene chunk and guarded quad resident upload lanes, U8 text/glyph/wasm budget work through web runtime evidence, U9 modular consumption profiles and `AppUi` facade split, workstream closeout audit, duplicate ADR ID `0324` resolution, and execution-surface allowlist alignment.
-- Latest done: Phase 2 U3 removed normal-path live element fallback scans and identity fallback diagnostics; live element resolution is now seed-or-index only, with retained detached reuse kept as an explicit retained-cache path.
-- In progress: Phase 2 U3/U4 follow-up design cut: remove or quarantine the remaining semantics `element_id_map_for_window` `WindowFrame.instances` map, then move `ViewId` and boundary storage to entity-first identities.
+- Latest done: Phase 2 U3 removed normal-path live element fallback scans, identity fallback diagnostics, and the semantics `element_id_map_for_window` lazy `WindowFrame.instances` map; live element and semantics relation resolution are now seed/index-derived only, with retained detached reuse kept as an explicit retained-cache path.
+- In progress: Phase 2 U4 design cut: move `ViewId` and boundary storage to entity-first identities.
 - Blocked: none known after the U3 deletion slice.
-- Next action: continue with the `element_id_map_for_window` semantics relation cleanup or start U4 `ViewId` / boundary storage migration if the semantics cleanup is folded into boundary identity work.
+- Next action: start U4 `ViewId` / boundary storage migration.
 
 # Citations
 

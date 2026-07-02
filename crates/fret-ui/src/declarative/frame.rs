@@ -7,18 +7,11 @@ pub(crate) struct ElementFrame {
     pub(super) windows: HashMap<AppWindowId, WindowFrame>,
 }
 
-#[derive(Default, Clone)]
-pub(crate) struct ElementIdMapCache {
-    pub revision: u64,
-    pub map: Arc<HashMap<u64, NodeId>>,
-}
-
 pub(crate) struct WindowFrame {
     pub(super) frame_id: FrameId,
     pub(super) revision: u64,
     pub(crate) instances: SecondaryMap<NodeId, ElementRecord>,
     pub(crate) children: SecondaryMap<NodeId, Arc<[NodeId]>>,
-    pub(super) element_id_map_cache: Option<ElementIdMapCache>,
 }
 
 impl Default for WindowFrame {
@@ -28,7 +21,6 @@ impl Default for WindowFrame {
             revision: 0,
             instances: SecondaryMap::new(),
             children: SecondaryMap::new(),
-            element_id_map_cache: None,
         }
     }
 }
@@ -520,33 +512,6 @@ pub(crate) struct ScrollHandleChange {
     pub offset_changed: bool,
     pub viewport_changed: bool,
     pub content_changed: bool,
-}
-
-pub(crate) fn element_id_map_for_window<H: UiHost>(
-    app: &mut H,
-    window: AppWindowId,
-) -> Arc<HashMap<u64, NodeId>> {
-    app.with_global_mut_untracked(ElementFrame::default, |frame, _app| {
-        let Some(window_frame) = frame.windows.get_mut(&window) else {
-            return Arc::new(HashMap::new());
-        };
-        if let Some(cache) = window_frame.element_id_map_cache.as_ref()
-            && cache.revision == window_frame.revision
-        {
-            return cache.map.clone();
-        }
-
-        let mut out = HashMap::with_capacity(window_frame.instances.len());
-        for (node, record) in window_frame.instances.iter() {
-            out.insert(record.element.0, node);
-        }
-        let map = Arc::new(out);
-        window_frame.element_id_map_cache = Some(ElementIdMapCache {
-            revision: window_frame.revision,
-            map: map.clone(),
-        });
-        map
-    })
 }
 
 pub(crate) fn layout_style_for_instance(instance: &ElementInstance) -> LayoutStyle {

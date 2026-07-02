@@ -189,3 +189,9 @@ timestamp: 2026-06-30
 - Remaining U3 cleanup candidate: `crates/fret-ui/src/declarative/frame.rs::element_id_map_for_window`
   still lazily builds a semantics relation map from `WindowFrame.instances`; future fixes should
   update semantics relation input or index maintenance, not restore live identity scan fallbacks.
+- 2026-07-02: Phase 2 U3 follow-up deletes `ElementIdMapCache` and
+  `element_id_map_for_window`. Semantics relation resolution now builds `UiTree::live_element_id_map`
+  from `ElementNodeIndex`, and `SemanticsCx::resolve_declarative_element` treats the supplied map as
+  authoritative instead of falling back to `ElementRuntime::live_node_for_element`.
+- U3 semantics map verification passed: `cargo check -p fret-ui`, focused semantics relation
+  nextest coverage, and `cargo nextest run -p fret-ui --no-fail-fast` (1180 passed).
