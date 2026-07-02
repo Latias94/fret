@@ -1,25 +1,24 @@
 # Fearless Architecture Convergence v1 - Handoff
 
-Updated: 2026-06-30
+Updated: 2026-07-02
 
 ## Current State
 
-This coordinator lane is active but should now be read mostly as the first-open owner map. It has
-mapped the six fearless cuts, landed the retained public-surface first slice, and opened the five
-narrow follow-on lanes for the remaining cuts.
+This coordinator lane is closed. Read it as a first-open owner map and closeout record, not as an
+active implementation folder.
 
-The 2026 UI framework convergence plan now extends this coordinator as the current owner map for
-new fearless refactor work:
+The 2026 UI framework convergence plan executed through U1-U9 and closed with explicit retained and
+deferred follow-ons:
 
 - plan: `docs/plans/2026-06-30-001-refactor-ui-framework-architecture-plan.md`
 - contract index: `docs/golden-architecture.md`
 - runtime contract checklist: `docs/runtime-contract-matrix.md`
 - closure map: `docs/ui-closure-map.md`
 - ADR overlay: `docs/adr/IMPLEMENTATION_ALIGNMENT.md`
+- closeout: `docs/workstreams/fearless-architecture-convergence-v1/CLOSEOUT_AUDIT_2026-07-02.md`
 
 Do not reopen the closed broad Frame Pipeline v2 lane. Treat it as evidence and start narrow
-follow-ons for ViewId-first dirty ownership, scene chunks, renderer dirty uploads, and text/glyph
-budget gates.
+follow-ons for any retained/deferred item named in the closeout audit.
 
 ## Owner Lanes
 
@@ -34,7 +33,7 @@ budget gates.
 
 ## Verified First Slice
 
-Recorded gates:
+Initial retained-surface gates:
 
 - `cargo test -p fret-ui retained_widget_authoring_exports_are_compat_feature_gated`
 - `cargo check -p fret-ui`
@@ -47,7 +46,34 @@ The `cargo check -p fret-ui` gate passed with existing warnings in
 `crates/fret-ui/src/tree/layout/clean_geometry.rs` and `current_effective_opacity`; these warnings
 were not introduced by the retained public-surface slice.
 
+## Closed Plan Evidence
+
+The final closeout records evidence for:
+
+- U1 contract freeze,
+- U2 source-policy gate,
+- U3 `workbench-lite` public app scaffold,
+- U4 identity/dirty graph diagnostics,
+- U5 `ViewId` / boundary frame product ownership,
+- U6 policy vocabulary demotion,
+- U7 scene chunks and guarded quad partial uploads,
+- U8 text/glyph/wasm budgets, and
+- U9 modular consumption profiles and `AppUi` facade split.
+
 ## Next Step
 
-Execute FAC-100 / plan U2: add the responsibility source-policy checker before broader runtime
-deletions. Then use identity/dirty graph metrics as the first runtime migration guardrail.
+Start a narrow follow-on only when fresh work has a concrete owner and gate. The highest-value
+follow-ons named by the closeout are:
+
+- stable-handle deletion after U4 observability,
+- entity-first `ViewId` ownership after the v1 boundary-node bridge,
+- per-boundary ownership for currently window/layer-forest products only when cross-layer behavior
+  remains proven,
+- retained mechanism vocabulary audits for `Roving*` and explicit resizable module paths,
+- full second-hour starter expansion beyond `workbench-lite`,
+- `workbench-lite` settings dialog / real async-mutation submit diagnostics,
+- advanced/manual source-policy allowlist cleanup as public wrappers land,
+- renderer output migration beyond the flat `Scene` compatibility bridge,
+- non-quad resident partial uploads,
+- full-blob text helper deletion after chunk-local text closure,
+- duplicate ADR ID `0324` resolution for the aggregate pre-release gate.

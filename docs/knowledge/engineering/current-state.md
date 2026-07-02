@@ -2,7 +2,7 @@
 type: Current State
 title: Fret architecture planning current state
 tags: fret,architecture,planning
-timestamp: 2026-07-01
+timestamp: 2026-07-02
 related_plan: docs/plans/2026-06-30-001-refactor-ui-framework-architecture-plan.md
 ---
 
@@ -10,12 +10,13 @@ related_plan: docs/plans/2026-06-30-001-refactor-ui-framework-architecture-plan.
 
 - Goal: execute the implementation-ready fearless refactor plan for Fret's UI framework architecture convergence.
 - Branch: `feat/ui-framework-convergence` from local `main` after the planning commit.
-- Last verified: U8 web/wasm runtime evidence closeout passed the direct `code_editor_torture` web bundle export, the U8 web text budget gate, wasm/native compile checks, focused timer/WGSL nextest gates, formatting, layering/surface/consumption gates, and `git diff --check`.
-- Done: local ADR/workstream research, crate/perf snapshots, GPUI/Zed comparison, architecture boundary audit, framework consumer audit, performance audit, implementation-ready plan, U1 convergence contract freeze, U2 source-policy gate, U3 first slice (`workbench-lite` public scaffold), U4 first observability slice for identity fallback pressure/parent repair/GC reachability/dispatch snapshot cache pressure, U4 second observability slice for dirty frontier breadth plus model/global observation-index churn, U5 first slice replacing raw `UiTree::dirty_boundaries` ownership with `DirtyViewFrontier`, U5 BoundaryFrameProducts slice grouping boundary dirty/prepaint/scene-fragment/paint-cache state under `ViewBoundaryState::frame_products`, U5 interaction replay entry removing `Node::interaction_cache` in favor of `BoundaryFrameProducts::interaction_cache`, U5 dispatch snapshot pre-slice moving raw `UiTree` dispatch snapshot generation/cache fields behind `DispatchSnapshotFrameProductState`, U5 hit-test bounds tree moving per-layer reusable bounds indexes into `BoundaryFrameProducts::hit_test_bounds`, U5 semantics subtree moving reusable clean boundary semantics subtree products into `BoundaryFrameProducts::semantics`, U5 hit-test path routing cache replacing raw `Option<HitTestPathCache>` ownership with `HitTestPathRoutingCacheState`, U5 command routing correctness and cache owner-state slices, U5 touch-drag routing correctness, U5 paint replay owner-state, U6 policy vocabulary demotion/cleanup slices, U7 renderer scene/upload observability plus retained scene chunk and resident upload lanes, U8 prepared shape cache budget/eviction, U8 glyph atlas page budget diagnostics, U8 text resource cache-key invalidation, U8 prepare/residency split, U8 visible text/glyph residency, U8 editor line text identity, U8 row text/row scene cache delta preservation, U8 code-editor text/cache diagnostics, U8 editor paint cache artifact gate, U8 text budget gate wrapper, and U8 web/wasm runtime evidence closeout.
-- Latest done: U8 web/wasm runtime evidence closeout.
-- In progress: plan closeout audit remains open after the U8 runtime evidence commit.
+- Last verified: closeout gates passed on 2026-07-02: `cargo fmt --all --check`, workstream catalog, layering, surface-policy, consumption profiles, source-policy/profile unit tests, strict perf-baseline audit, U8 web text-budget gate, wiki-memory validation, and `git diff --check`.
+- Done: local ADR/workstream research, crate/perf snapshots, GPUI/Zed comparison, architecture boundary audit, framework consumer audit, performance audit, implementation-ready plan, U1 convergence contract freeze, U2 source-policy gate, U3 first slice (`workbench-lite` public scaffold), U4 identity/dirty graph observability slices, U5 `ViewId` / boundary frame-product ownership slices, U6 policy vocabulary demotion/cleanup slices, U7 renderer scene/upload observability plus retained scene chunk and guarded quad resident upload lanes, U8 text/glyph/wasm budget work through web runtime evidence, U9 modular consumption profiles and `AppUi` facade split, and the workstream closeout audit.
+- Latest done: UI convergence closeout audit and gate rerun.
+- In progress: no active work in the closed convergence coordinator.
 - Blocked: no blocking issue.
-- Next action: commit the U8 web/wasm runtime evidence slice, then audit the remaining plan closeout requirements from the current tree.
+- Next action: start a narrow follow-on from the closeout retained/deferred table, or resolve
+  duplicate ADR ID `0324` if the aggregate pre-release gate is needed.
 
 # Citations
 
@@ -24,6 +25,8 @@ related_plan: docs/plans/2026-06-30-001-refactor-ui-framework-architecture-plan.
 - [U9 AppUi shell split audit](subagents/2026-07-02-u9-appui-shell-split-audit.md)
 - [U8 web wasm runtime evidence closeout](progress/2026-07-02-u8-web-wasm-runtime-evidence.md)
 - [U8 web gallery-dev page availability audit](subagents/2026-07-02-u8-web-gallery-dev-page-audit.md)
+- [UI convergence closeout audits](subagents/2026-07-02-ui-convergence-closeout-audits.md)
+- [UI convergence plan closeout](progress/2026-07-02-ui-convergence-closeout.md)
 - Commit `020bb34a37 docs(architecture): freeze ui convergence contract`
 - Commit `84f60d8355 feat(tools): add ui surface policy gate`
 - Commit `df0d6620ff feat(ui): expose dirty frontier diagnostics`

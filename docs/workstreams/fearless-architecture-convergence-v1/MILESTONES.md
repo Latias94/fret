@@ -1,7 +1,7 @@
 # Fearless Architecture Convergence v1 - Milestones
 
-Status: Active
-Last updated: 2026-05-25
+Status: Closed
+Last updated: 2026-07-02
 
 ## M0 - Six-Cut Map Frozen
 
@@ -61,7 +61,30 @@ Evidence:
 Exit criteria:
 
 - Every cut has an owner lane and a first validation command.
-- The coordinator handoff names the next active task.
+- The coordinator handoff names the next follow-on entry points.
 - `WORKSTREAM.json` status is updated to maintenance or closed.
 
-Status: Pending.
+Status: Complete.
+
+Evidence:
+
+- `docs/workstreams/fearless-architecture-convergence-v1/CLOSEOUT_AUDIT_2026-07-02.md`
+- `docs/workstreams/fearless-architecture-convergence-v1/WORKSTREAM.json`
+- `docs/workstreams/fearless-architecture-convergence-v1/HANDOFF.md`
+
+## M4 - 2026 UI Framework Convergence Closed
+
+Exit criteria:
+
+- U1-U9 from `docs/plans/2026-06-30-001-refactor-ui-framework-architecture-plan.md` have
+  implementation evidence or an explicit deferred owner.
+- Source-policy, layering, consumption-profile, perf-baseline, scaffold, text-budget, and focused
+  runtime gates have current evidence.
+- Retained compatibility paths are named with a reason and future gate.
+
+Status: Complete with explicit follow-ons.
+
+Evidence:
+
+- `docs/workstreams/fearless-architecture-convergence-v1/CLOSEOUT_AUDIT_2026-07-02.md`
+- `docs/knowledge/engineering/current-state.md`

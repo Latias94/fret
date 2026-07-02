@@ -2018,7 +2018,7 @@ Rule:
 - `docs/workstreams/editor-text-pipeline-v1/` — first 2026-02-14, latest 2026-03-03, 3 markdown docs
 - `docs/workstreams/environment-queries-v1/` — first 2026-02-09, latest 2026-03-12, 6 markdown docs
 - `docs/workstreams/example-suite-fearless-refactor-v1/` — first 2026-03-01, latest 2026-03-12, 9 markdown docs
-- `docs/workstreams/fearless-architecture-convergence-v1/` — first n/a, latest n/a, 5 markdown docs (active coordinator lane for the six architecture cuts: retained public surface exit, node low-level adapter, kit taxonomy, overlay/focus/dismissal oracle, Frame Pipeline v2 follow-on, and launch root-surface convergence; includes `WORKSTREAM.json`)
+- `docs/workstreams/fearless-architecture-convergence-v1/` — first n/a, latest n/a, 6 markdown docs (closed coordinator lane for the six architecture cuts and 2026 UI framework convergence closeout; includes `WORKSTREAM.json`)
 - `docs/workstreams/external-texture-imports-v1/` — first 2026-02-13, latest 2026-02-16, 3 markdown docs
 - `docs/workstreams/external-texture-imports-v2-zero-low-copy/` — first 2026-02-16, latest 2026-02-24, 3 markdown docs
 - `docs/workstreams/executor-backed-mutation-surface-v1/` — first n/a, latest n/a, 8 markdown docs (closed narrow closeout lane for the default app-facing async submit/mutation split on `fret-mutation` + `fret`; keeps `fret-query` read-only and records why GenUI/Sonner executor-backed side flows stay recipe/app-owned exceptions)

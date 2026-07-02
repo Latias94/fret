@@ -1,7 +1,7 @@
 # Fearless Architecture Convergence v1 - TODO
 
-Status: Active
-Last updated: 2026-06-30
+Status: Closed
+Last updated: 2026-07-02
 
 ## FAC-M0 - Scope And Contract Freeze
 
@@ -54,11 +54,12 @@ Last updated: 2026-06-30
 
 ## FAC-M3 - Closeout
 
-- [ ] FAC-080 [owner=planner] [deps=FAC-030,FAC-040,FAC-050,FAC-060,FAC-070] [scope=docs/workstreams/fearless-architecture-convergence-v1]
+- [x] FAC-080 [owner=planner] [deps=FAC-030,FAC-040,FAC-050,FAC-060,FAC-070] [scope=docs/workstreams/fearless-architecture-convergence-v1]
   Goal: Close this coordinator or leave it as maintenance once every cut has an owner lane.
   Validation: `python3 tools/check_workstream_catalog.py`; `python3 tools/check_layering.py`
   Evidence: `EVIDENCE_AND_GATES.md`, `HANDOFF.md`, `WORKSTREAM.json`
-  Handoff: Remaining work must be in narrow owner lanes, not this coordinator.
+  Handoff: Closed by `CLOSEOUT_AUDIT_2026-07-02.md`; remaining work must be in narrow owner lanes,
+  not this coordinator.
 
 ## FAC-M4 - 2026 UI Framework Convergence
 
@@ -73,7 +74,7 @@ Last updated: 2026-06-30
   Handoff: Execute the plan as narrow units. Start with source-policy gates, then identity/dirty
   graph metrics before deleting compatibility paths.
 
-- [ ] FAC-100 [owner=codex] [deps=FAC-090] [scope=tools,docs/dependency-policy.md]
+- [x] FAC-100 [owner=codex] [deps=FAC-090] [scope=tools,docs/dependency-policy.md]
   Goal: Add a source-policy gate that catches mechanism/policy drift and default app import leaks
   that dependency layering cannot see.
   Validation: `python3 tools/check_surface_policy.py`; focused unit tests for the checker; existing
@@ -81,3 +82,28 @@ Last updated: 2026-06-30
   Evidence: `tools/check_surface_policy.py`, `tools/test_check_surface_policy.py`
   Handoff: Keep this gate heuristic and allowlist-backed in v1; do not scan the whole repo with
   blanket `fret_ui`/`fret_core` denies.
+
+- [x] FAC-110 [owner=codex] [deps=FAC-090,FAC-100] [scope=docs/workstreams/fearless-architecture-convergence-v1]
+  Goal: Close the 2026 implementation-ready convergence plan with evidence for U1-U9 and explicit
+  retained/deferred follow-ons.
+  Validation: `python3 tools/check_layering.py`; `python3 tools/check_surface_policy.py`;
+  `python3 tools/check_consumption_profiles.py`; `python3 tools/check_workstream_catalog.py`;
+  `git diff --check`
+  Evidence: `docs/workstreams/fearless-architecture-convergence-v1/CLOSEOUT_AUDIT_2026-07-02.md`
+  Handoff: Future work starts from the closeout audit's retained/deferred table.
+
+## Deferred Follow-Ons
+
+- Stable handle deletion after U4 observability.
+- Entity-first `ViewId` ownership after the current v1 boundary-node bridge.
+- Per-boundary ownership for currently window/layer-forest products only where cross-layer behavior
+  can be preserved.
+- Retained mechanism vocabulary audits for `Roving*` and explicit resizable module paths.
+- Full second-hour starter expansion beyond the shipped `workbench-lite` scaffold.
+- `workbench-lite` settings dialog / real async-mutation submit diagnostics.
+- Advanced/manual allowlist cleanup as public wrappers replace proof surfaces.
+- Renderer output migration beyond the flat `Scene` compatibility bridge.
+- Non-quad resident partial uploads after side-table/material/text closure proofs.
+- Full-blob text helper deletion after chunk-local text resource closure.
+- Duplicate ADR ID `0324` resolution so `tools/pre_release.py` can run through the wired
+  consumption-profile gate.

@@ -1,7 +1,12 @@
 # Fearless Architecture Convergence v1
 
-Status: Active
-Last updated: 2026-05-25
+Status: Closed
+Last updated: 2026-07-02
+
+Status note (2026-07-02): this coordinator is closed by
+`CLOSEOUT_AUDIT_2026-07-02.md`. The target state and six-cut owner map below remain useful as
+historical context, but new implementation work should start from a narrow follow-on named in the
+closeout audit rather than reopening this folder.
 
 ## Why This Lane Exists
 
