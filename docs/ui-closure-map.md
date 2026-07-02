@@ -95,8 +95,8 @@ Must-be-true outcomes for the next convergence pass:
 - Dispatch snapshots, command routing and availability, final semantics snapshots, hit-test path
   routing, focus/capture state, active layer roots, modal barriers, and tree-wide paint recording
   stay window/layer-forest owned unless a later ADR proves a narrower owner.
-- Renderer/text costs for local edits are bounded by scene chunks, render-plan reuse, dirty upload
-  ranges, and explicit text/glyph/wasm cache budgets.
+- Renderer/text costs for local edits are bounded by scene chunks with explicit closure metadata,
+  render-plan reuse, dirty upload ranges, and explicit text/glyph/wasm cache budgets.
 
 High-risk compatibility paths that need either deletion or an explicit retention gate:
 
@@ -107,7 +107,8 @@ High-risk compatibility paths that need either deletion or an explicit retention
 - layout dirty iteration regressing from boundary candidates back to raw dirty `NodeId` ownership,
 - cache-root observation collapse returning as a post-layout/post-paint pass,
 - flat `Scene` bridges used as the normal renderer input or the only replay unit for local
-  text/caret/selection changes,
+  text/caret/selection changes; production chunk payload replay through temporary flat scenes must
+  not return after the closure-supported native payload path,
 - full-blob text resource helpers in normal renderer chunk/resource paths,
 - `fret-ui` public names that encode Dialog/Popover/Menu/Tooltip/dismissal policy,
 - first-party examples that make advanced/manual assembly look like the default app path,

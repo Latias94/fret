@@ -18,7 +18,11 @@ mod shadow;
 mod stroke;
 mod validate;
 
-pub use chunk::SceneChunk;
+pub use chunk::{
+    SceneChunk, SceneChunkClosureMetadata, SceneChunkClosureUnsupportedReason,
+    SceneChunkDrawStreamSummary, SceneChunkOpRange, SceneChunkResourceClosure,
+    SceneChunkScopeClosure, SceneChunkScopeKind,
+};
 pub use composite::{BlendMode, CompositeGroupDesc};
 use fingerprint::mix_scene_op;
 pub use image_object_fit::{ImageObjectFitMapped, map_image_object_fit};
@@ -1329,6 +1333,30 @@ mod tests {
         TextBlobId::from(KeyData::from_ffi(raw))
     }
 
+    fn image_id(raw: u64) -> ImageId {
+        ImageId::from(KeyData::from_ffi(raw))
+    }
+
+    fn svg_id(raw: u64) -> SvgId {
+        SvgId::from(KeyData::from_ffi(raw))
+    }
+
+    fn path_id(raw: u64) -> PathId {
+        PathId::from(KeyData::from_ffi(raw))
+    }
+
+    fn render_target_id(raw: u64) -> RenderTargetId {
+        RenderTargetId::from(KeyData::from_ffi(raw))
+    }
+
+    fn material_id(raw: u64) -> crate::MaterialId {
+        crate::MaterialId::from(KeyData::from_ffi(raw))
+    }
+
+    fn effect_id(raw: u64) -> EffectId {
+        EffectId::from(KeyData::from_ffi(raw))
+    }
+
     fn text_op(text: TextBlobId) -> SceneOp {
         SceneOp::Text {
             order: DrawOrder(0),
@@ -1434,6 +1462,114 @@ mod tests {
         assert!(matches!(replayed.ops()[2], SceneOp::Text { text, .. } if text == second));
         assert_eq!(replayed.text_blob_ids(), flat.text_blob_ids());
         assert_eq!(replayed.fingerprint(), flat.fingerprint());
+    }
+
+    #[test]
+    fn scene_chunk_closure_records_balanced_scopes_and_resource_refs() {
+        let image = image_id(1);
+        let svg = svg_id(2);
+        let path = path_id(3);
+        let text = text_blob_id(4);
+        let material = material_id(5);
+        let effect = effect_id(6);
+        let target = render_target_id(7);
+        let material_paint = PaintBindingV1::new(Paint::Material {
+            id: material,
+            params: MaterialParams::ZERO,
+        });
+        let chunk = SceneChunk::from_ops(std::sync::Arc::<[SceneOp]>::from(vec![
+            SceneOp::PushClipPath {
+                bounds: Rect::new(Point::default(), Size::new(Px(16.0), Px(16.0))),
+                origin: Point::default(),
+                path,
+            },
+            SceneOp::PushEffect {
+                bounds: Rect::new(Point::default(), Size::new(Px(16.0), Px(16.0))),
+                mode: EffectMode::FilterContent,
+                chain: EffectChain::from_steps(&[EffectStep::CustomV2 {
+                    id: effect,
+                    params: EffectParamsV1::ZERO,
+                    max_sample_offset_px: Px(0.0),
+                    input_image: Some(CustomEffectImageInputV1::new(image)),
+                }]),
+                quality: EffectQuality::Auto,
+            },
+            SceneOp::Image {
+                order: DrawOrder(0),
+                rect: Rect::new(Point::default(), Size::new(Px(8.0), Px(8.0))),
+                image,
+                fit: ViewportFit::Contain,
+                sampling: ImageSamplingHint::Default,
+                opacity: 1.0,
+            },
+            SceneOp::SvgImage {
+                order: DrawOrder(1),
+                rect: Rect::new(Point::default(), Size::new(Px(8.0), Px(8.0))),
+                svg,
+                fit: SvgFit::Contain,
+                opacity: 1.0,
+            },
+            SceneOp::Text {
+                order: DrawOrder(2),
+                origin: Point::default(),
+                text,
+                paint: material_paint,
+                outline: Some(TextOutlineV1 {
+                    paint: material_paint,
+                    width_px: Px(1.0),
+                }),
+                shadow: None,
+            },
+            SceneOp::ViewportSurface {
+                order: DrawOrder(3),
+                rect: Rect::new(Point::default(), Size::new(Px(8.0), Px(8.0))),
+                target,
+                opacity: 1.0,
+            },
+            SceneOp::PopEffect,
+            SceneOp::PopClip,
+        ]));
+
+        let closure = chunk.closure();
+        assert_eq!(closure.op_range(), SceneChunkOpRange::new(0, 8));
+        assert!(closure.scope_unsupported_reasons().is_empty());
+        assert!(closure.scope(SceneChunkScopeKind::Clip).is_balanced());
+        assert!(closure.scope(SceneChunkScopeKind::Effect).is_balanced());
+        assert_eq!(closure.draw_streams().image_ops, 1);
+        assert_eq!(closure.draw_streams().svg_ops, 1);
+        assert_eq!(closure.draw_streams().text_ops, 1);
+        assert_eq!(closure.draw_streams().viewport_ops, 1);
+        assert_eq!(closure.resources().images(), &[image]);
+        assert_eq!(closure.resources().svgs(), &[svg]);
+        assert_eq!(closure.resources().paths(), &[path]);
+        assert_eq!(closure.resources().text_blobs(), &[text]);
+        assert_eq!(closure.resources().materials(), &[material]);
+        assert_eq!(closure.resources().effects(), &[effect]);
+        assert_eq!(closure.resources().render_targets(), &[target]);
+        assert_ne!(closure.resource_fingerprint(), 0);
+    }
+
+    #[test]
+    fn scene_chunk_closure_reports_inherited_and_open_scope_reasons() {
+        let chunk = SceneChunk::from_ops(std::sync::Arc::<[SceneOp]>::from(vec![
+            SceneOp::PopClip,
+            SceneOp::PushCompositeGroup {
+                desc: CompositeGroupDesc {
+                    bounds: Rect::new(Point::default(), Size::new(Px(10.0), Px(10.0))),
+                    mode: BlendMode::Over,
+                    quality: EffectQuality::Auto,
+                    opacity: 1.0,
+                },
+            },
+        ]));
+
+        assert_eq!(
+            chunk.closure().scope_unsupported_reasons(),
+            vec![
+                SceneChunkClosureUnsupportedReason::InheritedScope(SceneChunkScopeKind::Clip),
+                SceneChunkClosureUnsupportedReason::OpenScope(SceneChunkScopeKind::Composite),
+            ]
+        );
     }
 
     #[test]

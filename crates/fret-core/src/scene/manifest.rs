@@ -32,6 +32,7 @@ impl SceneChunkManifestEntry {
     pub fn fingerprint(&self) -> u64 {
         let mut hash = 0x982d_3fc7_c4f1_6a5bu64;
         hash = mix_u64(hash, self.chunk.fingerprint());
+        hash = mix_u64(hash, self.chunk.closure().fingerprint());
         hash = mix_u64(hash, self.chunk.ops_len() as u64);
         hash = mix_rect(hash, self.local_bounds);
         mix_point(hash, self.scene_origin)

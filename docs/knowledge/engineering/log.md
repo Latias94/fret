@@ -234,3 +234,13 @@ timestamp: 2026-06-30
   authoritative instead of falling back to `ElementRuntime::live_node_for_element`.
 - U3 semantics map verification passed: `cargo check -p fret-ui`, focused semantics relation
   nextest coverage, and `cargo nextest run -p fret-ui --no-fail-fast` (1180 passed).
+- 2026-07-02: Phase 2 U6 first chunk-closure slice adds core `SceneChunk` closure metadata
+  (op range, scope balance/open inherited reasons, draw-stream summaries, resource refs, closure
+  fingerprints), includes closure fingerprint in manifest entry fingerprints, and removes the
+  production temporary flat-`Scene` replay bridge from closure-supported quad chunk payload
+  encoding. Renderer payloads now use the shared op-slice encoder with scene-origin translation;
+  unsupported/open-scope chunks produce empty payloads until their closure class is proven.
+  Verification so far: `cargo check -p fret-core --tests`, `cargo check -p fret-render-wgpu
+  --tests`, `cargo nextest run -p fret-core scene_chunk --no-fail-fast`, `cargo nextest run -p
+  fret-render-wgpu scene_chunk_encoding_cache --no-fail-fast`, and existing chunk
+  manifest/text-resource/resident-upload focused renderer tests.

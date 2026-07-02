@@ -176,6 +176,19 @@ impl<'a> EncodeState<'a> {
         state
     }
 
+    pub(super) fn set_initial_transform(&mut self, transform: Transform2D) {
+        self.transform_stack.clear();
+        self.transform_stack.push(transform);
+        self.current_uniform_index = self.push_uniform_snapshot(
+            self.clip_head,
+            self.clip_count,
+            self.mask_head,
+            self.mask_count,
+            self.mask_scope_head,
+            self.mask_scope_count,
+        );
+    }
+
     pub(super) fn flush_quad_batch(&mut self) {
         if let Some((scissor, uniform_index, pipeline, first_instance)) = self.quad_batch.take() {
             let instance_count = (self.instances.len() as u32).saturating_sub(first_instance);

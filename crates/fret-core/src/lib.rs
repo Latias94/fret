@@ -92,8 +92,10 @@ pub use render_text::{
 pub use scene::{
     BlendMode, Color, ColorSpace, CompositeGroupDesc, DitherMode, DrawOrder, EffectChain,
     EffectMode, EffectParamsV1, EffectQuality, EffectStep, GradientStop, LinearGradient, MAX_STOPS,
-    MaterialParams, Paint, RadialGradient, Scene, SceneChunk, SceneChunkManifest,
-    SceneChunkManifestEntry, SceneMeshVertex, SceneOp, SceneRecording, SceneValidationError,
+    MaterialParams, Paint, RadialGradient, Scene, SceneChunk, SceneChunkClosureMetadata,
+    SceneChunkClosureUnsupportedReason, SceneChunkDrawStreamSummary, SceneChunkManifest,
+    SceneChunkManifestEntry, SceneChunkOpRange, SceneChunkResourceClosure, SceneChunkScopeClosure,
+    SceneChunkScopeKind, SceneMeshVertex, SceneOp, SceneRecording, SceneValidationError,
     SceneValidationErrorKind, SweepGradient, TileMode, UvPoint, UvRect,
 };
 pub use semantics::{

@@ -22,6 +22,31 @@ impl Renderer {
         encode_family_profile_enabled: bool,
         frame_perf: &mut RenderPerfStats,
     ) {
+        self.encode_scene_op_slice_into(
+            scene.ops(),
+            None,
+            scale_factor,
+            viewport_size,
+            output_is_srgb,
+            encoding,
+            perf_enabled,
+            encode_family_profile_enabled,
+            frame_perf,
+        );
+    }
+
+    pub(in crate::renderer) fn encode_scene_op_slice_into(
+        &mut self,
+        ops: &[SceneOp],
+        initial_transform: Option<Transform2D>,
+        scale_factor: f32,
+        viewport_size: (u32, u32),
+        output_is_srgb: bool,
+        encoding: &mut SceneEncoding,
+        perf_enabled: bool,
+        encode_family_profile_enabled: bool,
+        frame_perf: &mut RenderPerfStats,
+    ) {
         encoding.clear();
         let (text_gamma_ratios, text_grayscale_enhanced_contrast, text_subpixel_enhanced_contrast) =
             self.text_system.text_quality_uniforms();
@@ -37,8 +62,13 @@ impl Renderer {
             self.material_effect_state
                 .material_distinct_budget_per_frame,
         );
+        if let Some(transform) = initial_transform
+            && transform != Transform2D::IDENTITY
+        {
+            state.set_initial_transform(transform);
+        }
 
-        for op in scene.ops() {
+        for op in ops {
             if perf_enabled {
                 let family = encode_scene_family(op);
                 let start = encode_family_profile_enabled.then(Instant::now);

@@ -610,14 +610,15 @@ impl Renderer {
         viewport_size: (u32, u32),
         output_is_srgb: bool,
     ) -> CachedSceneChunkEncoding {
-        let mut scene = fret_core::Scene::default();
-        entry
-            .chunk()
-            .replay_translated_into(&mut scene, entry.scene_origin());
         let mut encoding = SceneEncoding::default();
+        if !entry.chunk().closure().is_resource_free_quad_only() {
+            return CachedSceneChunkEncoding::new(encoding);
+        }
+
         let mut ignored_perf = RenderPerfStats::default();
-        self.encode_scene_ops_into(
-            &scene,
+        self.encode_scene_op_slice_into(
+            entry.chunk().ops(),
+            Some(fret_core::Transform2D::translation(entry.scene_origin())),
             scale_factor,
             viewport_size,
             output_is_srgb,
@@ -671,7 +672,10 @@ fn hash_pod_range<T: bytemuck::Pod>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fret_core::{Point, Rect, SceneChunk, SceneChunkManifest, SceneChunkManifestEntry, Size};
+    use fret_core::{
+        Color, DrawOrder, Point, Rect, Scene, SceneChunk, SceneChunkManifest,
+        SceneChunkManifestEntry, SceneOp, Size,
+    };
     use std::sync::Arc;
 
     fn context(text_quality_key: u64) -> SceneChunkEncodingContext {
@@ -742,6 +746,174 @@ mod tests {
             },
         }));
         encoding
+    }
+
+    fn quad_scene_op() -> SceneOp {
+        SceneOp::Quad {
+            order: DrawOrder(0),
+            rect: Rect::new(
+                Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
+                Size::new(fret_core::Px(10.0), fret_core::Px(10.0)),
+            ),
+            background: Color {
+                r: 0.25,
+                g: 0.5,
+                b: 0.75,
+                a: 1.0,
+            }
+            .into(),
+            border: fret_core::Edges::all(fret_core::Px(0.0)),
+            border_paint: Color::TRANSPARENT.into(),
+            corner_radii: fret_core::Corners::all(fret_core::Px(0.0)),
+        }
+    }
+
+    #[test]
+    fn quad_chunk_payload_encodes_native_ops_with_scene_origin() {
+        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+        let mut renderer = Renderer::new(&ctx.adapter, &ctx.device);
+        let chunk = SceneChunk::from_ops(Arc::from([quad_scene_op()]));
+        assert!(chunk.closure().is_resource_free_quad_only());
+        let entry = SceneChunkManifestEntry::new(
+            chunk.clone(),
+            Rect::new(
+                Point::default(),
+                Size::new(fret_core::Px(10.0), fret_core::Px(10.0)),
+            ),
+            Point::new(fret_core::Px(2.0), fret_core::Px(3.0)),
+        );
+
+        let payload = renderer.encode_scene_chunk_entry_payload(&entry, 1.0, (64, 64), true);
+
+        let mut flat_scene = Scene::default();
+        chunk.replay_translated_into(&mut flat_scene, entry.scene_origin());
+        let mut flat_encoding = SceneEncoding::default();
+        let mut ignored_perf = RenderPerfStats::default();
+        renderer.encode_scene_ops_into(
+            &flat_scene,
+            1.0,
+            (64, 64),
+            true,
+            &mut flat_encoding,
+            false,
+            false,
+            &mut ignored_perf,
+        );
+
+        assert_eq!(
+            payload.plan_shape,
+            SceneChunkPayloadPlanShape::from_ordered_draws(&flat_encoding.ordered_draws)
+        );
+        assert_eq!(
+            payload.stream_fingerprint,
+            SceneChunkPayloadStreamFingerprint::from_payload_encoding(&flat_encoding).fingerprint
+        );
+    }
+
+    #[test]
+    fn unsupported_scope_chunk_payload_is_not_replayed_into_draw_streams() {
+        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+        let mut renderer = Renderer::new(&ctx.adapter, &ctx.device);
+        let chunk = SceneChunk::from_ops(Arc::from([
+            SceneOp::PushClipRect {
+                rect: Rect::new(
+                    Point::default(),
+                    Size::new(fret_core::Px(8.0), fret_core::Px(8.0)),
+                ),
+            },
+            quad_scene_op(),
+        ]));
+        assert!(!chunk.closure().is_resource_free_quad_only());
+        assert_eq!(
+            chunk.closure().scope_unsupported_reasons(),
+            &[fret_core::SceneChunkClosureUnsupportedReason::OpenScope(
+                fret_core::SceneChunkScopeKind::Clip
+            )]
+        );
+        let entry = SceneChunkManifestEntry::new(
+            chunk,
+            Rect::new(
+                Point::default(),
+                Size::new(fret_core::Px(10.0), fret_core::Px(10.0)),
+            ),
+            Point::default(),
+        );
+
+        let payload = renderer.encode_scene_chunk_entry_payload(&entry, 1.0, (64, 64), true);
+
+        assert!(payload.encoding.ordered_draws.is_empty());
+        assert!(payload.encoding.instances.is_empty());
+        assert_eq!(
+            payload.stream_fingerprint,
+            SceneChunkPayloadStreamFingerprint::from_payload_encoding(&SceneEncoding::default())
+                .fingerprint
+        );
+    }
+
+    #[test]
+    fn balanced_clip_chunk_payload_matches_flat_side_tables_and_blocks_reassembly() {
+        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+        let mut renderer = Renderer::new(&ctx.adapter, &ctx.device);
+        let clip_rect = Rect::new(
+            Point::new(fret_core::Px(1.0), fret_core::Px(1.0)),
+            Size::new(fret_core::Px(8.0), fret_core::Px(8.0)),
+        );
+        let chunk = SceneChunk::from_ops(Arc::from([
+            SceneOp::PushClipRRect {
+                rect: clip_rect,
+                corner_radii: fret_core::Corners::all(fret_core::Px(2.0)),
+            },
+            quad_scene_op(),
+            SceneOp::PopClip,
+        ]));
+        assert!(
+            chunk
+                .closure()
+                .scope(fret_core::SceneChunkScopeKind::Clip)
+                .is_balanced()
+        );
+        let entry = SceneChunkManifestEntry::new(
+            chunk.clone(),
+            Rect::new(
+                Point::default(),
+                Size::new(fret_core::Px(10.0), fret_core::Px(10.0)),
+            ),
+            Point::new(fret_core::Px(2.0), fret_core::Px(3.0)),
+        );
+
+        let payload = renderer.encode_scene_chunk_entry_payload(&entry, 1.0, (64, 64), true);
+        let mut flat_scene = Scene::default();
+        chunk.replay_translated_into(&mut flat_scene, entry.scene_origin());
+        let mut flat_encoding = SceneEncoding::default();
+        let mut ignored_perf = RenderPerfStats::default();
+        renderer.encode_scene_ops_into(
+            &flat_scene,
+            1.0,
+            (64, 64),
+            true,
+            &mut flat_encoding,
+            false,
+            false,
+            &mut ignored_perf,
+        );
+
+        assert_eq!(
+            payload.stream_fingerprint,
+            SceneChunkPayloadStreamFingerprint::from_payload_encoding(&flat_encoding).fingerprint
+        );
+        assert_eq!(
+            payload.encoding.ordered_draws.len(),
+            flat_encoding.ordered_draws.len()
+        );
+        assert_eq!(payload.encoding.clips.len(), flat_encoding.clips.len());
+        assert_eq!(
+            payload.encoding.uniforms.len().saturating_add(1),
+            flat_encoding.uniforms.len()
+        );
+        assert_eq!(
+            payload.append_only_reassembly_blocker(),
+            Some(SceneChunkPayloadReassemblyBlocker::SideTables)
+        );
     }
 
     #[test]
