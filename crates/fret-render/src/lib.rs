@@ -22,7 +22,8 @@
 //! Stable v1 facade buckets:
 //!
 //! - Core runtime/bootstrap entrypoints:
-//!   [`Renderer`], [`RenderSceneParams`], [`SurfaceState`], [`WgpuContext`], [`ClearColor`],
+//!   [`Renderer`], [`RenderSceneParams`], [`RenderSceneSource`], [`SurfaceState`],
+//!   [`WgpuContext`], [`ClearColor`],
 //!   [`RenderError`]
 //! - Capability and adapter snapshots:
 //!   [`RendererCapabilities`], [`WgpuAdapterSelectionSnapshot`]
@@ -55,15 +56,15 @@
 #[cfg(feature = "backend-wgpu")]
 pub use fret_render_wgpu::{
     ClearColor, ImageColorSpace, ImageDescriptor, RenderError, RenderSceneParams,
-    RenderTargetAlphaMode, RenderTargetColorEncoding, RenderTargetColorPrimaries,
-    RenderTargetColorRange, RenderTargetColorSpace, RenderTargetDescriptor,
-    RenderTargetIngestStrategy, RenderTargetMatrixCoefficients, RenderTargetMetadata,
-    RenderTargetOrientation, RenderTargetRotation, RenderTargetTransferFunction, Renderer,
-    RendererCapabilities, RendererPerfFrameSample, RendererPerfFrameStore, SurfaceAcquireError,
-    SurfaceState, SvgAlphaMask, SvgRgbaImage, SvgTextBridgeDiagnosticsSnapshot,
-    SvgTextFontFallbackRecordSnapshot, SvgTextFontSelectionMissSnapshot,
-    SvgTextMissingGlyphRecordSnapshot, SystemFontRescanResult, SystemFontRescanSeed,
-    TextFontFamilyConfig, UploadedRgba8Image, WgpuAdapterSelectionSnapshot,
+    RenderSceneSource, RenderTargetAlphaMode, RenderTargetColorEncoding,
+    RenderTargetColorPrimaries, RenderTargetColorRange, RenderTargetColorSpace,
+    RenderTargetDescriptor, RenderTargetIngestStrategy, RenderTargetMatrixCoefficients,
+    RenderTargetMetadata, RenderTargetOrientation, RenderTargetRotation,
+    RenderTargetTransferFunction, Renderer, RendererCapabilities, RendererPerfFrameSample,
+    RendererPerfFrameStore, SurfaceAcquireError, SurfaceState, SvgAlphaMask, SvgRgbaImage,
+    SvgTextBridgeDiagnosticsSnapshot, SvgTextFontFallbackRecordSnapshot,
+    SvgTextFontSelectionMissSnapshot, SvgTextMissingGlyphRecordSnapshot, SystemFontRescanResult,
+    SystemFontRescanSeed, TextFontFamilyConfig, UploadedRgba8Image, WgpuAdapterSelectionSnapshot,
     WgpuAllocatorReportFrameSample, WgpuAllocatorReportFrameStore, WgpuContext,
     WgpuHubReportCounts, WgpuHubReportFrameSample, WgpuHubReportFrameStore,
     create_rgba8_image_storage, upload_alpha_mask, upload_rgba_image, upload_rgba8_image,
@@ -86,6 +87,7 @@ mod tests {
         let _ = std::mem::size_of::<RendererCapabilities>();
         let _ = std::mem::size_of::<SurfaceState>();
         let _ = std::mem::size_of::<RenderSceneParams>();
+        let _ = std::mem::size_of::<RenderSceneSource>();
         let _ = std::mem::size_of::<RenderError>();
         let _ = std::mem::size_of::<TextFontFamilyConfig>();
         let _ = std::mem::size_of::<RenderTargetColorSpace>();

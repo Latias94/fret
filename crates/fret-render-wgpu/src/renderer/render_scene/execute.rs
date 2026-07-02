@@ -15,20 +15,25 @@ impl Renderer {
         let RenderSceneParams {
             format,
             target_view,
-            scene,
-            scene_chunks,
+            source,
             clear,
             scale_factor,
             viewport_size,
         } = params;
+        let diagnostic_chunks = match source {
+            RenderSceneSource::Flat {
+                diagnostic_chunks, ..
+            } => diagnostic_chunks,
+            RenderSceneSource::ResourceFreeQuadChunks { manifest, .. } => Some(manifest),
+        };
 
         let trace_enabled = tracing::enabled!(tracing::Level::TRACE);
         let render_scene_span = if trace_enabled {
             tracing::trace_span!(
                 "fret.renderer.render_scene",
                 frame_index,
-                ops = scene.ops_len(),
-                scene_chunk_inputs = scene_chunks.map_or(0, |manifest| manifest.len()),
+                ops = render_scene_source_ops_len(source),
+                scene_chunk_inputs = diagnostic_chunks.map_or(0, |manifest| manifest.len()),
                 viewport_w = viewport_size.0,
                 viewport_h = viewport_size.1,
                 scale_factor,
@@ -51,12 +56,20 @@ impl Renderer {
         let mut frame_perf = RenderPerfStats::default();
         if perf_enabled {
             self.begin_frame_perf_collection(&mut frame_perf);
-            record_scene_chunk_input_perf(scene_chunks, &mut frame_perf);
+            record_scene_chunk_input_perf(diagnostic_chunks, &mut frame_perf);
         }
 
         #[cfg(debug_assertions)]
-        if let Err(e) = scene.validate() {
-            panic!("invalid scene: {e}");
+        {
+            let validation_scene = match source {
+                RenderSceneSource::Flat { scene, .. } => Some(scene),
+                RenderSceneSource::ResourceFreeQuadChunks { debug_scene, .. } => debug_scene,
+            };
+            if let Some(scene) = validation_scene
+                && let Err(e) = scene.validate()
+            {
+                panic!("invalid scene: {e}");
+            }
         }
 
         let path_samples = self.ensure_frame_pipelines_and_path_samples(
@@ -69,56 +82,92 @@ impl Renderer {
             &mut frame_perf,
         );
 
-        let text_frame_resources = self.prepare_text_for_frame(
-            queue,
-            scene,
-            scale_factor,
-            viewport_size,
-            frame_index,
-            perf_enabled,
-            trace_enabled,
-            &mut frame_perf,
-        );
-        self.prepare_svg_for_frame(
-            device,
-            queue,
-            scene,
-            scale_factor,
-            frame_index,
-            perf_enabled,
-            trace_enabled,
-            &mut frame_perf,
-        );
+        let text_frame_resources = match source {
+            RenderSceneSource::Flat { scene, .. } => {
+                let text_frame_resources = self.prepare_text_for_frame(
+                    queue,
+                    scene,
+                    scale_factor,
+                    viewport_size,
+                    frame_index,
+                    perf_enabled,
+                    trace_enabled,
+                    &mut frame_perf,
+                );
+                self.prepare_svg_for_frame(
+                    device,
+                    queue,
+                    scene,
+                    scale_factor,
+                    frame_index,
+                    perf_enabled,
+                    trace_enabled,
+                    &mut frame_perf,
+                );
+                text_frame_resources
+            }
+            RenderSceneSource::ResourceFreeQuadChunks { .. } => PreparedTextFrameResources {
+                scene_resource_fingerprint: 0,
+            },
+        };
         let scene_chunk_encoding_context =
             self.build_scene_chunk_encoding_context(format, viewport_size, scale_factor);
         self.record_scene_chunk_encoding_key_cache_for_frame(
-            scene_chunks,
+            diagnostic_chunks,
             scene_chunk_encoding_context,
             scale_factor,
             perf_enabled,
             &mut frame_perf,
         );
 
-        let key = self.build_scene_encoding_cache_key(
-            format,
-            viewport_size,
-            scale_factor,
-            scene,
-            text_frame_resources.scene_resource_fingerprint,
-        );
-
-        let (encoding, cache_hit) = self.acquire_scene_encoding_for_frame(
-            key,
-            frame_index,
-            scene,
-            scale_factor,
-            viewport_size,
-            format.is_srgb(),
-            perf_enabled,
-            trace_enabled,
-            &render_scene_span,
-            &mut frame_perf,
-        );
+        let (key, encoding, cache_hit) = match source {
+            RenderSceneSource::ResourceFreeQuadChunks { manifest, .. } => {
+                let key = self.build_scene_encoding_cache_key_for_scene_chunks(
+                    format,
+                    viewport_size,
+                    scale_factor,
+                    manifest,
+                    text_frame_resources.scene_resource_fingerprint,
+                );
+                if let Some((encoding, cache_hit)) = self
+                    .acquire_scene_encoding_from_chunk_payloads_for_frame(
+                        key,
+                        manifest,
+                        scene_chunk_encoding_context,
+                        perf_enabled,
+                        trace_enabled,
+                        &render_scene_span,
+                        &mut frame_perf,
+                    )
+                {
+                    (key, encoding, cache_hit)
+                } else {
+                    panic!("authoritative resource-free quad scene chunks could not be assembled");
+                }
+            }
+            RenderSceneSource::Flat { scene, .. } => {
+                let key = self.build_scene_encoding_cache_key(
+                    format,
+                    viewport_size,
+                    scale_factor,
+                    scene,
+                    text_frame_resources.scene_resource_fingerprint,
+                );
+                let (encoding, cache_hit) = self.acquire_scene_encoding_for_frame(
+                    key,
+                    frame_index,
+                    scene,
+                    scale_factor,
+                    viewport_size,
+                    format.is_srgb(),
+                    perf_enabled,
+                    trace_enabled,
+                    &render_scene_span,
+                    &mut frame_perf,
+                );
+                (key, encoding, cache_hit)
+            }
+        };
 
         self.maybe_dump_render_text_json(frame_index, viewport_size, &encoding);
 
@@ -295,6 +344,13 @@ impl Renderer {
         self.scene_encoding_state
             .store_after_frame(key, cache_hit, encoding);
         cmd
+    }
+}
+
+fn render_scene_source_ops_len(source: RenderSceneSource<'_>) -> usize {
+    match source {
+        RenderSceneSource::Flat { scene, .. } => scene.ops_len(),
+        RenderSceneSource::ResourceFreeQuadChunks { manifest, .. } => manifest.ops_len(),
     }
 }
 

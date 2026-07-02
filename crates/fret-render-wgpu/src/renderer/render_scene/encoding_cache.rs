@@ -1,6 +1,38 @@
 use super::super::*;
 
 impl Renderer {
+    pub(super) fn build_scene_encoding_cache_key_for_scene_chunks(
+        &self,
+        format: wgpu::TextureFormat,
+        viewport_size: (u32, u32),
+        scale_factor: f32,
+        scene_chunks: &fret_core::SceneChunkManifest,
+        text_scene_resource_key: u64,
+    ) -> SceneEncodingCacheKey {
+        let (render_targets_generation, images_generation) = self.gpu_resources.generations();
+        super::super::scene_encoding_cache::SceneEncodingState::build_key(
+            super::super::scene_encoding_cache::SceneEncodingKeyInputs {
+                format,
+                viewport_size,
+                scale_factor_bits: scale_factor.to_bits(),
+                scene_fingerprint: chunk_native_scene_fingerprint(scene_chunks),
+                scene_ops_len: scene_chunks.ops_len(),
+                render_targets_generation,
+                images_generation,
+                text_scene_resource_key,
+                text_quality_key: self.text_system.text_quality_key(),
+                materials_generation: self.material_effect_state.materials_generation,
+                material_paint_budget_per_frame: self
+                    .material_effect_state
+                    .material_paint_budget_per_frame,
+                material_distinct_budget_per_frame: self
+                    .material_effect_state
+                    .material_distinct_budget_per_frame,
+                custom_effects_generation: self.material_effect_state.custom_effects_generation,
+            },
+        )
+    }
+
     pub(super) fn build_scene_encoding_cache_key(
         &self,
         format: wgpu::TextureFormat,
@@ -31,6 +63,34 @@ impl Renderer {
                 custom_effects_generation: self.material_effect_state.custom_effects_generation,
             },
         )
+    }
+
+    pub(super) fn acquire_scene_encoding_from_chunk_payloads_for_frame(
+        &mut self,
+        key: SceneEncodingCacheKey,
+        scene_chunks: &fret_core::SceneChunkManifest,
+        context: SceneChunkEncodingContext,
+        perf_enabled: bool,
+        trace_enabled: bool,
+        render_scene_span: &tracing::Span,
+        frame_perf: &mut RenderPerfStats,
+    ) -> Option<(SceneEncoding, bool)> {
+        let assembled = self
+            .scene_chunk_encoding_state
+            .assemble_resource_free_quad_frame_encoding(scene_chunks, context)?;
+        let (cached_encoding, cache_hit) = self.scene_encoding_state.begin_frame(
+            key,
+            perf_enabled,
+            trace_enabled,
+            render_scene_span,
+            frame_perf,
+        );
+        if cache_hit {
+            return Some((cached_encoding, true));
+        }
+
+        self.scene_encoding_state.note_miss(key);
+        Some((assembled, false))
     }
 
     pub(super) fn acquire_scene_encoding_for_frame(
@@ -84,4 +144,11 @@ impl Renderer {
         self.scene_encoding_state.note_miss(key);
         (encoding, false)
     }
+}
+
+fn chunk_native_scene_fingerprint(scene_chunks: &fret_core::SceneChunkManifest) -> u64 {
+    scene_chunks
+        .fingerprint()
+        .wrapping_add(0x41c6_4e6d_37a1_91f5)
+        .rotate_left(17)
 }

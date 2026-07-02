@@ -53,7 +53,7 @@ pub use images::{
 };
 pub use perf_store::{RendererPerfFrameSample, RendererPerfFrameStore};
 pub use renderer::{BlurQualityCounters, BlurQualitySnapshot};
-pub use renderer::{ClearColor, RenderSceneParams, Renderer};
+pub use renderer::{ClearColor, RenderSceneParams, RenderSceneSource, Renderer};
 pub use renderer::{EffectDegradationCounters, EffectDegradationSnapshot};
 pub use renderer::{
     GeometryUploadPerfSnapshot, IntermediatePerfSnapshot, RenderPerfSnapshot,

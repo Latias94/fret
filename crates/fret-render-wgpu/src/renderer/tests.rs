@@ -554,8 +554,7 @@ fn image_fit_cover_encodes_cropped_uvs() {
         super::RenderSceneParams {
             format,
             target_view: &target_view,
-            scene: &scene,
-            scene_chunks: None,
+            source: super::RenderSceneSource::flat(&scene),
             clear: super::ClearColor::default(),
             scale_factor: 1.0,
             viewport_size,
@@ -647,8 +646,7 @@ fn image_fit_contain_encodes_centered_draw_rect() {
         super::RenderSceneParams {
             format,
             target_view: &target_view,
-            scene: &scene,
-            scene_chunks: None,
+            source: super::RenderSceneSource::flat(&scene),
             clear: super::ClearColor::default(),
             scale_factor: 1.0,
             viewport_size,
@@ -741,8 +739,7 @@ fn vertex_color_quad_encodes_two_triangles_with_corner_colors() {
         super::RenderSceneParams {
             format,
             target_view: &target_view,
-            scene: &scene,
-            scene_chunks: None,
+            source: super::RenderSceneSource::flat(&scene),
             clear: super::ClearColor::default(),
             scale_factor: 1.0,
             viewport_size,
@@ -837,8 +834,7 @@ fn vertex_color_triangle_encodes_three_custom_vertices() {
         super::RenderSceneParams {
             format,
             target_view: &target_view,
-            scene: &scene,
-            scene_chunks: None,
+            source: super::RenderSceneSource::flat(&scene),
             clear: super::ClearColor::default(),
             scale_factor: 1.0,
             viewport_size,
@@ -947,8 +943,7 @@ fn image_quad_encodes_custom_points_uvs_and_tint() {
         super::RenderSceneParams {
             format,
             target_view: &target_view,
-            scene: &scene,
-            scene_chunks: None,
+            source: super::RenderSceneSource::flat(&scene),
             clear: super::ClearColor::default(),
             scale_factor: 1.0,
             viewport_size,
@@ -1075,8 +1070,7 @@ fn image_triangle_encodes_custom_uvs_and_vertex_colors() {
         super::RenderSceneParams {
             format,
             target_view: &target_view,
-            scene: &scene,
-            scene_chunks: None,
+            source: super::RenderSceneSource::flat(&scene),
             clear: super::ClearColor::default(),
             scale_factor: 1.0,
             viewport_size,
@@ -1152,8 +1146,7 @@ fn shadow_rrect_encodes_shadow_quad_instance() {
         super::RenderSceneParams {
             format,
             target_view: &target_view,
-            scene: &scene,
-            scene_chunks: None,
+            source: super::RenderSceneSource::flat(&scene),
             clear: super::ClearColor::default(),
             scale_factor: 1.0,
             viewport_size,
@@ -1205,8 +1198,7 @@ fn scene_encoding_cache_is_busted_by_text_quality_changes() {
     let make_params = || super::RenderSceneParams {
         format,
         target_view: &target_view,
-        scene: &scene,
-        scene_chunks: None,
+        source: super::RenderSceneSource::flat(&scene),
         clear: super::ClearColor::default(),
         scale_factor: 1.0,
         viewport_size,
@@ -1279,7 +1271,100 @@ fn scene_encoding_cache_is_busted_by_text_quality_changes() {
 }
 
 #[test]
-fn scene_chunk_manifest_is_reported_without_busting_scene_encoding_cache() {
+fn diagnostic_scene_chunk_manifest_does_not_override_flat_scene_encoding() {
+    let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+    let mut renderer = super::Renderer::new(&ctx.adapter, &ctx.device);
+    renderer.set_perf_enabled(true);
+
+    let format = wgpu::TextureFormat::Bgra8UnormSrgb;
+    let viewport_size = (32, 32);
+    let target = ctx.device.create_texture(&wgpu::TextureDescriptor {
+        label: Some("diagnostic scene chunk input test target"),
+        size: wgpu::Extent3d {
+            width: viewport_size.0,
+            height: viewport_size.1,
+            depth_or_array_layers: 1,
+        },
+        mip_level_count: 1,
+        sample_count: 1,
+        dimension: wgpu::TextureDimension::D2,
+        format,
+        usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
+        view_formats: &[],
+    });
+    let target_view = target.create_view(&Default::default());
+
+    let mut scene = Scene::default();
+    scene.push(SceneOp::Quad {
+        order: DrawOrder(0),
+        rect: Rect::new(Point::default(), fret_core::Size::new(Px(10.0), Px(10.0))),
+        background: Color {
+            r: 0.25,
+            g: 0.5,
+            b: 0.75,
+            a: 1.0,
+        }
+        .into(),
+        border: fret_core::Edges::all(Px(0.0)),
+        border_paint: Color::TRANSPARENT.into(),
+        corner_radii: Corners::all(Px(0.0)),
+    });
+    let chunk = fret_core::SceneChunk::from_scene(&scene);
+    let mut manifest = fret_core::SceneChunkManifest::default();
+    manifest.push(fret_core::SceneChunkManifestEntry::new(
+        chunk.clone(),
+        Rect::new(Point::default(), fret_core::Size::new(Px(10.0), Px(10.0))),
+        Point::new(Px(2.0), Px(3.0)),
+    ));
+
+    let params = |source| super::RenderSceneParams {
+        format,
+        target_view: &target_view,
+        source,
+        clear: super::ClearColor::default(),
+        scale_factor: 1.0,
+        viewport_size,
+    };
+
+    let _ = renderer.render_scene(
+        &ctx.device,
+        &ctx.queue,
+        params(super::RenderSceneSource::flat(&scene)),
+    );
+    let key_without_manifest = renderer
+        .scene_encoding_state
+        .cache_key()
+        .expect("scene encoding key");
+
+    let _ = renderer.render_scene(
+        &ctx.device,
+        &ctx.queue,
+        params(super::RenderSceneSource::flat_with_diagnostic_chunks(
+            &scene, &manifest,
+        )),
+    );
+    let key_with_diagnostic_manifest = renderer
+        .scene_encoding_state
+        .cache_key()
+        .expect("scene encoding key");
+    let last = renderer
+        .diagnostics_state
+        .last_frame_perf
+        .expect("last frame perf snapshot");
+
+    assert_eq!(
+        key_with_diagnostic_manifest, key_without_manifest,
+        "diagnostic manifests must not switch flat render input to chunk-native encoding"
+    );
+    assert_eq!(last.scene_encoding_cache_hits, 1);
+    assert_eq!(last.scene_encoding_cache_misses, 0);
+    assert_eq!(last.scene_chunk_input_chunks, 1);
+    assert_eq!(last.scene_chunk_input_ops, chunk.ops_len() as u64);
+    assert_eq!(last.scene_chunk_input_fingerprint, manifest.fingerprint());
+}
+
+#[test]
+fn resource_free_quad_scene_chunk_manifest_uses_chunk_native_scene_encoding_key() {
     let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
     let mut renderer = super::Renderer::new(&ctx.adapter, &ctx.device);
     renderer.set_perf_enabled(true);
@@ -1325,35 +1410,49 @@ fn scene_chunk_manifest_is_reported_without_busting_scene_encoding_cache() {
         Point::new(Px(2.0), Px(3.0)),
     ));
 
-    let params = |scene_chunks| super::RenderSceneParams {
+    let params = |source| super::RenderSceneParams {
         format,
         target_view: &target_view,
-        scene: &scene,
-        scene_chunks,
+        source,
         clear: super::ClearColor::default(),
         scale_factor: 1.0,
         viewport_size,
     };
 
-    let _ = renderer.render_scene(&ctx.device, &ctx.queue, params(None));
+    let _ = renderer.render_scene(
+        &ctx.device,
+        &ctx.queue,
+        params(super::RenderSceneSource::flat(&scene)),
+    );
     let key_without_manifest = renderer
         .scene_encoding_state
         .cache_key()
         .expect("scene encoding key");
 
-    let _ = renderer.render_scene(&ctx.device, &ctx.queue, params(Some(&manifest)));
+    let _ = renderer.render_scene(
+        &ctx.device,
+        &ctx.queue,
+        params(super::RenderSceneSource::resource_free_quad_chunks(
+            &manifest,
+            Some(&scene),
+        )),
+    );
     let key_with_manifest = renderer
         .scene_encoding_state
         .cache_key()
         .expect("scene encoding key");
 
-    assert_eq!(key_with_manifest, key_without_manifest);
-    assert_eq!(renderer.diagnostics_state.perf.scene_encoding_cache_hits, 1);
+    assert_ne!(
+        key_with_manifest, key_without_manifest,
+        "resource-free quad manifests should use a chunk-native scene encoding key"
+    );
 
     let last = renderer
         .diagnostics_state
         .last_frame_perf
         .expect("last frame perf snapshot");
+    assert_eq!(last.scene_encoding_cache_hits, 0);
+    assert_eq!(last.scene_encoding_cache_misses, 1);
     assert_eq!(last.scene_chunk_input_chunks, 1);
     assert_eq!(last.scene_chunk_input_ops, chunk.ops_len() as u64);
     assert_eq!(last.scene_chunk_input_fingerprint, manifest.fingerprint());
@@ -1372,11 +1471,11 @@ fn scene_chunk_manifest_is_reported_without_busting_scene_encoding_cache() {
     assert_eq!(last.scene_chunk_encoding_payload_plan_shape_mismatches, 0);
     assert_eq!(
         last.scene_chunk_encoding_payload_plan_stream_fingerprint_matches,
-        0
+        1
     );
     assert_eq!(
         last.scene_chunk_encoding_payload_plan_stream_fingerprint_mismatches,
-        1
+        0
     );
     assert_eq!(
         last.scene_chunk_encoding_payload_reassembly_dry_run_candidates,
@@ -1384,11 +1483,11 @@ fn scene_chunk_manifest_is_reported_without_busting_scene_encoding_cache() {
     );
     assert_eq!(
         last.scene_chunk_encoding_payload_reassembly_append_only_matches,
-        0
+        1
     );
     assert_eq!(
         last.scene_chunk_encoding_payload_reassembly_blocked_by_stream_fingerprint_mismatch,
-        1
+        0
     );
     assert_eq!(
         last.scene_chunk_encoding_payload_entries_without_plan_candidate,
@@ -1399,17 +1498,26 @@ fn scene_chunk_manifest_is_reported_without_busting_scene_encoding_cache() {
         0
     );
 
-    let _ = renderer.render_scene(&ctx.device, &ctx.queue, params(Some(&manifest)));
+    let _ = renderer.render_scene(
+        &ctx.device,
+        &ctx.queue,
+        params(super::RenderSceneSource::resource_free_quad_chunks(
+            &manifest,
+            Some(&scene),
+        )),
+    );
     let key_with_stable_manifest = renderer
         .scene_encoding_state
         .cache_key()
         .expect("scene encoding key");
 
-    assert_eq!(key_with_stable_manifest, key_without_manifest);
+    assert_eq!(key_with_stable_manifest, key_with_manifest);
     let last = renderer
         .diagnostics_state
         .last_frame_perf
         .expect("last frame perf snapshot");
+    assert_eq!(last.scene_encoding_cache_hits, 1);
+    assert_eq!(last.scene_encoding_cache_misses, 0);
     assert_eq!(last.scene_chunk_encoding_key_cache_entries, 1);
     assert_eq!(last.scene_chunk_encoding_key_cache_hits, 1);
     assert_eq!(last.scene_chunk_encoding_key_cache_misses, 0);
@@ -1424,11 +1532,11 @@ fn scene_chunk_manifest_is_reported_without_busting_scene_encoding_cache() {
     assert_eq!(last.scene_chunk_encoding_payload_plan_shape_mismatches, 0);
     assert_eq!(
         last.scene_chunk_encoding_payload_plan_stream_fingerprint_matches,
-        0
+        1
     );
     assert_eq!(
         last.scene_chunk_encoding_payload_plan_stream_fingerprint_mismatches,
-        1
+        0
     );
     assert_eq!(
         last.scene_chunk_encoding_payload_reassembly_dry_run_candidates,
@@ -1436,11 +1544,11 @@ fn scene_chunk_manifest_is_reported_without_busting_scene_encoding_cache() {
     );
     assert_eq!(
         last.scene_chunk_encoding_payload_reassembly_append_only_matches,
-        0
+        1
     );
     assert_eq!(
         last.scene_chunk_encoding_payload_reassembly_blocked_by_stream_fingerprint_mismatch,
-        1
+        0
     );
     assert_eq!(
         last.scene_chunk_encoding_payload_entries_without_plan_candidate,
@@ -1513,8 +1621,7 @@ fn unreferenced_text_atlas_churn_does_not_bust_scene_or_chunk_encoding_cache() {
     let params = || super::RenderSceneParams {
         format,
         target_view: &target_view,
-        scene: &scene,
-        scene_chunks: Some(&manifest),
+        source: super::RenderSceneSource::flat_with_diagnostic_chunks(&scene, &manifest),
         clear: super::ClearColor::default(),
         scale_factor: 1.0,
         viewport_size,
@@ -1645,8 +1752,7 @@ fn scene_chunk_payload_and_resident_upload_state_warm_without_perf() {
     let params = || super::RenderSceneParams {
         format,
         target_view: &target_view,
-        scene: &scene,
-        scene_chunks: Some(&manifest),
+        source: super::RenderSceneSource::resource_free_quad_chunks(&manifest, Some(&scene)),
         clear: super::ClearColor::default(),
         scale_factor: 1.0,
         viewport_size,
@@ -1731,8 +1837,7 @@ fn perf_snapshot_counts_path_material_paint_degradation() {
         super::RenderSceneParams {
             format,
             target_view: &target_view,
-            scene: &scene,
-            scene_chunks: None,
+            source: super::RenderSceneSource::flat(&scene),
             clear: super::ClearColor::default(),
             scale_factor: 1.0,
             viewport_size,

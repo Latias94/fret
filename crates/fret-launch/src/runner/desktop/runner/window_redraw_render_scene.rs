@@ -1,5 +1,7 @@
 use fret_core::Scene;
-use fret_render::{ClearColor, RenderSceneParams, Renderer, SurfaceState, WgpuContext};
+use fret_render::{
+    ClearColor, RenderSceneParams, RenderSceneSource, Renderer, SurfaceState, WgpuContext,
+};
 
 use super::redraw_hitch::{RedrawPhase, measure_redraw_phase};
 
@@ -24,8 +26,10 @@ pub(super) fn record_window_redraw_render_scene(
             RenderSceneParams {
                 format: input.surface.format(),
                 target_view: input.target_view,
-                scene: input.scene,
-                scene_chunks: Some(input.scene_chunks),
+                source: RenderSceneSource::flat_with_diagnostic_chunks(
+                    input.scene,
+                    input.scene_chunks,
+                ),
                 clear: input.clear_color,
                 scale_factor: input.scale_factor,
                 viewport_size: input.surface.size(),

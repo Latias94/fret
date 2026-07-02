@@ -3,8 +3,8 @@ mod support;
 use fret_core::geometry::{Corners, Edges, Point, Px, Rect, Size, Transform2D};
 use fret_core::scene::{Color, DrawOrder, Paint, Scene, SceneOp};
 use fret_render_wgpu::{
-    ClearColor, RenderSceneParams, RenderTargetColorSpace, RenderTargetDescriptor, Renderer,
-    WgpuContext,
+    ClearColor, RenderSceneParams, RenderSceneSource, RenderTargetColorSpace,
+    RenderTargetDescriptor, Renderer, WgpuContext,
 };
 use support::{pixel_rgba, render_scene_rgba8};
 
@@ -342,8 +342,7 @@ fn gpu_affine_clip_conformance() {
             RenderSceneParams {
                 format,
                 target_view: &source_render_view,
-                scene: &source_scene,
-                scene_chunks: None,
+                source: RenderSceneSource::flat(&source_scene),
                 clear: ClearColor(wgpu::Color {
                     r: 0.0,
                     g: 0.0,

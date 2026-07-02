@@ -2,7 +2,8 @@ use fret_core::AlphaMode;
 use fret_core::geometry::{Corners, Edges, Point, Px, Rect, Size};
 use fret_core::scene::{Color, DrawOrder, ImageSamplingHint, Paint, Scene, SceneOp, UvRect};
 use fret_render_wgpu::{
-    ClearColor, ImageColorSpace, ImageDescriptor, RenderSceneParams, Renderer, WgpuContext,
+    ClearColor, ImageColorSpace, ImageDescriptor, RenderSceneParams, RenderSceneSource, Renderer,
+    WgpuContext,
 };
 
 #[path = "support/readback.rs"]
@@ -127,8 +128,7 @@ fn image_sampling_hint_nearest_vs_linear_differs() {
         RenderSceneParams {
             format,
             target_view: &view,
-            scene: &scene,
-            scene_chunks: None,
+            source: RenderSceneSource::flat(&scene),
             clear: ClearColor(wgpu::Color::TRANSPARENT),
             scale_factor: 1.0,
             viewport_size: size,
@@ -244,8 +244,7 @@ fn image_sampling_hint_preserves_order_across_mixed_primitives() {
         RenderSceneParams {
             format,
             target_view: &view,
-            scene: &scene,
-            scene_chunks: None,
+            source: RenderSceneSource::flat(&scene),
             clear: ClearColor(wgpu::Color::TRANSPARENT),
             scale_factor: 1.0,
             viewport_size: size,

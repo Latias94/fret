@@ -41,7 +41,9 @@ frame-pipeline contract while freezing stricter migration rules:
   resource-closure gates before deletion. Production chunk payload replay through temporary flat
   scenes is no longer a valid bridge for closure-supported payloads, and full-blob text resource
   helpers are no longer valid on normal renderer chunk/resource paths; flat replay may remain only
-  as a parity oracle while chunk-native payload classes are proven.
+  as a parity oracle while chunk-native payload classes are proven. Renderer callers must declare
+  whether a manifest is diagnostic evidence beside a flat scene or an authoritative resource-free
+  quad chunk source; the old ambiguous `scene_chunks: Option<_>` input is not a valid contract.
 - Public/source-policy compatibility exceptions are not frame products. They may be referenced by
   this plan because they protect adoption during the same breaking window, but they belong to the
   app facade/source-policy contract and must carry owner, reason, and retirement criteria there.

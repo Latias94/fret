@@ -253,3 +253,11 @@ timestamp: 2026-06-30
   glyph key. Remaining U7 work is shaping-aware cluster/run closure for ligatures, RTL, combining
   marks, fallback fonts, decorations, selection, and caret dependencies before text payload
   reassembly or text partial uploads.
+- 2026-07-02: Phase 2 U8 explicit render scene source slice replaces
+  `RenderSceneParams.scene`/`scene_chunks` with `RenderSceneSource`. Launch callers now pass flat
+  scenes with diagnostic manifests, while authoritative chunk-native rendering is explicit and
+  currently limited to resource-free quad manifests. Cached quad chunk payloads can be assembled into
+  frame `SceneEncoding` by relocating quad instance/uniform indices; unsupported authoritative chunks
+  fail instead of silently falling back through an unprepared debug scene. Verification passed:
+  renderer/facade/launch checks, focused U8 chunk-source tests, and full `cargo nextest run -p
+  fret-render-wgpu --no-fail-fast` (343 passed).

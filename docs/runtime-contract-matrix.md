@@ -84,15 +84,20 @@ The convergence target is GPUI-aligned but Fret-owned:
   resource-generation keys, render-plan reuse, and dirty upload ranges over whole-scene
   encode/upload when a local edit is observable. Supported chunk payloads must encode from chunk
   ops directly; flat replay is a parity oracle, not a hidden production payload bridge.
+- Normal renderer input is explicit: `RenderSceneSource::Flat` carries the flat scene plus optional
+  diagnostic chunks, while `RenderSceneSource::ResourceFreeQuadChunks` is the only authoritative
+  chunk-native source and is currently limited to resource-free quad manifests whose payloads can be
+  assembled without flat-scene replay.
 
 Compatibility bridge policy for the active plan:
 
 - The deleted `ViewId(pub NodeId)` and `BoundaryId(NodeId)` wrappers must not return. Parent repair,
-  GC reachability expansion, flat `Scene` normal renderer input, shaping-aware text chunk closure
-  gaps, stream classes without chunk closure, and source-policy allowlist entries are remaining
-  migration bridges. Production chunk payload replay through temporary flat scenes is deleted for
-  the closure-supported quad payload path and must not return. Full-blob text resource helpers are
-  test-only/debug-only and must not return to normal renderer chunk/resource paths.
+  GC reachability expansion, flat `Scene` input for default launch callers and parity/debug paths,
+  shaping-aware text chunk closure gaps, stream classes without chunk closure, and source-policy
+  allowlist entries are remaining migration bridges. Production chunk payload replay through
+  temporary flat scenes is deleted for the closure-supported quad payload path and must not return.
+  Full-blob text resource helpers are test-only/debug-only and must not return to normal renderer
+  chunk/resource paths.
 - The deleted cache-root observation collapse bridge must not return. If observation fanout widens,
   it should widen from boundary/view subscribers rather than from descendant `NodeId` scans.
 - Every retained bridge needs an owner, reason, measurable deletion gate, and follow-up path. An

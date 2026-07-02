@@ -283,6 +283,26 @@ impl SceneChunkEncodingKey {
 }
 
 impl SceneChunkEncodingState {
+    pub(super) fn assemble_resource_free_quad_frame_encoding(
+        &self,
+        manifest: &fret_core::SceneChunkManifest,
+        context: SceneChunkEncodingContext,
+    ) -> Option<SceneEncoding> {
+        let mut encoding = SceneEncoding::default();
+        for entry in manifest.entries() {
+            if !entry.chunk().closure().is_resource_free_quad_only() {
+                return None;
+            }
+            let key = SceneChunkEncodingKey::new(context, entry, 0);
+            let payload = self.payloads.get(&key)?;
+            if payload.append_only_reassembly_blocker().is_some() {
+                return None;
+            }
+            append_quad_payload_encoding(&mut encoding, &payload.encoding)?;
+        }
+        Some(encoding)
+    }
+
     pub(super) fn begin_frame_with_payloads(
         &mut self,
         manifest: Option<&fret_core::SceneChunkManifest>,
@@ -477,6 +497,40 @@ impl SceneChunkEncodingState {
             reassembly_plan,
         }
     }
+}
+
+fn append_quad_payload_encoding(dst: &mut SceneEncoding, src: &SceneEncoding) -> Option<()> {
+    let instance_base = u32::try_from(dst.instances.len()).ok()?;
+    let uniform_base = u32::try_from(dst.uniforms.len()).ok()?;
+
+    dst.instances.extend_from_slice(&src.instances);
+    dst.uniforms.extend_from_slice(&src.uniforms);
+    dst.uniform_mask_images
+        .extend_from_slice(&src.uniform_mask_images);
+
+    if src.path_paints.is_empty()
+        && src.text_paints.is_empty()
+        && src.viewport_vertices.is_empty()
+        && src.text_glyph_instances.is_empty()
+        && src.text_vertices.is_empty()
+        && src.path_vertices.is_empty()
+        && src.clip_path_masks.is_empty()
+        && src.clips.is_empty()
+        && src.masks.is_empty()
+        && src.effect_markers.is_empty()
+    {
+        for draw in &src.ordered_draws {
+            let OrderedDraw::Quad(mut quad) = *draw else {
+                return None;
+            };
+            quad.first_instance = quad.first_instance.checked_add(instance_base)?;
+            quad.uniform_index = quad.uniform_index.checked_add(uniform_base)?;
+            dst.ordered_draws.push(OrderedDraw::Quad(quad));
+        }
+        return Some(());
+    }
+
+    None
 }
 
 impl Renderer {
@@ -736,7 +790,10 @@ mod tests {
     fn quad_payload_encoding() -> SceneEncoding {
         let mut encoding = SceneEncoding::default();
         let instance: QuadInstance = bytemuck::Zeroable::zeroed();
+        let uniform: ViewportUniform = bytemuck::Zeroable::zeroed();
         encoding.instances.push(instance);
+        encoding.uniforms.push(uniform);
+        encoding.uniform_mask_images.push(None);
         encoding.ordered_draws.push(OrderedDraw::Quad(QuadDraw {
             scissor: ScissorRect::full(320, 200),
             uniform_index: 0,
@@ -753,6 +810,51 @@ mod tests {
             },
         }));
         encoding
+    }
+
+    #[test]
+    fn resource_free_quad_payloads_assemble_frame_encoding_with_relocated_indices() {
+        let mut state = SceneChunkEncodingState::default();
+        let frame = manifest(&[
+            SceneChunkManifestEntry::new(
+                SceneChunk::from_ops(Arc::from([quad_scene_op()])),
+                Rect::new(
+                    Point::default(),
+                    Size::new(fret_core::Px(10.0), fret_core::Px(10.0)),
+                ),
+                Point::default(),
+            ),
+            SceneChunkManifestEntry::new(
+                SceneChunk::from_ops(Arc::from([quad_scene_op()])),
+                Rect::new(
+                    Point::default(),
+                    Size::new(fret_core::Px(10.0), fret_core::Px(10.0)),
+                ),
+                Point::new(fret_core::Px(20.0), fret_core::Px(0.0)),
+            ),
+        ]);
+        state.begin_frame_with_payloads(Some(&frame), context(1), &[0, 0], |_| {
+            CachedSceneChunkEncoding::new(quad_payload_encoding())
+        });
+
+        let encoding = state
+            .assemble_resource_free_quad_frame_encoding(&frame, context(1))
+            .expect("resource-free quad chunks should assemble");
+
+        assert_eq!(encoding.instances.len(), 2);
+        assert_eq!(encoding.uniforms.len(), 2);
+        assert_eq!(encoding.uniform_mask_images.len(), 2);
+        assert_eq!(encoding.ordered_draws.len(), 2);
+        let OrderedDraw::Quad(first) = encoding.ordered_draws[0] else {
+            panic!("expected first quad draw");
+        };
+        let OrderedDraw::Quad(second) = encoding.ordered_draws[1] else {
+            panic!("expected second quad draw");
+        };
+        assert_eq!(first.first_instance, 0);
+        assert_eq!(first.uniform_index, 0);
+        assert_eq!(second.first_instance, 1);
+        assert_eq!(second.uniform_index, 1);
     }
 
     fn quad_scene_op() -> SceneOp {

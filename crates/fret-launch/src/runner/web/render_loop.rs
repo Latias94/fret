@@ -6,7 +6,7 @@ use fret_core::{
     AppWindowId, ColorScheme, ContrastPreference, Edges, ForcedColorsMode, Point, Px, Rect, Size,
     WindowMetricsService,
 };
-use fret_render::RenderSceneParams;
+use fret_render::{RenderSceneParams, RenderSceneSource};
 use fret_runtime::apply_window_metrics_event;
 use web_sys::wasm_bindgen::JsCast;
 use web_sys::wasm_bindgen::closure::Closure;
@@ -648,8 +648,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 RenderSceneParams {
                     format: gfx.surface_state.format(),
                     target_view: &view,
-                    scene: &self.scene,
-                    scene_chunks: Some(&self.scene_chunks),
+                    source: RenderSceneSource::flat_with_diagnostic_chunks(
+                        &self.scene,
+                        &self.scene_chunks,
+                    ),
                     clear: self.config.clear_color,
                     scale_factor,
                     viewport_size: gfx.surface_state.size(),

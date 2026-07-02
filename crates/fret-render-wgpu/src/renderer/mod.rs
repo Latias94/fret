@@ -163,9 +163,49 @@ pub struct Renderer {
 pub struct RenderSceneParams<'a> {
     pub format: wgpu::TextureFormat,
     pub target_view: &'a wgpu::TextureView,
-    pub scene: &'a Scene,
-    pub scene_chunks: Option<&'a fret_core::SceneChunkManifest>,
+    pub source: RenderSceneSource<'a>,
     pub clear: ClearColor,
     pub scale_factor: f32,
     pub viewport_size: (u32, u32),
+}
+
+#[derive(Clone, Copy)]
+pub enum RenderSceneSource<'a> {
+    Flat {
+        scene: &'a Scene,
+        diagnostic_chunks: Option<&'a fret_core::SceneChunkManifest>,
+    },
+    ResourceFreeQuadChunks {
+        manifest: &'a fret_core::SceneChunkManifest,
+        debug_scene: Option<&'a Scene>,
+    },
+}
+
+impl<'a> RenderSceneSource<'a> {
+    pub fn flat(scene: &'a Scene) -> Self {
+        Self::Flat {
+            scene,
+            diagnostic_chunks: None,
+        }
+    }
+
+    pub fn flat_with_diagnostic_chunks(
+        scene: &'a Scene,
+        diagnostic_chunks: &'a fret_core::SceneChunkManifest,
+    ) -> Self {
+        Self::Flat {
+            scene,
+            diagnostic_chunks: Some(diagnostic_chunks),
+        }
+    }
+
+    pub fn resource_free_quad_chunks(
+        manifest: &'a fret_core::SceneChunkManifest,
+        debug_scene: Option<&'a Scene>,
+    ) -> Self {
+        Self::ResourceFreeQuadChunks {
+            manifest,
+            debug_scene,
+        }
+    }
 }

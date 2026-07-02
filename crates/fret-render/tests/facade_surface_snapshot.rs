@@ -1,13 +1,13 @@
 use fret_render::{
     ClearColor, ImageColorSpace, ImageDescriptor, RenderError, RenderSceneParams,
-    RenderTargetAlphaMode, RenderTargetColorEncoding, RenderTargetColorPrimaries,
-    RenderTargetColorRange, RenderTargetColorSpace, RenderTargetDescriptor,
-    RenderTargetIngestStrategy, RenderTargetMatrixCoefficients, RenderTargetMetadata,
-    RenderTargetOrientation, RenderTargetRotation, RenderTargetTransferFunction, Renderer,
-    RendererCapabilities, RendererPerfFrameSample, RendererPerfFrameStore, SurfaceState,
-    SvgAlphaMask, SvgRgbaImage, UploadedRgba8Image, WgpuAdapterSelectionSnapshot,
-    WgpuAllocatorReportFrameSample, WgpuAllocatorReportFrameStore, WgpuContext,
-    WgpuHubReportCounts, WgpuHubReportFrameSample, WgpuHubReportFrameStore,
+    RenderSceneSource, RenderTargetAlphaMode, RenderTargetColorEncoding,
+    RenderTargetColorPrimaries, RenderTargetColorRange, RenderTargetColorSpace,
+    RenderTargetDescriptor, RenderTargetIngestStrategy, RenderTargetMatrixCoefficients,
+    RenderTargetMetadata, RenderTargetOrientation, RenderTargetRotation,
+    RenderTargetTransferFunction, Renderer, RendererCapabilities, RendererPerfFrameSample,
+    RendererPerfFrameStore, SurfaceState, SvgAlphaMask, SvgRgbaImage, UploadedRgba8Image,
+    WgpuAdapterSelectionSnapshot, WgpuAllocatorReportFrameSample, WgpuAllocatorReportFrameStore,
+    WgpuContext, WgpuHubReportCounts, WgpuHubReportFrameSample, WgpuHubReportFrameStore,
     create_rgba8_image_storage, upload_alpha_mask, upload_rgba_image, upload_rgba8_image,
     viewport_overlay, write_rgba8_texture_region,
 };
@@ -17,6 +17,7 @@ fn facade_surface_snapshot_matches_v1_contract_buckets() {
     // Bucket A: core runtime/bootstrap entrypoints.
     let _ = std::mem::size_of::<Renderer>();
     let _ = std::mem::size_of::<RenderSceneParams<'static>>();
+    let _ = std::mem::size_of::<RenderSceneSource<'static>>();
     let _ = std::mem::size_of::<SurfaceState<'static>>();
     let _ = std::mem::size_of::<WgpuContext>();
     let _ = std::mem::size_of::<ClearColor>();
