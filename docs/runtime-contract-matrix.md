@@ -82,10 +82,9 @@ The convergence target is GPUI-aligned but Fret-owned:
 Compatibility bridge policy for the active plan:
 
 - The deleted `ViewId(pub NodeId)` and `BoundaryId(NodeId)` wrappers must not return. Parent repair,
-  GC reachability expansion, the remaining `dirty_live_boundary_nodes_v1_quarantine` layout
-  projection, flat `Scene` normal renderer input, chunk replay through temporary flat scenes,
-  full-blob text resource helpers, and source-policy allowlist entries are remaining migration
-  bridges.
+  GC reachability expansion, flat `Scene` normal renderer input, chunk replay through temporary flat
+  scenes, full-blob text resource helpers, and source-policy allowlist entries are remaining
+  migration bridges.
 - Every retained bridge needs an owner, reason, measurable deletion gate, and follow-up path. An
   unowned compatibility path is out of contract for this pre-launch refactor window.
 - Source-policy exceptions are not runtime mechanisms. They are public-surface quarantine records

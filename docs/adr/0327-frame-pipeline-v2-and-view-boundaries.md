@@ -23,9 +23,8 @@ frame-pipeline contract while freezing stricter migration rules:
 
 - `ViewId` and `BoundaryId` are independent window-scoped/runtime identities, not durable aliases
   for retained `NodeId` placement. The old `ViewId(pub NodeId)` and `BoundaryId(NodeId)` wrappers
-  are deleted. The live-`NodeId` derived `ViewId` helper is also deleted; the remaining
-  `dirty_live_boundary_nodes_v1_quarantine` bridge only projects dirty `ViewId`s to current live
-  layout candidates.
+  are deleted. The live-`NodeId` derived `ViewId` helper is also deleted; layout dirty iteration now
+  consumes boundary candidates before resolving current live layout roots.
 - `ViewBoundaryStore` owns independent `BoundaryId` records, stable boundary keys, durable
   `ViewId` allocation, and explicit live-node projection metadata. A temporarily detached boundary
   may exist with `live_node: None`; final removal deletes its boundary record.

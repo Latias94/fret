@@ -194,6 +194,22 @@ pub(super) struct ViewBoundaryState {
     pub(super) frame_products: BoundaryFrameProducts,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(in crate::tree) struct DirtyBoundaryLayoutCandidate {
+    boundary: BoundaryId,
+    root: NodeId,
+}
+
+impl DirtyBoundaryLayoutCandidate {
+    pub(in crate::tree) fn boundary(self) -> BoundaryId {
+        self.boundary
+    }
+
+    pub(in crate::tree) fn root(self) -> NodeId {
+        self.root
+    }
+}
+
 pub(super) struct ViewBoundaryStore {
     entries: SlotMap<BoundaryId, ViewBoundaryState>,
     by_live_node: slotmap::SecondaryMap<NodeId, BoundaryId>,
@@ -1089,10 +1105,16 @@ impl<H: UiHost> UiTree<H> {
         self.debug_refresh_dirty_frontier_max();
     }
 
-    pub(in crate::tree) fn dirty_live_boundary_nodes_v1_quarantine(&self) -> Vec<NodeId> {
+    pub(in crate::tree) fn dirty_boundary_layout_candidates(
+        &self,
+    ) -> Vec<DirtyBoundaryLayoutCandidate> {
         self.dirty_view_frontier
             .iter_views()
-            .filter_map(|view| self.view_boundaries.live_node_for_view(view))
+            .filter_map(|view| {
+                let boundary = self.view_boundaries.boundary_id_for_view(view)?;
+                let root = self.view_boundaries.live_node_for_boundary(boundary)?;
+                Some(DirtyBoundaryLayoutCandidate { boundary, root })
+            })
             .collect()
     }
 

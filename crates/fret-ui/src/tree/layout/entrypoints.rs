@@ -1707,8 +1707,9 @@ impl<H: UiHost> UiTree<H> {
 
     fn prune_detached_layout_followups(&mut self) {
         let detached: Vec<NodeId> = self
-            .dirty_live_boundary_nodes_v1_quarantine()
+            .dirty_boundary_layout_candidates()
             .into_iter()
+            .map(|candidate| candidate.root())
             .filter(|&root| !self.node_is_attached_to_layer_tree(root))
             .collect();
         for root in detached {
@@ -2000,8 +2001,14 @@ impl<H: UiHost> UiTree<H> {
         //
         // Hot path: avoid scanning the whole node store. Boundary invalidations are tracked in
         // the dirty view frontier, so we can restrict this pass to the subset that actually changed.
-        let mut candidates: Vec<NodeId> = Vec::with_capacity(16);
-        for id in self.dirty_live_boundary_nodes_v1_quarantine() {
+        let mut candidates = Vec::with_capacity(16);
+        for candidate in self.dirty_boundary_layout_candidates() {
+            let id = candidate.root();
+            debug_assert_eq!(
+                self.view_boundaries
+                    .live_node_for_boundary(candidate.boundary()),
+                Some(id)
+            );
             let Some(node) = self.nodes.get(id) else {
                 continue;
             };
@@ -2011,7 +2018,7 @@ impl<H: UiHost> UiTree<H> {
             if !node.invalidation.layout {
                 continue;
             }
-            candidates.push(id);
+            candidates.push(candidate);
         }
 
         if candidates.is_empty() {
@@ -2019,12 +2026,16 @@ impl<H: UiHost> UiTree<H> {
         }
         self.debug_record_dirty_frontier_contained_candidates(candidates.len());
 
-        let candidate_set: std::collections::HashSet<NodeId> = candidates.iter().copied().collect();
+        let candidate_set: std::collections::HashSet<NodeId> = candidates
+            .iter()
+            .map(|candidate| candidate.root())
+            .collect();
         let mut scheduled_followups: std::collections::HashSet<NodeId> =
             std::collections::HashSet::new();
 
         let mut targets: Vec<(NodeId, Rect)> = Vec::with_capacity(candidates.len());
-        for id in candidates {
+        for candidate in candidates {
+            let id = candidate.root();
             let mut skip = false;
             let mut parent = self.nodes.get(id).and_then(|n| n.parent);
             while let Some(p) = parent {

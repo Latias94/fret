@@ -193,6 +193,18 @@ timestamp: 2026-06-30
   `GlobalElementId` for declarative roots, preserves temporary detach with `live_node = None`, and
   removes boundary records only on final removal. Remaining bridge: layout-only
   `dirty_live_boundary_nodes_v1_quarantine`.
+- 2026-07-02: Phase 2 U5 boundary layout candidate slice deletes
+  `dirty_live_boundary_nodes_v1_quarantine`. Layout dirty consumers now iterate
+  `DirtyBoundaryLayoutCandidate` values resolved through `ViewBoundaryStore`, preserving
+  boundary-first identity while exposing only current live layout roots to layout code. Subagent
+  `019f23bf-a8ae-7c20-8c7b-ba3428e560a1` confirmed existing dispatch, command, semantics,
+  hit-test, focus-barrier, and window-arbitration tests already guard window-owned products.
+- U5 boundary layout candidate verification passed: `cargo check -p fret-ui --tests`,
+  `cargo check -p fret-ui --features diagnostics`,
+  `cargo check -p fret-bootstrap --lib --features launch,ui-app-driver,diagnostics`,
+  `cargo nextest run -p fret-ui --no-fail-fast` (1182 passed),
+  `cargo nextest run -p fret-bootstrap --lib --no-fail-fast`, `cargo fmt --all --check`,
+  layering/surface/consumption profile gates, deleted-bridge static search, and `git diff --check`.
 - U3 deletion verification passed: `cargo check -p fret-ui`, `cargo check -p fret-bootstrap`,
   focused U3 identity and scroll-target nextest coverage,
   `cargo nextest run -p fret-ui --no-fail-fast` (1180 passed),
