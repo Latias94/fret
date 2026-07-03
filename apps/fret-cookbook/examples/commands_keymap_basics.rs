@@ -1,5 +1,4 @@
 use fret::actions::{CommandId, ElementCommandGatingExt as _};
-use fret::advanced::raw::LocalStateModelStoreExt as _;
 use fret::app::prelude::*;
 use fret::children::UiElementSinkExt as _;
 use fret::semantics::SemanticsRole;
@@ -229,12 +228,9 @@ impl View for CommandsKeymapBasicsView {
             });
 
         cx.actions().availability::<act::TogglePanel>({
-            let allow_command_state = allow_command_state.clone();
-            move |host, _acx| {
-                let allowed = allow_command_state
-                    .read_in(host.models_mut(), |value| *value)
-                    .unwrap_or(true);
-                if allowed {
+            let allow_command_available = allow_command;
+            move |_host, _acx| {
+                if allow_command_available {
                     CommandAvailability::Available
                 } else {
                     CommandAvailability::Blocked

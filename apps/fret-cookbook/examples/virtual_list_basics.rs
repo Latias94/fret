@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use fret::app::LocalState;
 use fret::app::RenderContextAccess as _;
 use fret::app::prelude::*;
 use fret::{
@@ -7,7 +8,6 @@ use fret::{
     icons::IconId,
     style::{LayoutRefinement, Space},
 };
-use fret_runtime::Model;
 use fret_ui::{
     ScrollStrategy,
     element::{ContainerProps, LayoutStyle, Length, VirtualListKeyCacheMode, VirtualListOptions},
@@ -80,14 +80,14 @@ fn row_height_at(index: usize, tall_rows: bool) -> Px {
 }
 
 struct VirtualListBasicsView {
-    items: Model<Arc<Vec<RowItem>>>,
+    items: LocalState<Arc<Vec<RowItem>>>,
     scroll: VirtualListScrollHandle,
 }
 
 impl View for VirtualListBasicsView {
     fn init(app: &mut App, _window: WindowId) -> Self {
         Self {
-            items: app.models_mut().insert(make_items(LIST_LEN)),
+            items: app.local_state(make_items(LIST_LEN)),
             scroll: VirtualListScrollHandle::new(),
         }
     }
@@ -184,6 +184,7 @@ impl View for VirtualListBasicsView {
         let theme_for_rows = theme.clone();
         let row_settings = view_settings.clone();
         let list = cx
+            .elements()
             .virtual_list_keyed_with_layout(
                 list_layout,
                 len,
@@ -253,65 +254,63 @@ impl View for VirtualListBasicsView {
             )
             .test_id(TEST_ID_LIST);
 
-        cx.actions().models::<act::RotateItems>({
-            let items = self.items.clone();
-            move |models| {
-                models
-                    .update(&items, |v| {
-                        let items = Arc::make_mut(v);
-                        if items.is_empty() {
-                            return;
-                        }
-                        let by = 37 % items.len();
-                        items.rotate_left(by);
-                    })
-                    .is_ok()
-            }
-        });
+        cx.actions()
+            .locals_with(&self.items)
+            .on::<act::RotateItems>(|tx, items| {
+                tx.update(&items, |v| {
+                    let items = Arc::make_mut(v);
+                    if items.is_empty() {
+                        return;
+                    }
+                    let by = 37 % items.len();
+                    items.rotate_left(by);
+                })
+            });
 
-        cx.actions().models::<act::ScrollToTarget>({
-            let items = self.items.clone();
-            let reversed = reversed_state.clone();
-            let scroll = self.scroll.clone();
-            move |models| {
-                let items = models
-                    .read(&items, Arc::clone)
-                    .ok()
-                    .unwrap_or_else(|| Arc::new(Vec::new()));
-                let reversed = reversed.value_in_or(models, false);
+        cx.actions()
+            .locals_with((&self.items, &reversed_state))
+            .on::<act::ScrollToTarget>({
+                let scroll = self.scroll.clone();
+                move |tx, (items, reversed)| {
+                    let items = tx.value(&items);
+                    let reversed = tx.value_or(&reversed, false);
 
-                let pos = items.iter().position(|it| it.id == TARGET_ID).unwrap_or(0);
-                let index = if reversed {
-                    items.len().saturating_sub(1).saturating_sub(pos)
-                } else {
-                    pos
-                };
+                    let pos = items.iter().position(|it| it.id == TARGET_ID).unwrap_or(0);
+                    let index = if reversed {
+                        items.len().saturating_sub(1).saturating_sub(pos)
+                    } else {
+                        pos
+                    };
 
-                scroll.scroll_to_item(index, ScrollStrategy::Start);
-                true
-            }
-        });
+                    scroll.scroll_to_item(index, ScrollStrategy::Start);
+                    true
+                }
+            });
 
-        cx.actions().models::<act::ScrollJump>({
-            let jump = jump_state.clone();
-            let scroll = self.scroll.clone();
-            move |models| {
-                let raw = jump.value_in_or_default(models);
-                let index = raw.trim().parse::<usize>().ok().unwrap_or(0);
-                scroll.scroll_to_item(index, ScrollStrategy::Start);
-                true
-            }
-        });
+        cx.actions()
+            .locals_with(&jump_state)
+            .on::<act::ScrollJump>({
+                let scroll = self.scroll.clone();
+                move |tx, jump| {
+                    let raw = tx.value_or_else(&jump, String::new);
+                    let index = raw.trim().parse::<usize>().ok().unwrap_or(0);
+                    scroll.scroll_to_item(index, ScrollStrategy::Start);
+                    true
+                }
+            });
 
         let mode_toggle = shadcn::ToggleGroup::single(&mode_state)
             .items([
-                shadcn::ToggleGroupItem::new(MODE_MEASURED, [cx.text("Measured")])
-                    .a11y_label("Measured virtualization")
-                    .test_id(TEST_ID_MODE_MEASURED),
-                shadcn::ToggleGroupItem::new(MODE_FIXED, [cx.text("Fixed")])
+                shadcn::ToggleGroupItem::new(
+                    MODE_MEASURED,
+                    [ui::text("Measured").into_element_in(cx)],
+                )
+                .a11y_label("Measured virtualization")
+                .test_id(TEST_ID_MODE_MEASURED),
+                shadcn::ToggleGroupItem::new(MODE_FIXED, [ui::text("Fixed").into_element_in(cx)])
                     .a11y_label("Fixed row height virtualization")
                     .test_id(TEST_ID_MODE_FIXED),
-                shadcn::ToggleGroupItem::new(MODE_KNOWN, [cx.text("Known")])
+                shadcn::ToggleGroupItem::new(MODE_KNOWN, [ui::text("Known").into_element_in(cx)])
                     .a11y_label("Known variable row heights virtualization")
                     .test_id(TEST_ID_MODE_KNOWN),
             ])
@@ -422,7 +421,7 @@ impl View for VirtualListBasicsView {
             },
             |_cx| [list],
         )
-        .into_element(cx);
+        .into_element_in(cx);
 
         let body = ui::h_flex_build(|cx, out| {
             out.push_ui(cx, left);

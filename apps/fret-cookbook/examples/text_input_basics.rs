@@ -1,6 +1,4 @@
 use fret::actions::CommandId;
-use fret::advanced::raw::LocalStateModelStoreExt as _;
-use fret::app::LocalState;
 use fret::app::prelude::*;
 use fret::semantics::SemanticsRole;
 use fret::style::Space;
@@ -23,6 +21,7 @@ const TEST_ID_SUBMITTED_COUNT: &str = "cookbook.text_input_basics.submitted_coun
 struct TextInputStats {
     text_len_chars: u32,
     submitted_count: u32,
+    has_text: bool,
 }
 
 fn install_commands(app: &mut App) {
@@ -43,19 +42,6 @@ fn install_commands(app: &mut App) {
 
 struct TextInputBasicsView;
 
-impl TextInputBasicsView {
-    fn has_text(
-        host: &mut dyn fret_ui::action::UiCommandAvailabilityActionHost,
-        text: &LocalState<String>,
-    ) -> bool {
-        let text = text
-            .read_in(host.models_mut(), Clone::clone)
-            .ok()
-            .unwrap_or_default();
-        !text.trim().is_empty()
-    }
-}
-
 impl View for TextInputBasicsView {
     fn init(_app: &mut App, _window: WindowId) -> Self {
         Self
@@ -70,6 +56,7 @@ impl View for TextInputBasicsView {
             |(text, submitted_count)| TextInputStats {
                 text_len_chars: text.chars().count() as u32,
                 submitted_count,
+                has_text: !text.trim().is_empty(),
             },
         );
         let text_len = stats.text_len_chars as f64;
@@ -128,9 +115,9 @@ impl View for TextInputBasicsView {
             });
 
         cx.actions().availability::<act::Submit>({
-            let text_state = text_state.clone();
-            move |host, _acx| {
-                if TextInputBasicsView::has_text(host, &text_state) {
+            let has_text = stats.has_text;
+            move |_host, _acx| {
+                if has_text {
                     CommandAvailability::Available
                 } else {
                     CommandAvailability::Blocked
@@ -139,9 +126,9 @@ impl View for TextInputBasicsView {
         });
 
         cx.actions().availability::<act::Clear>({
-            let text_state = text_state.clone();
-            move |host, _acx| {
-                if TextInputBasicsView::has_text(host, &text_state) {
+            let has_text = stats.has_text;
+            move |_host, _acx| {
+                if has_text {
                     CommandAvailability::Available
                 } else {
                     CommandAvailability::Blocked

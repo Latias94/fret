@@ -248,8 +248,8 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
     ),
     _cookbook_advanced_surface(
         "commands_keymap_basics.rs",
-        "command availability and keymap wiring still use advanced action seams",
-        ("fret::advanced", "fret_app", "fret_core", "fret_ui"),
+        "command availability and keymap wiring still use command infrastructure seams",
+        ("fret_app", "fret_core", "fret_ui"),
     ),
     _cookbook_advanced_surface(
         "compositing_alpha_basics.rs",
@@ -343,8 +343,8 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
     ),
     _cookbook_advanced_surface(
         "text_input_basics.rs",
-        "text-input availability still uses raw model-store bindings",
-        ("fret::advanced", "fret_app", "fret_ui"),
+        "text-input availability still uses command and low-level semantics seams",
+        ("fret_app", "fret_ui"),
     ),
     _cookbook_advanced_surface(
         "undo_basics.rs",
@@ -365,8 +365,8 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
     ),
     _cookbook_advanced_surface(
         "virtual_list_basics.rs",
-        "virtual list still uses raw runtime model reads pending app-facing row state helpers",
-        ("fret_core", "fret_runtime", "fret_ui"),
+        "virtual list still teaches low-level virtual-list mechanism types",
+        ("fret_core", "fret_ui"),
     ),
     SurfacePath(
         "apps/fret-examples/src/node_graph_demo.rs",

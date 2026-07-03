@@ -368,6 +368,9 @@ mod authoring_surface_policy_tests {
         assert!(TEXT_INPUT_EXAMPLE.contains("cx.actions().availability::<act::Submit>"));
         assert!(TEXT_INPUT_EXAMPLE.contains(".selector_layout("));
         assert!(TEXT_INPUT_EXAMPLE.contains("(&text_state, &submitted_count_state),"));
+        assert!(TEXT_INPUT_EXAMPLE.contains("has_text: !text.trim().is_empty(),"));
+        assert!(!TEXT_INPUT_EXAMPLE.contains("LocalStateModelStoreExt"));
+        assert!(!TEXT_INPUT_EXAMPLE.contains("read_in(host.models_mut()"));
         assert!(!TEXT_INPUT_EXAMPLE.contains("watch(&text_state)"));
         assert!(!TEXT_INPUT_EXAMPLE.contains("watch(&submitted_count_state)"));
 
@@ -420,6 +423,9 @@ mod authoring_surface_policy_tests {
         );
         assert!(COMMANDS_KEYMAP_EXAMPLE.contains(".local(&allow_command_state)"));
         assert!(COMMANDS_KEYMAP_EXAMPLE.contains(".toggle_bool::<act::ToggleAllowCommand>()"));
+        assert!(COMMANDS_KEYMAP_EXAMPLE.contains("let allow_command_available = allow_command;"));
+        assert!(!COMMANDS_KEYMAP_EXAMPLE.contains("LocalStateModelStoreExt"));
+        assert!(!COMMANDS_KEYMAP_EXAMPLE.contains("read_in(host.models_mut()"));
 
         assert!(OVERLAY_EXAMPLE.contains(".local(&dialog_open_state)"));
         assert!(OVERLAY_EXAMPLE.contains(".set::<act::OpenDialog>(true);"));
@@ -448,7 +454,8 @@ mod authoring_surface_policy_tests {
         assert!(!TOAST_EXAMPLE.contains("cx.on_action_notify::<act::SuccessToast>"));
         assert!(!TOAST_EXAMPLE.contains("cx.on_action_notify::<act::DismissAll>"));
 
-        assert!(VIRTUAL_LIST_EXAMPLE.contains("use fret_runtime::Model;"));
+        assert!(VIRTUAL_LIST_EXAMPLE.contains("use fret::app::LocalState;"));
+        assert!(!VIRTUAL_LIST_EXAMPLE.contains("use fret_runtime::Model;"));
         assert!(VIRTUAL_LIST_EXAMPLE.contains(".items"));
         assert!(
             VIRTUAL_LIST_EXAMPLE.contains("let items = self.items.layout(cx).value_or_default();")
@@ -457,7 +464,8 @@ mod authoring_surface_policy_tests {
         assert!(!VIRTUAL_LIST_EXAMPLE.contains(".watch(cx)"));
         assert!(!VIRTUAL_LIST_EXAMPLE.contains("watch(&mode_state)"));
         assert!(!VIRTUAL_LIST_EXAMPLE.contains("watch(&visible_only_keys_state)"));
-        assert!(VIRTUAL_LIST_EXAMPLE.contains("models::<act::RotateItems>"));
+        assert!(VIRTUAL_LIST_EXAMPLE.contains(".locals_with(&self.items)"));
+        assert!(!VIRTUAL_LIST_EXAMPLE.contains("models::<act::RotateItems>"));
 
         assert!(ASYNC_INBOX_EXAMPLE.contains("use fret_runtime::Model;"));
         assert!(ASYNC_INBOX_EXAMPLE.contains("models::<act::Cancel>"));
@@ -657,15 +665,13 @@ mod authoring_surface_policy_tests {
             !VIRTUAL_LIST_EXAMPLE
                 .contains("shadcn::Switch::new(visible_only_keys_state.clone_model())")
         );
-        assert!(VIRTUAL_LIST_EXAMPLE.contains("let reversed = reversed_state.clone();"));
+        assert!(VIRTUAL_LIST_EXAMPLE.contains(".locals_with((&self.items, &reversed_state))"));
         assert!(EFFECTS_LAYER_EXAMPLE.contains("shadcn::ToggleGroup::single(&self.effect)"));
         assert!(EFFECTS_LAYER_EXAMPLE.contains(".deselectable(false)"));
         assert!(!EFFECTS_LAYER_EXAMPLE.contains("self.effect.clone_model()"));
-        assert!(VIRTUAL_LIST_EXAMPLE.contains("let jump = jump_state.clone();"));
-        assert!(
-            VIRTUAL_LIST_EXAMPLE.contains("let reversed = reversed.value_in_or(models, false);")
-        );
-        assert!(VIRTUAL_LIST_EXAMPLE.contains("let raw = jump.value_in_or_default(models);"));
+        assert!(VIRTUAL_LIST_EXAMPLE.contains(".locals_with(&jump_state)"));
+        assert!(VIRTUAL_LIST_EXAMPLE.contains("let reversed = tx.value_or(&reversed, false);"));
+        assert!(VIRTUAL_LIST_EXAMPLE.contains("let raw = tx.value_or_else(&jump, String::new);"));
         assert!(!VIRTUAL_LIST_EXAMPLE.contains("reversed_state.clone_model()"));
         assert!(!VIRTUAL_LIST_EXAMPLE.contains("jump_state.clone_model()"));
     }

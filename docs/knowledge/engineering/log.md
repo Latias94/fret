@@ -473,3 +473,11 @@ timestamp: 2026-06-30
   unlisted and unused seams. Verification passed for source-policy unit tests and gate,
   consumption-profile, execution-surface, layering, ADR-number, workstream-catalog, wiki,
   cookbook check, formatting, and whitespace gates.
+- 2026-07-03: Phase 3 U13 cookbook raw helper shrink removes
+  `LocalStateModelStoreExt` availability reads from `commands_keymap_basics` and
+  `text_input_basics`, moves `virtual_list_basics` item state from raw `Model` to app-facing
+  `LocalState`, and rewrites virtual-list actions through `locals_with(...)` transactions.
+  Source-policy quarantine records now drop the no-longer-used `fret::advanced` and
+  `fret_runtime` seams for those examples. Verification passed for focused examples, cookbook
+  checks and nextest, surface/profile/execution/layering/ADR/workstream/wiki gates, formatting,
+  whitespace, and static old-helper searches.
