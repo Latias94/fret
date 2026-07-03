@@ -26,6 +26,7 @@ impl<H: UiHost> UiTree<H> {
         &mut self,
         app: &mut H,
         node: NodeId,
+        parent: Option<NodeId>,
         inputs: &mut PrepaintInteractionInputs<'_>,
     ) {
         if self.debug_enabled {
@@ -127,6 +128,9 @@ impl<H: UiHost> UiTree<H> {
                     .extend_from_slice(&self.interaction_cache.prev_records[range]);
                 for i in 0..self.interaction_cache.replay_scratch.len() {
                     let mut record = self.interaction_cache.replay_scratch[i];
+                    if record.node == node {
+                        record.parent = parent;
+                    }
                     if root_delta.x.0 != 0.0 || root_delta.y.0 != 0.0 {
                         record.bounds.origin = Point::new(
                             record.bounds.origin.x + root_delta.x,
@@ -254,6 +258,7 @@ impl<H: UiHost> UiTree<H> {
 
         let record = InteractionRecord {
             node,
+            parent,
             bounds,
             render_transform_inv: render_transform,
             children_render_transform_inv: children_render_transform,
@@ -272,7 +277,7 @@ impl<H: UiHost> UiTree<H> {
             children_buf.set(children);
         }
         for &child in children_buf.as_slice() {
-            self.prepaint_interaction_node(app, child, inputs);
+            self.prepaint_interaction_node(app, child, Some(node), inputs);
         }
 
         let end = self.interaction_cache.records.len();

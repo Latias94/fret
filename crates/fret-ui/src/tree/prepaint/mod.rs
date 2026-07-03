@@ -98,6 +98,7 @@ pub(super) struct InteractionCacheEntry {
 #[allow(dead_code)]
 pub(super) struct InteractionRecord {
     pub(super) node: NodeId,
+    pub(super) parent: Option<NodeId>,
     pub(super) bounds: Rect,
     pub(super) render_transform_inv: Option<Transform2D>,
     pub(super) children_render_transform_inv: Option<Transform2D>,

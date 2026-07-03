@@ -46,11 +46,10 @@ impl HitTestBoundsTrees {
         self.frame_id.is_some() && !hit_test_bounds_tree_disabled()
     }
 
-    pub(super) fn rebuild_for_layer_from_records<H: UiHost>(
+    pub(super) fn rebuild_for_layer_from_records(
         &mut self,
         layer_root: NodeId,
         records: &[prepaint::InteractionRecord],
-        nodes: &SlotMap<NodeId, Node<H>>,
         layer: &mut BoundaryHitTestBoundsState,
     ) {
         let Some(frame_id) = self.frame_id else {
@@ -74,7 +73,7 @@ impl HitTestBoundsTrees {
         let mut order: u32 = 1;
 
         for record in records {
-            let parent = nodes.get(record.node).and_then(|n| n.parent);
+            let parent = record.parent;
             if record.node == layer_root {
                 self.clip_stack.clear();
             } else {
@@ -256,7 +255,6 @@ impl<H: UiHost> UiTree<H> {
 
         let _ = self.ensure_view_boundary_state(layer_root);
         let records = &self.interaction_cache.records[start..end];
-        let nodes = &self.nodes;
         let hit_test_bounds_trees = &mut self.hit_test_bounds_trees;
         let Some(boundary) = self.view_boundaries.get_live_mut(layer_root) else {
             return;
@@ -264,7 +262,6 @@ impl<H: UiHost> UiTree<H> {
         hit_test_bounds_trees.rebuild_for_layer_from_records(
             layer_root,
             records,
-            nodes,
             &mut boundary.frame_products.hit_test_bounds,
         );
     }

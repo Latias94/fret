@@ -55,7 +55,7 @@ impl<H: UiHost> UiTree<H> {
                     let hit_testable = self.layers[layer_id].hit_testable;
 
                     let start = self.interaction_cache.records.len();
-                    self.prepaint_interaction_node(app, root, &mut interaction_inputs);
+                    self.prepaint_interaction_node(app, root, None, &mut interaction_inputs);
                     let end = self.interaction_cache.records.len();
 
                     if hit_testable {

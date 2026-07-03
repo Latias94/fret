@@ -182,6 +182,7 @@ fn observe_virtual_list_prepaint_case(
 
     let record = InteractionRecord {
         node: vlist_node,
+        parent: None,
         bounds,
         render_transform_inv: None,
         children_render_transform_inv: None,

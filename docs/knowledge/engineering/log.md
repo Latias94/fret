@@ -329,3 +329,12 @@ timestamp: 2026-06-30
   passed for focused propagation/model invalidation tests, `cargo check -p fret-ui`, full `cargo
   nextest run -p fret-ui --no-fail-fast` (1195 passed), formatting, whitespace, layering, surface,
   consumption-profile, execution-surface, ADR-number, workstream-catalog, and wiki-memory gates.
+- 2026-07-03: Phase 3 U3 bounds-tree topology slice moves hit-test bounds-tree clip-stack
+  reconstruction from retained `Node.parent` to prepaint-recorded frame parent topology.
+  `InteractionRecord` now carries parent topology and `HitTestBoundsTrees::rebuild_for_layer_from_records`
+  no longer receives the retained node slotmap. Red/green proof:
+  `bounds_tree_clip_stack_uses_recorded_parent_under_stale_parent_pointers` failed by hitting a
+  child outside a clipping root when retained parent pointers were stale and now misses. Verification
+  passed for focused bounds-tree/prepaint tests, `cargo check -p fret-ui`, full `cargo nextest run
+  -p fret-ui --no-fail-fast` (1196 passed), formatting, whitespace, layering, surface,
+  consumption-profile, execution-surface, ADR-number, workstream-catalog, and wiki-memory gates.
