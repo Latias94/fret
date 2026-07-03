@@ -52,6 +52,65 @@ fn glyph_keys_for_blob_matching(
         .collect()
 }
 
+fn inter_fixture_family(text: &mut super::TextSystem) -> String {
+    text.all_font_names()
+        .into_iter()
+        .find(|name| {
+            let lower = name.to_ascii_lowercase();
+            lower == "inter" || lower.contains("inter ")
+        })
+        .unwrap_or_else(|| {
+            panic!(
+                "expected an Inter family name after loading the fixture font (names_head={:?})",
+                text.all_font_names()
+                    .into_iter()
+                    .take(8)
+                    .collect::<Vec<_>>()
+            )
+        })
+}
+
+fn text_system_with_inter_fixture(device: &wgpu::Device) -> super::TextSystem {
+    let mut text = super::TextSystem::new(device);
+    reset_bundled_only_font_runtime(&mut text);
+    let added = text.add_fonts([INTER_ROMAN_FULL.to_vec()]);
+    assert!(added > 0, "expected Inter fixture font to load");
+    text
+}
+
+fn assert_shape_cluster_metadata_consistent(shape: &super::TextShape) {
+    assert!(
+        !shape.clusters().is_empty(),
+        "prepared shapes with glyphs must preserve cluster metadata"
+    );
+    for (glyph_index, glyph) in shape.glyphs().iter().enumerate() {
+        let cluster_index = glyph.cluster_index() as usize;
+        let cluster = shape.clusters().get(cluster_index).unwrap_or_else(|| {
+            panic!("glyph {glyph_index} points at missing cluster {cluster_index}")
+        });
+        assert!(
+            (cluster.line_index() as usize) < shape.lines().len(),
+            "cluster line index must point at an existing shaped line"
+        );
+        assert!(
+            cluster.glyph_range().contains(&glyph_index),
+            "glyph {glyph_index} must be inside its cluster glyph range {:?}",
+            cluster.glyph_range()
+        );
+        assert_ne!(
+            cluster.font_fingerprint(),
+            0,
+            "cluster with glyphs must record font/run identity"
+        );
+        assert_ne!(
+            cluster.glyph_fingerprint(),
+            0,
+            "cluster with glyphs must record glyph identity"
+        );
+        let _paint_span_summary = (cluster.paint_span(), cluster.mixed_paint_spans());
+    }
+}
+
 fn face_keys_for_blob(
     text: &super::TextSystem,
     blob_id: fret_core::TextBlobId,
@@ -263,6 +322,138 @@ fn query_fontdb_family(
         stretch: usvg::fontdb::Stretch::Normal,
         style: usvg::fontdb::Style::Normal,
     })
+}
+
+#[test]
+fn text_shape_records_cluster_metadata_for_inter_ligature() {
+    let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+    let mut text = text_system_with_inter_fixture(&ctx.device);
+    let family = inter_fixture_family(&mut text);
+    let base_style = TextStyle {
+        font: fret_core::FontId::family(family),
+        size: Px(32.0),
+        ..Default::default()
+    };
+    let constraints = TextConstraints {
+        max_width: None,
+        wrap: TextWrap::None,
+        overflow: TextOverflow::Clip,
+        align: fret_core::TextAlign::Start,
+        scale_factor: 1.0,
+    };
+
+    let content = "->";
+    let rich = fret_core::AttributedText::new(
+        Arc::<str>::from(content),
+        Arc::<[TextSpan]>::from(vec![TextSpan {
+            len: content.len(),
+            shaping: TextShapingStyle::default().with_feature("calt", 1),
+            paint: Default::default(),
+        }]),
+    );
+    let (blob, _) = text.prepare_attributed(&rich, &base_style, constraints);
+    let shape = prepared_shape_for_blob(&text, blob);
+
+    assert_shape_cluster_metadata_consistent(shape);
+    let cluster_debug = shape
+        .clusters()
+        .iter()
+        .map(|cluster| {
+            (
+                cluster.text_range(),
+                cluster.glyph_range(),
+                cluster.visual_bounds(),
+            )
+        })
+        .collect::<Vec<_>>();
+    let glyph_debug = shape
+        .glyphs()
+        .iter()
+        .map(|glyph| (glyph.key.glyph_id, glyph.cluster_index(), glyph.rect()))
+        .collect::<Vec<_>>();
+    assert!(
+        shape
+            .clusters()
+            .iter()
+            .any(|cluster| cluster.text_range() == (0..content.len())
+                && !cluster.glyph_range().is_empty()
+                && !cluster.is_rtl()),
+        "expected the Inter arrow ligature cluster to preserve the full source text range; clusters={cluster_debug:?} glyphs={glyph_debug:?}"
+    );
+}
+
+#[test]
+fn cluster_residency_pins_complete_multi_glyph_cluster() {
+    let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+    let mut text = text_system_with_inter_fixture(&ctx.device);
+    let family = inter_fixture_family(&mut text);
+    let style = TextStyle {
+        font: fret_core::FontId::family(family),
+        size: Px(32.0),
+        ..Default::default()
+    };
+    let constraints = TextConstraints {
+        max_width: None,
+        wrap: TextWrap::None,
+        overflow: TextOverflow::Clip,
+        align: fret_core::TextAlign::Start,
+        scale_factor: 1.0,
+    };
+
+    let candidates = [
+        "a\u{0301}",
+        "e\u{0301}",
+        "a\u{0301}\u{0327}",
+        "n\u{0303}",
+        "o\u{0302}",
+    ];
+    let mut debug = Vec::new();
+    let mut selected = None;
+    for candidate in candidates {
+        let (blob, _) = text.prepare(candidate, &style, constraints);
+        let shape = prepared_shape_for_blob(&text, blob);
+        assert_shape_cluster_metadata_consistent(shape);
+        debug.push(format!(
+            "{candidate:?}: glyphs={} clusters={:?}",
+            shape.glyphs().len(),
+            shape
+                .clusters()
+                .iter()
+                .map(|cluster| (cluster.text_range(), cluster.glyph_range()))
+                .collect::<Vec<_>>()
+        ));
+        if let Some((cluster_index, cluster)) = shape
+            .clusters()
+            .iter()
+            .enumerate()
+            .find(|(_, cluster)| cluster.glyph_range().len() > 1)
+        {
+            selected = Some((
+                blob,
+                cluster_index,
+                cluster.text_range(),
+                cluster.glyph_range().len(),
+            ));
+            break;
+        }
+    }
+
+    let (blob, _cluster_index, text_range, expected_glyphs) = selected.unwrap_or_else(|| {
+        panic!("expected a combining-mark candidate with a multi-glyph cluster; debug={debug:?}")
+    });
+    let mut residency = super::TextFrameResidency::new();
+    assert!(
+        text.push_cluster_residency_for_blob(&mut residency, blob, |cluster| {
+            cluster.text_range() == text_range && cluster.glyph_range().len() == expected_glyphs
+        })
+    );
+
+    assert_eq!(residency.cluster_count(), 1);
+    assert_eq!(
+        residency.glyph_count(),
+        expected_glyphs,
+        "cluster-aware residency must pin every glyph in the selected shaped cluster"
+    );
 }
 
 #[test]

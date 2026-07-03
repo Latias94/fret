@@ -75,6 +75,7 @@ It is a sidecar for session recovery and subagent synthesis, not a replacement f
 - [Phase 3 U4 build-time view-cache membership](progress/2026-07-03-phase3-u4-build-time-view-cache-membership.md)
 - [Phase 3 U5 parent repair deletion](progress/2026-07-03-phase3-u5-parent-repair-deletion.md)
 - [Phase 3 U5.5 retained parent query bridges](progress/2026-07-03-phase3-u5-5-retained-parent-query-bridges.md)
+- [Phase 3 U6 text cluster residency](progress/2026-07-03-phase3-u6-text-cluster-residency.md)
 - [Phase 2 U4 boundary store audit](subagents/2026-07-02-phase2-u4-boundary-store-audit.md)
 - [Phase 2 U4 durable ViewId audit](subagents/2026-07-02-phase2-u4-durable-viewid-audit.md)
 - [Phase 2 U5 boundary bridge audit](subagents/2026-07-02-phase2-u5-boundary-bridge-audit.md)

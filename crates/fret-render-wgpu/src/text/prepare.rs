@@ -21,6 +21,7 @@ mod shape_build;
 pub(super) struct PrepareShapeBuildContext {
     pub(super) wrapped: WrappedLayout,
     pub(super) glyphs: Vec<super::GlyphInstance>,
+    pub(super) clusters: Vec<super::TextGlyphClusterBuilder>,
     pub(super) face_usage: HashMap<FontFaceKey, (u32, u32)>,
     pub(super) lines: Vec<TextLine>,
 }

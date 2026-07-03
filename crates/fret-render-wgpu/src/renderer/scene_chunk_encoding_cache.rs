@@ -1210,10 +1210,10 @@ mod tests {
         let frame = manifest(&[text_chunk_entry(blob)]);
 
         let mut visible_residency = crate::text::TextFrameResidency::new();
-        assert!(renderer.text_system.push_glyph_residency_for_blob(
+        assert!(renderer.text_system.push_cluster_residency_for_blob(
             &mut visible_residency,
             blob,
-            |rect| rect[0] < 36.0
+            |cluster| cluster.visual_bounds()[0] < 36.0
         ));
         let visible_prepare =
             renderer

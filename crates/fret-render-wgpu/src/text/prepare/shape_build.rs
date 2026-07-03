@@ -1,4 +1,6 @@
-use super::super::{GlyphInstance, TextFontFaceUsage, TextLine, TextShape, TextSystem};
+use super::super::{
+    GlyphInstance, TextFontFaceUsage, TextGlyphClusterBuilder, TextLine, TextShape, TextSystem,
+};
 use super::PrepareShapeBuildContext;
 use fret_core::{TextConstraints, TextInputRef, TextMetrics, TextSpan, TextStyle, geometry::Px};
 use fret_render_text::FontFaceKey;
@@ -18,6 +20,7 @@ impl TextSystem {
         PrepareShapeBuildContext {
             wrapped,
             glyphs: Vec::new(),
+            clusters: Vec::new(),
             face_usage: HashMap::new(),
             lines: Vec::new(),
         }
@@ -26,6 +29,7 @@ impl TextSystem {
     pub(in super::super) fn finish_prepared_shape(
         &self,
         glyphs: Vec<GlyphInstance>,
+        clusters: Vec<TextGlyphClusterBuilder>,
         lines: Vec<TextLine>,
         face_usage: HashMap<FontFaceKey, (u32, u32)>,
         metrics: TextMetrics,
@@ -33,8 +37,13 @@ impl TextSystem {
         first_line_caret_stops: Vec<(usize, Px)>,
     ) -> Arc<TextShape> {
         let face_usages = prepared_shape_face_usages(face_usage);
+        let clusters = clusters
+            .into_iter()
+            .map(TextGlyphClusterBuilder::finish)
+            .collect::<Vec<_>>();
         Arc::new(TextShape::new(
             Arc::from(glyphs),
+            Arc::from(clusters),
             metrics,
             Arc::from(lines),
             Arc::from(first_line_caret_stops),

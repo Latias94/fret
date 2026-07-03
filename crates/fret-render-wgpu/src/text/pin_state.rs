@@ -1,4 +1,5 @@
 use super::atlas::{GlyphKey, GlyphPinKeys};
+use super::{TextGlyphCluster, TextShape};
 use fret_core::TextBlobId;
 use rustc_hash::{FxHashMap, FxHashSet};
 use slotmap::Key;
@@ -181,6 +182,9 @@ impl TextBlobResidencySignature {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(super) struct TextResidencyEntryKey {
     text_blob: TextBlobId,
+    reset_generation: u64,
+    cluster_fingerprint: u64,
+    clusters: u32,
     glyph_fingerprint: u64,
     glyphs: u32,
 }
@@ -199,27 +203,51 @@ impl TextFrameResidency {
         }
     }
 
-    pub(super) fn push_glyphs(
+    pub(super) fn push_shape_clusters(
         &mut self,
         text_blob: TextBlobId,
-        glyphs: impl IntoIterator<Item = GlyphKey>,
+        shape: &TextShape,
+        cluster_indices: impl IntoIterator<Item = usize>,
+        reset_generation: u64,
     ) {
-        let glyphs: Vec<GlyphKey> = glyphs.into_iter().collect();
+        let mut cluster_indices: Vec<usize> = cluster_indices.into_iter().collect();
+        cluster_indices.sort_unstable();
+        cluster_indices.dedup();
+        let selected_clusters_len = cluster_indices.len().min(u32::MAX as usize) as u32;
+
+        let mut glyphs: Vec<GlyphKey> = Vec::new();
+        let mut cluster_hasher = DefaultHasher::new();
+        text_blob.data().as_ffi().hash(&mut cluster_hasher);
+        reset_generation.hash(&mut cluster_hasher);
+        cluster_indices.len().hash(&mut cluster_hasher);
+
+        for cluster_index in cluster_indices {
+            let Some(cluster) = shape.clusters().get(cluster_index) else {
+                continue;
+            };
+            cluster.hash_residency_key(&mut cluster_hasher);
+            append_cluster_glyph_keys(&mut glyphs, shape, cluster_index, cluster);
+        }
+
         if glyphs.is_empty() {
             return;
         }
 
-        let mut hasher = DefaultHasher::new();
-        text_blob.data().as_ffi().hash(&mut hasher);
-        glyphs.len().hash(&mut hasher);
+        let mut glyph_hasher = DefaultHasher::new();
+        text_blob.data().as_ffi().hash(&mut glyph_hasher);
+        reset_generation.hash(&mut glyph_hasher);
+        glyphs.len().hash(&mut glyph_hasher);
         for glyph in &glyphs {
-            glyph.hash(&mut hasher);
+            glyph.hash(&mut glyph_hasher);
         }
 
         let glyphs_len = glyphs.len().min(u32::MAX as usize) as u32;
         let key = TextResidencyEntryKey {
             text_blob,
-            glyph_fingerprint: hasher.finish(),
+            reset_generation,
+            cluster_fingerprint: cluster_hasher.finish(),
+            clusters: selected_clusters_len,
+            glyph_fingerprint: glyph_hasher.finish(),
             glyphs: glyphs_len,
         };
         let pin_keys = GlyphPinKeys::from_keys(glyphs.iter().copied());
@@ -268,6 +296,14 @@ impl TextFrameResidency {
             .map(|entry| entry.glyphs.len())
             .sum::<usize>()
     }
+
+    #[cfg(test)]
+    pub(crate) fn cluster_count(&self) -> usize {
+        self.entries
+            .iter()
+            .map(|entry| entry.key.clusters as usize)
+            .sum::<usize>()
+    }
 }
 
 impl Default for TextFrameResidency {
@@ -281,6 +317,23 @@ pub(super) struct TextResidencyEntry {
     key: TextResidencyEntryKey,
     glyphs: Vec<GlyphKey>,
     pin_keys: GlyphPinKeys,
+}
+
+fn append_cluster_glyph_keys(
+    glyphs: &mut Vec<GlyphKey>,
+    shape: &TextShape,
+    cluster_index: usize,
+    cluster: &TextGlyphCluster,
+) {
+    let range = cluster.glyph_range();
+    let start = range.start.min(shape.glyphs().len());
+    let end = range.end.min(shape.glyphs().len());
+    for glyph in &shape.glyphs()[start..end] {
+        if glyph.cluster_index() as usize != cluster_index {
+            continue;
+        }
+        glyphs.push(glyph.key);
+    }
 }
 
 impl TextResidencyEntry {

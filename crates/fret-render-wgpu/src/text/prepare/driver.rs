@@ -88,6 +88,7 @@ impl TextSystem {
         let PrepareShapeBuildContext {
             wrapped,
             mut glyphs,
+            mut clusters,
             mut face_usage,
             mut lines,
         } = self.begin_prepare_shape_build(text, style, spans, constraints);
@@ -108,7 +109,9 @@ impl TextSystem {
                 prepared_line,
                 resolved_spans,
                 scale,
+                metrics.baseline,
                 &mut glyphs,
+                &mut clusters,
                 &mut face_usage,
                 &mut lines,
             );
@@ -116,6 +119,7 @@ impl TextSystem {
 
         self.finish_prepared_shape(
             glyphs,
+            clusters,
             lines,
             face_usage,
             metrics,

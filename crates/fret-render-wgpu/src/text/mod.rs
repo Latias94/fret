@@ -57,7 +57,8 @@ pub use self::types::TextFontFamilyConfig;
 pub(crate) use self::types::TextLine;
 use self::types::{GlyphInstance, TextBlob, TextShape};
 pub(crate) use self::types::{
-    TextAtlasPerfSnapshot, TextFontFaceUsage, TextRenderGlyph, TextRenderGlyphKind,
+    TextAtlasPerfSnapshot, TextFontFaceUsage, TextGlyphCluster, TextGlyphClusterBuilder,
+    TextRenderGlyph, TextRenderGlyphKind,
 };
 use std::time::Duration;
 

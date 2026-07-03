@@ -384,3 +384,12 @@ timestamp: 2026-06-30
   `cargo check -p fret-ui`, `cargo check -p fret-ui-shadcn`, `cargo check -p fret-ui-gallery`,
   focused `set_children_in_mount` nextest coverage, formatting, whitespace, layering, surface,
   consumption-profile, execution-surface, ADR-number, and workstream-catalog gates.
+- 2026-07-03: Phase 3 U6 text cluster residency slice adds CPU-side `TextGlyphCluster` metadata to
+  WGPU `TextShape`, records `GlyphInstance.cluster_index`, and moves visible text residency from
+  glyph-only rect filtering to cluster-aware closure while keeping atlas pinning glyph-based. A key
+  design finding is that `TextLineCluster` can be a caret/visual slice rather than the full
+  residency cluster, so WGPU cluster metadata is derived from materialized glyph visual coverage and
+  uses line clusters to expand visual bounds/text ranges. Verification passed for `cargo check -p
+  fret-render-wgpu`, focused cluster/visible-text tests, broader `text` and `visible_text
+  scene_chunk_encoding_cache` nextest filters, formatting, whitespace, layering, surface,
+  consumption-profile, execution-surface, ADR-number, and workstream-catalog gates.

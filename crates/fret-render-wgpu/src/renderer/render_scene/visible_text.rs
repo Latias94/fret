@@ -115,9 +115,10 @@ impl VisibleTextState {
                     return;
                 }
 
-                text_system.push_glyph_residency_for_blob(residency, text, |rect| {
-                    self.glyph_rect_intersects_scissor(origin, rect)
-                        || self.shadow_glyph_rect_intersects_scissor(origin, rect, shadow)
+                text_system.push_cluster_residency_for_blob(residency, text, |cluster| {
+                    let bounds = cluster.visual_bounds();
+                    self.glyph_rect_intersects_scissor(origin, bounds)
+                        || self.shadow_glyph_rect_intersects_scissor(origin, bounds, shadow)
                 });
             }
             SceneOp::PushLayer { .. }
@@ -288,6 +289,31 @@ mod tests {
         Color, DrawOrder, Paint, TextBlobId, TextConstraints, TextStyle, geometry::Size,
     };
 
+    const INTER_ROMAN_FULL: &[u8] = include_bytes!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../assets/font-archive/fret-fonts-bootstrap-full/Inter-roman.ttf"
+    ));
+
+    fn inter_fixture_family(text: &mut TextSystem) -> String {
+        let added = text.add_fonts([INTER_ROMAN_FULL.to_vec()]);
+        assert!(added > 0, "expected Inter fixture font to load");
+        text.all_font_names()
+            .into_iter()
+            .find(|name| {
+                let lower = name.to_ascii_lowercase();
+                lower == "inter" || lower.contains("inter ")
+            })
+            .unwrap_or_else(|| {
+                panic!(
+                    "expected an Inter family name after loading the fixture font (names_head={:?})",
+                    text.all_font_names()
+                        .into_iter()
+                        .take(8)
+                        .collect::<Vec<_>>()
+                )
+            })
+    }
+
     fn white_text_op(origin: Point, text: TextBlobId) -> SceneOp {
         SceneOp::Text {
             order: DrawOrder(0),
@@ -386,6 +412,46 @@ mod tests {
         assert!(
             full_after.missing_glyph_resources > 0,
             "offscreen suffix glyph resources must remain absent after visible-prefix prewarm"
+        );
+    }
+
+    #[test]
+    fn visible_text_residency_pins_complete_combining_cluster_under_narrow_scissor() {
+        let ctx = pollster::block_on(WgpuContext::new()).expect("wgpu context");
+        let mut text = TextSystem::new(&ctx.device);
+        let family = inter_fixture_family(&mut text);
+        let style = TextStyle {
+            font: fret_core::FontId::family(family),
+            size: Px(32.0),
+            ..Default::default()
+        };
+        let (blob, _) = text.prepare(
+            "a\u{0301}\u{0327}zzzzzzzz",
+            &style,
+            TextConstraints::default(),
+        );
+        let full_before = text.text_resource_snapshot_for_blobs(&[blob]);
+        assert!(
+            full_before.glyphs > 3,
+            "test setup expects a visible combining cluster plus an offscreen suffix"
+        );
+
+        let mut scene = Scene::default();
+        scene.push(white_text_op(Point::new(Px(0.0), Px(32.0)), blob));
+
+        let residency = visible_text_residency_for_scene(&scene, &text, 1.0, (4, 80));
+        assert_eq!(residency.text_blob_ids(), vec![blob]);
+        assert!(
+            residency.cluster_count() >= 1,
+            "narrow viewport should select at least the leading shaped cluster"
+        );
+        assert!(
+            residency.glyph_count() >= 2,
+            "the leading combining cluster must pin all of its glyphs"
+        );
+        assert!(
+            residency.glyph_count() < full_before.glyphs as usize,
+            "offscreen suffix clusters must remain outside visible residency"
         );
     }
 

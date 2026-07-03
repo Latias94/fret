@@ -1,3 +1,4 @@
+use super::TextGlyphCluster;
 use super::{TextBlob, TextDecoration, TextFrameResidency, TextRenderGlyph, TextSystem};
 use fret_core::{Color, TextBlobId, geometry::Px};
 use std::sync::Arc;
@@ -60,29 +61,40 @@ impl TextSystem {
                 residency.note_missing_entry();
                 continue;
             };
-            residency.push_glyphs(text_blob, shape.glyphs().iter().map(|glyph| glyph.key));
+            residency.push_shape_clusters(
+                text_blob,
+                shape,
+                0..shape.clusters().len(),
+                self.atlas_runtime.reset_generation(),
+            );
         }
         residency
     }
 
-    pub(crate) fn push_glyph_residency_for_blob(
+    pub(crate) fn push_cluster_residency_for_blob(
         &self,
         residency: &mut TextFrameResidency,
         text_blob: TextBlobId,
-        mut predicate: impl FnMut([f32; 4]) -> bool,
+        mut predicate: impl FnMut(&TextGlyphCluster) -> bool,
     ) -> bool {
         let Some(shape) = self.shape_for_blob(text_blob) else {
             residency.note_missing_entry();
             return false;
         };
-        let glyphs = shape
-            .glyphs()
+        let clusters = shape
+            .clusters()
             .iter()
-            .filter(|glyph| predicate(glyph.rect()))
-            .map(|glyph| glyph.key)
+            .enumerate()
+            .filter(|(_, cluster)| predicate(cluster))
+            .map(|(index, _)| index)
             .collect::<Vec<_>>();
-        let pushed = !glyphs.is_empty();
-        residency.push_glyphs(text_blob, glyphs);
+        let pushed = !clusters.is_empty();
+        residency.push_shape_clusters(
+            text_blob,
+            shape,
+            clusters,
+            self.atlas_runtime.reset_generation(),
+        );
         pushed
     }
 
