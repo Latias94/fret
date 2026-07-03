@@ -1821,6 +1821,34 @@ pub(crate) const REGISTERED_FRAME_STATS_KEYS: &[PerfKey] = &[
         PerfKeyAggregate::Max,
     ),
     count_key(
+        "renderer_render_scene_source_chunk_manifest_frames",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_render_scene_source_flat_compat_frames",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_render_scene_source_flat_compat_unsupported_frames",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_render_scene_source_unsupported_empty_manifest",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_render_scene_source_unsupported_mixed_streams",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_render_scene_source_unsupported_scope",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_render_scene_source_unsupported_side_tables",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
         "renderer_scene_chunk_encoding_key_cache_entries",
         PerfKeyAggregate::Max,
     ),
@@ -2673,6 +2701,13 @@ mod tests {
             "renderer_geometry_upload_text_vertex_write_count",
             "renderer_scene_encoding_cache_miss_scene_fingerprint_changed",
             "renderer_scene_chunk_input_chunks",
+            "renderer_render_scene_source_chunk_manifest_frames",
+            "renderer_render_scene_source_flat_compat_frames",
+            "renderer_render_scene_source_flat_compat_unsupported_frames",
+            "renderer_render_scene_source_unsupported_empty_manifest",
+            "renderer_render_scene_source_unsupported_mixed_streams",
+            "renderer_render_scene_source_unsupported_scope",
+            "renderer_render_scene_source_unsupported_side_tables",
             "renderer_scene_chunk_encoding_key_cache_entries",
             "renderer_scene_chunk_encoding_key_cache_hits",
             "renderer_scene_chunk_encoding_payload_cache_hits",

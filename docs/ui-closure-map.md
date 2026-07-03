@@ -107,6 +107,12 @@ Must-be-true outcomes for the next convergence pass:
   Current source-selection evidence lives in `crates/fret-render-wgpu/src/renderer/mod.rs`, while
   renderer-owned chunk payload/cache assembly state lives behind
   `crates/fret-render-wgpu/src/renderer/render_scene/frame_assembler.rs`.
+  Native/web launch now share `RenderSceneSourcePolicy::chunk_manifest_when_supported()` in
+  `crates/fret-launch/src/runner/desktop/runner/window_redraw_render_scene.rs` and
+  `crates/fret-launch/src/runner/web/render_loop.rs`. Frame stats expose
+  `renderer_render_scene_source_chunk_manifest_frames`,
+  `renderer_render_scene_source_flat_compat_frames`, and structured unsupported fallback counters
+  so diagnostics can prove zero normal-path `FlatCompat` usage for supported classes.
   Manifest closure evidence lives in `crates/fret-core/src/scene/manifest.rs` and
   `crates/fret-core/src/scene/chunk.rs`; boundary scene chunk diagnostics use entry
   bounds/origin-sensitive fingerprints from `crates/fret-ui/src/tree/view_boundary.rs`.

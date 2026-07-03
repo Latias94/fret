@@ -190,6 +190,18 @@ impl Renderer {
             scene_chunk_input_chunks: perf.scene_chunk_input_chunks,
             scene_chunk_input_ops: perf.scene_chunk_input_ops,
             scene_chunk_input_fingerprint: perf.scene_chunk_input_fingerprint,
+            render_scene_source_chunk_manifest_frames: perf
+                .render_scene_source_chunk_manifest_frames,
+            render_scene_source_flat_compat_frames: perf.render_scene_source_flat_compat_frames,
+            render_scene_source_flat_compat_unsupported_frames: perf
+                .render_scene_source_flat_compat_unsupported_frames,
+            render_scene_source_unsupported_empty_manifest: perf
+                .render_scene_source_unsupported_empty_manifest,
+            render_scene_source_unsupported_mixed_streams: perf
+                .render_scene_source_unsupported_mixed_streams,
+            render_scene_source_unsupported_scope: perf.render_scene_source_unsupported_scope,
+            render_scene_source_unsupported_side_tables: perf
+                .render_scene_source_unsupported_side_tables,
             scene_chunk_encoding_key_cache_entries: perf.scene_chunk_encoding_key_cache_entries,
             scene_chunk_encoding_key_cache_hits: perf.scene_chunk_encoding_key_cache_hits,
             scene_chunk_encoding_key_cache_misses: perf.scene_chunk_encoding_key_cache_misses,

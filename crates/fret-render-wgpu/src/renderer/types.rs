@@ -859,6 +859,20 @@ pub struct RenderPerfSnapshot {
     pub scene_chunk_input_ops: u64,
     /// Best-effort fingerprint of the supplied retained scene chunk manifest.
     pub scene_chunk_input_fingerprint: u64,
+    /// Frames rendered from authoritative `ChunkManifest` source selection.
+    pub render_scene_source_chunk_manifest_frames: u64,
+    /// Frames rendered from explicit `FlatCompat` source selection.
+    pub render_scene_source_flat_compat_frames: u64,
+    /// `FlatCompat` frames caused by unsupported chunk-manifest source selection.
+    pub render_scene_source_flat_compat_unsupported_frames: u64,
+    /// Unsupported source selections caused by an empty manifest.
+    pub render_scene_source_unsupported_empty_manifest: u64,
+    /// Unsupported source selections caused by mixed stream classes.
+    pub render_scene_source_unsupported_mixed_streams: u64,
+    /// Unsupported source selections caused by open/inherited chunk scopes.
+    pub render_scene_source_unsupported_scope: u64,
+    /// Unsupported source selections caused by missing side-table/resource relocation.
+    pub render_scene_source_unsupported_side_tables: u64,
     /// Retained scene chunk entries tracked by the renderer-side encoding key cache.
     ///
     /// This reports key-cache slots only. It does not imply encoded payload reuse or dirty GPU
@@ -1270,6 +1284,13 @@ pub(super) struct RenderPerfStats {
     pub(super) scene_chunk_input_chunks: u64,
     pub(super) scene_chunk_input_ops: u64,
     pub(super) scene_chunk_input_fingerprint: u64,
+    pub(super) render_scene_source_chunk_manifest_frames: u64,
+    pub(super) render_scene_source_flat_compat_frames: u64,
+    pub(super) render_scene_source_flat_compat_unsupported_frames: u64,
+    pub(super) render_scene_source_unsupported_empty_manifest: u64,
+    pub(super) render_scene_source_unsupported_mixed_streams: u64,
+    pub(super) render_scene_source_unsupported_scope: u64,
+    pub(super) render_scene_source_unsupported_side_tables: u64,
     pub(super) scene_chunk_encoding_key_cache_entries: u64,
     pub(super) scene_chunk_encoding_key_cache_hits: u64,
     pub(super) scene_chunk_encoding_key_cache_misses: u64,

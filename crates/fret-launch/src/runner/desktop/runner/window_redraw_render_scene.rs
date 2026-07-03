@@ -30,7 +30,7 @@ pub(super) fn record_window_redraw_render_scene(
                 source: select_render_scene_source(
                     input.scene,
                     input.scene_chunks,
-                    RenderSceneSourcePolicy::flat_compat(),
+                    RenderSceneSourcePolicy::chunk_manifest_when_supported(),
                 ),
                 clear: input.clear_color,
                 scale_factor: input.scale_factor,

@@ -420,3 +420,12 @@ timestamp: 2026-06-30
   fingerprints or XOR-only summaries. Verification passed for `fret-core`, `fret-render-wgpu`,
   `fret-render`, `fret-ui`, and `fret-code-editor` focused checks plus manifest/renderer/UI
   nextest coverage.
+- 2026-07-03: Phase 3 U10 authoritative chunk launch routes normal native/web launch through
+  `RenderSceneSourcePolicy::chunk_manifest_when_supported()`. Supported resource-free manifest
+  classes render through `ChunkManifest`; unsupported manifests fall back through explicit
+  `FlatCompat` source selection with `renderer_render_scene_source_*` counters in renderer perf,
+  bootstrap frame stats, and `fret-diag` perf-key registry. Static launch search has no
+  `flat_with_diagnostic_chunks` matches and only renderer debug/parity tests call
+  `RenderSceneSourcePolicy::flat_compat()`. Verification passed for renderer/launch/bootstrap/diag
+  checks and nextest gates plus formatting, whitespace, layering, surface, consumption-profile,
+  execution-surface, ADR-number, and workstream-catalog gates.

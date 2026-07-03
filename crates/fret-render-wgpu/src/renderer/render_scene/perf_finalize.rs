@@ -234,6 +234,27 @@ impl Renderer {
         if frame_perf.scene_chunk_input_fingerprint != 0 {
             perf.scene_chunk_input_fingerprint = frame_perf.scene_chunk_input_fingerprint;
         }
+        perf.render_scene_source_chunk_manifest_frames = perf
+            .render_scene_source_chunk_manifest_frames
+            .saturating_add(frame_perf.render_scene_source_chunk_manifest_frames);
+        perf.render_scene_source_flat_compat_frames = perf
+            .render_scene_source_flat_compat_frames
+            .saturating_add(frame_perf.render_scene_source_flat_compat_frames);
+        perf.render_scene_source_flat_compat_unsupported_frames = perf
+            .render_scene_source_flat_compat_unsupported_frames
+            .saturating_add(frame_perf.render_scene_source_flat_compat_unsupported_frames);
+        perf.render_scene_source_unsupported_empty_manifest = perf
+            .render_scene_source_unsupported_empty_manifest
+            .saturating_add(frame_perf.render_scene_source_unsupported_empty_manifest);
+        perf.render_scene_source_unsupported_mixed_streams = perf
+            .render_scene_source_unsupported_mixed_streams
+            .saturating_add(frame_perf.render_scene_source_unsupported_mixed_streams);
+        perf.render_scene_source_unsupported_scope = perf
+            .render_scene_source_unsupported_scope
+            .saturating_add(frame_perf.render_scene_source_unsupported_scope);
+        perf.render_scene_source_unsupported_side_tables = perf
+            .render_scene_source_unsupported_side_tables
+            .saturating_add(frame_perf.render_scene_source_unsupported_side_tables);
         perf.scene_chunk_encoding_key_cache_entries = perf
             .scene_chunk_encoding_key_cache_entries
             .max(frame_perf.scene_chunk_encoding_key_cache_entries);
@@ -730,6 +751,19 @@ impl Renderer {
             scene_chunk_input_chunks: frame_perf.scene_chunk_input_chunks,
             scene_chunk_input_ops: frame_perf.scene_chunk_input_ops,
             scene_chunk_input_fingerprint: frame_perf.scene_chunk_input_fingerprint,
+            render_scene_source_chunk_manifest_frames: frame_perf
+                .render_scene_source_chunk_manifest_frames,
+            render_scene_source_flat_compat_frames: frame_perf
+                .render_scene_source_flat_compat_frames,
+            render_scene_source_flat_compat_unsupported_frames: frame_perf
+                .render_scene_source_flat_compat_unsupported_frames,
+            render_scene_source_unsupported_empty_manifest: frame_perf
+                .render_scene_source_unsupported_empty_manifest,
+            render_scene_source_unsupported_mixed_streams: frame_perf
+                .render_scene_source_unsupported_mixed_streams,
+            render_scene_source_unsupported_scope: frame_perf.render_scene_source_unsupported_scope,
+            render_scene_source_unsupported_side_tables: frame_perf
+                .render_scene_source_unsupported_side_tables,
             scene_chunk_encoding_key_cache_entries: frame_perf
                 .scene_chunk_encoding_key_cache_entries,
             scene_chunk_encoding_key_cache_hits: frame_perf.scene_chunk_encoding_key_cache_hits,

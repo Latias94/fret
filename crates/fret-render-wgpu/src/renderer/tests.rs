@@ -1608,6 +1608,9 @@ fn resource_free_quad_scene_chunk_manifest_uses_chunk_native_scene_encoding_key(
         .expect("last frame perf snapshot");
     assert_eq!(last.scene_encoding_cache_hits, 0);
     assert_eq!(last.scene_encoding_cache_misses, 1);
+    assert_eq!(last.render_scene_source_chunk_manifest_frames, 1);
+    assert_eq!(last.render_scene_source_flat_compat_frames, 0);
+    assert_eq!(last.render_scene_source_flat_compat_unsupported_frames, 0);
     assert_eq!(last.scene_chunk_input_chunks, 1);
     assert_eq!(last.scene_chunk_input_ops, chunk.ops_len() as u64);
     assert_eq!(last.scene_chunk_input_fingerprint, manifest.fingerprint());
@@ -1713,6 +1716,87 @@ fn resource_free_quad_scene_chunk_manifest_uses_chunk_native_scene_encoding_key(
         last.scene_chunk_encoding_payload_plan_candidates_without_payload,
         0
     );
+}
+
+#[test]
+fn unsupported_side_table_manifest_renders_flat_compat_with_reason_counters() {
+    let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+    let mut renderer = super::Renderer::new(&ctx.adapter, &ctx.device);
+    renderer.set_perf_enabled(true);
+
+    let format = wgpu::TextureFormat::Bgra8UnormSrgb;
+    let viewport_size = (32, 32);
+    let target = ctx.device.create_texture(&wgpu::TextureDescriptor {
+        label: Some("side table source fallback test target"),
+        size: wgpu::Extent3d {
+            width: viewport_size.0,
+            height: viewport_size.1,
+            depth_or_array_layers: 1,
+        },
+        mip_level_count: 1,
+        sample_count: 1,
+        dimension: wgpu::TextureDimension::D2,
+        format,
+        usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
+        view_formats: &[],
+    });
+    let target_view = target.create_view(&Default::default());
+
+    let mut scene = Scene::default();
+    scene.push(SceneOp::PushClipRRect {
+        rect: Rect::new(Point::default(), Size::new(Px(12.0), Px(12.0))),
+        corner_radii: Corners::all(Px(2.0)),
+    });
+    scene.push(SceneOp::Quad {
+        order: DrawOrder(0),
+        rect: Rect::new(Point::default(), Size::new(Px(10.0), Px(10.0))),
+        background: Color {
+            r: 0.25,
+            g: 0.5,
+            b: 0.75,
+            a: 1.0,
+        }
+        .into(),
+        border: fret_core::Edges::all(Px(0.0)),
+        border_paint: Color::TRANSPARENT.into(),
+        corner_radii: Corners::all(Px(0.0)),
+    });
+    scene.push(SceneOp::PopClip);
+    let chunk = fret_core::SceneChunk::from_scene(&scene);
+    let mut manifest = fret_core::SceneChunkManifest::default();
+    manifest.push(fret_core::SceneChunkManifestEntry::new(
+        chunk,
+        Rect::new(Point::default(), Size::new(Px(12.0), Px(12.0))),
+        Point::default(),
+    ));
+
+    let _ = renderer.render_scene(
+        &ctx.device,
+        &ctx.queue,
+        super::RenderSceneParams {
+            format,
+            target_view: &target_view,
+            source: super::select_render_scene_source(
+                &scene,
+                &manifest,
+                super::RenderSceneSourcePolicy::chunk_manifest_when_supported(),
+            ),
+            clear: super::ClearColor::default(),
+            scale_factor: 1.0,
+            viewport_size,
+        },
+    );
+
+    let last = renderer
+        .diagnostics_state
+        .last_frame_perf
+        .expect("last frame perf snapshot");
+    assert_eq!(last.render_scene_source_chunk_manifest_frames, 0);
+    assert_eq!(last.render_scene_source_flat_compat_frames, 1);
+    assert_eq!(last.render_scene_source_flat_compat_unsupported_frames, 1);
+    assert_eq!(last.render_scene_source_unsupported_side_tables, 1);
+    assert_eq!(last.render_scene_source_unsupported_scope, 0);
+    assert_eq!(last.scene_chunk_input_chunks, 1);
 }
 
 #[test]

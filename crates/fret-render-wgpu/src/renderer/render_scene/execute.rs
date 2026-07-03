@@ -53,6 +53,7 @@ impl Renderer {
         let mut frame_perf = RenderPerfStats::default();
         if perf_enabled {
             self.begin_frame_perf_collection(&mut frame_perf);
+            record_render_scene_source_perf(source_selection, &mut frame_perf);
             record_scene_chunk_input_perf(assembly_manifest, &mut frame_perf);
         }
 
@@ -370,6 +371,54 @@ fn record_scene_chunk_input_perf(
     frame_perf.scene_chunk_input_chunks = scene_chunks.len() as u64;
     frame_perf.scene_chunk_input_ops = scene_chunks.ops_len() as u64;
     frame_perf.scene_chunk_input_fingerprint = scene_chunks.fingerprint();
+}
+
+fn record_render_scene_source_perf(
+    source_selection: RenderSceneSourceSelection<'_>,
+    frame_perf: &mut RenderPerfStats,
+) {
+    match source_selection.source() {
+        RenderSceneSource::FlatCompat { .. } => {
+            frame_perf.render_scene_source_flat_compat_frames = 1;
+        }
+        RenderSceneSource::ChunkManifest { .. } => {
+            frame_perf.render_scene_source_chunk_manifest_frames = 1;
+        }
+    }
+
+    let ChunkLaunchSupport::Unsupported { reason, .. } = source_selection.chunk_support() else {
+        return;
+    };
+
+    match reason {
+        ChunkLaunchUnsupportedReason::NoManifest => {}
+        ChunkLaunchUnsupportedReason::EmptyManifest => {
+            frame_perf.render_scene_source_flat_compat_unsupported_frames = 1;
+            frame_perf.render_scene_source_unsupported_empty_manifest = 1;
+        }
+        ChunkLaunchUnsupportedReason::MixedStreams => {
+            frame_perf.render_scene_source_flat_compat_unsupported_frames = 1;
+            frame_perf.render_scene_source_unsupported_mixed_streams = 1;
+        }
+        ChunkLaunchUnsupportedReason::ManifestUnsupported(reason) => {
+            frame_perf.render_scene_source_flat_compat_unsupported_frames = 1;
+            match reason {
+                fret_core::SceneChunkManifestUnsupportedReason::EmptyManifest => {
+                    frame_perf.render_scene_source_unsupported_empty_manifest = 1;
+                }
+                fret_core::SceneChunkManifestUnsupportedReason::EntryScopeUnsupported {
+                    ..
+                } => {
+                    frame_perf.render_scene_source_unsupported_scope = 1;
+                }
+                fret_core::SceneChunkManifestUnsupportedReason::EntrySideTableRequired {
+                    ..
+                } => {
+                    frame_perf.render_scene_source_unsupported_side_tables = 1;
+                }
+            }
+        }
+    }
 }
 
 // FrameTargets moved to `renderer/frame_targets.rs`.

@@ -2860,6 +2860,55 @@
       "unit": "count"
     },
     {
+      "key": "renderer_render_scene_source_chunk_manifest_frames",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_render_scene_source_flat_compat_frames",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_render_scene_source_flat_compat_unsupported_frames",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_render_scene_source_unsupported_empty_manifest",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_render_scene_source_unsupported_mixed_streams",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_render_scene_source_unsupported_scope",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_render_scene_source_unsupported_side_tables",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
       "key": "renderer_scene_chunk_encoding_key_cache_entries",
       "kind": "counter",
       "scope": "frame",

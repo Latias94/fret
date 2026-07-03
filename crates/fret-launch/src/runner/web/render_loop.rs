@@ -651,7 +651,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     source: select_render_scene_source(
                         &self.scene,
                         &self.scene_chunks,
-                        RenderSceneSourcePolicy::flat_compat(),
+                        RenderSceneSourcePolicy::chunk_manifest_when_supported(),
                     ),
                     clear: self.config.clear_color,
                     scale_factor,

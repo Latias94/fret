@@ -736,6 +736,20 @@ pub struct UiFrameStatsV1 {
     #[serde(default)]
     pub renderer_scene_chunk_input_fingerprint: u64,
     #[serde(default)]
+    pub renderer_render_scene_source_chunk_manifest_frames: u64,
+    #[serde(default)]
+    pub renderer_render_scene_source_flat_compat_frames: u64,
+    #[serde(default)]
+    pub renderer_render_scene_source_flat_compat_unsupported_frames: u64,
+    #[serde(default)]
+    pub renderer_render_scene_source_unsupported_empty_manifest: u64,
+    #[serde(default)]
+    pub renderer_render_scene_source_unsupported_mixed_streams: u64,
+    #[serde(default)]
+    pub renderer_render_scene_source_unsupported_scope: u64,
+    #[serde(default)]
+    pub renderer_render_scene_source_unsupported_side_tables: u64,
+    #[serde(default)]
     pub renderer_scene_chunk_encoding_key_cache_entries: u64,
     #[serde(default)]
     pub renderer_scene_chunk_encoding_key_cache_hits: u64,
@@ -1662,6 +1676,13 @@ impl UiFrameStatsV1 {
             renderer_scene_chunk_input_chunks: 0,
             renderer_scene_chunk_input_ops: 0,
             renderer_scene_chunk_input_fingerprint: 0,
+            renderer_render_scene_source_chunk_manifest_frames: 0,
+            renderer_render_scene_source_flat_compat_frames: 0,
+            renderer_render_scene_source_flat_compat_unsupported_frames: 0,
+            renderer_render_scene_source_unsupported_empty_manifest: 0,
+            renderer_render_scene_source_unsupported_mixed_streams: 0,
+            renderer_render_scene_source_unsupported_scope: 0,
+            renderer_render_scene_source_unsupported_side_tables: 0,
             renderer_scene_chunk_encoding_key_cache_entries: 0,
             renderer_scene_chunk_encoding_key_cache_hits: 0,
             renderer_scene_chunk_encoding_key_cache_misses: 0,
@@ -2025,6 +2046,21 @@ impl UiFrameStatsV1 {
         self.renderer_scene_chunk_input_chunks = sample.perf.scene_chunk_input_chunks;
         self.renderer_scene_chunk_input_ops = sample.perf.scene_chunk_input_ops;
         self.renderer_scene_chunk_input_fingerprint = sample.perf.scene_chunk_input_fingerprint;
+        self.renderer_render_scene_source_chunk_manifest_frames =
+            sample.perf.render_scene_source_chunk_manifest_frames;
+        self.renderer_render_scene_source_flat_compat_frames =
+            sample.perf.render_scene_source_flat_compat_frames;
+        self.renderer_render_scene_source_flat_compat_unsupported_frames = sample
+            .perf
+            .render_scene_source_flat_compat_unsupported_frames;
+        self.renderer_render_scene_source_unsupported_empty_manifest =
+            sample.perf.render_scene_source_unsupported_empty_manifest;
+        self.renderer_render_scene_source_unsupported_mixed_streams =
+            sample.perf.render_scene_source_unsupported_mixed_streams;
+        self.renderer_render_scene_source_unsupported_scope =
+            sample.perf.render_scene_source_unsupported_scope;
+        self.renderer_render_scene_source_unsupported_side_tables =
+            sample.perf.render_scene_source_unsupported_side_tables;
         self.renderer_scene_chunk_encoding_key_cache_entries =
             sample.perf.scene_chunk_encoding_key_cache_entries;
         self.renderer_scene_chunk_encoding_key_cache_hits =

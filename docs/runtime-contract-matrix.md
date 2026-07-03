@@ -97,6 +97,11 @@ The convergence target is GPUI-aligned but Fret-owned:
   Evidence anchors: `crates/fret-render-wgpu/src/renderer/mod.rs`
   (`RenderSceneSourceSelection`, `select_render_scene_source`, `ChunkLaunchSupportMatrix`) and
   `crates/fret-render-wgpu/src/renderer/render_scene/frame_assembler.rs` (`FrameAssembler`).
+  Native and web launch select `RenderSceneSourcePolicy::chunk_manifest_when_supported()` in
+  `crates/fret-launch/src/runner/desktop/runner/window_redraw_render_scene.rs` and
+  `crates/fret-launch/src/runner/web/render_loop.rs`, so supported manifests render from the
+  authoritative chunk source while unsupported manifests fall back through explicit `FlatCompat`
+  counters.
   `fret_core::SceneChunkManifestEntry` now carries explicit order identity and manifest-level
   `assembly_unsupported_reasons()` exposes scope and side-table requirements. The currently
   authoritative resource-free frame classes are quad and vertex-color; clip/mask/effect/resource
@@ -121,7 +126,9 @@ Compatibility bridge policy for the active plan:
 - Debug/parity and compatibility are allowed only when they are named as such: `FlatCompat` is a
   renderer oracle, full-blob text helpers are test/debug scaffolding, historical observation-collapse
   perf keys are compatibility inputs, and raw app/model seams are explicit advanced/raw imports.
-  None of those paths are normal runtime evidence.
+  None of those paths are normal runtime evidence. U10 diagnostics expose
+  `renderer_render_scene_source_*` counters so bundle gates can distinguish authoritative chunk
+  frames from unsupported `FlatCompat` fallbacks.
 - Non-quad partial uploads are not a broad bridge deletion yet. The only supported non-quad slice is
   `VertexColor` viewport vertices; all other streams must continue to report full-upload fallback
   reasons rather than silently accepting dirty-range writes.
