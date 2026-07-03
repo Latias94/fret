@@ -129,6 +129,9 @@ class SurfacePolicyTests(unittest.TestCase):
                         "apps/manual.rs",
                         "advanced_manual",
                         "fixture manual assembly surface",
+                        owner="fixture-owner",
+                        allowed_raw_seams=("FnDriver", "fret_launch"),
+                        retirement="fixture retires once public launch wrappers cover this path",
                     )
                 ],
                 policy_recipe_surfaces=[],
@@ -137,6 +140,103 @@ class SurfacePolicyTests(unittest.TestCase):
 
             self.assertGreaterEqual(len(default_violations), 1)
             self.assertEqual([], advanced_violations)
+
+    def test_advanced_manual_surface_requires_quarantine_metadata(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(root / "apps/manual.rs", "use fret_launch::FnDriver;\n")
+
+            violations = POLICY.check_surface_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/manual.rs",
+                        "advanced_manual",
+                        "fixture manual assembly surface",
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            self.assertEqual(
+                {
+                    "advanced-surface-quarantine-owner",
+                    "advanced-surface-quarantine-retirement",
+                    "advanced-surface-quarantine-raw-seams",
+                    "advanced-surface-unlisted-raw-seam",
+                },
+                {violation.rule for violation in violations},
+            )
+
+    def test_advanced_manual_surface_rejects_unlisted_raw_seam(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/manual.rs",
+                """
+                use fret_ui::UiTree;
+
+                fn main() {
+                    let _tree: Option<UiTree<()>> = None;
+                }
+                """,
+            )
+
+            violations = POLICY.check_surface_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/manual.rs",
+                        "advanced_manual",
+                        "fixture manual assembly surface",
+                        owner="fixture-owner",
+                        allowed_raw_seams=("fret_ui",),
+                        retirement="fixture retires once public UI wrappers cover this path",
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            self.assertGreaterEqual(len(violations), 1)
+            self.assertTrue(
+                all(v.rule == "advanced-surface-unlisted-raw-seam" for v in violations)
+            )
+            self.assertTrue(any("UiTree" in v.message for v in violations))
+
+    def test_default_starter_raw_advanced_import_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "crates/fretboard/src/scaffold/templates.rs",
+                """
+                pub const MAIN_RS: &str = r#"
+                use fret::{advanced::prelude::*, FretApp};
+                use fret_ui::element::AnyElement;
+                "#;
+                """,
+            )
+
+            violations = POLICY.check_surface_policy(
+                root,
+                default_surfaces=[
+                    POLICY.SurfacePath(
+                        "crates/fretboard/src/scaffold/templates.rs",
+                        "default_app_clean",
+                        "fixture generated starter",
+                    )
+                ],
+                advanced_manual_surfaces=[],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            self.assertGreaterEqual(len(violations), 1)
+            self.assertTrue(all(v.rule == "default-app-clean" for v in violations))
+            self.assertTrue(any("advanced" in v.message for v in violations))
 
     def test_policy_recipe_crate_may_consume_runtime_mechanisms(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -395,8 +495,7 @@ class SurfacePolicyTests(unittest.TestCase):
                 mechanism_root_surfaces=[],
             )
 
-            self.assertEqual(1, len(violations))
-            self.assertEqual("classified-surface-exists", violations[0].rule)
+            self.assertIn("classified-surface-exists", {v.rule for v in violations})
 
 
 if __name__ == "__main__":

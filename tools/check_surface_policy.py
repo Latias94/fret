@@ -26,6 +26,9 @@ class SurfacePath:
     path: str
     category: str
     reason: str
+    owner: str = ""
+    allowed_raw_seams: tuple[str, ...] = ()
+    retirement: str = ""
 
 
 @dataclass(frozen=True)
@@ -87,27 +90,103 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
     SurfacePath(
         "apps/fret-examples/src/api_workbench_lite_demo.rs",
         "advanced_manual",
-        "second-hour prototype with raw runtime imports until U3 adds a public workbench-lite scaffold",
+        (
+            "advanced API comparison demo retained as a migration reference while public "
+            "workbench-lite and mutation-workbench starters replace default onboarding coverage"
+        ),
+        owner="examples-api-workbench",
+        allowed_raw_seams=(
+            "fret::advanced",
+            "fret_app",
+            "fret_core",
+            "fret_runtime",
+            "fret_ui",
+            "AnyElement",
+            "ModelStore",
+        ),
+        retirement=(
+            "Delete or move behind explicit advanced docs after public workbench-lite and "
+            "mutation-workbench diagnostics cover the same command, data, and feedback flows"
+        ),
     ),
     SurfacePath(
         "apps/fret-examples/src/workspace_shell_demo",
         "advanced_manual",
-        "workspace shell proof currently owns FnDriver/UiTree seams directly",
+        (
+            "workspace shell proof owns manual launch, UiTree, frame lifecycle, command "
+            "dispatch, overlay, virtual-list, and diagnostics seams directly"
+        ),
+        owner="examples-workspace-shell",
+        allowed_raw_seams=(
+            "fret::advanced",
+            "fret_app",
+            "fret_core",
+            "fret_launch",
+            "fret_runtime",
+            "fret_ui",
+            "AnyElement",
+            "ElementContext",
+            "FnDriver",
+            "UiTree",
+        ),
+        retirement=(
+            "Replace with a public workspace-shell starter once AppUi wrappers own command, "
+            "overlay, virtual-list, diagnostics, and window lifecycle flows"
+        ),
     ),
     SurfacePath(
         "apps/fret-cookbook/examples/canvas_pan_zoom_basics.rs",
         "advanced_manual",
-        "canvas starter still exposes pointer/canvas runtime seams until a public wrapper lands",
+        (
+            "canvas cookbook keeps a narrow advanced lane for custom pointer-action and "
+            "painter escape hatches not yet hidden by public canvas wrappers"
+        ),
+        owner="cookbook-canvas",
+        allowed_raw_seams=(
+            "fret::advanced",
+            "fret_core",
+            "fret_runtime",
+            "fret_ui",
+            "AnyElement",
+        ),
+        retirement=(
+            "Move to the public cookbook lane after canvas action and painter wrappers hide "
+            "raw pointer host/cx and CanvasPainter types from app authors"
+        ),
     ),
     SurfacePath(
         "apps/fret-examples/src/node_graph_demo.rs",
         "advanced_manual",
-        "node graph remains an advanced proof until the public app ladder has a starter",
+        "node graph demo is an advanced proof only for app-view prelude plus low-level paint override types",
+        owner="examples-node-graph",
+        allowed_raw_seams=(
+            "fret::advanced",
+            "fret_core",
+        ),
+        retirement=(
+            "Reclassify after node/canvas public starter covers graph creation, selection, "
+            "diagnostics, and edge paint overrides without direct fret_core paint types"
+        ),
     ),
     SurfacePath(
         "crates/fret-framework/src/lib.rs",
         "advanced_manual",
         "fret-framework is the manual assembly facade, not the default app crate",
+        owner="kernel-facade",
+        allowed_raw_seams=(
+            "fret_app",
+            "fret_core",
+            "fret_launch",
+            "fret_runtime",
+            "fret_ui",
+            "ElementContext",
+            "FnDriver",
+            "UiTree",
+        ),
+        retirement=(
+            "Keep only while ADR 0109 preserves an opt-in manual assembly facade; shrink "
+            "exports when default app and launch facades cover the same entry points"
+        ),
     ),
 )
 
@@ -148,6 +227,21 @@ DEFAULT_FORBIDDEN_PATTERNS: tuple[tuple[str, str], ...] = (
         r"\badvanced::prelude::\*",
         "`advanced::prelude::*` must stay off default app/tutorial surfaces",
     ),
+)
+
+RAW_SEAM_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
+    ("fret::advanced", re.compile(r"\bfret::advanced\b|\badvanced::prelude::\*")),
+    ("fret_app", re.compile(r"\bfret_app::")),
+    ("fret_core", re.compile(r"\bfret_core::")),
+    ("fret_launch", re.compile(r"\bfret_launch::")),
+    ("fret_runtime", re.compile(r"\bfret_runtime::")),
+    ("fret_ui", re.compile(r"\bfret_ui::")),
+    ("AnyElement", re.compile(r"\bAnyElement\b")),
+    ("ElementContext", re.compile(r"\bElementContext\b")),
+    ("FnDriver", re.compile(r"\bFnDriver\b")),
+    ("ModelStore", re.compile(r"\bModelStore\b")),
+    ("UiActionHostAdapter", re.compile(r"\bUiActionHostAdapter\b")),
+    ("UiTree", re.compile(r"\bUiTree\b")),
 )
 
 POLICY_CODED_EXPORT_TERMS: tuple[str, ...] = (
@@ -266,6 +360,32 @@ def _scan_default_authoring_surface(root: Path, spec: SurfacePath) -> list[Surfa
     return violations
 
 
+def _scan_advanced_manual_surface(root: Path, spec: SurfacePath) -> list[SurfaceViolation]:
+    violations: list[SurfaceViolation] = []
+    allowed_raw_seams = set(spec.allowed_raw_seams)
+    for path in _iter_source_files(root / spec.path):
+        text = _read_text(path)
+        for line_no, line in _code_lines_for_scan(path, text):
+            if path.suffix == ".rs" and _is_rust_source_line_ignorable(line):
+                continue
+            for seam, pattern in RAW_SEAM_PATTERNS:
+                if seam in allowed_raw_seams or not pattern.search(line):
+                    continue
+                violations.append(
+                    SurfaceViolation(
+                        rule="advanced-surface-unlisted-raw-seam",
+                        path=path,
+                        line_no=line_no,
+                        message=(
+                            f"advanced/manual surface uses raw seam `{seam}` without listing it "
+                            "in the quarantine record's allowed_raw_seams"
+                        ),
+                        source=line.strip(),
+                    )
+                )
+    return violations
+
+
 def _collect_root_public_statements(text: str) -> list[tuple[int, str]]:
     public_text = text.split("#[cfg(test)]\nmod ", 1)[0]
     statements: list[tuple[int, str]] = []
@@ -376,6 +496,35 @@ def _validate_surface_specs(specs: Sequence[SurfacePath]) -> list[SurfaceViolati
                     message=f"{spec.category} surface classification must include a reason",
                 )
             )
+        if spec.category != "advanced_manual":
+            continue
+        if not spec.owner.strip():
+            violations.append(
+                SurfaceViolation(
+                    rule="advanced-surface-quarantine-owner",
+                    path=Path(spec.path),
+                    line_no=1,
+                    message="advanced/manual surface quarantine must include an owner",
+                )
+            )
+        if not spec.retirement.strip():
+            violations.append(
+                SurfaceViolation(
+                    rule="advanced-surface-quarantine-retirement",
+                    path=Path(spec.path),
+                    line_no=1,
+                    message="advanced/manual surface quarantine must include a retirement condition",
+                )
+            )
+        if not spec.allowed_raw_seams or any(not seam.strip() for seam in spec.allowed_raw_seams):
+            violations.append(
+                SurfaceViolation(
+                    rule="advanced-surface-quarantine-raw-seams",
+                    path=Path(spec.path),
+                    line_no=1,
+                    message="advanced/manual surface quarantine must list allowed raw seams",
+                )
+            )
     for symbol, reason in MECHANISM_ROOT_EXPORT_CLASSIFICATIONS.items():
         if not reason.strip():
             violations.append(
@@ -431,10 +580,8 @@ def check_surface_policy(
     for spec in default_surfaces:
         violations.extend(_scan_default_authoring_surface(root, spec))
 
-    # Advanced/manual surfaces are explicitly classified so their raw runtime imports are not
-    # mistaken for default app authoring. They should move out of this list as U3/U9 add public
-    # ladders or facade splits.
-    _ = advanced_manual_surfaces
+    for spec in advanced_manual_surfaces:
+        violations.extend(_scan_advanced_manual_surface(root, spec))
 
     # Policy/recipe surfaces are intentionally classified here. Dependency direction and backend
     # leakage remain owned by `tools/check_layering.py`; this checker only prevents treating their
