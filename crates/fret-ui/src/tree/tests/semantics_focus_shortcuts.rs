@@ -81,6 +81,39 @@ fn semantics_snapshot_includes_visible_roots_and_barrier() {
 }
 
 #[test]
+fn semantics_snapshot_parent_uses_child_edges_under_stale_parent_pointers() {
+    let mut app = crate::test_host::TestHost::new();
+
+    let mut ui = UiTree::new();
+    ui.set_window(AppWindowId::default());
+
+    let root = ui.create_node(TestStack);
+    let actual_parent = ui.create_node(TestStack);
+    let stale_parent = ui.create_node(TestStack);
+    let leaf = ui.create_node(TestStack);
+
+    ui.set_root(root);
+    ui.set_children(root, vec![actual_parent, stale_parent]);
+    ui.set_children(actual_parent, vec![leaf]);
+
+    ui.test_set_node_parent(leaf, Some(stale_parent));
+
+    ui.request_semantics_snapshot();
+    ui.refresh_semantics_snapshot(&mut app);
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot");
+    assert_eq!(
+        snap.nodes
+            .iter()
+            .find(|node| node.id == leaf)
+            .unwrap()
+            .parent,
+        Some(actual_parent),
+        "semantics parent links must follow current child-edge traversal, not stale retained parents"
+    );
+}
+
+#[test]
 fn semantics_snapshot_rebuilds_clean_descendants_when_dirty_ancestor_transform_changes() {
     let mut app = crate::test_host::TestHost::new();
 

@@ -309,3 +309,9 @@ timestamp: 2026-06-30
   missing the stale retained-parent path cache and now reuses the child-edge path. Verification
   passed for focused hit-test tests, `cargo check -p fret-ui`, full `cargo nextest run -p fret-ui
   --no-fail-fast` (1192 passed), formatting, whitespace, layering, and surface-policy gates.
+- 2026-07-03: Phase 3 U3 semantics topology slice migrates `SemanticsNode.parent` assignment from
+  retained `Node.parent` to the current traversal's child-edge parent. Red/green proof:
+  `semantics_snapshot_parent_uses_child_edges_under_stale_parent_pointers` failed by publishing the
+  stale retained sibling as parent and now publishes the actual child-edge parent. Verification
+  passed for focused semantics tests, `cargo check -p fret-ui`, full `cargo nextest run -p fret-ui
+  --no-fail-fast` (1193 passed), formatting, whitespace, layering, and surface-policy gates.

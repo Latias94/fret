@@ -252,13 +252,14 @@ impl<H: UiHost> UiTree<H> {
                 for root in roots.iter().map(|r| r.root) {
                     let mut visited = self.take_scratch_semantics_visited();
                     visited.clear();
-                    // Stack entries carry the transform that maps this node's local bounds into
-                    // screen-space (excluding this node's own `render_transform`).
+                    // Stack entries carry the current-frame parent and the transform that maps
+                    // this node's local bounds into screen-space (excluding this node's own
+                    // `render_transform`).
                     let mut stack = self.take_scratch_semantics_stack();
                     stack.clear();
-                    stack.push((root, Transform2D::IDENTITY, false));
+                    stack.push((root, None, Transform2D::IDENTITY, false));
                     let mut scratch_children = self.take_scratch_semantics_children();
-                    while let Some((id, before, ancestor_rebuilt)) = stack.pop() {
+                    while let Some((id, parent, before, ancestor_rebuilt)) = stack.pop() {
                         if !visited.insert(id) {
                             if crate::strict_runtime::strict_runtime_enabled() {
                                 panic!(
@@ -272,7 +273,6 @@ impl<H: UiHost> UiTree<H> {
                             continue;
                         }
                         let (
-                            parent,
                             bounds,
                             is_text_input,
                             is_focusable,
@@ -377,7 +377,6 @@ impl<H: UiHost> UiTree<H> {
                             }
 
                             (
-                                node.parent,
                                 bounds,
                                 is_text_input,
                                 is_focusable,
@@ -572,7 +571,12 @@ impl<H: UiHost> UiTree<H> {
                             let descendant_ancestor_rebuilt =
                                 ancestor_rebuilt || node_semantics_dirty || node_geometry_changed;
                             for &child in scratch_children.iter().rev() {
-                                stack.push((child, before_child, descendant_ancestor_rebuilt));
+                                stack.push((
+                                    child,
+                                    Some(id),
+                                    before_child,
+                                    descendant_ancestor_rebuilt,
+                                ));
                             }
                         }
                     }
