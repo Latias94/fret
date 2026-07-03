@@ -161,7 +161,7 @@ fn set_children_in_mount_same_children_syncs_parent_edge_without_global_repair_a
 }
 
 #[test]
-fn set_children_in_mount_new_dirty_detached_parent_skips_redundant_structural_walk() {
+fn set_children_in_mount_new_dirty_layer_root_skips_redundant_structural_walk() {
     let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
     ui.set_window(AppWindowId::default());
     ui.set_debug_enabled(true);
@@ -169,6 +169,7 @@ fn set_children_in_mount_new_dirty_detached_parent_skips_redundant_structural_wa
 
     let parent = ui.create_node(TestStack);
     let child = ui.create_node(TestStack);
+    ui.set_root(parent);
 
     assert!(ui.nodes[parent].invalidation.layout);
     assert!(ui.nodes[parent].invalidation.paint);
@@ -194,6 +195,51 @@ fn set_children_in_mount_new_dirty_detached_parent_skips_redundant_structural_wa
             w.detail != UiDebugInvalidationDetail::StructuralChildrenChanged || w.root != parent
         }),
         "new mount-time dirty parent should not emit a redundant structural invalidation walk; walks={new_walks:?}"
+    );
+}
+
+#[test]
+fn set_children_in_mount_stale_retained_none_parent_does_not_skip_live_ancestor_walk() {
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(AppWindowId::default());
+
+    let root = ui.create_node(TestStack);
+    let ancestor = ui.create_node(TestStack);
+    let parent = ui.create_node(TestStack);
+    let child = ui.create_node(TestStack);
+
+    ui.set_root(root);
+    ui.set_children(root, vec![ancestor]);
+    ui.set_children(ancestor, vec![parent]);
+
+    for id in [root, ancestor, parent, child] {
+        ui.test_clear_node_invalidations(id);
+    }
+    ui.invalidate(parent, Invalidation::HitTest);
+    ui.test_clear_node_invalidations(root);
+    ui.test_clear_node_invalidations(ancestor);
+    ui.test_set_node_parent(parent, None);
+
+    assert_eq!(
+        ui.node_parent_in_layer_tree(parent),
+        Some(ancestor),
+        "test setup must keep the authoritative child-edge parent"
+    );
+    assert_eq!(
+        ui.node_parent(parent),
+        None,
+        "test setup must simulate stale retained parent storage"
+    );
+
+    ui.set_children_in_mount(parent, vec![child]);
+
+    assert!(
+        ui.nodes[ancestor].invalidation.hit_test,
+        "live non-root mount changes must propagate through child-edge ancestors"
+    );
+    assert!(
+        ui.nodes[root].invalidation.hit_test,
+        "stale retained parent storage must not trigger the initial layer-root fast path"
     );
 }
 

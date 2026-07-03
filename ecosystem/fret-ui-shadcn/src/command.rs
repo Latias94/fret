@@ -7381,7 +7381,7 @@ mod tests {
                         break;
                     };
                     input_chain.push(id);
-                    current = ui.node_parent(id);
+                    current = ui.node_parent_in_layer_tree(id);
                 }
                 eprintln!("cmdk hover debug: input parent chain={input_chain:?}");
             } else {
@@ -7394,7 +7394,7 @@ mod tests {
                     break;
                 };
                 chain.push(id);
-                current = ui.node_parent(id);
+                current = ui.node_parent_in_layer_tree(id);
             }
             eprintln!("cmdk hover debug: beta parent chain={chain:?}");
             for id in &chain {

@@ -5015,7 +5015,7 @@ mod tests {
                 focused_is_content_ancestor = true;
                 break;
             }
-            current = ui.node_parent(node);
+            current = ui.node_parent_in_layer_tree(node);
         }
 
         assert!(

@@ -52,6 +52,7 @@ impl<H: UiHost> UiTree<H> {
         would_repair
     }
 
+    #[cfg(test)]
     pub fn node_parent(&self, node: NodeId) -> Option<NodeId> {
         self.nodes.get(node).and_then(|n| n.parent)
     }

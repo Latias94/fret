@@ -2390,7 +2390,7 @@ mod tests {
                 .and_then(|n| n.test_id.as_deref())
                 .unwrap_or("-");
             out.push(format!("{:?}:{kind}:{test_id}", id));
-            node = rendered.state.ui.node_parent(id);
+            node = rendered.state.ui.node_parent_in_layer_tree(id);
         }
         out
     }

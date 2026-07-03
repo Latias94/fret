@@ -225,6 +225,7 @@ flowchart LR
 | U3 | U2 | Build frame/boundary topology as normal query authority. |
 | U4 | U3 | Move view-cache membership and GC liveness off retained subtree scans. |
 | U5 | U4 | Delete or debug-demote normal parent repair. |
+| U5.5 | U5 | Remove remaining normal retained-parent query bridges. |
 | U6 | U1 | Add text cluster/run metadata and residency gates. |
 | U7 | U6 | Retire full-blob text helper usage that no longer provides oracle value. |
 | U8 | U1, U6 | Split renderer source contract and add `FrameAssembler` scaffolding. |
@@ -233,7 +234,7 @@ flowchart LR
 | U11 | U9 | Expand partial upload stream policy with diagnostics and negative gates. |
 | U12 | U1 | Clean public facade constructors, raw bridge visibility, and cookbook source policy. |
 | U13 | U12 | Split advanced facade lanes and shrink quarantine records. |
-| U14 | U5, U7, U10, U11, U13 | Retire historical perf keys and close out bridge deletion evidence. |
+| U14 | U5.5, U7, U10, U11, U13 | Retire historical perf keys and close out bridge deletion evidence. |
 
 ### U1 - Freeze Phase 3 Bridge Deletion Contract
 
@@ -380,6 +381,35 @@ flowchart LR
 - `cargo nextest run -p fret-ui --no-fail-fast`.
 
 **Deletion gate:** If any normal query still needs retained parent repair, U5 must stop and reopen U3/U4 instead of preserving repair as a hidden shim.
+
+### U5.5 - Remove Remaining Retained Parent Query Bridges
+
+**Goal:** Close the residual normal-path retained-parent reads left after U5.
+
+**Files:**
+
+- `crates/fret-ui/src/tree/ui_tree_mutation/mount.rs`
+- `crates/fret-ui/src/tree/ui_tree_mutation/focus.rs`
+- `crates/fret-ui/src/tree/identity.rs`
+- `crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs`
+- `ecosystem/fret-ui-shadcn/src/{command,drawer,sheet}.rs`
+- `apps/fret-ui-gallery/src/driver/render_flow.rs`
+- `crates/fret-ui/src/tree/tests/children.rs`
+
+**Approach:**
+
+- Make initial mount skip decisions depend on child-edge/layer-root topology, not `Node.parent`.
+- Route runtime parent-chain/debug ancestry queries through `node_parent_in_layer_tree`.
+- Demote retained `node_parent` reads to test-only storage assertions.
+- Refresh stale comments that still describe `node_layer` or liveness as parent-pointer based.
+
+**Test scenarios and verification:**
+
+- A stale retained `None` parent on a live child-edge subtree must not trigger the initial layer-root mount fast path.
+- Static search shows no non-test runtime call to `node_parent()`.
+- `cargo nextest run -p fret-ui set_children_in_mount --no-fail-fast`.
+
+**Deletion gate:** Retained `Node.parent` may remain as direct edge storage and debug/test oracle only; it must not be a normal topology query authority.
 
 ### U6 - Add Shape Cluster/Run Metadata and Text Residency Gates
 

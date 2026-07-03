@@ -10,28 +10,29 @@ related_plan: docs/plans/2026-07-03-001-refactor-ui-framework-phase3-retained-br
 
 - Goal: execute `docs/plans/2026-07-03-001-refactor-ui-framework-phase3-retained-bridge-deletion-plan.md` as a breaking Phase 3 retained-bridge deletion refactor.
 - Branch: `feat/ui-framework-phase2-refactor`.
-- Last verified: Phase 3 U5 parent repair deletion slice passed `cargo check -p fret-ui`,
-  focused children/dirty/view-cache/gc/retained-virtual-list tests, non-stack full `fret-ui`
-  nextest, formatting, whitespace, layering, surface, consumption-profile, execution-surface,
-  ADR-number, workstream-catalog, and wiki-memory gates on 2026-07-03. Full `fret-ui` nextest still
-  has a local long-running caveat for the two `stack_safety` deep-tree tests.
+- Last verified: Phase 3 U5.5 retained-parent query bridge slice passed `cargo check -p fret-ui`,
+  `cargo check -p fret-ui-shadcn`, `cargo check -p fret-ui-gallery`, focused
+  `set_children_in_mount` nextest coverage, formatting, whitespace, layering, surface,
+  consumption-profile, execution-surface, ADR-number, and workstream-catalog gates on 2026-07-03.
+  Full `fret-ui` nextest still has a local long-running caveat for the two `stack_safety`
+  deep-tree tests.
 - Done: local ADR/workstream research, crate/perf snapshots, GPUI/Zed comparison, architecture boundary audit, framework consumer audit, performance audit, implementation-ready plan, U1 convergence contract freeze, U2 source-policy gate, U3 first slice (`workbench-lite` public scaffold), U4 identity/dirty graph observability slices, U5 `ViewId` / boundary frame-product ownership slices, U6 policy vocabulary demotion/cleanup slices, U7 renderer scene/upload observability plus retained scene chunk and guarded quad resident upload lanes, U8 text/glyph/wasm budget work through web runtime evidence, U9 modular consumption profiles and `AppUi` facade split, Phase 2 U9 VertexColor viewport partial upload, Phase 2 U10 workbench-lite public settings diagnostics, Phase 2 U11 public mutation/toast wrappers, workstream closeout audit, duplicate ADR ID `0324` resolution, and execution-surface allowlist alignment.
-- Latest done: Phase 3 U5 parent repair deletion slice removed the normal all-layer retained parent
-  repair pass from mount, deleted its repair helper/recorder, and left only the `would_repair`
-  shadow oracle plus direct-edge same-children storage sync.
-- In progress: Phase 3 retained bridge closeout / U6 kickoff, with the
+- Latest done: Phase 3 U5.5 inserted the retained-parent query bridge cleanup into the plan,
+  narrowed mount's initial skip to layer-root topology, made runtime parent-chain callers use
+  `node_parent_in_layer_tree`, and demoted retained `node_parent()` to test-only storage inspection.
+- In progress: Phase 3 retained bridge closeout / U6 text shaping cluster metadata kickoff, with the
   [view boundary cache architecture research checkpoint](progress/2026-07-03-view-cache-architecture-research.md)
   confirming that the direction is correct and the
   [window snapshot/cache topology slice](progress/2026-07-03-phase3-u3-window-snapshot-cache-topology.md),
   [dirty/remove topology slice](progress/2026-07-03-phase3-u3-dirty-remove-topology.md), and
   [build-time view-cache membership slice](progress/2026-07-03-phase3-u4-build-time-view-cache-membership.md)
   plus the [parent repair deletion slice](progress/2026-07-03-phase3-u5-parent-repair-deletion.md)
-  leaving remaining `Node.parent` reads to classify as storage/debug/test/compatibility or true
-  retained bridges.
+  and [retained parent query bridge slice](progress/2026-07-03-phase3-u5-5-retained-parent-query-bridges.md)
+  leaving normal topology queries on child edges before text residency work.
 - Blocked: none known after the boundary store migration.
-- Next action: run a remaining `Node.parent`/`node_parent` classification pass and then proceed to
-  U6 text shaping cluster/run metadata, unless classification finds a normal retained-parent bridge
-  that should reopen U3/U5.
+- Next action: implement U6 text shaping cluster/run metadata in `fret-render-wgpu`: add CPU-side
+  `TextGlyphCluster`, attach `cluster_index` to `GlyphInstance`, and make visible text residency
+  select full clusters while keeping atlas pinning glyph-based.
 
 # Citations
 
@@ -53,6 +54,7 @@ related_plan: docs/plans/2026-07-03-001-refactor-ui-framework-phase3-retained-br
 - [Phase 3 U3 dirty/remove topology](progress/2026-07-03-phase3-u3-dirty-remove-topology.md)
 - [Phase 3 U4 build-time view-cache membership](progress/2026-07-03-phase3-u4-build-time-view-cache-membership.md)
 - [Phase 3 U5 parent repair deletion](progress/2026-07-03-phase3-u5-parent-repair-deletion.md)
+- [Phase 3 U5.5 retained parent query bridges](progress/2026-07-03-phase3-u5-5-retained-parent-query-bridges.md)
 - [Phase 1 convergence plan](../../plans/2026-06-30-001-refactor-ui-framework-architecture-plan.md)
 - [Subagent Findings](subagents/2026-06-30-ui-framework-architecture-audit-findings.md)
 - [U9 AppUi shell split audit](subagents/2026-07-02-u9-appui-shell-split-audit.md)

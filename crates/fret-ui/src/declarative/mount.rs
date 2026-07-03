@@ -701,10 +701,9 @@ where
             // - recorded view-cache subtree memberships (to tolerate temporarily-incomplete child
             //   edges on cache-hit frames).
             //
-            // Note: `UiTree::node_layer` relies on parent pointers. Parent pointers can transiently
-            // drift under fearless refactors (e.g. when reusing cached subtrees), so `node_layer == None`
-            // must never be treated as a sufficient signal for liveness. Reachability from the
-            // liveness roots is the authoritative predicate for GC.
+            // Note: retained parent storage can transiently drift under fearless refactors (e.g.
+            // when reusing cached subtrees), so child-edge reachability from liveness roots is the
+            // authoritative predicate for GC.
             let liveness_roots = ui.all_layer_roots();
             let keep_alive_roots = collect_live_retained_keep_alive_roots(ui, window_state);
             let mut stale: Vec<StaleNodeRecord> = Vec::new();

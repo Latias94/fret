@@ -377,3 +377,10 @@ timestamp: 2026-06-30
   children/dirty/view-cache/gc/retained-virtual-list tests, non-stack full `fret-ui` nextest,
   formatting, whitespace, layering, surface, consumption-profile, execution-surface, ADR-number,
   workstream-catalog, and wiki-memory gates.
+- 2026-07-03: Phase 3 U5.5 retained-parent query bridge slice adds U5.5 to the Phase 3 plan and
+  closes the remaining normal `Node.parent` query bridges. `set_children_in_mount` now uses a
+  layer-root-only initial skip predicate, runtime/debug parent-chain callers use
+  `node_parent_in_layer_tree`, and retained `node_parent()` is test-only. Verification passed for
+  `cargo check -p fret-ui`, `cargo check -p fret-ui-shadcn`, `cargo check -p fret-ui-gallery`,
+  focused `set_children_in_mount` nextest coverage, formatting, whitespace, layering, surface,
+  consumption-profile, execution-surface, ADR-number, and workstream-catalog gates.

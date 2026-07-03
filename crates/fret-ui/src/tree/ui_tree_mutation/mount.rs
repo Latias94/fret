@@ -26,8 +26,9 @@ impl<H: UiHost> UiTree<H> {
             return;
         }
 
+        let parent_is_layer_root = self.root_to_layer.contains_key(&parent);
         let skip_redundant_initial_mount_walk = self.nodes.get(parent).is_some_and(|n| {
-            n.parent.is_none()
+            parent_is_layer_root
                 && n.children.is_empty()
                 && n.invalidation.layout
                 && n.invalidation.paint

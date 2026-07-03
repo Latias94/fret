@@ -178,7 +178,7 @@ impl<H: UiHost> UiTree<H> {
         None
     }
 
-    pub(crate) fn node_parent_in_layer_tree(&self, node: NodeId) -> Option<NodeId> {
+    pub fn node_parent_in_layer_tree(&self, node: NodeId) -> Option<NodeId> {
         self.parent_in_layer_forest_via_children(node)
     }
 

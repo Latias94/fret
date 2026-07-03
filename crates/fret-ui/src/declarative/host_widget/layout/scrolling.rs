@@ -2687,7 +2687,7 @@ impl ElementHostWidget {
                     found = Some(test_id.clone());
                     break;
                 }
-                current = cx.tree.node_parent(node);
+                current = cx.tree.node_parent_in_layer_tree(node);
                 steps = steps.saturating_add(1);
                 if steps >= 48 {
                     break;
