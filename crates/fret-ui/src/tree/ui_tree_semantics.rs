@@ -764,33 +764,24 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
-    pub(in crate::tree) fn node_root(&self, mut node: NodeId) -> Option<NodeId> {
-        while let Some(parent) = self.nodes.get(node).and_then(|n| n.parent) {
-            node = parent;
+    pub(in crate::tree) fn node_root(&self, node: NodeId) -> Option<NodeId> {
+        if !self.nodes.contains_key(node) {
+            return None;
         }
-        self.nodes.contains_key(node).then_some(node)
-    }
 
-    pub fn is_descendant(&self, root: NodeId, mut node: NodeId) -> bool {
-        if root == node {
-            return true;
-        }
-        while let Some(parent) = self.nodes.get(node).and_then(|n| n.parent) {
-            if parent == root {
-                return true;
-            }
-            node = parent;
-        }
-        false
+        self.all_layer_roots()
+            .into_iter()
+            .find(|&root| self.is_reachable_from_root_via_children(root, node))
     }
 
     /// Returns `true` when `node` is reachable from `root` by following authoritative child
     /// edges for the current frame.
-    ///
-    /// Unlike [`UiTree::is_descendant`], this does not rely on retained parent pointers, which
-    /// can be stale under view-cache / overlay reuse while the child graph is already correct.
     pub fn is_descendant_via_children(&self, root: NodeId, node: NodeId) -> bool {
         self.is_reachable_from_root_via_children(root, node)
+    }
+
+    pub fn is_descendant(&self, root: NodeId, node: NodeId) -> bool {
+        self.is_descendant_via_children(root, node)
     }
 }
 

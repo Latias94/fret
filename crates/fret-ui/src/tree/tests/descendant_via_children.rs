@@ -26,8 +26,8 @@ fn descendant_via_children_ignores_stale_parent_pointers() {
     ui.nodes[grandchild].parent = None;
 
     assert!(
-        !ui.is_descendant(root, grandchild),
-        "expected retained parent-pointer traversal to observe the injected stale parent"
+        ui.is_descendant(root, grandchild),
+        "expected descendant queries to use authoritative child-edge topology"
     );
     assert!(
         ui.is_descendant_via_children(root, grandchild),

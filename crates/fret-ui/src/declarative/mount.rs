@@ -3459,7 +3459,7 @@ mod tests {
     }
 
     #[test]
-    fn gc_retention_ignores_stale_parent_pointer_layer_membership() {
+    fn gc_retention_rejects_stale_parent_pointer_layer_membership() {
         let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
         ui.set_window(AppWindowId::default());
 
@@ -3474,8 +3474,8 @@ mod tests {
         ui.test_set_node_parent(stale, Some(root));
 
         assert!(
-            ui.node_layer(stale).is_some(),
-            "reproducer requires a stale parent path that still resolves to a layer"
+            ui.node_layer(stale).is_none(),
+            "stale retained parents must not prove layer membership"
         );
 
         let reachable = collect_reachable_nodes_for_gc(&ui, None, [root]);
