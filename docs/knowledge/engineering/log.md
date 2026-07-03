@@ -354,3 +354,10 @@ timestamp: 2026-06-30
   non-stack full `fret-ui` nextest, formatting, whitespace, layering, surface, consumption-profile,
   execution-surface, ADR-number, workstream-catalog, and wiki-memory gates. Full `fret-ui` nextest
   still has a local long-running caveat for the two `stack_safety` deep-tree tests.
+- 2026-07-03: Phase 3 U3 dirty/remove topology slice migrates semantics dirty propagation, layout
+  dirty propagation, layout dirty underflow repair, subtree removal unlink/delta propagation,
+  layout profile/debug ancestry, and view-cache membership ancestor walks from retained parent
+  pointers to child-edge topology. Layout dirty underflow no longer calls normal parent repair.
+  Verification passed for `cargo check -p fret-ui` and focused dirty/remove/view-cache/window
+  snapshot tests, non-stack full `fret-ui` nextest, formatting, whitespace, layering, surface,
+  consumption-profile, execution-surface, ADR-number, workstream-catalog, and wiki-memory gates.

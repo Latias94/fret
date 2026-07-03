@@ -35,6 +35,81 @@ fn subtree_layout_dirty_underflow_repairs_counts_upwards() {
 }
 
 #[test]
+fn subtree_layout_dirty_underflow_uses_child_edges_without_parent_repair() {
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(AppWindowId::default());
+    ui.set_debug_enabled(true);
+
+    let root = ui.create_node(TestStack);
+    let a = ui.create_node(TestStack);
+    let b = ui.create_node(TestStack);
+
+    ui.set_root(root);
+    ui.set_children(root, vec![a, b]);
+
+    ui.test_clear_node_invalidations(a);
+    ui.test_clear_node_invalidations(b);
+    ui.test_clear_node_invalidations(root);
+
+    ui.test_set_layout_invalidation(b, true);
+    assert_eq!(ui.nodes[root].subtree_layout_dirty_count, 1);
+
+    ui.nodes[a].subtree_layout_dirty_count = 0;
+    ui.nodes[root].subtree_layout_dirty_count = 0;
+    ui.nodes[a].invalidation.layout = false;
+    ui.test_set_node_parent(a, None);
+
+    ui.note_layout_invalidation_transition_for_subtree_aggregation(a, true, false);
+
+    assert_eq!(ui.nodes[a].subtree_layout_dirty_count, 0);
+    assert_eq!(ui.nodes[b].subtree_layout_dirty_count, 1);
+    assert_eq!(
+        ui.nodes[root].subtree_layout_dirty_count, 1,
+        "underflow repair must recompute real child-edge ancestors even when retained parents are stale"
+    );
+    assert_eq!(
+        ui.debug_stats().parent_pointer_repair_passes,
+        0,
+        "layout dirty underflow must not repair retained parent pointers in the normal path"
+    );
+    assert_eq!(ui.node_parent(a), None);
+}
+
+#[test]
+fn semantics_dirty_propagation_uses_child_edges_under_stale_parent_pointers() {
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(AppWindowId::default());
+
+    let root = ui.create_node(TestStack);
+    let parent = ui.create_node(TestStack);
+    let leaf = ui.create_node(TestStack);
+
+    ui.set_root(root);
+    ui.set_children(root, vec![parent]);
+    ui.set_children(parent, vec![leaf]);
+    ui.clear_all_semantics_dirty_tracking();
+    ui.semantics_dirty = false;
+    ui.semantics_dirty_all = false;
+    ui.test_set_node_parent(leaf, None);
+
+    ui.mark_semantics_dirty_for_node(leaf);
+
+    assert_eq!(ui.nodes[leaf].subtree_semantics_dirty_count, 1);
+    assert_eq!(
+        ui.nodes[parent].subtree_semantics_dirty_count, 1,
+        "semantics dirty propagation must follow child-edge ancestors"
+    );
+    assert_eq!(ui.nodes[root].subtree_semantics_dirty_count, 1);
+
+    ui.clear_semantics_dirty_nodes(vec![leaf]);
+
+    assert_eq!(ui.nodes[leaf].subtree_semantics_dirty_count, 0);
+    assert_eq!(ui.nodes[parent].subtree_semantics_dirty_count, 0);
+    assert_eq!(ui.nodes[root].subtree_semantics_dirty_count, 0);
+    assert_eq!(ui.node_parent(leaf), None);
+}
+
+#[test]
 fn suppressed_parent_does_not_aggregate_dirty_child_transitions() {
     let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
     ui.set_window(AppWindowId::default());
@@ -110,6 +185,47 @@ fn remove_dirty_child_from_suppressed_parent_does_not_underflow_or_repair() {
         rebuilds_before,
         "removing a dirty child hidden behind a suppressed parent must not trip the underflow repair path"
     );
+}
+
+#[test]
+fn remove_subtree_uses_child_edges_under_stale_parent_pointers() {
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(AppWindowId::default());
+    ui.set_debug_enabled(true);
+
+    let root = ui.create_node(TestStack);
+    let actual_parent = ui.create_node(TestStack);
+    let stale_parent = ui.create_node(TestStack);
+    let child = ui.create_node(TestStack);
+
+    ui.set_root(root);
+    ui.set_children(root, vec![actual_parent, stale_parent]);
+    ui.set_children(actual_parent, vec![child]);
+
+    ui.test_clear_node_invalidations(child);
+    ui.test_clear_node_invalidations(actual_parent);
+    ui.test_clear_node_invalidations(stale_parent);
+    ui.test_clear_node_invalidations(root);
+    ui.test_set_layout_invalidation(child, true);
+
+    assert_eq!(ui.nodes[actual_parent].subtree_layout_dirty_count, 1);
+    assert_eq!(ui.nodes[root].subtree_layout_dirty_count, 1);
+
+    ui.test_set_node_parent(child, Some(stale_parent));
+
+    let mut services = FakeUiServices;
+    let removed = ui.remove_subtree(&mut services, child);
+
+    assert_eq!(removed, vec![child]);
+    assert!(!ui.nodes.contains_key(child));
+    assert!(
+        !ui.nodes[actual_parent].children.contains(&child),
+        "remove_subtree must unlink from the actual child-edge parent"
+    );
+    assert_eq!(ui.nodes[actual_parent].subtree_layout_dirty_count, 0);
+    assert_eq!(ui.nodes[stale_parent].subtree_layout_dirty_count, 0);
+    assert_eq!(ui.nodes[root].subtree_layout_dirty_count, 0);
+    assert_eq!(ui.debug_stats().parent_pointer_repair_passes, 0);
 }
 
 #[test]

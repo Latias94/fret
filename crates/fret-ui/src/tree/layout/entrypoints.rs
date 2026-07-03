@@ -944,7 +944,7 @@ impl<H: UiHost> UiTree<H> {
                 if let Some(test_id) = test_id_by_node.get(&node) {
                     return Some(test_id.as_str());
                 }
-                cur = tree.nodes.get(node).and_then(|n| n.parent);
+                cur = tree.parent_in_layer_forest_via_children(node);
             }
             None
         };
@@ -1017,7 +1017,7 @@ impl<H: UiHost> UiTree<H> {
                 if let Some(test_id) = test_id_by_node.get(&node) {
                     return Some(test_id.as_str());
                 }
-                cur = tree.nodes.get(node).and_then(|n| n.parent);
+                cur = tree.parent_in_layer_forest_via_children(node);
             }
             None
         };
@@ -1933,7 +1933,7 @@ impl<H: UiHost> UiTree<H> {
             if id == ancestor {
                 return true;
             }
-            current = self.nodes.get(id).and_then(|n| n.parent);
+            current = self.parent_in_layer_forest_via_children(id);
         }
         false
     }

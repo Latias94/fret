@@ -370,7 +370,7 @@ impl<H: UiHost> UiTree<H> {
                 continue;
             }
 
-            let parent = self.nodes.get(node).and_then(|n| n.parent);
+            let parent = self.parent_in_layer_forest_via_children(node);
             if let Some(parent) = parent
                 && let Some(p) = self.nodes.get_mut(parent)
             {

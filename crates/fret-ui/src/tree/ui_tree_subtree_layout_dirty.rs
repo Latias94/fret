@@ -37,19 +37,18 @@ impl<H: UiHost> UiTree<H> {
             if remaining == 0 {
                 tracing::error!(
                     node = ?current,
-                    "semantics dirty count propagation aborted (cycle or corrupt parent pointers?)"
+                    "semantics dirty count propagation aborted (cycle or corrupt topology?)"
                 );
                 break;
             }
             remaining = remaining.saturating_sub(1);
 
-            let (parent, underflow) = {
+            let parent = self.parent_in_layer_forest_via_children(current);
+            let underflow = {
                 let Some(entry) = self.nodes.get_mut(current) else {
                     break;
                 };
-                let underflow =
-                    apply_i32_delta_to_u32(&mut entry.subtree_semantics_dirty_count, delta);
-                (entry.parent, underflow)
+                apply_i32_delta_to_u32(&mut entry.subtree_semantics_dirty_count, delta)
             };
 
             if underflow {
@@ -70,7 +69,7 @@ impl<H: UiHost> UiTree<H> {
     }
 
     fn rebuild_subtree_semantics_dirty_counts_from(&mut self, root: NodeId) {
-        let root_parent = self.nodes.get(root).and_then(|n| n.parent);
+        let root_parent = self.parent_in_layer_forest_via_children(root);
         let old_root_count = self
             .nodes
             .get(root)
@@ -128,19 +127,18 @@ impl<H: UiHost> UiTree<H> {
             if remaining == 0 {
                 tracing::error!(
                     node = ?id,
-                    "semantics dirty ancestor propagation aborted (cycle or corrupt parent pointers?)"
+                    "semantics dirty ancestor propagation aborted (cycle or corrupt topology?)"
                 );
                 break;
             }
             remaining = remaining.saturating_sub(1);
 
-            let (parent, underflow) = {
+            let parent = self.parent_in_layer_forest_via_children(id);
+            let underflow = {
                 let Some(entry) = self.nodes.get_mut(id) else {
                     break;
                 };
-                let underflow =
-                    apply_i32_delta_to_u32(&mut entry.subtree_semantics_dirty_count, delta);
-                (entry.parent, underflow)
+                apply_i32_delta_to_u32(&mut entry.subtree_semantics_dirty_count, delta)
             };
             if underflow {
                 tracing::error!(node = ?id, delta, "subtree semantics dirty count underflow");
@@ -320,7 +318,8 @@ impl<H: UiHost> UiTree<H> {
             );
         }
 
-        let (parent, old_count, new_count) = {
+        let parent = self.parent_in_layer_forest_via_children(node);
+        let (old_count, new_count) = {
             let Some(n) = self.nodes.get(node) else {
                 return;
             };
@@ -335,7 +334,7 @@ impl<H: UiHost> UiTree<H> {
                     );
                 }
             }
-            (n.parent, n.subtree_layout_dirty_count, sum)
+            (n.subtree_layout_dirty_count, sum)
         };
 
         if old_count == new_count {
@@ -356,7 +355,7 @@ impl<H: UiHost> UiTree<H> {
         &mut self,
         root: NodeId,
     ) {
-        let root_parent = self.nodes.get(root).and_then(|n| n.parent);
+        let root_parent = self.parent_in_layer_forest_via_children(root);
         let old_root_count = self
             .nodes
             .get(root)
@@ -448,15 +447,17 @@ impl<H: UiHost> UiTree<H> {
             rebuilt_nodes = rebuilt_nodes.saturating_add(1);
         }
 
-        // Step 2: recompute exact counts on ancestors so drift cannot linger above `root` even if
-        // the previously stored `root` count (used by delta propagation) was already incorrect.
+        // Step 2: recompute exact counts on child-edge ancestors so drift cannot linger above
+        // `root` even if the previously stored `root` count (used by delta propagation) was
+        // already incorrect.
         let mut walked_nodes: u32 = 0;
-        let mut current = self.nodes.get(root).and_then(|n| n.parent);
+        let mut current = self.parent_in_layer_forest_via_children(root);
         while let Some(id) = current {
             let (next_parent, expected) = {
                 let Some(n) = self.nodes.get(id) else {
                     break;
                 };
+                let next_parent = self.parent_in_layer_forest_via_children(id);
                 let mut sum: u32 = if n.invalidation.layout { 1 } else { 0 };
                 if !n.layout_dirty_children_suppressed {
                     for &child in &n.children {
@@ -468,7 +469,7 @@ impl<H: UiHost> UiTree<H> {
                         );
                     }
                 }
-                (n.parent, sum)
+                (next_parent, sum)
             };
 
             if let Some(n) = self.nodes.get_mut(id) {
@@ -479,7 +480,7 @@ impl<H: UiHost> UiTree<H> {
             if walked_nodes > 4096 {
                 tracing::warn!(
                     node = ?id,
-                    "repair_subtree_layout_dirty_counts_from: aborting ancestor walk (cycle or corrupt parent pointers?)"
+                    "repair_subtree_layout_dirty_counts_from: aborting ancestor walk (cycle or corrupt topology?)"
                 );
                 break;
             }
@@ -532,7 +533,8 @@ impl<H: UiHost> UiTree<H> {
         let mut current = start;
         let mut first = true;
         while let Some(id) = current {
-            let (parent, element, stored, underflow) = {
+            let parent = self.parent_in_layer_forest_via_children(id);
+            let (element, stored, underflow) = {
                 let Some(n) = self.nodes.get_mut(id) else {
                     break;
                 };
@@ -542,7 +544,7 @@ impl<H: UiHost> UiTree<H> {
                 }
 
                 let underflow = apply_i32_delta_to_u32(&mut n.subtree_layout_dirty_count, delta);
-                (n.parent, n.element, n.subtree_layout_dirty_count, underflow)
+                (n.element, n.subtree_layout_dirty_count, underflow)
             };
             if underflow {
                 let caller = std::panic::Location::caller();
@@ -554,22 +556,6 @@ impl<H: UiHost> UiTree<H> {
                     caller = %caller,
                     "subtree layout dirty count underflow"
                 );
-                // Parent pointers participate in both delta propagation and repair walks. When an
-                // underflow is observed, aggressively repair reachable parent pointers first so
-                // the subsequent subtree-count rebuild can propagate along the most plausible
-                // ancestry chain.
-                let would_repair = self.parent_pointers_would_repair_from_layer_roots();
-                self.debug_record_parent_pointer_would_repair(would_repair);
-                let repaired_parents = self.repair_parent_pointers_from_layer_roots();
-                self.debug_record_parent_pointer_repair(repaired_parents);
-                if repaired_parents > 0 {
-                    tracing::warn!(
-                        node = ?id,
-                        repaired_parents,
-                        caller = %caller,
-                        "repaired parent pointers after subtree layout dirty underflow"
-                    );
-                }
                 self.repair_subtree_layout_dirty_counts_from(id);
                 break;
             }

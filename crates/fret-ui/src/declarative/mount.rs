@@ -617,11 +617,9 @@ where
                 }
             });
 
-            // View-cache experiments rely on explicit liveness bookkeeping (layer roots + view-cache
-            // reuse roots + subtree membership lists; ADR 0176). Parent pointers are still required
-            // for cache-root discovery and `node_layer` detachment checks, so repair any reachable
-            // inconsistencies before applying invalidations that may need to propagate across cache-root
-            // boundaries.
+            // Phase 3 still keeps parent repair as a temporary shadow/compatibility bridge during
+            // mount. Normal cache-root and layer queries should use child-edge topology; U5 owns
+            // deleting this bridge once U4 cache-hit membership no longer relies on retained scans.
             if ui.view_cache_enabled() {
                 let would_repair = ui.parent_pointers_would_repair_from_layer_roots();
                 ui.debug_record_parent_pointer_would_repair(would_repair);
@@ -865,7 +863,7 @@ where
                 #[cfg(feature = "diagnostics")]
                 if let Some(ctx) = with_window_frame(app, window, |window_frame| {
                     let window_frame = window_frame?;
-                    let parent = ui.node_parent(node);
+                    let parent = ui.node_parent_in_layer_tree(node);
                     let parent_frame_children = parent.and_then(|p| window_frame.children.get(p));
                     let root_reachable_from_layer_roots =
                         reachable_from_layers_computed && reachable_from_layers.contains(&node);
@@ -888,7 +886,7 @@ where
                     let mut path_edge_len: u8 = 0;
                     let mut current = Some(node);
                     while let Some(child) = current {
-                        let Some(parent) = ui.node_parent(child) else {
+                        let Some(parent) = ui.node_parent_in_layer_tree(child) else {
                             break;
                         };
                         if (path_edge_len as usize) >= path_edge_frame_contains_child.len() {
@@ -1364,7 +1362,7 @@ where
                 #[cfg(feature = "diagnostics")]
                 if let Some(ctx) = with_window_frame(app, window, |window_frame| {
                     let window_frame = window_frame?;
-                    let parent = ui.node_parent(node);
+                    let parent = ui.node_parent_in_layer_tree(node);
                     let parent_frame_children = parent.and_then(|p| window_frame.children.get(p));
                     let root_reachable_from_layer_roots =
                         reachable_from_layers_computed && reachable_from_layers.contains(&node);
@@ -1387,7 +1385,7 @@ where
                     let mut path_edge_len: u8 = 0;
                     let mut current = Some(node);
                     while let Some(child) = current {
-                        let Some(parent) = ui.node_parent(child) else {
+                        let Some(parent) = ui.node_parent_in_layer_tree(child) else {
                             break;
                         };
                         if (path_edge_len as usize) >= path_edge_frame_contains_child.len() {
@@ -3171,7 +3169,7 @@ fn refresh_view_cache_membership_for_ancestor_roots<H: UiHost>(
             ui.debug_record_retained_subtree_membership_scan(scanned);
             window_state.record_view_cache_subtree_elements(record.element, elements);
         }
-        current = ui.node_parent(node);
+        current = ui.node_parent_in_layer_tree(node);
     }
 }
 
