@@ -518,3 +518,9 @@ timestamp: 2026-06-30
   `advanced_manual` retirement records because they are conformance/stress infrastructure, not
   copyable public examples waiting for wrapper replacement. Verification passed for source-policy
   tests/gate, consumption-profile, execution-surface, layering, formatting, and whitespace gates.
+- 2026-07-03: Phase 3 U13 command facade cookbook migration adds explicit `fret::commands`
+  vocabulary and moves `commands_keymap_basics.rs`, `form_basics.rs`, and `text_input_basics.rs`
+  from `advanced_manual` to default clean source-policy coverage. Verification passed for focused
+  `fret` facade tests, `fret-cookbook --all-targets`, source-policy tests/gate,
+  consumption-profile, execution-surface, layering, formatting, engineering-memory, and whitespace
+  gates.

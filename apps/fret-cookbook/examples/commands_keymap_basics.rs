@@ -1,14 +1,13 @@
-use fret::actions::{CommandId, ElementCommandGatingExt as _};
+use fret::actions::ElementCommandGatingExt as _;
 use fret::app::prelude::*;
 use fret::children::UiElementSinkExt as _;
+use fret::commands::{
+    CommandAvailability, CommandId, CommandMeta, CommandScope, DefaultKeybinding, InputContext,
+    KeyChord, KeyCode, KeymapService, Modifiers, Platform, PlatformFilter, format_sequence,
+    install_command_default_keybindings_into_keymap,
+};
 use fret::semantics::SemanticsRole;
 use fret::style::Space;
-use fret_app::{
-    CommandMeta, CommandScope, DefaultKeybinding, InputContext, KeyChord, KeymapService, Platform,
-    PlatformFilter, format_sequence,
-};
-use fret_core::{KeyCode, Modifiers};
-use fret_ui::CommandAvailability;
 
 mod act {
     fret::actions!([
@@ -61,7 +60,7 @@ fn install_commands(app: &mut App) {
 
     // Ensure keybindings are installed after registering the command (the app may have already
     // installed defaults for previously-known commands during bootstrap).
-    fret_app::install_command_default_keybindings_into_keymap(app);
+    install_command_default_keybindings_into_keymap(app);
 }
 
 struct CommandsKeymapBasicsView;

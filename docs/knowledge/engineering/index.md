@@ -95,6 +95,7 @@ It is a sidecar for session recovery and subagent synthesis, not a replacement f
 - [Phase 3 U13 simple todo app surface shrink](progress/2026-07-03-phase3-u13-simple-todo-app-surface.md)
 - [Phase 3 U13 fret-examples explicit raw imports](progress/2026-07-03-phase3-u13-fret-examples-raw-imports.md)
 - [Phase 3 U13 internal harness classification](progress/2026-07-03-phase3-u13-internal-harness-classification.md)
+- [Phase 3 U13 command facade cookbook migration](progress/2026-07-03-phase3-u13-command-facade-cookbook-migration.md)
 - [Phase 3 U13 advanced facade audits](subagents/2026-07-03-phase3-u13-advanced-facade-audits.md)
 - [Phase 2 U4 boundary store audit](subagents/2026-07-02-phase2-u4-boundary-store-audit.md)
 - [Phase 2 U4 durable ViewId audit](subagents/2026-07-02-phase2-u4-durable-viewid-audit.md)

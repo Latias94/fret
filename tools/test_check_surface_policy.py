@@ -612,6 +612,18 @@ class SurfacePolicyTests(unittest.TestCase):
         )
         self.assertNotIn("apps/fret-examples/src", POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS)
 
+    def test_migrated_cookbook_command_examples_are_default_clean(self) -> None:
+        migrated = {
+            "apps/fret-cookbook/examples/commands_keymap_basics.rs",
+            "apps/fret-cookbook/examples/form_basics.rs",
+            "apps/fret-cookbook/examples/text_input_basics.rs",
+        }
+        default_paths = {spec.path for spec in POLICY.DEFAULT_AUTHORING_SURFACES}
+        advanced_paths = {spec.path for spec in POLICY.ADVANCED_MANUAL_SURFACES}
+
+        self.assertTrue(migrated.issubset(default_paths))
+        self.assertTrue(migrated.isdisjoint(advanced_paths))
+
     def test_policy_coded_fret_ui_root_export_is_rejected_without_classification(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

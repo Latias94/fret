@@ -382,6 +382,22 @@ pub(crate) enum AssetMount {
 }
 
 pub mod actions;
+
+/// Explicit command and keybinding vocabulary for app code.
+///
+/// Keep command registration, availability, key chords, and shortcut display on this named lane
+/// instead of importing `fret_app`, `fret_runtime`, `fret_core`, or `fret_ui` from cookbook/default
+/// app code.
+pub mod commands {
+    pub use fret_app::{
+        CommandId, CommandMeta, CommandRegistry, CommandScope, DefaultKeybinding, InputContext,
+        KeyChord, KeymapService, Platform, PlatformFilter, format_sequence,
+        install_command_default_keybindings_into_keymap,
+    };
+    pub use fret_core::{KeyCode, Modifiers};
+    pub use fret_ui::CommandAvailability;
+}
+
 pub mod in_window_menubar;
 mod view;
 
@@ -3353,7 +3369,7 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_USAGE_GUIDE.contains("`cx.effects().toast_message(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`cx.effects().toast_dismiss_all()`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::app::LocalState`"));
-        assert!(CRATE_USAGE_GUIDE.contains("`fret::actions::CommandId`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`fret::commands::{...}`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::style::{...}`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::style::ThemeSnapshot`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::icons::{icon, IconId}`"));
@@ -3819,7 +3835,7 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_USAGE_GUIDE.contains("`use fret::component::prelude::*;`"));
         assert!(CRATE_USAGE_GUIDE.contains("`ComponentCx`"));
         assert!(CRATE_USAGE_GUIDE.contains("`UiBuilder`/`UiPatchTarget`/`IntoUiElement<H>`"));
-        assert!(CRATE_USAGE_GUIDE.contains("`fret::actions::CommandId`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`fret::commands::{CommandId, CommandMeta, ...}`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::env::{...}`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::adaptive::{...}`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::activate::{on_activate,"));
@@ -4322,6 +4338,7 @@ mod authoring_surface_policy_tests {
             "actions",
             "assets",
             "children",
+            "commands",
             "env",
             "imui",
             "icons",
@@ -4386,6 +4403,7 @@ mod authoring_surface_policy_tests {
 
         assert!(root_header.contains("pub mod activate {"));
         assert!(root_header.contains("pub mod children {"));
+        assert!(root_header.contains("pub mod commands {"));
         assert!(root_header.contains("pub mod icons {"));
         assert!(root_header.contains("pub mod semantics {"));
         assert!(root_header.contains("pub mod style {"));
@@ -4397,6 +4415,12 @@ mod authoring_surface_policy_tests {
         assert!(root_header.contains("pub use fret_ui_kit::ui::UiElementSinkExt;"));
         assert!(root_header.contains("pub use fret_icons::IconId;"));
         assert!(root_header.contains("pub use fret_ui_kit::declarative::icon;"));
+        assert!(root_header.contains("CommandMeta, CommandRegistry, CommandScope"));
+        assert!(root_header.contains("DefaultKeybinding, InputContext,"));
+        assert!(root_header.contains("KeyChord, KeymapService, Platform, PlatformFilter"));
+        assert!(root_header.contains("install_command_default_keybindings_into_keymap,"));
+        assert!(root_header.contains("pub use fret_core::{KeyCode, Modifiers};"));
+        assert!(root_header.contains("pub use fret_ui::CommandAvailability;"));
         assert!(root_header.contains("pub use fret_core::SemanticsRole;"));
         assert!(root_header.contains("pub use fret_ui::element::SemanticsDecoration;"));
         assert!(
@@ -4635,7 +4659,17 @@ mod authoring_surface_policy_tests {
         assert!(!app_prelude_exports_symbol("UiServices"));
         assert!(!app_prelude_exports_symbol("UiHost"));
         assert!(!app_prelude_exports_symbol("AnyElement"));
+        assert!(!app_prelude_exports_symbol("CommandAvailability"));
         assert!(!app_prelude_exports_symbol("ActionId"));
+        assert!(!app_prelude_exports_symbol("CommandMeta"));
+        assert!(!app_prelude_exports_symbol("CommandRegistry"));
+        assert!(!app_prelude_exports_symbol("CommandScope"));
+        assert!(!app_prelude_exports_symbol("DefaultKeybinding"));
+        assert!(!app_prelude_exports_symbol("InputContext"));
+        assert!(!app_prelude_exports_symbol("KeyChord"));
+        assert!(!app_prelude_exports_symbol("KeyCode"));
+        assert!(!app_prelude_exports_symbol("KeymapService"));
+        assert!(!app_prelude_exports_symbol("Modifiers"));
         assert!(!app_prelude_exports_symbol("TypedAction"));
         assert!(!app_prelude_exports_symbol("RouterUiStore"));
         assert!(!app_prelude_exports_symbol("RouterOutlet"));

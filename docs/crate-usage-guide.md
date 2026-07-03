@@ -264,8 +264,9 @@ When app code needs explicit theme snapshot value types in extracted helper sign
 `fret::style::ThemeSnapshot` instead of expecting it from `fret::app::prelude::*`.
 When app code needs explicit local state-handle types in validators or helper signatures, import
 `fret::app::LocalState` instead of expecting it from `fret::app::prelude::*`.
-When app code needs explicit command identity values, import `fret::actions::CommandId` instead of
-expecting `CommandId` from the default prelude.
+When app code needs explicit command identity, metadata, availability, keybinding, keymap, or
+shortcut-display nouns, import them from `fret::commands::{...}` instead of importing `fret_app`,
+`fret_runtime`, `fret_core`, or `fret_ui` from default app/tutorial code.
 When app code needs explicit semantics nouns, import them intentionally from
 `fret::semantics::{SemanticsDecoration, SemanticsRole}` instead of expecting them from
 `fret::app::prelude::*`.
@@ -348,8 +349,9 @@ intact without widening autocomplete pressure. The conversion surface is intenti
 collapsed to one public component conversion trait; new docs/examples should follow
 `docs/workstreams/into-element-surface-fearless-refactor-v1/TARGET_INTERFACE_STATE.md` instead of
 teaching the legacy split conversion trait names. When reusable component code needs explicit
-command identity values, import `fret::actions::CommandId` (or `fret-runtime` directly) instead
-of expecting `CommandId` from `fret::component::prelude::*`. When reusable component code needs
+command identity or metadata values, import `fret::commands::{CommandId, CommandMeta, ...}` (or
+`fret-runtime` directly) instead of expecting command nouns from `fret::component::prelude::*`.
+When reusable component code needs
 low-level environment/responsive reads, import them explicitly from `fret::env::{...}` instead of
 expecting breakpoint/media helpers from `fret::component::prelude::*`. Keep query-configuration
 nouns such as `ContainerQueryHysteresis`, `ViewportQueryHysteresis`, and `ViewportOrientation` on

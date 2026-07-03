@@ -1,9 +1,7 @@
-use fret::actions::CommandId;
 use fret::app::prelude::*;
-use fret::semantics::SemanticsRole;
+use fret::commands::{CommandAvailability, CommandId, CommandMeta, CommandScope};
+use fret::semantics::{SemanticsDecoration, SemanticsRole};
 use fret::style::Space;
-use fret_app::{CommandMeta, CommandScope};
-use fret_ui::{CommandAvailability, element::SemanticsDecoration};
 
 mod act {
     fret::actions!([

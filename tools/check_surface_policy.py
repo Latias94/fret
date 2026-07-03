@@ -117,6 +117,21 @@ DEFAULT_AUTHORING_SURFACES: tuple[SurfacePath, ...] = (
         "default data-table cookbook should not teach raw local-state construction",
     ),
     SurfacePath(
+        "apps/fret-cookbook/examples/commands_keymap_basics.rs",
+        "default_app_clean",
+        "default command/keymap cookbook should stay on the explicit fret command facade",
+    ),
+    SurfacePath(
+        "apps/fret-cookbook/examples/form_basics.rs",
+        "default_app_clean",
+        "default form cookbook should stay on app-facing action and semantics helpers",
+    ),
+    SurfacePath(
+        "apps/fret-cookbook/examples/text_input_basics.rs",
+        "default_app_clean",
+        "default text-input cookbook should stay on app-facing command and semantics helpers",
+    ),
+    SurfacePath(
         "apps/fret-cookbook/examples/toast_basics.rs",
         "default_app_clean",
         "default toast cookbook should stay on app-facing effect helpers",
@@ -461,11 +476,6 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
         ),
     ),
     _cookbook_advanced_surface(
-        "commands_keymap_basics.rs",
-        "command availability and keymap wiring still use command infrastructure seams",
-        ("fret_app", "fret_core", "fret_ui"),
-    ),
-    _cookbook_advanced_surface(
         "compositing_alpha_basics.rs",
         "the alpha compositing example still owns a manual driver/window setup path",
         ("fret::advanced", "fret_app", "fret_core", "fret_launch", "FnDriver"),
@@ -513,11 +523,6 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
         ),
     ),
     _cookbook_advanced_surface(
-        "form_basics.rs",
-        "form controls still use low-level command and semantics mechanism types",
-        ("fret_ui",),
-    ),
-    _cookbook_advanced_surface(
         "gizmo_basics.rs",
         "gizmo rendering still owns retained tree, model, and low-level element seams",
         (
@@ -554,11 +559,6 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
         "router_basics.rs",
         "router action binding still uses a raw action notify hook",
         ("fret::advanced", "fret_ui"),
-    ),
-    _cookbook_advanced_surface(
-        "text_input_basics.rs",
-        "text-input availability still uses command and low-level semantics seams",
-        ("fret_app", "fret_ui"),
     ),
     _cookbook_advanced_surface(
         "undo_basics.rs",

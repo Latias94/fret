@@ -190,9 +190,11 @@ controls, and `fret::imui::docking` for docking helpers.
 If app code needs explicit style/token nouns or icon helpers/IDs beyond the default lane, import
 them from `fret::style::{...}` and `fret::icons::{icon, IconId}` instead of expecting them from
 `fret::app::prelude::*`.
-If app code needs explicit `ThemeSnapshot`, `LocalState`, or `CommandId` nouns for helper
-signatures / command registration, import them intentionally from `fret::style::ThemeSnapshot`,
-`fret::app::LocalState`, and `fret::actions::CommandId`.
+If app code needs explicit `ThemeSnapshot` or `LocalState` nouns for helper signatures, import them
+intentionally from `fret::style::ThemeSnapshot` and `fret::app::LocalState`.
+If app code needs command registration, availability, keybinding, or shortcut-display nouns, import
+them intentionally from `fret::commands::{...}` instead of teaching `fret_app`, `fret_runtime`,
+`fret_core`, or `fret_ui` in app code.
 If app code needs explicit semantic-role nouns, import them from
 `fret::semantics::SemanticsRole` instead of expecting them from `fret::app::prelude::*`.
 If app code needs explicit selector/query helper nouns beyond the grouped `cx.data()` story
