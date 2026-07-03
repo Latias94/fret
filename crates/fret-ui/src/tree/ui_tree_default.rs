@@ -58,6 +58,8 @@ impl<H: UiHost> Default for UiTree<H> {
             interactive_resize_last_bounds_delta: None,
             clean_geometry_scroll_side_effect_fallback_nodes: Vec::new(),
             viewport_roots: Vec::new(),
+            current_frame_viewport_roots: Vec::new(),
+            retained_viewport_root_bounds: HashMap::new(),
             pending_barrier_relayouts: Vec::new(),
             pending_declarative_window_snapshot_roots: HashSet::new(),
             pending_post_layout_window_runtime_snapshot_refine: false,

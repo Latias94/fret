@@ -69,6 +69,8 @@ It is a sidecar for session recovery and subagent synthesis, not a replacement f
 - [Phase 2 U13 surface quarantine records](progress/2026-07-02-phase2-u13-surface-quarantine-records.md)
 - [Phase 2 U14 AppUi facade narrowing](progress/2026-07-02-phase2-u14-appui-facade-narrowing.md)
 - [Phase 2 closeout](progress/2026-07-02-phase2-closeout.md)
+- [View boundary cache architecture research checkpoint](progress/2026-07-03-view-cache-architecture-research.md)
+- [Phase 3 U3 window snapshot and cache topology](progress/2026-07-03-phase3-u3-window-snapshot-cache-topology.md)
 - [Phase 2 U4 boundary store audit](subagents/2026-07-02-phase2-u4-boundary-store-audit.md)
 - [Phase 2 U4 durable ViewId audit](subagents/2026-07-02-phase2-u4-durable-viewid-audit.md)
 - [Phase 2 U5 boundary bridge audit](subagents/2026-07-02-phase2-u5-boundary-bridge-audit.md)

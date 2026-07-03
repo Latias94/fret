@@ -338,3 +338,19 @@ timestamp: 2026-06-30
   passed for focused bounds-tree/prepaint tests, `cargo check -p fret-ui`, full `cargo nextest run
   -p fret-ui --no-fail-fast` (1196 passed), formatting, whitespace, layering, surface,
   consumption-profile, execution-surface, ADR-number, workstream-catalog, and wiki-memory gates.
+- 2026-07-03: Architecture checkpoint for view/boundary caching completed after GPUI/Zed,
+  Fret self-audit, and broader UI prior-art research. Verdict: the `ViewId -> ViewBoundary ->
+  dirty frontier -> boundary frame products -> scene fragments -> renderer reuse` direction is
+  correct for Fret, but the current implementation is still a retained bridge state. Phase 3 should
+  continue deleting normal-path `Node.parent` liveness, cache-hit retained subtree scans, GC
+  reachability as live proof, and node-owned rerender pressure. See
+  `progress/2026-07-03-view-cache-architecture-research.md`.
+- 2026-07-03: Phase 3 U3 window snapshot/cache topology slice migrates pending declarative window
+  snapshot attachment, selectable text drag-autoscroll ancestry, view-cache invalidation walks,
+  nested cache-root ancestor propagation, layout dirty suppression, snapshot cache-root fallback,
+  and viewport-root bounds preservation away from normal retained-parent reads where covered.
+  Stale-parent fixtures now prove those paths follow the declarative child graph. Verification
+  passed for focused stale-parent tests, viewport-root bounds tests, `cargo check -p fret-ui`,
+  non-stack full `fret-ui` nextest, formatting, whitespace, layering, surface, consumption-profile,
+  execution-surface, ADR-number, workstream-catalog, and wiki-memory gates. Full `fret-ui` nextest
+  still has a local long-running caveat for the two `stack_safety` deep-tree tests.

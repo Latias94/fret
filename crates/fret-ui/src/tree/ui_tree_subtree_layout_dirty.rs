@@ -188,7 +188,7 @@ impl<H: UiHost> UiTree<H> {
     }
 
     pub(in crate::tree) fn node_layout_dirty_suppressed_by_ancestor(&self, node: NodeId) -> bool {
-        let mut current = self.nodes.get(node).and_then(|n| n.parent);
+        let mut current = self.parent_in_layer_forest_via_children(node);
         let mut remaining = self.nodes.len().saturating_add(1);
         while let Some(id) = current {
             if remaining == 0 {
@@ -201,7 +201,7 @@ impl<H: UiHost> UiTree<H> {
             if entry.layout_dirty_children_suppressed {
                 return true;
             }
-            current = entry.parent;
+            current = self.parent_in_layer_forest_via_children(id);
         }
         false
     }
@@ -265,7 +265,7 @@ impl<H: UiHost> UiTree<H> {
             if id == ancestor {
                 return true;
             }
-            current = self.nodes.get(id).and_then(|n| n.parent);
+            current = self.parent_in_layer_forest_via_children(id);
         }
         false
     }

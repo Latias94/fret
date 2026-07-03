@@ -36,6 +36,42 @@ fn view_cache_invalidation_stops_at_boundary_for_paint() {
 }
 
 #[test]
+fn view_cache_invalidation_walk_uses_child_edges_under_stale_parent_pointers() {
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(AppWindowId::default());
+    ui.set_view_cache_enabled(true);
+    ui.set_debug_enabled(true);
+
+    let root = ui.create_node(TestStack);
+    let boundary = ui.create_node(TestStack);
+    let leaf = ui.create_node(TestStack);
+
+    ui.set_root(root);
+    ui.set_children(root, vec![boundary]);
+    ui.set_children(boundary, vec![leaf]);
+
+    for id in [root, boundary, leaf] {
+        ui.test_clear_node_invalidations(id);
+    }
+    ui.nodes[boundary].view_cache.enabled = true;
+    ui.nodes[boundary]
+        .view_cache
+        .test_set_layout_contained_when_bounds_known(true);
+
+    ui.test_set_node_parent(leaf, None);
+
+    ui.invalidate(leaf, Invalidation::Paint);
+
+    assert!(ui.nodes[leaf].invalidation.paint);
+    assert!(
+        ui.nodes[boundary].invalidation.paint,
+        "invalidation must walk to the actual child-edge cache boundary"
+    );
+    assert!(!ui.nodes[root].invalidation.paint);
+    assert_eq!(ui.debug_stats().view_cache_invalidation_truncations, 1);
+}
+
+#[test]
 fn view_cache_disables_paint_cache_for_non_boundary_nodes() {
     let mut app = crate::test_host::TestHost::new();
 
@@ -711,6 +747,42 @@ fn view_cache_nearest_root_uses_child_edges_under_stale_parent_pointers() {
 }
 
 #[test]
+fn contained_view_cache_dirty_coverage_uses_child_edges_under_stale_parent_pointers() {
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(AppWindowId::default());
+    ui.set_view_cache_enabled(true);
+
+    let root = ui.create_node(TestStack);
+    let wrapper = ui.create_node(TestStack);
+    let boundary = ui.create_node(TestStack);
+
+    ui.set_root(root);
+    ui.set_children(root, vec![wrapper]);
+    ui.set_children(wrapper, vec![boundary]);
+
+    ui.nodes[boundary].view_cache.enabled = true;
+    ui.nodes[boundary]
+        .view_cache
+        .test_set_layout_contained_when_bounds_known(true);
+    ui.nodes[boundary].invalidation.layout = true;
+    ui.nodes[boundary].subtree_layout_dirty_count = 1;
+    ui.nodes[wrapper].invalidation.layout = false;
+    ui.nodes[wrapper].subtree_layout_dirty_count = 1;
+    ui.mark_boundary_layout_dirty(
+        boundary,
+        UiDebugInvalidationSource::Other,
+        UiDebugInvalidationDetail::SubtreeLayoutDirtyRepair,
+    );
+
+    ui.test_set_node_parent(boundary, None);
+
+    assert!(
+        ui.node_subtree_layout_dirty_covered_by_contained_view_cache_roots(wrapper),
+        "contained dirty coverage must follow child-edge topology, not retained parent pointers"
+    );
+}
+
+#[test]
 fn contained_view_cache_relayout_uses_child_edges_for_candidate_pruning_and_scroll_followup() {
     struct SpyScroll {
         layout_count: Arc<AtomicUsize>,
@@ -877,6 +949,50 @@ fn view_cache_nested_boundaries_invalidate_ancestor_cache_roots() {
     assert!(ui.nodes[outer].invalidation.paint);
     assert!(!ui.nodes[mid].invalidation.paint);
     assert!(!ui.nodes[root].invalidation.paint);
+}
+
+#[test]
+fn view_cache_nested_boundary_ancestors_use_child_edges_under_stale_parent_pointers() {
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(AppWindowId::default());
+    ui.set_view_cache_enabled(true);
+
+    let root = ui.create_node(TestStack);
+    let outer = ui.create_node(TestStack);
+    let stale_outer = ui.create_node(TestStack);
+    let mid = ui.create_node(TestStack);
+    let inner = ui.create_node(TestStack);
+    let leaf = ui.create_node(TestStack);
+
+    ui.set_root(root);
+    ui.set_children(root, vec![outer, stale_outer]);
+    ui.set_children(outer, vec![mid]);
+    ui.set_children(mid, vec![inner]);
+    ui.set_children(inner, vec![leaf]);
+
+    for id in [root, outer, stale_outer, mid, inner, leaf] {
+        ui.test_clear_node_invalidations(id);
+    }
+    for id in [outer, stale_outer, inner] {
+        ui.nodes[id].view_cache.enabled = true;
+        ui.nodes[id]
+            .view_cache
+            .test_set_layout_contained_when_bounds_known(true);
+    }
+
+    ui.test_set_node_parent(inner, Some(stale_outer));
+
+    ui.invalidate(leaf, Invalidation::Paint);
+
+    assert!(ui.nodes[inner].invalidation.paint);
+    assert!(
+        ui.nodes[outer].invalidation.paint,
+        "nested cache-root propagation must mark the actual child-edge ancestor"
+    );
+    assert!(
+        !ui.nodes[stale_outer].invalidation.paint,
+        "stale retained parents must not receive nested cache-root invalidation"
+    );
 }
 
 #[test]

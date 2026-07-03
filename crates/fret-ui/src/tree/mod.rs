@@ -442,6 +442,8 @@ pub struct UiTree<H: UiHost> {
     interactive_resize_last_bounds_delta: Option<(fret_core::Px, fret_core::Px)>,
     clean_geometry_scroll_side_effect_fallback_nodes: Vec<NodeId>,
     viewport_roots: Vec<(NodeId, Rect)>,
+    current_frame_viewport_roots: Vec<(NodeId, Rect)>,
+    retained_viewport_root_bounds: HashMap<NodeId, Rect>,
     pending_barrier_relayouts: Vec<NodeId>,
     pending_declarative_window_snapshot_roots: HashSet<NodeId>,
     pending_post_layout_window_runtime_snapshot_refine: bool,

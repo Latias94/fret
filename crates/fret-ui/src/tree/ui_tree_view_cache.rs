@@ -169,7 +169,7 @@ impl<H: UiHost> UiTree<H> {
         while let Some(id) = current {
             let next = match snapshot {
                 Some(snapshot) => snapshot.parent.get(id).copied().flatten(),
-                None => self.nodes.get(id).and_then(|n| n.parent),
+                None => self.parent_in_layer_forest_via_children(id),
             };
 
             if let Some(n) = self.nodes.get_mut(id)
@@ -222,15 +222,15 @@ impl<H: UiHost> UiTree<H> {
 
     /// Repair invalidation propagation for newly mounted auto-sized cache roots.
     ///
-    /// During declarative mounting we may discover `ViewCache` roots before their parent pointers
-    /// are fully connected. When view caching is active, invalidation propagation can be
+    /// During declarative mounting we may discover `ViewCache` roots before retained parent
+    /// metadata is fully connected. When view caching is active, invalidation propagation can be
     /// truncated at cache roots, and a cache root that is only marked dirty on itself may never be
     /// laid out by its (still-clean) ancestors. This shows up as cache-root subtrees stuck at
     /// `Rect::default()` origins (e.g. scripted clicks using semantics bounds land in the wrong
     /// place).
     ///
-    /// Call this after `repair_parent_pointers_from_layer_roots()` and before `layout_all` so the
-    /// next layout pass walks far enough to place newly mounted cache-root subtrees.
+    /// Call this after the declarative child graph is mounted and before `layout_all` so the next
+    /// layout pass walks far enough to place newly mounted cache-root subtrees.
     pub(crate) fn propagate_auto_sized_view_cache_root_invalidations(&mut self) {
         if !self.view_cache_active() {
             return;

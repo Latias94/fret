@@ -1507,6 +1507,13 @@ impl<H: UiHost> UiTree<H> {
             }
             if let Some((root, root_bounds)) = self.viewport_root_bounds_for_node(node) {
                 let owner = self.viewport_root_registration_owner(root);
+                let registered_this_frame = self
+                    .current_frame_viewport_roots
+                    .iter()
+                    .any(|(current, _)| *current == root);
+                if !registered_this_frame && self.layout_performed_nodes.contains(&owner) {
+                    continue;
+                }
                 element_root_bounds_records.push((element, root, owner, root_bounds));
             }
         }
@@ -1528,7 +1535,7 @@ impl<H: UiHost> UiTree<H> {
                 || !self.node_exists(*node)
                 || !self.node_exists(owner)
                 || self
-                    .viewport_roots
+                    .current_frame_viewport_roots
                     .iter()
                     .any(|(current, _)| *current == root)
             {
@@ -1567,12 +1574,15 @@ impl<H: UiHost> UiTree<H> {
     fn viewport_root_bounds_for_node(&self, mut node: NodeId) -> Option<(NodeId, Rect)> {
         loop {
             if let Some((root, bounds)) = self
-                .viewport_roots()
+                .current_frame_viewport_roots
                 .iter()
                 .rev()
                 .find(|(root, _)| *root == node)
             {
                 return Some((*root, *bounds));
+            }
+            if let Some(bounds) = self.retained_viewport_root_bounds.get(&node).copied() {
+                return Some((node, bounds));
             }
 
             let parent = self.parent_in_layer_forest_via_children(node)?;
@@ -1669,6 +1679,7 @@ impl<H: UiHost> UiTree<H> {
     fn begin_layout_engine_frame(&mut self, app: &mut H) {
         self.layout_engine.begin_frame(app.frame_id());
         self.viewport_roots.clear();
+        self.current_frame_viewport_roots.clear();
         self.layout_performed_nodes.clear();
     }
 

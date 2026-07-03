@@ -157,6 +157,7 @@ impl<H: UiHost> UiTree<H> {
         let mut pending_layout_dirty_delta: i32 = 0;
         let mut agg_walk_len: u32 = 0;
         while let Some(id) = current {
+            let next_parent = self.parent_in_layer_forest_via_children(id);
             if invalidation_active && self.nodes.contains_key(id) {
                 self.record_invalidation_walk_node(source);
                 walked_nodes = walked_nodes.saturating_add(1);
@@ -168,8 +169,7 @@ impl<H: UiHost> UiTree<H> {
             let mut self_delta: i32 = 0;
             let applied_layout_dirty_delta: i32;
             let mut rebuild_subtree_layout_dirty: bool = false;
-            let next_parent = if let Some(n) = self.nodes.get_mut(id) {
-                let next_parent = n.parent;
+            if let Some(n) = self.nodes.get_mut(id) {
                 if invalidation_active {
                     let prev = n.invalidation;
                     let layout_before = n.invalidation.layout;
@@ -245,10 +245,9 @@ impl<H: UiHost> UiTree<H> {
                         );
                     }
                 }
-                next_parent
             } else {
                 break;
-            };
+            }
 
             if let Some((prev, next)) = counter_update {
                 self.update_invalidation_counters(prev, next);
@@ -319,9 +318,9 @@ impl<H: UiHost> UiTree<H> {
         // cache roots must also be invalidated for the same categories so they cannot replay stale
         // recorded ranges that include the old descendant output.
         if stop_at_view_cache && let Some(cache_root) = hit_cache_root {
-            let mut parent = self.nodes.get(cache_root).and_then(|n| n.parent);
+            let mut parent = self.parent_in_layer_forest_via_children(cache_root);
             while let Some(id) = parent {
-                let next_parent = self.nodes.get(id).and_then(|n| n.parent);
+                let next_parent = self.parent_in_layer_forest_via_children(id);
                 let mut mark_dirty = false;
                 let mut mark_dirty_for_layout_dependency_repair = false;
                 let mut counter_update: Option<(InvalidationFlags, InvalidationFlags)> = None;
@@ -427,6 +426,7 @@ impl<H: UiHost> UiTree<H> {
         let mut pending_layout_dirty_delta: i32 = 0;
         let mut agg_walk_len: u32 = 0;
         while let Some(id) = current {
+            let next_parent = self.parent_in_layer_forest_via_children(id);
             let already = visited.mask(id);
             if invalidation_active
                 && source != UiDebugInvalidationSource::Notify
@@ -449,8 +449,7 @@ impl<H: UiHost> UiTree<H> {
             let mut self_delta: i32 = 0;
             let applied_layout_dirty_delta: i32;
             let mut rebuild_subtree_layout_dirty: bool = false;
-            let next_parent = if let Some(n) = self.nodes.get_mut(id) {
-                let next_parent = n.parent;
+            if let Some(n) = self.nodes.get_mut(id) {
                 let mut counter_update: Option<(InvalidationFlags, InvalidationFlags)> = None;
                 if invalidation_active
                     && (source == UiDebugInvalidationSource::Notify || (already & needed) != needed)
@@ -527,10 +526,9 @@ impl<H: UiHost> UiTree<H> {
                 if let Some((prev, next)) = counter_update {
                     self.update_invalidation_counters(prev, next);
                 }
-                next_parent
             } else {
                 break;
-            };
+            }
 
             if self_delta > 0 {
                 self.debug_note_layout_dirty_source(id, source_root, source, detail);
@@ -597,9 +595,9 @@ impl<H: UiHost> UiTree<H> {
         // cache roots must also be invalidated for the same categories so they cannot replay stale
         // recorded ranges that include the old descendant output.
         if stop_at_view_cache && let Some(cache_root) = hit_cache_root {
-            let mut parent = self.nodes.get(cache_root).and_then(|n| n.parent);
+            let mut parent = self.parent_in_layer_forest_via_children(cache_root);
             while let Some(id) = parent {
-                let next_parent = self.nodes.get(id).and_then(|n| n.parent);
+                let next_parent = self.parent_in_layer_forest_via_children(id);
                 let already = visited.mask(id);
                 if self.nodes.get(id).is_some_and(|n| n.view_cache.enabled) {
                     let mut mark_dirty = false;

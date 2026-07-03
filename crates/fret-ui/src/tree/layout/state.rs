@@ -232,6 +232,8 @@ impl<H: UiHost> UiTree<H> {
 
     pub(crate) fn register_viewport_root(&mut self, root: NodeId, bounds: Rect) {
         self.viewport_roots.push((root, bounds));
+        self.current_frame_viewport_roots.push((root, bounds));
+        self.retained_viewport_root_bounds.insert(root, bounds);
     }
 
     #[allow(dead_code)]

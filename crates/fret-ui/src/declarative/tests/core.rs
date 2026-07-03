@@ -1592,6 +1592,7 @@ fn render_layer_interaction_root_parent_attach_commits_window_snapshot_after_roo
     );
 
     ui.set_children(base_root, vec![attached_root]);
+    ui.test_set_node_parent(attached_root, None);
     let text_input = ui.children(attached_root)[0];
     ui.set_focus(Some(text_input));
 

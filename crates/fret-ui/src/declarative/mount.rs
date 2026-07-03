@@ -363,7 +363,7 @@ fn finish_declarative_window_snapshot_commit_after_root_render<H: UiHost>(
     app: &mut H,
     root_node: NodeId,
 ) {
-    let root_attached = ui.node_layer(root_node).is_some() || ui.node_parent(root_node).is_some();
+    let root_attached = ui.node_is_attached_to_layer_tree(root_node);
 
     if ui.layout_active() {
         if root_attached {

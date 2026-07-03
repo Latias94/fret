@@ -10,17 +10,26 @@ related_plan: docs/plans/2026-07-03-001-refactor-ui-framework-phase3-retained-br
 
 - Goal: execute `docs/plans/2026-07-03-001-refactor-ui-framework-phase3-retained-bridge-deletion-plan.md` as a breaking Phase 3 retained-bridge deletion refactor.
 - Branch: `feat/ui-framework-phase2-refactor`.
-- Last verified: Phase 3 U3 bounds-tree topology slice passed focused bounds-tree/prepaint tests,
-  full `fret-ui` nextest, formatting, whitespace, layering, surface, consumption-profile,
-  execution-surface, ADR-number, workstream-catalog, and wiki-memory gates on 2026-07-03.
+- Last verified: Phase 3 U3 window snapshot/cache topology slice passed focused stale-parent
+  tests, `cargo check -p fret-ui`, non-stack full `fret-ui` nextest, formatting, whitespace,
+  layering, surface, consumption-profile, execution-surface, ADR-number, workstream-catalog, and
+  wiki-memory gates on 2026-07-03. Full `fret-ui` nextest still has a local long-running caveat for
+  the two `stack_safety` deep-tree tests.
 - Done: local ADR/workstream research, crate/perf snapshots, GPUI/Zed comparison, architecture boundary audit, framework consumer audit, performance audit, implementation-ready plan, U1 convergence contract freeze, U2 source-policy gate, U3 first slice (`workbench-lite` public scaffold), U4 identity/dirty graph observability slices, U5 `ViewId` / boundary frame-product ownership slices, U6 policy vocabulary demotion/cleanup slices, U7 renderer scene/upload observability plus retained scene chunk and guarded quad resident upload lanes, U8 text/glyph/wasm budget work through web runtime evidence, U9 modular consumption profiles and `AppUi` facade split, Phase 2 U9 VertexColor viewport partial upload, Phase 2 U10 workbench-lite public settings diagnostics, Phase 2 U11 public mutation/toast wrappers, workstream closeout audit, duplicate ADR ID `0324` resolution, and execution-surface allowlist alignment.
-- Latest done: Phase 3 U3 tenth slice migrated hit-test bounds-tree clip-stack reconstruction from
-  retained `Node.parent` to prepaint-recorded frame parent topology.
-- In progress: Phase 3 U3 remaining normal-query retained parent audit.
+- Latest done: Phase 3 U3 window snapshot/cache topology slice migrated pending window snapshot
+  attachment, selectable text autoscroll ancestry, view-cache invalidation walks, layout dirty
+  suppression, snapshot cache-root fallback, and viewport-root bounds preservation away from normal
+  retained-parent reads where covered.
+- In progress: Phase 3 U3 remaining normal-query retained parent audit, with the
+  [view boundary cache architecture research checkpoint](progress/2026-07-03-view-cache-architecture-research.md)
+  confirming that the direction is correct and the
+  [window snapshot/cache topology slice](progress/2026-07-03-phase3-u3-window-snapshot-cache-topology.md)
+  identifying dirty aggregation, mount repair, and cache-hit membership refresh as the next
+  retained bridges.
 - Blocked: none known after the boundary store migration.
 - Next action: finish U3 by classifying remaining retained parent reads; migrate any remaining
-  normal live-topology queries, and keep retained storage mutation plus U5 parent repair/dirty-count
-  work separate.
+  normal live-topology queries; then use U4/U5 to move cache-hit membership, GC liveness, and parent
+  repair off normal paths rather than preserving them as hidden shims.
 
 # Citations
 
@@ -37,6 +46,8 @@ related_plan: docs/plans/2026-07-03-001-refactor-ui-framework-phase3-retained-br
 - [Phase 3 U3 widget coordinate topology](progress/2026-07-03-phase3-u3-widget-coordinate-topology.md)
 - [Phase 3 U3 propagation depth topology](progress/2026-07-03-phase3-u3-propagation-depth-topology.md)
 - [Phase 3 U3 bounds-tree topology](progress/2026-07-03-phase3-u3-bounds-tree-topology.md)
+- [View boundary cache architecture research checkpoint](progress/2026-07-03-view-cache-architecture-research.md)
+- [Phase 3 U3 window snapshot and cache topology](progress/2026-07-03-phase3-u3-window-snapshot-cache-topology.md)
 - [Phase 1 convergence plan](../../plans/2026-06-30-001-refactor-ui-framework-architecture-plan.md)
 - [Subagent Findings](subagents/2026-06-30-ui-framework-architecture-audit-findings.md)
 - [U9 AppUi shell split audit](subagents/2026-07-02-u9-appui-shell-split-audit.md)

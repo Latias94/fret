@@ -219,3 +219,25 @@ fn detached_pending_barrier_relayout_is_pruned_before_layout() {
         "detached barrier roots must not keep running pending barrier relayouts"
     );
 }
+
+#[test]
+fn layout_dirty_suppression_uses_child_edges_under_stale_parent_pointers() {
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(AppWindowId::default());
+
+    let root = ui.create_node(TestStack);
+    let barrier = ui.create_node(TestStack);
+    let leaf = ui.create_node(TestStack);
+
+    ui.set_root(root);
+    ui.set_children(root, vec![barrier]);
+    ui.set_children_barrier(barrier, vec![leaf]);
+    ui.set_layout_dirty_children_suppressed(barrier, true);
+
+    ui.test_set_node_parent(leaf, None);
+
+    assert!(
+        ui.node_layout_dirty_suppressed_by_ancestor(leaf),
+        "layout dirty suppression must follow child-edge ancestors, not retained parent pointers"
+    );
+}

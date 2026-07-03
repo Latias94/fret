@@ -1588,7 +1588,7 @@ impl ElementHostWidget {
                     const MAX_STEP: Px = Px(16.0);
 
                     let mut node = cx.node;
-                    while let Some(parent) = cx.tree.node_parent(node) {
+                    while let Some(parent) = cx.tree.node_parent_in_layer_tree(node) {
                         node = parent;
                         let Some(record) = crate::declarative::frame::element_record_for_node(
                             cx.app, window, node,

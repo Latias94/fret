@@ -658,7 +658,7 @@ impl<H: UiHost> UiTree<H> {
             return false;
         }
 
-        let attached = self.node_layer(root).is_some() || self.node_parent(root).is_some();
+        let attached = self.node_is_attached_to_layer_tree(root);
         if !attached {
             return false;
         }
@@ -2036,7 +2036,7 @@ impl<H: UiHost> UiTree<H> {
             .pending_declarative_window_snapshot_roots
             .iter()
             .copied()
-            .filter(|&root| self.node_layer(root).is_some() || self.node_parent(root).is_some())
+            .filter(|&root| self.node_is_attached_to_layer_tree(root))
             .collect::<Vec<_>>();
         let had_attached_pending = !attached_pending.is_empty();
         for root in attached_pending {

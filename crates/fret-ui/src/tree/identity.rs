@@ -178,6 +178,10 @@ impl<H: UiHost> UiTree<H> {
         None
     }
 
+    pub(crate) fn node_parent_in_layer_tree(&self, node: NodeId) -> Option<NodeId> {
+        self.parent_in_layer_forest_via_children(node)
+    }
+
     fn stable_handle_matches_live_element(
         &self,
         element: GlobalElementId,

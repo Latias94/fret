@@ -103,12 +103,14 @@ fn selectable_text_drag_autoscrolls_scroll_container() {
         }),
     );
 
+    ui.test_set_node_parent(selectable_node, None);
+
     let mut scene = Scene::default();
     ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
 
     assert!(
         scroll_handle.offset().y.0 > 0.01,
-        "expected selectable drag to auto-scroll, got offset={:?}",
+        "expected selectable drag to auto-scroll through child-edge ancestors, got offset={:?}",
         scroll_handle.offset()
     );
 }

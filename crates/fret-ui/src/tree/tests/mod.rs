@@ -280,4 +280,5 @@ mod view_cache;
 mod window_command_action_availability_snapshot;
 mod window_input_arbitration_snapshot;
 mod window_input_context_snapshot;
+mod window_snapshot_topology;
 mod window_text_input_snapshot;
