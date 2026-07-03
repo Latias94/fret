@@ -1,14 +1,14 @@
 use std::sync::Arc;
 
-use fret::advanced::raw::AppUiRawActionNotifyExt as _;
 use fret::app::prelude::*;
+use fret::commands::CommandAvailability;
 use fret::router::{
     MemoryHistory, NavigationAction, PathPattern, RouteCodec, RouteHooks, RouteLocation, RouteNode,
     RoutePrefetchIntent, RouteSearchTable, RouteTree, Router, RouterOutlet, RouterUiStore,
-    SearchValidationMode, router_link_to_typed_route_with_test_id, router_link_with_test_id,
+    SearchValidationMode, bind_history_actions, router_link_to_typed_route_with_test_id,
+    router_link_with_test_id,
 };
 use fret::style::{LayoutRefinement, Space};
-use fret_ui::CommandAvailability;
 
 mod act {
     fret::actions!([
@@ -161,8 +161,7 @@ impl View for RouterBasicsView {
         let intents_model = self.store.intents_model();
         let intents_weak_for_clear = intents_model.downgrade();
 
-        cx.on_action_notify::<act::RouterBack>(self.store.back_on_action());
-        cx.on_action_notify::<act::RouterForward>(self.store.forward_on_action());
+        bind_history_actions(cx, &self.store, act::RouterBack, act::RouterForward);
         cx.actions().models::<act::ClearIntents>({
             let intents = intents_weak_for_clear;
             move |models| {
@@ -222,7 +221,7 @@ impl View for RouterBasicsView {
         let missing_label = ui::text("Missing").into_element_in(cx);
 
         let home_link = router_link_to_typed_route_with_test_id(
-            cx,
+            cx.elements(),
             &self.store,
             NavigationAction::Push,
             &APP_ROUTE_CODEC,
@@ -232,7 +231,7 @@ impl View for RouterBasicsView {
         );
 
         let settings_link = router_link_to_typed_route_with_test_id(
-            cx,
+            cx.elements(),
             &self.store,
             NavigationAction::Push,
             &APP_ROUTE_CODEC,
@@ -242,7 +241,7 @@ impl View for RouterBasicsView {
         );
 
         let user_link = router_link_to_typed_route_with_test_id(
-            cx,
+            cx.elements(),
             &self.store,
             NavigationAction::Push,
             &APP_ROUTE_CODEC,
@@ -257,7 +256,13 @@ impl View for RouterBasicsView {
             let link = self
                 .store
                 .link_to_location(NavigationAction::Push, RouteLocation::parse("/missing"));
-            router_link_with_test_id(cx, &self.store, link, TEST_ID_LINK_MISSING, [missing_label])
+            router_link_with_test_id(
+                cx.elements(),
+                &self.store,
+                link,
+                TEST_ID_LINK_MISSING,
+                [missing_label],
+            )
         };
 
         let nav = shadcn::card(|cx| {
@@ -286,7 +291,7 @@ impl View for RouterBasicsView {
         let outlet = RouterOutlet::new(snapshot_model.clone())
             .test_id(TEST_ID_OUTLET)
             .into_element_by_leaf(
-                cx,
+                cx.elements(),
                 |_cx, route, snap| {
                     let leaf = snap.leaf_match().expect("leaf match should exist");
                     let matched_path = leaf.matched_path.clone();

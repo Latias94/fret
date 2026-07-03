@@ -85,7 +85,7 @@
 //!   or explicit `handle.retry_last(...)` replay instead of teaching click-driven submit flows
 //!   through `query_async(...)`
 //! - enable `router` for `fret::router::{app::install, RouterUiStore, RouterOutlet, router_link, ...}`
-//!   plus `RouterUiStore::{back_on_action, forward_on_action}` history bindings
+//!   plus `fret::router::bind_history_actions(...)` history bindings
 //! - depend on `fret-docking` directly for editor-grade docking workflows instead of expecting a
 //!   `fret` root feature proxy
 //! - enable `imui` for `fret::imui::{prelude::*, kit, editor, docking}` when the app wants an
@@ -740,6 +740,27 @@ pub mod router {
         router_link_to_with_test_id, router_link_with_props, router_link_with_test_id,
         router_outlet, router_outlet_with_test_id,
     };
+
+    /// Bind router back/forward handlers to typed app actions.
+    ///
+    /// This keeps default app code on the router facade instead of importing the raw
+    /// `AppUi::on_action_notify(...)` bridge.
+    pub fn bind_history_actions<Back, Forward, R, H>(
+        cx: &mut crate::AppUi<'_, '_>,
+        store: &RouterUiStore<R, H>,
+        _back: Back,
+        _forward: Forward,
+    ) where
+        Back: crate::TypedAction,
+        Forward: crate::TypedAction,
+        R: Clone + Eq + std::hash::Hash + 'static,
+        H: fret_router::HistoryAdapter + 'static,
+    {
+        use crate::view::AppUiRawActionNotifyExt as _;
+
+        cx.on_action_notify::<Back>(store.back_on_action());
+        cx.on_action_notify::<Forward>(store.forward_on_action());
+    }
 
     /// Explicit router app-install helpers for the default app lane.
     pub mod app {
@@ -3076,18 +3097,18 @@ mod authoring_surface_policy_tests {
     #[test]
     fn readme_and_rustdoc_expose_router_as_explicit_optional_surface() {
         assert!(CRATE_README.contains("- `router`: enable the explicit app-level router surface"));
-        assert!(
-            CRATE_README
-                .contains("`fret::router::{app::install, RouterUiStore, RouterOutlet, ...}`")
-        );
+        assert!(CRATE_README.contains(
+            "`fret::router::{app::install, bind_history_actions, RouterUiStore, RouterOutlet, ...}`"
+        ));
 
         let rustdoc = crate_rustdoc();
         let public_surface = crate_public_surface_source();
         assert!(rustdoc.contains(
             "`fret::router::{app::install, RouterUiStore, RouterOutlet, router_link, ...}`"
         ));
-        assert!(rustdoc.contains("`RouterUiStore::{back_on_action, forward_on_action}`"));
+        assert!(rustdoc.contains("`fret::router::bind_history_actions(...)`"));
         assert!(public_surface.contains("pub mod router {"));
+        assert!(public_surface.contains("pub fn bind_history_actions<Back, Forward, R, H>("));
         assert!(public_surface.contains("pub mod app {"));
         assert!(public_surface.contains("pub fn install(app: &mut crate::app::App) {"));
         assert!(!public_surface.contains("register_router_commands"));
@@ -3611,12 +3632,18 @@ mod authoring_surface_policy_tests {
     fn usage_docs_expose_router_as_explicit_extension_surface() {
         assert!(CRATE_USAGE_GUIDE.contains("enable `fret`'s `router` feature"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::router::*`"));
-        assert!(CRATE_USAGE_GUIDE.contains("`back_on_action()`"));
-        assert!(CRATE_USAGE_GUIDE.contains("`forward_on_action()`"));
         assert!(
-            CRATE_USAGE_GUIDE.contains("`use fret::advanced::raw::AppUiRawActionNotifyExt as _;`")
+            CRATE_USAGE_GUIDE.contains(
+                "`bind_history_actions(cx, &store, act::RouterBack, act::RouterForward)`"
+            )
         );
-        assert!(CRATE_USAGE_GUIDE.contains("`cx.on_action_notify::<...>(store.back_on_action())`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`bind_history_actions(...)`"));
+        assert!(
+            !CRATE_USAGE_GUIDE.contains("`use fret::advanced::raw::AppUiRawActionNotifyExt as _;`")
+        );
+        assert!(
+            !CRATE_USAGE_GUIDE.contains("`cx.on_action_notify::<...>(store.back_on_action())`")
+        );
         assert!(CRATE_USAGE_GUIDE.contains("second default app runtime"));
     }
 

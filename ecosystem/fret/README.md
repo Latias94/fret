@@ -260,7 +260,7 @@ The same ordered builder surface now also includes compile-time/static entries t
   `cx.data().query_snapshot_entry(...)` for explicit app-lane query maintenance/diagnostics), plus
   the explicit `fret::selector::*` / `fret::query::*`
   secondary lanes when app code needs state helper nouns.
-- `router`: enable the explicit app-level router surface (`fret::router::{app::install, RouterUiStore, RouterOutlet, ...}`).
+- `router`: enable the explicit app-level router surface (`fret::router::{app::install, bind_history_actions, RouterUiStore, RouterOutlet, ...}`).
 - `imui`: enable the explicit immediate-mode authoring lane
   (`fret::imui::{prelude::*, kit, editor, docking}`) for imgui-style control flow while keeping
   `fret::app::prelude::*` declarative-first.
@@ -339,10 +339,10 @@ now live explicitly under `fret::advanced` instead of the default inherent build
 
 Optional ecosystems also stay explicit. For example, the router integration lives under
 `fret::router`; wire it with `FretApp::setup(fret::router::app::install)` instead of expecting it
-to appear in `fret::app::prelude::*`. Docking and editor theming similarly stay on their owning
-crates (`fret-docking`, `fret-ui-editor`) so advanced apps opt into those ecosystems explicitly
-instead of learning extra `fret` root feature proxies. The default design-system surface is
-similarly curated under
+to appear in `fret::app::prelude::*`, and use `fret::router::bind_history_actions(...)` for
+back/forward action bindings. Docking and editor theming similarly stay on their owning crates
+(`fret-docking`, `fret-ui-editor`) so advanced apps opt into those ecosystems explicitly instead of
+learning extra `fret` root feature proxies. The default design-system surface is similarly curated under
 `fret::shadcn`: keep component names at `shadcn::Button` / `shadcn::Card`, use
 `shadcn::app::install(...)` for app wiring plus environment-aware host-theme syncing,
 `shadcn::themes::apply_shadcn_new_york(...)` for explicit one-shot/fixed presets, and

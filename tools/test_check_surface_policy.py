@@ -616,6 +616,7 @@ class SurfacePolicyTests(unittest.TestCase):
         migrated = {
             "apps/fret-cookbook/examples/commands_keymap_basics.rs",
             "apps/fret-cookbook/examples/form_basics.rs",
+            "apps/fret-cookbook/examples/router_basics.rs",
             "apps/fret-cookbook/examples/text_input_basics.rs",
         }
         default_paths = {spec.path for spec in POLICY.DEFAULT_AUTHORING_SURFACES}

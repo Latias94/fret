@@ -976,17 +976,15 @@ Notes:
 
 - On the default app path, enable `fret`'s `router` feature and prefer the explicit
   `fret::router::*` seam (`fret::router::app::install(...)`, `RouterUiStore`, `RouterOutlet`,
-  link/history helpers).
+  link helpers, and `bind_history_actions(...)`).
 - When depending on `fret-router-ui` directly, keep the same shape and use
   `fret_router_ui::app::install(...)` for command registration instead of inventing a parallel
   root-level app helper.
 - `fret-router-ui` provides `RouterUiStore` (router + snapshot model), pressable-based link/outlet
-  helpers, and history action helpers (`back_on_action()`, `forward_on_action()`,
-  `navigate_history_on_action(...)`).
-- Prefer wiring router history actions through
-  `use fret::advanced::raw::AppUiRawActionNotifyExt as _;` plus
-  `cx.on_action_notify::<...>(store.back_on_action())` / `store.forward_on_action()` instead of
-  hand-rolling window/host availability glue in app code.
+  helpers, and low-level history action handlers for advanced adopters.
+- On the `fret` app facade, wire router history actions through
+  `bind_history_actions(cx, &store, act::RouterBack, act::RouterForward)` instead of importing raw
+  `AppUi::on_action_notify(...)` hooks in app code.
 - Keep routing adoption explicit at the app boundary (`FretApp::setup(...)`, app-owned models, or
   explicit view state) rather than treating router crates as a second default app runtime.
 - Prefer keeping policy in apps (what pages exist, what prefetch means, what “not found” looks like).

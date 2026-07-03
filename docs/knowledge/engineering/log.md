@@ -524,3 +524,10 @@ timestamp: 2026-06-30
   `fret` facade tests, `fret-cookbook --all-targets`, source-policy tests/gate,
   consumption-profile, execution-surface, layering, formatting, engineering-memory, and whitespace
   gates.
+- 2026-07-03: Phase 3 U13 router facade cookbook migration adds
+  `fret::router::bind_history_actions(...)`, removes the raw action-notify bridge from
+  `router_basics.rs`, fixes the router example under `cookbook-router`, and moves it to default
+  clean source-policy coverage. Verification passed for router feature/example compile,
+  `fret-cookbook --all-targets`, focused `fret` facade tests, source-policy tests/gate,
+  consumption-profile, execution-surface, layering, formatting, engineering-memory, and whitespace
+  gates.

@@ -132,6 +132,11 @@ DEFAULT_AUTHORING_SURFACES: tuple[SurfacePath, ...] = (
         "default text-input cookbook should stay on app-facing command and semantics helpers",
     ),
     SurfacePath(
+        "apps/fret-cookbook/examples/router_basics.rs",
+        "default_app_clean",
+        "default router cookbook should stay on the explicit fret router facade",
+    ),
+    SurfacePath(
         "apps/fret-cookbook/examples/toast_basics.rs",
         "default_app_clean",
         "default toast cookbook should stay on app-facing effect helpers",
@@ -554,11 +559,6 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
         "imui_plot_basics.rs",
         "IMUI plot controls still expose raw runtime and low-level UI seams",
         ("fret_core", "fret_runtime", "fret_ui"),
-    ),
-    _cookbook_advanced_surface(
-        "router_basics.rs",
-        "router action binding still uses a raw action notify hook",
-        ("fret::advanced", "fret_ui"),
     ),
     _cookbook_advanced_surface(
         "undo_basics.rs",
