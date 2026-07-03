@@ -261,3 +261,86 @@ fn shortcuts_use_focus_barrier_key_context_scope_when_input_barrier_is_off() {
         "dispatch-time key-context publication must stay aligned with the focus barrier scope when the shortcut path returns early"
     );
 }
+
+#[test]
+fn shortcut_key_context_stack_uses_child_edges_for_focused_barrier_descendant() {
+    let mut app = crate::test_host::TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+
+    let window = AppWindowId::default();
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let base_root = ui.create_node(TestStack);
+    ui.set_root(base_root);
+
+    let overlay_root = ui.create_node(TestStack);
+    let overlay_leaf = ui.create_node(TestStack);
+    let overlay_layer = ui.push_overlay_root_with_options(
+        overlay_root,
+        crate::OverlayRootOptions {
+            blocks_underlay_input: false,
+            hit_testable: false,
+        },
+    );
+    ui.set_layer_blocks_underlay_focus(overlay_layer, true);
+    ui.set_children(overlay_root, vec![overlay_leaf]);
+    ui.set_focus(Some(overlay_leaf));
+
+    crate::declarative::frame::with_window_frame_mut(&mut app, window, |window_frame| {
+        window_frame.instances.insert(
+            base_root,
+            crate::declarative::frame::ElementRecord {
+                element: crate::elements::GlobalElementId(1),
+                instance: crate::declarative::frame::ElementInstance::Stack(
+                    crate::element::StackProps::default(),
+                ),
+                inherited_foreground: None,
+                inherited_text_style: None,
+                semantics_decoration: None,
+                key_context: Some(Arc::<str>::from("underlay")),
+                layout_direction: fret_core::LayoutDirection::default(),
+            },
+        );
+        window_frame.instances.insert(
+            overlay_root,
+            crate::declarative::frame::ElementRecord {
+                element: crate::elements::GlobalElementId(2),
+                instance: crate::declarative::frame::ElementInstance::Stack(
+                    crate::element::StackProps::default(),
+                ),
+                inherited_foreground: None,
+                inherited_text_style: None,
+                semantics_decoration: None,
+                key_context: Some(Arc::<str>::from("overlay")),
+                layout_direction: fret_core::LayoutDirection::default(),
+            },
+        );
+        window_frame.instances.insert(
+            overlay_leaf,
+            crate::declarative::frame::ElementRecord {
+                element: crate::elements::GlobalElementId(3),
+                instance: crate::declarative::frame::ElementInstance::Stack(
+                    crate::element::StackProps::default(),
+                ),
+                inherited_foreground: None,
+                inherited_text_style: None,
+                semantics_decoration: None,
+                key_context: Some(Arc::<str>::from("overlay-leaf")),
+                layout_direction: fret_core::LayoutDirection::default(),
+            },
+        );
+    });
+
+    ui.test_set_node_parent(overlay_leaf, Some(base_root));
+
+    let key_contexts = ui.shortcut_key_context_stack(&mut app, Some(overlay_root));
+    assert_eq!(
+        key_contexts,
+        vec![
+            Arc::<str>::from("overlay-leaf"),
+            Arc::<str>::from("overlay")
+        ],
+        "focused overlay descendant contexts must follow child-edge ancestry under a focus barrier"
+    );
+}

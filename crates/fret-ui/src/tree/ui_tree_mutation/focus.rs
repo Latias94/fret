@@ -148,7 +148,7 @@ impl<H: UiHost> UiTree<H> {
                 return Some(id);
             }
 
-            node = self.nodes.get(id).and_then(|n| n.parent);
+            node = self.parent_in_layer_forest_via_children(id);
         }
         None
     }

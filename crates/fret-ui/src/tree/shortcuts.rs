@@ -56,7 +56,7 @@ impl<H: UiHost> UiTree<H> {
             if id == target {
                 return true;
             }
-            node = self.nodes.get(id).and_then(|n| n.parent);
+            node = self.parent_in_layer_forest_via_children(id);
         }
         false
     }
@@ -100,7 +100,7 @@ impl<H: UiHost> UiTree<H> {
             if Some(node) == barrier_root {
                 break;
             }
-            let Some(parent) = self.nodes.get(node).and_then(|n| n.parent) else {
+            let Some(parent) = self.parent_in_layer_forest_via_children(node) else {
                 break;
             };
             node = parent;

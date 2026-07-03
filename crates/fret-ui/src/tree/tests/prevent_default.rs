@@ -57,6 +57,57 @@ fn focus_on_pointer_down_defaults_to_first_focusable_ancestor() {
 }
 
 #[test]
+fn default_focus_ancestor_uses_child_edges_under_stale_parent_pointers() {
+    struct FocusableStack;
+
+    impl<H: UiHost> Widget<H> for FocusableStack {
+        fn is_focusable(&self) -> bool {
+            true
+        }
+
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            for &child in cx.children {
+                let _ = cx.layout_in(child, cx.bounds);
+            }
+            cx.available
+        }
+    }
+
+    struct PassiveLeaf;
+
+    impl<H: UiHost> Widget<H> for PassiveLeaf {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            cx.available
+        }
+    }
+
+    let window = AppWindowId::default();
+
+    let mut app = crate::test_host::TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let root = ui.create_node(TestStack);
+    let actual_focusable = ui.create_node(FocusableStack);
+    let stale_focusable = ui.create_node(FocusableStack);
+    let leaf = ui.create_node(PassiveLeaf);
+
+    ui.set_root(root);
+    ui.set_children(root, vec![actual_focusable, stale_focusable]);
+    ui.set_children(actual_focusable, vec![leaf]);
+
+    ui.test_set_node_parent(leaf, Some(stale_focusable));
+
+    assert_eq!(
+        ui.first_focusable_ancestor_including_declarative(&mut app, window, leaf),
+        Some(actual_focusable),
+        "default focus ancestry must follow current child-edge topology, not stale retained parents"
+    );
+}
+
+#[test]
 fn pointer_driven_focus_requests_do_not_scroll_into_view() {
     struct SpyScroll {
         scroll_calls: Arc<AtomicUsize>,

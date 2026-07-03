@@ -297,3 +297,9 @@ timestamp: 2026-06-30
   overclaiming every strong DoD deletion. Retained follow-ons include parent-pointer repair,
   retained-tree liveness, flat launch input, full text shaping closure, unsupported non-quad upload
   streams, source-policy quarantine shrink, and historical observation-collapse perf-key retirement.
+- 2026-07-03: Phase 3 U3 input ancestry topology slice migrates shortcut key-context ancestry,
+  focus barrier containment, and pointer-down default-focus ancestor resolution from retained
+  `Node.parent` to layer-forest child-edge topology. Red/green proof: the new stale-parent shortcut
+  and default-focus tests failed on the retained-parent implementation and pass after the migration.
+  Verification passed for focused input tests, `cargo check -p fret-ui`, full `cargo nextest run -p
+  fret-ui --no-fail-fast` (1191 passed), formatting, whitespace, layering, and surface-policy gates.
