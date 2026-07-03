@@ -106,7 +106,7 @@ required cookbook features for known Lab examples and print what it enabled.
     - `cargo run -p fret-cookbook --features cookbook-query --example query_basics`
   - Router basics:
     - `cargo run -p fret-cookbook --features cookbook-router --example router_basics`
-  - IMUI + GenUI interop:
+  - IMUI basics and editor-grade follow-ups:
     - `cargo run -p fret-cookbook --features cookbook-imui --example imui_action_basics`
     - `cargo run -p fret-cookbook --features cookbook-imui --example imui_debug_draw_basics`
     - `cargo run -p fret-cookbook --features cookbook-imui --example imui_editor_controls_basics`

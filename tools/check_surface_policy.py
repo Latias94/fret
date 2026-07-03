@@ -107,6 +107,11 @@ DEFAULT_AUTHORING_SURFACES: tuple[SurfacePath, ...] = (
         "default action cookbook should stay on app-facing typed action helpers",
     ),
     SurfacePath(
+        "apps/fret-cookbook/examples/imui_action_basics.rs",
+        "default_app_clean",
+        "default IMUI action cookbook should stay on app-facing local-state and imui facades",
+    ),
+    SurfacePath(
         "apps/fret-cookbook/examples/theme_switching_basics.rs",
         "default_app_clean",
         "default cookbook theme controls should stay on app-facing state helpers",
@@ -554,11 +559,6 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
         "image_asset_cache_basics.rs",
         "image asset cache stress still owns a manual driver/window setup path",
         ("fret::advanced", "fret_app", "fret_core", "fret_launch", "FnDriver"),
-    ),
-    _cookbook_advanced_surface(
-        "imui_action_basics.rs",
-        "IMUI action examples still use raw runtime and low-level UI seams",
-        ("fret_runtime", "fret_ui"),
     ),
     _cookbook_advanced_surface(
         "imui_editor_controls_basics.rs",

@@ -1,20 +1,14 @@
 use std::sync::Arc;
 
+use fret::app::LocalState;
 use fret::app::prelude::*;
+use fret::commands::{CommandId, CommandMeta, CommandScope};
 use fret::imui::{
     kit::{ButtonOptions, InputTextOptions, SameLineOptions},
     prelude::*,
 };
 use fret::semantics::SemanticsRole;
 use fret::style::Space;
-use fret_genui_core::catalog::CatalogActionV1;
-use fret_genui_core::render::{GenUiRuntime, RenderLimits, render_spec};
-use fret_genui_core::spec::SpecV1;
-use fret_genui_core::validate::ValidationMode;
-use fret_genui_shadcn::catalog::shadcn_catalog_v1;
-use fret_genui_shadcn::resolver::ShadcnResolver;
-use fret_runtime::{CommandId, CommandMeta, CommandScope, Model};
-use serde_json::{Value, json};
 
 mod act {
     fret::actions!([Inc = "cookbook.imui_action_basics.inc.v1"]);
@@ -33,81 +27,24 @@ const TEST_ID_INPUT_FILTER: &str = "cookbook.imui_action_basics.input.filter";
 const TEST_ID_INPUT_SNAPSHOT: &str = "cookbook.imui_action_basics.input.snapshot";
 
 struct ImUiActionBasicsView {
-    genui_state: Model<Value>,
-    genui_spec: SpecV1,
-    genui_catalog: Arc<fret_genui_core::catalog::CatalogV1>,
-    filter_text: Model<String>,
-    snapshot_text: Model<String>,
+    filter_text: LocalState<String>,
+    snapshot_text: LocalState<String>,
 }
 
 impl View for ImUiActionBasicsView {
     fn init(app: &mut App, _window: WindowId) -> Self {
-        let genui_state = app.models_mut().insert(json!({}));
-        let filter_text = app.models_mut().insert(String::from("Actions"));
-        let snapshot_text = app
-            .models_mut()
-            .insert(String::from("Read-only action snapshot"));
-
-        let genui_spec: SpecV1 = serde_json::from_value(json!({
-            "schema_version": 1,
-            "root": "cookbook.imui_action_basics.genui.root",
-            "elements": {
-                "cookbook.imui_action_basics.genui.root": {
-                    "type": "VStack",
-                    "props": { "gap": "N2" },
-                    "children": [
-                        "cookbook.imui_action_basics.genui.menu",
-                        "cookbook.imui_action_basics.genui.button.inc"
-                    ]
-                },
-                "cookbook.imui_action_basics.genui.menu": {
-                    "type": "DropdownMenu",
-                    "props": {
-                        "trigger": "Open (genui menu)",
-                        "items": [
-                            {
-                                "type": "item",
-                                "label": "Increment (genui menu)",
-                                "action": "cookbook.imui_action_basics.inc.v1",
-                                "testId": "cookbook.imui_action_basics.genui.menu.inc"
-                            }
-                        ]
-                    },
-                    "children": []
-                },
-                "cookbook.imui_action_basics.genui.button.inc": {
-                    "type": "Button",
-                    "props": { "label": "Increment (genui)" },
-                    "on": { "press": { "action": "cookbook.imui_action_basics.inc.v1" } },
-                    "children": []
-                }
-            }
-        }))
-        .expect("hardcoded spec must be valid");
-
-        let mut catalog = shadcn_catalog_v1();
-        catalog.actions.insert(
-            act::Inc::ID_STR.to_string(),
-            CatalogActionV1 {
-                description: Some(
-                    "Dispatch a stable ActionId via the host command pipeline.".to_string(),
-                ),
-                params: Default::default(),
-            },
-        );
+        let filter_text = app.local_state(String::from("Actions"));
+        let snapshot_text = app.local_state(String::from("Read-only action snapshot"));
 
         app.commands_mut().register(
             CommandId::new(act::Inc::ID_STR),
             CommandMeta::new("Increment (action-first)")
                 .with_category("Cookbook")
-                .with_keywords(["action-first", "view runtime", "imui", "genui", "increment"])
+                .with_keywords(["action-first", "view runtime", "imui", "increment"])
                 .with_scope(CommandScope::Widget),
         );
 
         Self {
-            genui_state,
-            genui_spec,
-            genui_catalog: Arc::new(catalog),
             filter_text,
             snapshot_text,
         }
@@ -128,32 +65,8 @@ impl View for ImUiActionBasicsView {
             });
 
         ui::v_flex(|cx| {
-            let genui_panel = cx.column(fret_ui::element::ColumnProps::default(), |cx| {
-                let runtime = GenUiRuntime {
-                    state: self.genui_state.clone(),
-                    action_queue: None,
-                    auto_apply_standard_actions: false,
-                    limits: RenderLimits::default(),
-                    catalog: Some(self.genui_catalog.clone()),
-                    catalog_validation: ValidationMode::Strict,
-                };
-                let mut resolver = ShadcnResolver::new();
-                match render_spec(cx, &self.genui_spec, &runtime, &mut resolver) {
-                    Ok(out) => {
-                        if !out.issues.is_empty() {
-                            vec![cx.text(format!("GenUI issues: {:?}", out.issues))]
-                        } else {
-                            out.roots
-                        }
-                    }
-                    Err(err) => vec![cx.text(format!("GenUI render error: {err}"))],
-                }
-            });
-
-            let imui_panel = cx.column(fret_ui::element::ColumnProps::default(), |cx| {
-                // This panel already sits inside an explicit Column host, so use the raw entrypoint
-                // instead of asking `imui(...)` to add another stacked host.
-                imui_raw(cx, |ui| {
+            let imui_panel = ui::v_flex(|cx| {
+                imui_in(cx, |ui| {
                     ui.text("IMUI");
                     ui.action_button_with_options(
                         Arc::from("Increment (imui)"),
@@ -163,7 +76,7 @@ impl View for ImUiActionBasicsView {
                             ..Default::default()
                         },
                     );
-                    let _ = ui.input_text_model_with_options(
+                    let _ = ui.input_text_local_with_options(
                         &self.filter_text,
                         InputTextOptions {
                             select_all_on_focus: true,
@@ -172,7 +85,7 @@ impl View for ImUiActionBasicsView {
                             ..Default::default()
                         },
                     );
-                    let _ = ui.input_text_model_with_options(
+                    let _ = ui.input_text_local_with_options(
                         &self.snapshot_text,
                         InputTextOptions {
                             read_only: true,
@@ -208,14 +121,13 @@ impl View for ImUiActionBasicsView {
 
             ui::children![
                 cx;
-                shadcn::Label::new("Cross-frontend action dispatch"),
+                shadcn::Label::new("Action dispatch"),
                 cx.text(format!("Count: {count_value}"))
                     .test_id(TEST_ID_COUNT),
                 shadcn::Button::new("Increment (declarative)")
                     .action(act::Inc)
                     .a11y_role(SemanticsRole::Button)
                     .test_id(TEST_ID_BUTTON_DECL),
-                genui_panel,
                 imui_panel,
             ]
         })

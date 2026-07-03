@@ -665,6 +665,7 @@ class SurfacePolicyTests(unittest.TestCase):
         migrated = {
             "apps/fret-cookbook/examples/commands_keymap_basics.rs",
             "apps/fret-cookbook/examples/form_basics.rs",
+            "apps/fret-cookbook/examples/imui_action_basics.rs",
             "apps/fret-cookbook/examples/router_basics.rs",
             "apps/fret-cookbook/examples/text_input_basics.rs",
             "apps/fret-cookbook/examples/undo_basics.rs",

@@ -256,6 +256,38 @@ pub mod imui {
     };
     pub use fret_ui_kit::imui::{ImUiFacade, ResponseExt, UiWriterImUiFacadeExt, UiWriterUiKitExt};
 
+    /// App-facing IMUI text helpers for view-local state.
+    ///
+    /// These keep cookbook/default IMUI examples on `LocalState<String>` without exposing the raw
+    /// `Model<String>` bridge at the call site.
+    pub trait AppImUiLocalTextExt<H: fret_ui::UiHost>: UiWriterImUiFacadeExt<H> {
+        fn input_text_local(&mut self, local: &crate::view::LocalState<String>) -> ResponseExt {
+            self.input_text_local_with_options(
+                local,
+                fret_ui_kit::imui::InputTextOptions::default(),
+            )
+        }
+
+        fn input_text_local_with_options(
+            &mut self,
+            local: &crate::view::LocalState<String>,
+            options: fret_ui_kit::imui::InputTextOptions,
+        ) -> ResponseExt {
+            <Self as UiWriterImUiFacadeExt<H>>::input_text_model_with_options(
+                self,
+                crate::view::LocalStateRawModelExt::model(local),
+                options,
+            )
+        }
+    }
+
+    impl<H, W> AppImUiLocalTextExt<H> for W
+    where
+        H: fret_ui::UiHost,
+        W: UiWriterImUiFacadeExt<H> + ?Sized,
+    {
+    }
+
     /// Policy-heavy immediate-mode widgets, responses, and option types from `fret-ui-kit`.
     pub mod kit {
         pub use fret_ui_kit::imui::*;
@@ -280,8 +312,9 @@ pub mod imui {
     /// Common imports for immediate-mode authoring on the explicit `fret::imui` lane.
     pub mod prelude {
         pub use crate::imui::{
-            ImUi, ImUiFacade, Response, ResponseExt, UiWriterImUiFacadeExt, UiWriterUiKitExt,
-            docking, editor, imui, imui_build, imui_build_in, imui_in, imui_raw, imui_raw_in, kit,
+            AppImUiLocalTextExt as _, ImUi, ImUiFacade, Response, ResponseExt,
+            UiWriterImUiFacadeExt, UiWriterUiKitExt, docking, editor, imui, imui_build,
+            imui_build_in, imui_in, imui_raw, imui_raw_in, kit,
         };
         pub use fret_imui::prelude::*;
     }
@@ -4505,6 +4538,8 @@ mod authoring_surface_policy_tests {
         assert!(root_header.contains("pub mod imui {"));
         assert!(root_header.contains("pub use fret_imui::{"));
         assert!(root_header.contains("pub use fret_ui_kit::imui::{"));
+        assert!(public_surface.contains("pub trait AppImUiLocalTextExt"));
+        assert!(public_surface.contains("fn input_text_local_with_options("));
         assert!(public_surface.contains("pub mod kit {"));
         assert!(public_surface.contains("pub use fret_ui_kit::imui::*;"));
         assert!(public_surface.contains("pub mod editor {"));
@@ -4517,8 +4552,9 @@ mod authoring_surface_policy_tests {
         assert!(public_surface.contains("pub use fret_docking::imui::*;"));
         assert!(public_surface.contains("pub mod prelude {"));
         assert!(public_surface.contains("pub use fret_imui::prelude::*;"));
-        assert!(public_surface.contains("docking, editor, imui, imui_build, imui_build_in,"));
-        assert!(public_surface.contains("imui_in, imui_raw, imui_raw_in,"));
+        assert!(public_surface.contains("AppImUiLocalTextExt as _,"));
+        assert!(public_surface.contains("docking, editor, imui, imui_build,"));
+        assert!(public_surface.contains("imui_build_in, imui_in, imui_raw, imui_raw_in,"));
         assert!(public_surface.contains("kit,"));
     }
 

@@ -538,7 +538,13 @@ mod authoring_surface_policy_tests {
         assert!(!ROUTER_EXAMPLE.contains(".into_element_by_leaf_ui("));
         assert!(!ROUTER_EXAMPLE.contains("router_outlet_ui("));
 
-        assert!(DATA_TABLE_EXAMPLE.contains("use fret_runtime::Model;"));
+        assert!(DATA_TABLE_EXAMPLE.contains("use fret::app::LocalState;"));
+        assert!(
+            DATA_TABLE_EXAMPLE.contains("table_output: LocalState<shadcn::DataTableViewOutput>")
+        );
+        assert!(DATA_TABLE_EXAMPLE.contains(".output_model(self.table_output.clone())"));
+        assert!(!DATA_TABLE_EXAMPLE.contains("use fret_runtime::Model;"));
+        assert!(!DATA_TABLE_EXAMPLE.contains("table_output: Model<"));
         assert!(DATA_TABLE_EXAMPLE.contains("fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui"));
 
         assert!(UNDO_EXAMPLE.contains("use fret::app::{LocalState, LocalStateTxn};"));
@@ -586,8 +592,12 @@ mod authoring_surface_policy_tests {
 
         assert!(
             IMUI_ACTION_EXAMPLE
-                .contains("use fret_runtime::{CommandId, CommandMeta, CommandScope, Model};")
+                .contains("use fret::commands::{CommandId, CommandMeta, CommandScope};")
         );
+        assert!(IMUI_ACTION_EXAMPLE.contains("use fret::app::LocalState;"));
+        assert!(!IMUI_ACTION_EXAMPLE.contains("use fret_runtime::"));
+        assert!(!IMUI_ACTION_EXAMPLE.contains("Model<"));
+        assert!(!IMUI_ACTION_EXAMPLE.contains("fret_ui::element::ColumnProps"));
         assert!(IMUI_ACTION_EXAMPLE.contains(".local(&count_state)"));
         assert!(IMUI_ACTION_EXAMPLE.contains(".update::<act::Inc>(|v| {"));
         assert!(IMUI_ACTION_EXAMPLE.contains("cx.state().local_init(|| 0u32)"));
@@ -817,15 +827,22 @@ mod authoring_surface_policy_tests {
             "imui_action_basics",
             IMUI_ACTION_EXAMPLE,
             &[
+                "use fret::app::LocalState;",
+                "use fret::app::prelude::*;",
+                "use fret::commands::{CommandId, CommandMeta, CommandScope};",
                 "use fret::imui::{ kit::{ButtonOptions, InputTextOptions, SameLineOptions}, prelude::*, };",
+                "filter_text: LocalState<String>",
+                "snapshot_text: LocalState<String>",
+                "let filter_text = app.local_state(String::from(\"Actions\"));",
+                "let snapshot_text = app.local_state(String::from(\"Read-only action snapshot\"));",
                 "fret::payload_actions!([SetCount(u32) = \"cookbook.imui_action_basics.set_count.v1\"]);",
                 ".payload_update_if::<act::SetCount>(|value, preset| {",
-                "imui_raw(cx, |ui| {",
+                "imui_in(cx, |ui| {",
                 "ui.action_button_with_options(",
                 "ui.action_payload_button_with_options(",
                 "ui.same_line_with_options(",
                 "SameLineOptions {",
-                "ui.input_text_model_with_options(",
+                "ui.input_text_local_with_options(",
                 "select_all_on_focus: true,",
                 "read_only: true,",
                 "cookbook.imui_action_basics.input.filter",
@@ -834,6 +851,19 @@ mod authoring_surface_policy_tests {
                 "cookbook.imui_action_basics.button.imui.payload.5",
             ],
             &[
+                "use fret_runtime::",
+                "Model<",
+                "app.models_mut().insert(",
+                "fret_genui_",
+                "GenUiRuntime",
+                "render_spec(",
+                "ShadcnResolver",
+                "SpecV1",
+                "ValidationMode",
+                "CatalogActionV1",
+                "fret_ui::element::ColumnProps",
+                "imui_raw(cx, |ui| {",
+                "ui.input_text_model_with_options(",
                 "use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;",
                 "fret_imui::imui_raw(cx, |ui| {",
             ],

@@ -561,3 +561,14 @@ timestamp: 2026-06-30
   `fret_runtime::`. Verification passed for focused data-table cookbook/table/shadcn/fretboard
   tests, `fret-cookbook --all-targets`, source-policy tests/gate, consumption-profile,
   execution-surface, layering, formatting, and whitespace.
+- 2026-07-03: Phase 3 U13 IMUI action local-state migration adds
+  `fret::imui::AppImUiLocalTextExt`, deletes the mixed GenUI panel from
+  `imui_action_basics.rs`, migrates the example to explicit `fret::commands` +
+  `LocalState<String>`, replaces raw `ColumnProps` / `imui_raw(...)` with an app-facing
+  `ui::v_flex(|cx| imui_in(cx, ...))` shape, and moves the example to default clean
+  source-policy coverage. Readonly IMUI facade audits also established the next slices:
+  editor-control `LocalState<T>` adapters plus app-facing color, debug-draw host cleanup, and a
+  plot-specific handle/binding before retiring plot quarantine. Verification passed for focused
+  IMUI cookbook/fret facade tests, `fret-cookbook --all-targets`, source-policy tests/gate,
+  consumption-profile, execution-surface, layering, ADR/workstream catalog, formatting, and
+  whitespace.

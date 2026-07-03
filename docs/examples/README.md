@@ -197,9 +197,9 @@ Mounting rule for the immediate-mode lane:
   `v_flex`, and you explicitly want bare sibling emission, use `imui_raw(cx, ...)` from
   `use fret::imui::prelude::*;`.
 - `imui_raw(...)` is the advanced seam, not the default first-open teaching surface.
-- `imui_action_basics` demonstrates the explicit layout-host + raw shape on the root `fret::imui`
-  lane; `imui_hello_demo` remains the small smoke/reference proof of the default root-hosted
-  shape.
+- `imui_action_basics` demonstrates the default app-facing `imui_in(...)` shape with
+  `LocalState<String>` text inputs; `imui_hello_demo` remains the small smoke/reference proof of the
+  root-hosted shape.
   - the public CLI must choose a package explicitly for this binary name collision
 
 Stable identity rule for the immediate-mode lane:
