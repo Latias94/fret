@@ -362,20 +362,6 @@ impl<H: UiHost> UiTree<H> {
             .saturating_add(1);
     }
 
-    pub(crate) fn debug_record_parent_pointer_repair(&mut self, repaired: u32) {
-        if !self.debug_enabled {
-            return;
-        }
-        self.debug_stats.parent_pointer_repair_passes = self
-            .debug_stats
-            .parent_pointer_repair_passes
-            .saturating_add(1);
-        self.debug_stats.parent_pointer_repairs = self
-            .debug_stats
-            .parent_pointer_repairs
-            .saturating_add(repaired);
-    }
-
     pub(crate) fn debug_record_parent_pointer_would_repair(&mut self, would_repair: u32) {
         if !self.debug_enabled {
             return;

@@ -15,57 +15,10 @@ impl<H: UiHost> UiTree<H> {
             .unwrap_or(&[])
     }
 
-    /// Best-effort repair pass for parent pointers based on child edges from layer roots.
+    /// Count retained parent-pointer drift from layer-root child edges without mutating nodes.
     ///
-    /// Parent pointers are used for cache-root discovery (`nearest_view_cache_root`) and for
-    /// determining whether nodes are attached to any layer (`node_layer`). If a bug or GC edge
-    /// case leaves a reachable node with a missing/incorrect `parent`, this can cascade into
-    /// incorrect invalidation truncation and overly-aggressive subtree sweeping.
-    ///
-    /// This intentionally only walks nodes reachable from the installed layer roots; it does not
-    /// attempt to "rescue" detached islands.
-    pub(crate) fn repair_parent_pointers_from_layer_roots(&mut self) -> u32 {
-        let roots = self.all_layer_roots();
-        if roots.is_empty() {
-            return 0;
-        }
-
-        let mut repaired: u32 = 0;
-        let mut visited: HashSet<NodeId> = HashSet::new();
-        let mut stack: Vec<(Option<NodeId>, NodeId)> = Vec::with_capacity(roots.len());
-        for root in roots {
-            stack.push((None, root));
-        }
-
-        while let Some((expected_parent, node)) = stack.pop() {
-            if !visited.insert(node) {
-                continue;
-            }
-
-            let (current_parent, children) = match self.nodes.get(node) {
-                Some(n) => (n.parent, n.children.clone()),
-                None => continue,
-            };
-
-            if current_parent != expected_parent
-                && let Some(n) = self.nodes.get_mut(node)
-            {
-                n.parent = expected_parent;
-                repaired = repaired.saturating_add(1);
-            }
-
-            for child in children {
-                stack.push((Some(node), child));
-            }
-        }
-
-        repaired
-    }
-
-    /// Count what `repair_parent_pointers_from_layer_roots` would repair without mutating nodes.
-    ///
-    /// This is the deletion oracle for the normal repair pass: later phases can require this to
-    /// stay at zero after warmup before demoting repair to a debug-only assertion.
+    /// This is the deletion oracle for the removed normal repair pass. Normal runtime queries must
+    /// use current child-edge topology instead of relying on this retained storage field.
     pub(crate) fn parent_pointers_would_repair_from_layer_roots(&self) -> u32 {
         let roots = self.all_layer_roots();
         if roots.is_empty() {

@@ -617,14 +617,11 @@ where
                 }
             });
 
-            // Phase 3 still keeps parent repair as a temporary shadow/compatibility bridge during
-            // mount. Normal cache-root and layer queries should use child-edge topology; U5 owns
-            // deleting this bridge once U4 cache-hit membership no longer relies on retained scans.
+            // Retained parent pointers are now a shadow oracle during mount. Normal cache-root and
+            // layer queries use child-edge topology; U5 must not repair retained parents here.
             if ui.view_cache_enabled() {
                 let would_repair = ui.parent_pointers_would_repair_from_layer_roots();
                 ui.debug_record_parent_pointer_would_repair(would_repair);
-                let repaired = ui.repair_parent_pointers_from_layer_roots();
-                ui.debug_record_parent_pointer_repair(repaired);
             }
 
             apply_pending_invalidations(ui, &mut pending_invalidations);
@@ -1136,8 +1133,6 @@ where
             if ui.view_cache_enabled() {
                 let would_repair = ui.parent_pointers_would_repair_from_layer_roots();
                 ui.debug_record_parent_pointer_would_repair(would_repair);
-                let repaired = ui.repair_parent_pointers_from_layer_roots();
-                ui.debug_record_parent_pointer_repair(repaired);
             }
 
             apply_pending_invalidations(ui, &mut pending_invalidations);

@@ -313,18 +313,16 @@ impl<H: UiHost> UiTree<H> {
             return;
         };
 
-        // Keep parent pointers consistent even when the child list is unchanged.
+        // Keep the direct retained parent edge consistent even when the child list is unchanged.
         //
-        // This matters for view-cache reuse and GC/repair flows where a node may be temporarily
-        // detached and then re-attached without changing the parent's child list. Invalidation
-        // propagation relies on `parent` pointers even when semantics/debug traversals use the
-        // child lists.
+        // Normal topology queries use child edges, but `Node.parent` remains retained storage
+        // metadata for the touched edge.
         let same_children = self
             .nodes
             .get(parent)
             .is_some_and(|n| n.children.as_slice() == children.as_slice());
         if same_children {
-            self.repair_same_children_parent_pointers_and_reconnect_layout(parent, &children);
+            self.sync_same_children_parent_edges_and_reconnect_layout(parent, &children);
             if self.node_is_reachable_from_layer_forest(parent) {
                 for &child in &children {
                     self.index_live_subtree(child);
@@ -460,7 +458,7 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
-    pub(in crate::tree) fn repair_same_children_parent_pointers_and_reconnect_layout(
+    pub(in crate::tree) fn sync_same_children_parent_edges_and_reconnect_layout(
         &mut self,
         parent: NodeId,
         children: &[NodeId],
@@ -485,10 +483,9 @@ impl<H: UiHost> UiTree<H> {
                 .get(parent)
                 .is_some_and(|node| !node.invalidation.layout)
         {
-            // Same-children writes are also used as a parent-pointer repair path during retained /
-            // GC flows. If a descendant became layout-dirty while detached, reconnect the parent to
-            // the authoritative layout invalidation walk so the next frame descends back into the
-            // repaired subtree.
+            // Same-children writes can reconnect a touched direct parent edge after a descendant
+            // became layout-dirty while detached. Mark the parent so the next layout pass descends
+            // back into the child-edge subtree.
             self.invalidate_with_source_and_detail(
                 parent,
                 Invalidation::Layout,

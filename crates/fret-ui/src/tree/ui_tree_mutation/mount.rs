@@ -10,13 +10,13 @@ impl<H: UiHost> UiTree<H> {
         self.set_node_children_write_policy(parent, ChildrenWritePolicy::Standard);
         self.detach_reparented_children_from_old_parents(parent, &children);
 
-        // Keep parent pointers consistent even when the child list is unchanged.
+        // Keep the direct retained parent edge consistent even when the child list is unchanged.
         let same_children = self
             .nodes
             .get(parent)
             .is_some_and(|n| n.children.as_slice() == children.as_slice());
         if same_children {
-            self.repair_same_children_parent_pointers_and_reconnect_layout(parent, &children);
+            self.sync_same_children_parent_edges_and_reconnect_layout(parent, &children);
             if self.node_is_reachable_from_layer_forest(parent) {
                 for &child in &children {
                     self.index_live_subtree(child);

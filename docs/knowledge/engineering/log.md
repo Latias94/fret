@@ -369,3 +369,11 @@ timestamp: 2026-06-30
   fret-ui`, focused view-cache/gc/retained-virtual-list tests, non-stack full `fret-ui` nextest,
   formatting, whitespace, layering, surface, consumption-profile, execution-surface, ADR-number,
   workstream-catalog, and wiki-memory gates.
+- 2026-07-03: Phase 3 U5 parent repair deletion slice removes the normal all-layer retained parent
+  repair pass from full-window and interaction-root mount. Runtime now records only the
+  `parent_pointers_would_repair_from_layer_roots` shadow oracle; the mutating repair helper and
+  repair counter recorder are deleted. Same-children writes are named as direct parent-edge storage
+  sync, not global retained repair. Verification passed for `cargo check -p fret-ui`, focused
+  children/dirty/view-cache/gc/retained-virtual-list tests, non-stack full `fret-ui` nextest,
+  formatting, whitespace, layering, surface, consumption-profile, execution-surface, ADR-number,
+  workstream-catalog, and wiki-memory gates.

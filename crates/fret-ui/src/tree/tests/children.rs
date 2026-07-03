@@ -47,7 +47,7 @@ fn set_children_invalidates_parent_when_changed() {
 }
 
 #[test]
-fn set_children_same_children_repairs_parent_pointers_and_reconnects_dirty_descendant_layout() {
+fn set_children_same_children_records_parent_drift_without_global_repair_and_reconnects_layout() {
     let mut app = crate::test_host::TestHost::new();
     let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
     ui.set_window(AppWindowId::default());
@@ -80,14 +80,12 @@ fn set_children_same_children_repairs_parent_pointers_and_reconnects_dirty_desce
         None,
         "shadow oracle must not mutate retained parent pointers"
     );
-    let repaired = ui.repair_parent_pointers_from_layer_roots();
-    ui.debug_record_parent_pointer_repair(repaired);
 
     let stats = ui.debug_stats();
     assert_eq!(stats.parent_pointer_would_repair_passes, 1);
     assert_eq!(stats.parent_pointer_would_repair_nodes, 1);
-    assert_eq!(stats.parent_pointer_repair_passes, 1);
-    assert_eq!(stats.parent_pointer_repairs, 1);
+    assert_eq!(stats.parent_pointer_repair_passes, 0);
+    assert_eq!(stats.parent_pointer_repairs, 0);
 
     ui.test_set_node_parent(child, None);
     ui.test_set_layout_invalidation(child, true);
@@ -107,16 +105,17 @@ fn set_children_same_children_repairs_parent_pointers_and_reconnects_dirty_desce
 
     assert!(
         !ui.nodes[child].invalidation.layout,
-        "repairing same-children parent pointers must reconnect detached descendant layout invalidations to the authoritative layout pass"
+        "same-children parent edge sync must reconnect detached descendant layout invalidations to the authoritative layout pass"
     );
 }
 
 #[test]
-fn set_children_in_mount_same_children_repairs_parent_pointers_and_reconnects_dirty_descendant_layout()
+fn set_children_in_mount_same_children_syncs_parent_edge_without_global_repair_and_reconnects_layout()
  {
     let mut app = crate::test_host::TestHost::new();
     let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
     ui.set_window(AppWindowId::default());
+    ui.set_debug_enabled(true);
 
     let root = ui.create_node(TestStack);
     let parent = ui.create_node(TestStack);
@@ -149,13 +148,15 @@ fn set_children_in_mount_same_children_repairs_parent_pointers_and_reconnects_di
     assert_eq!(ui.node_parent(child), Some(parent));
     assert!(ui.nodes[parent].invalidation.layout);
     assert!(ui.nodes[root].invalidation.layout);
+    assert_eq!(ui.debug_stats().parent_pointer_repair_passes, 0);
+    assert_eq!(ui.debug_stats().parent_pointer_repairs, 0);
 
     app.advance_frame();
     ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
     assert!(
         !ui.nodes[child].invalidation.layout,
-        "mount-time same-children parent repair must reconnect detached descendant layout invalidations to the authoritative layout pass"
+        "mount-time same-children parent edge sync must reconnect detached descendant layout invalidations to the authoritative layout pass"
     );
 }
 
