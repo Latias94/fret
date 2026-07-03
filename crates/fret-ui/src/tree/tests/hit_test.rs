@@ -750,6 +750,58 @@ fn hit_test_layers_cached_reuses_path_and_respects_layer_order() {
 }
 
 #[test]
+fn hit_test_path_cache_uses_child_edges_under_stale_parent_pointers() {
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_debug_enabled(true);
+
+    let root = ui.create_node(TestStack);
+    let actual_parent = ui.create_node(TestStack);
+    let stale_parent = ui.create_node(TestStack);
+    let leaf = ui.create_node(TestStack);
+
+    ui.set_root(root);
+    ui.set_children(root, vec![actual_parent, stale_parent]);
+    ui.set_children(actual_parent, vec![leaf]);
+
+    let hit_bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(100.0)),
+    );
+    ui.nodes[root].bounds = hit_bounds;
+    ui.nodes[actual_parent].bounds = hit_bounds;
+    ui.nodes[leaf].bounds = hit_bounds;
+    ui.nodes[stale_parent].bounds = Rect::new(
+        Point::new(Px(200.0), Px(0.0)),
+        Size::new(Px(100.0), Px(100.0)),
+    );
+
+    ui.test_set_node_parent(leaf, Some(stale_parent));
+
+    let pointer = Point::new(Px(10.0), Px(10.0));
+    assert_eq!(
+        ui.hit_test_layers_cached(&[root], pointer),
+        Some(leaf),
+        "prime the cache through the current child-edge path"
+    );
+
+    let before_reuse = ui.debug_stats();
+    assert_eq!(
+        ui.hit_test_layers_cached(&[root], pointer),
+        Some(leaf),
+        "stale retained parent pointers must not poison the reusable routing path"
+    );
+    let after_reuse = ui.debug_stats();
+    assert!(
+        after_reuse.hit_test_path_cache_hits > before_reuse.hit_test_path_cache_hits,
+        "expected the second query to reuse the child-edge path cache"
+    );
+    assert_eq!(
+        after_reuse.hit_test_path_cache_misses, before_reuse.hit_test_path_cache_misses,
+        "a stale retained parent path should not force a cached-path miss"
+    );
+}
+
+#[test]
 fn hit_test_path_routing_cache_clear_api_drops_entry() {
     let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
 

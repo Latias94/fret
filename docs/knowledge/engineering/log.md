@@ -303,3 +303,9 @@ timestamp: 2026-06-30
   and default-focus tests failed on the retained-parent implementation and pass after the migration.
   Verification passed for focused input tests, `cargo check -p fret-ui`, full `cargo nextest run -p
   fret-ui --no-fail-fast` (1191 passed), formatting, whitespace, layering, and surface-policy gates.
+- 2026-07-03: Phase 3 U3 hit-test topology slice migrates bounds-tree candidate reachability and
+  hit-test path-cache publication from retained `Node.parent` walks to layer-root child-edge paths.
+  Red/green proof: `hit_test_path_cache_uses_child_edges_under_stale_parent_pointers` failed by
+  missing the stale retained-parent path cache and now reuses the child-edge path. Verification
+  passed for focused hit-test tests, `cargo check -p fret-ui`, full `cargo nextest run -p fret-ui
+  --no-fail-fast` (1192 passed), formatting, whitespace, layering, and surface-policy gates.

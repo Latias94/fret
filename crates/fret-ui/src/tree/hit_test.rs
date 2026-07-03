@@ -479,22 +479,12 @@ impl<H: UiHost> UiTree<H> {
         // Validate that the root->candidate chain is hit-test traversable in the current
         // coordinate space.
 
-        let mut path_rev: Vec<NodeId> = Vec::new();
-        let mut current = Some(candidate);
-        while let Some(id) = current {
-            path_rev.push(id);
-            if id == root {
-                break;
-            }
-            current = self.nodes.get(id).and_then(|n| n.parent);
-        }
-        if path_rev.last().copied() != Some(root) {
+        let Some(path) = self.path_from_root_to_node_via_children(root, candidate) else {
             return false;
-        }
-        path_rev.reverse();
+        };
 
         let mut position = position;
-        for (idx, &node) in path_rev.iter().enumerate() {
+        for (idx, &node) in path.iter().enumerate() {
             let Some(n) = self.nodes.get(node) else {
                 return false;
             };
@@ -538,7 +528,7 @@ impl<H: UiHost> UiTree<H> {
                 }
             }
 
-            let Some(next) = path_rev.get(idx + 1).copied() else {
+            let Some(next) = path.get(idx + 1).copied() else {
                 return true;
             };
 
@@ -560,11 +550,7 @@ impl<H: UiHost> UiTree<H> {
                 position_local
             };
 
-            // Only follow the declared parent chain; this validates traversal gates and clips,
-            // and does not attempt to prove sibling z-order correctness (the bounds tree already
-            // provides candidate ordering).
-            let next_parent_ok = self.nodes.get(next).and_then(|n| n.parent) == Some(node);
-            if !next_parent_ok {
+            if !n.children.contains(&next) {
                 return false;
             }
 
@@ -572,6 +558,46 @@ impl<H: UiHost> UiTree<H> {
         }
 
         false
+    }
+
+    fn path_from_root_to_node_via_children(
+        &self,
+        root: NodeId,
+        target: NodeId,
+    ) -> Option<Vec<NodeId>> {
+        if !self.nodes.contains_key(root) || !self.nodes.contains_key(target) {
+            return None;
+        }
+
+        let mut path: Vec<NodeId> = Vec::new();
+        let mut visited: HashSet<NodeId> = HashSet::new();
+        let mut stack: Vec<(NodeId, bool)> = vec![(root, false)];
+
+        while let Some((node, exiting)) = stack.pop() {
+            if exiting {
+                path.pop();
+                continue;
+            }
+
+            let Some(record) = self.nodes.get(node) else {
+                continue;
+            };
+            if !visited.insert(node) {
+                continue;
+            }
+
+            path.push(node);
+            if node == target {
+                return Some(path);
+            }
+
+            stack.push((node, true));
+            for &child in record.children.iter().rev() {
+                stack.push((child, false));
+            }
+        }
+
+        None
     }
 
     fn hit_test_node_self_only(&self, node: NodeId, position: Point) -> bool {
@@ -627,22 +653,11 @@ impl<H: UiHost> UiTree<H> {
             return;
         };
 
-        let mut path_rev: Vec<NodeId> = Vec::new();
-        let mut current = Some(hit);
-        while let Some(id) = current {
-            path_rev.push(id);
-            if id == layer_root {
-                break;
-            }
-            current = self.nodes.get(id).and_then(|n| n.parent);
-        }
-        if path_rev.last().copied() != Some(layer_root) {
+        let Some(path) = self.path_from_root_to_node_via_children(layer_root, hit) else {
             self.hit_test_path_cache.clear_after_query();
             return;
-        }
-        path_rev.reverse();
-        self.hit_test_path_cache
-            .set_after_query(layer_root, path_rev);
+        };
+        self.hit_test_path_cache.set_after_query(layer_root, path);
     }
 
     fn try_hit_test_along_cached_path(&self, path: &[NodeId], position: Point) -> Option<NodeId> {
