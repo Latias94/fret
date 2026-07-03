@@ -580,3 +580,9 @@ timestamp: 2026-06-30
   coverage. Verification passed for editor example compile, `fret-cookbook --all-targets`,
   focused cookbook/fret facade tests, source-policy tests/gate, consumption-profile,
   execution-surface, and layering.
+- 2026-07-04: Phase 3 U13 IMUI debug draw host cleanup removes direct
+  `fret_ui::element::ColumnProps` and root `imui_raw(...)` from
+  `imui_debug_draw_basics.rs`, mounts the proof through `ui::v_flex(|cx| imui_in(cx, ...))`,
+  and tightens cookbook/source gates so the low-level layout host seam cannot return.
+  Verification passed for focused debug-draw example compile, `fret-cookbook --all-targets`,
+  cookbook IMUI source tests, IMUI teaching gate, source-policy tests/gate, and formatting.

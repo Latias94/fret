@@ -40,13 +40,16 @@ Two readonly explorers audited the remaining IMUI cookbook facade gaps.
 
 # Disposition
 
-The action and editor recommendations were implemented immediately. The action example now uses
+The action, editor, and debug-draw recommendations were implemented. The action example now uses
 `LocalState<String>`, `fret::commands`, and `imui_in(...)`; the editor controls example now uses
-editor-control `LocalState<T>` adapter traits and `fret::style::Color`. Both source-policy
-quarantine records were removed. Debug draw and plot remain follow-up slices.
+editor-control `LocalState<T>` adapter traits and `fret::style::Color`; the debug-draw example no
+longer reaches for `ColumnProps` or root `imui_raw(...)`. The action/editor source-policy
+quarantine records were removed. Plot remains a follow-up slice because it needs a plot-specific
+binding/handle first.
 
 # Citations
 
 - [Phase 3 plan](../../../plans/2026-07-03-001-refactor-ui-framework-phase3-retained-bridge-deletion-plan.md)
 - [IMUI action local-state migration](../progress/2026-07-03-phase3-u13-imui-action-local-state.md)
 - [IMUI editor local-state migration](../progress/2026-07-03-phase3-u13-imui-editor-local-state.md)
+- [IMUI debug draw host cleanup](../progress/2026-07-04-phase3-u13-imui-debug-draw-host.md)

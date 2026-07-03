@@ -883,7 +883,7 @@ mod authoring_surface_policy_tests {
                 "DebugDrawStrokeStyle,",
                 "DebugDrawVertex,",
                 "prelude::*,",
-                "imui_raw(cx, |ui| {",
+                "imui_in(cx, |ui| {",
                 "let response = ui.debug_draw_with_options(",
                 "DebugDrawInteractionOptions::enabled()",
                 "draw.push_clip_rect(",
@@ -906,6 +906,8 @@ mod authoring_surface_policy_tests {
             ],
             &[
                 "fret_ui_kit::imui::",
+                "fret_ui::element::ColumnProps",
+                "imui_raw(cx, |ui| {",
                 "fret_imui::imui_raw(cx, |ui| {",
                 "CmdBuffer",
                 "VtxBuffer",

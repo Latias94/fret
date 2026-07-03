@@ -26,8 +26,8 @@ impl View for ImUiDebugDrawBasicsView {
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         ui::v_flex(|cx| {
-            let debug_draw = cx.column(fret_ui::element::ColumnProps::default(), |cx| {
-                imui_raw(cx, |ui| {
+            let debug_draw = ui::v_flex(|cx| {
+                imui_in(cx, |ui| {
                     ui.text("Debug draw");
 
                     let response = ui.debug_draw_with_options(

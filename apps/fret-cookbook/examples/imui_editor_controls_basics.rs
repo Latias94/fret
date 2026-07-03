@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
-use fret::app::prelude::*;
 use fret::app::LocalState;
 use fret::app::RenderContextAccess as _;
+use fret::app::prelude::*;
 use fret::imui::{
     editor::{
         self,
@@ -17,7 +17,7 @@ use fret::imui::{
             TextAssistField, TextAssistFieldLocalStateExt, TextAssistFieldOptions,
             TextAssistFieldSurface, TextAssistItem, TextFieldOptions,
         },
-        theme::{install_editor_theme_preset_v1, EditorThemePresetV1},
+        theme::{EditorThemePresetV1, install_editor_theme_preset_v1},
     },
     prelude::*,
 };

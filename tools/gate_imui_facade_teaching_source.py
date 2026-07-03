@@ -727,6 +727,19 @@ def main() -> None:
             forbidden=COOKBOOK_EDITOR_DIRECT_CRATE_FORBIDDEN,
         )
     )
+    checks.append(
+        SourceCheck(
+            Path("apps/fret-cookbook/examples/imui_debug_draw_basics.rs"),
+            required=[
+                "imui_in(cx, |ui| {",
+                "let response = ui.debug_draw_with_options(",
+            ],
+            forbidden=[
+                "fret_ui::element::ColumnProps",
+                "imui_raw(cx, |ui| {",
+            ],
+        )
+    )
 
     slice_checks = [
         SourceSliceCheck(
