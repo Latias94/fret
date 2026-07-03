@@ -265,6 +265,7 @@ mod pointer_occlusion;
 mod pointer_occlusion_routing_harness;
 mod prepaint;
 mod prevent_default;
+mod propagation_depth_topology;
 mod scroll_handle_invalidation_harness;
 mod scroll_into_view;
 mod scroll_invalidation;

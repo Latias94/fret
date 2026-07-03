@@ -40,7 +40,7 @@ pub(super) fn propagation_depth_for<H: UiHost>(tree: &mut UiTree<H>, start: Node
         }
 
         tree.propagation_chain.push(node);
-        current = tree.nodes.get(node).and_then(|n| n.parent);
+        current = tree.parent_in_layer_forest_via_children(node);
     }
 
     let mut d = 0u32;

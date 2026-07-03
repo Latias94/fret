@@ -322,3 +322,10 @@ timestamp: 2026-06-30
   Verification passed for focused transform tests, `cargo check -p fret-ui`, full `cargo nextest
   run -p fret-ui --no-fail-fast` (1194 passed), formatting, whitespace, layering, and
   surface-policy gates.
+- 2026-07-03: Phase 3 U3 propagation depth topology slice migrates observation invalidation
+  propagation ordering from retained `Node.parent` to layer-forest child-edge parents. Red/green
+  proof: `propagation_depth_uses_child_edges_under_stale_parent_pointers` failed with depth `0`
+  after the leaf retained parent was cleared and now reports the child-edge depth `2`. Verification
+  passed for focused propagation/model invalidation tests, `cargo check -p fret-ui`, full `cargo
+  nextest run -p fret-ui --no-fail-fast` (1195 passed), formatting, whitespace, layering, surface,
+  consumption-profile, execution-surface, ADR-number, workstream-catalog, and wiki-memory gates.
