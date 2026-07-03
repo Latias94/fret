@@ -149,6 +149,35 @@ impl<H: UiHost> UiTree<H> {
         self.is_reachable_from_any_root_via_children(node, roots.as_slice())
     }
 
+    pub(in crate::tree) fn parent_in_layer_forest_via_children(
+        &self,
+        node: NodeId,
+    ) -> Option<NodeId> {
+        if !self.nodes.contains_key(node) || self.root_to_layer.contains_key(&node) {
+            return None;
+        }
+
+        let roots = self.all_layer_roots();
+        let mut visited: HashSet<NodeId> = HashSet::new();
+        let mut stack: Vec<NodeId> = roots;
+        while let Some(parent) = stack.pop() {
+            if !visited.insert(parent) {
+                continue;
+            }
+            let Some(entry) = self.nodes.get(parent) else {
+                continue;
+            };
+            for &child in &entry.children {
+                if child == node {
+                    return Some(parent);
+                }
+                stack.push(child);
+            }
+        }
+
+        None
+    }
+
     fn stable_handle_matches_live_element(
         &self,
         element: GlobalElementId,

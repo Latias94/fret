@@ -61,13 +61,17 @@ impl<H: UiHost> UiTree<H> {
     }
 
     pub(in crate::tree) fn nearest_view_cache_root(&self, node: NodeId) -> Option<NodeId> {
+        if !self.node_is_reachable_from_layer_forest(node) {
+            return None;
+        }
+
         let mut current = Some(node);
         while let Some(id) = current {
             let n = self.nodes.get(id)?;
             if n.view_cache.enabled {
                 return Some(id);
             }
-            current = n.parent;
+            current = self.parent_in_layer_forest_via_children(id);
         }
         None
     }
@@ -205,7 +209,7 @@ impl<H: UiHost> UiTree<H> {
 
         let mut current: Option<NodeId> = Some(root);
         while let Some(id) = current {
-            let next_parent = self.nodes.get(id).and_then(|n| n.parent);
+            let next_parent = self.parent_in_layer_forest_via_children(id);
             if let Some(n) = self.nodes.get_mut(id)
                 && n.view_cache.enabled
             {

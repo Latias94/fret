@@ -1143,7 +1143,7 @@ impl<H: UiHost> UiTree<H> {
     }
 
     fn nearest_parent_view_boundary_node(&self, node: NodeId) -> Option<NodeId> {
-        let mut current = self.nodes.get(node).and_then(|n| n.parent);
+        let mut current = self.parent_in_layer_forest_via_children(node);
         while let Some(id) = current {
             if self.view_boundaries.contains_live_node(id)
                 || self
@@ -1153,7 +1153,7 @@ impl<H: UiHost> UiTree<H> {
             {
                 return Some(id);
             }
-            current = self.nodes.get(id).and_then(|n| n.parent);
+            current = self.parent_in_layer_forest_via_children(id);
         }
         None
     }

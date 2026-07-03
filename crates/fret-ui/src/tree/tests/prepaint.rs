@@ -483,3 +483,39 @@ fn prepaint_output_is_owned_by_view_boundary_state_and_removed_with_node() {
         "none"
     );
 }
+
+#[test]
+fn view_boundary_parent_uses_child_edges_under_stale_parent_pointers() {
+    let mut app = crate::test_host::TestHost::new();
+    let mut ui = UiTree::new();
+    ui.set_window(AppWindowId::default());
+    ui.set_view_cache_enabled(true);
+
+    let root = ui.create_node(TestStack);
+    let actual_parent = ui.create_node(TestStack);
+    let stale_parent = ui.create_node(TestStack);
+    let child = ui.create_node(TestStack);
+
+    ui.set_root(root);
+    ui.set_children(root, vec![actual_parent, stale_parent]);
+    ui.set_children(actual_parent, vec![child]);
+    ui.set_node_view_cache_flags(actual_parent, true, true, true);
+    ui.set_node_view_cache_flags(stale_parent, true, true, true);
+    ui.set_node_view_cache_flags(child, true, true, true);
+
+    ui.test_set_node_parent(child, Some(stale_parent));
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(100.0)),
+    );
+
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert_eq!(
+        ui.test_view_boundary_parent(child),
+        Some(actual_parent),
+        "view-boundary parent must follow child-edge topology, not stale retained parents"
+    );
+}

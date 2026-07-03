@@ -667,6 +667,50 @@ fn view_cache_mark_nearest_root_needs_rerender_propagates_to_ancestor_roots() {
 }
 
 #[test]
+fn view_cache_nearest_root_uses_child_edges_under_stale_parent_pointers() {
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(AppWindowId::default());
+    ui.set_view_cache_enabled(true);
+
+    let root = ui.create_node(TestStack);
+    let actual_outer = ui.create_node(TestStack);
+    let stale_outer = ui.create_node(TestStack);
+    let actual_inner = ui.create_node(TestStack);
+    let leaf = ui.create_node(TestStack);
+
+    ui.set_root(root);
+    ui.set_children(root, vec![actual_outer, stale_outer]);
+    ui.set_children(actual_outer, vec![actual_inner]);
+    ui.set_children(actual_inner, vec![leaf]);
+
+    for id in [actual_outer, stale_outer, actual_inner] {
+        ui.nodes[id].view_cache.enabled = true;
+        ui.nodes[id].view_cache_needs_rerender = false;
+    }
+
+    ui.test_set_node_parent(leaf, Some(stale_outer));
+
+    ui.mark_nearest_view_cache_root_needs_rerender(
+        leaf,
+        UiDebugInvalidationSource::Notify,
+        UiDebugInvalidationDetail::ScrollHandleLayout,
+    );
+
+    assert!(
+        ui.nodes[actual_inner].view_cache_needs_rerender,
+        "nearest cache root must follow child-edge topology, not the stale retained parent"
+    );
+    assert!(
+        ui.nodes[actual_outer].view_cache_needs_rerender,
+        "ancestor cache roots must follow child-edge topology"
+    );
+    assert!(
+        !ui.nodes[stale_outer].view_cache_needs_rerender,
+        "stale retained parents must not receive cache-root rerender pressure"
+    );
+}
+
+#[test]
 fn view_cache_auto_sized_repair_does_not_promote_hit_test_when_bounds_are_known() {
     let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
     ui.set_window(AppWindowId::default());
