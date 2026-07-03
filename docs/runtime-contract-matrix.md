@@ -33,10 +33,10 @@ For a closure-oriented, module-by-module index (contracts → code → tests →
 ## 2026 convergence addendum
 
 The active convergence plan is
-`docs/plans/2026-07-02-001-refactor-ui-framework-phase2-plan.md`. It follows the closed
-Phase 1 convergence plan
-`docs/plans/2026-06-30-001-refactor-ui-framework-architecture-plan.md` and turns the retained
-bridges from that closeout into explicit deletion work.
+`docs/plans/2026-07-03-001-refactor-ui-framework-phase3-retained-bridge-deletion-plan.md`. It
+follows the closed Phase 2 plan
+`docs/plans/2026-07-02-001-refactor-ui-framework-phase2-plan.md` and turns that closeout's retained
+bridges into explicit deletion work.
 This addendum defines the runtime contract posture that the active plan implements.
 
 `crates/fret-ui` should stay broad internally but narrow publicly:
@@ -44,9 +44,10 @@ This addendum defines the runtime contract posture that the active plan implemen
 - **Stable mechanism:** IDs, element hosting, layout vocabulary, routing, focus/capture, layer
   roots, outside-interaction observation, geometry queries, dirty propagation, `ViewBoundary`
   ownership, prepaint products, and scene-fragment emission.
-- **Compatibility:** retained-widget authoring exports, cache-root-first dirty-view aliases,
-  hash-keyed identity repair paths, and flat-scene replay bridges while their replacements are
-  being proven.
+- **Compatibility:** retained-widget authoring exports, explicitly classified advanced/raw app
+  seams, debug/parity renderer oracles, and diagnostics alias readers while their replacements are
+  being proven. Compatibility must be typed as compatibility; it must not masquerade as normal
+  runtime behavior.
 - **Out of scope:** Dialog/Popover/Menu/Tooltip policy names, Radix/shadcn recipe vocabulary,
   focus trap/restore policy, dismissal reason mapping, hover-intent policy, and recipe chrome
   defaults.
@@ -78,31 +79,42 @@ The convergence target is GPUI-aligned but Fret-owned:
 - Window/layer-forest products stay window-owned: dispatch snapshots, command routing and
   availability, final semantics snapshots, hit-test path routing, focus/capture state, active layer
   roots, modal barriers, and tree-wide paint recording.
-- `GlobalElementId`-seeded retained-node repair must be measured through stable-handle diagnostics
-  before hash fallback paths are deleted.
+- Current-frame liveness must be answered from frame/boundary topology, dispatch snapshots, and
+  boundary records rather than retained-parent repair. `Node.parent` is a retained storage
+  invariant and debug/assert signal, not the normal authority for focus, scroll, semantics, command,
+  layer attachment, cache-root lookup, or dirty propagation.
+- Retained-node repair must be measured through stable-handle diagnostics and a non-mutating
+  would-repair shadow oracle before normal parent repair is deleted. A zero-repair metric is not
+  enough after repair has been disabled.
 - Renderer-facing work should prefer retained scene chunks with closure metadata,
   resource-generation keys, render-plan reuse, and dirty upload ranges over whole-scene
   encode/upload when a local edit is observable. Supported chunk payloads must encode from chunk
   ops directly; flat replay is a parity oracle, not a hidden production payload bridge.
-- Normal renderer input is explicit: `RenderSceneSource::Flat` carries the flat scene plus optional
-  diagnostic chunks, while `RenderSceneSource::ResourceFreeQuadChunks` is the only authoritative
-  chunk-native source and is currently limited to resource-free quad manifests whose payloads can be
-  assembled without flat-scene replay.
+- Normal renderer input must not mix flat-scene semantics with diagnostic chunks. The Phase 3 target
+  split is authoritative `ChunkManifest` input for supported frame classes and explicit
+  `FlatCompat` debug/parity oracle runs. Unsupported classes report structured unsupported reasons;
+  they do not silently count as chunk-native launch evidence.
+- Text chunk closure must be shaping-aware before full-blob text helpers are retired: WGPU
+  `TextShape` residency metadata should preserve cluster/run facts derived from `fret-render-text`
+  so ligatures, RTL, combining marks, fallback font runs, selection/caret, decorations, and atlas
+  reset generation remain coherent.
 - Dirty geometry uploads are enabled stream-by-stream, not by buffer type alone. The supported
   partial-upload streams are resource-free quad instances and `viewport_vertices` for
   `VertexColor`-only chunks whose payload-plan shape, stream fingerprint, and full-stream coverage
   gates pass. `Image`, `ViewportSurface`, text, path, mask, material, clip, and effect-dependent
-  streams remain full upload until their resource and side-table closure gates are explicit.
+  streams remain full upload until their resource and side-table closure gates, fallback reasons,
+  and per-stream write-count/byte budgets are explicit.
 
 Compatibility bridge policy for the active plan:
 
-- The deleted `ViewId(pub NodeId)` and `BoundaryId(NodeId)` wrappers must not return. Parent repair,
-  GC reachability expansion, flat `Scene` input for default launch callers and parity/debug paths,
-  shaping-aware text chunk closure gaps, stream classes without chunk closure, and source-policy
-  allowlist entries are remaining migration bridges. Production chunk payload replay through
-  temporary flat scenes is deleted for the closure-supported quad payload path and must not return.
-  Full-blob text resource helpers are test-only/debug-only and must not return to normal renderer
-  chunk/resource paths.
+- The deleted `ViewId(pub NodeId)` and `BoundaryId(NodeId)` wrappers must not return. Parent repair
+  in normal paths, GC reachability as liveness proof, flat `Scene` as normal launch input,
+  full-blob text helpers in normal chunk/resource paths, stream classes without closure policy, and
+  public-looking raw app seams are Phase 3 deletion targets.
+- Debug/parity and compatibility are allowed only when they are named as such: `FlatCompat` is a
+  renderer oracle, full-blob text helpers are test/debug scaffolding, historical observation-collapse
+  perf keys are compatibility inputs, and raw app/model seams are explicit advanced/raw imports.
+  None of those paths are normal runtime evidence.
 - Non-quad partial uploads are not a broad bridge deletion yet. The only supported non-quad slice is
   `VertexColor` viewport vertices; all other streams must continue to report full-upload fallback
   reasons rather than silently accepting dirty-range writes.

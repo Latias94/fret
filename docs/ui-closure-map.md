@@ -66,9 +66,9 @@ Key invariants:
 ## Current Convergence Closure Target
 
 The active fearless-refactor plan is
-`docs/plans/2026-07-02-001-refactor-ui-framework-phase2-plan.md`. It builds on the closed
-Phase 1 convergence plan
-`docs/plans/2026-06-30-001-refactor-ui-framework-architecture-plan.md`.
+`docs/plans/2026-07-03-001-refactor-ui-framework-phase3-retained-bridge-deletion-plan.md`. It
+builds on the closed Phase 2 convergence plan
+`docs/plans/2026-07-02-001-refactor-ui-framework-phase2-plan.md`.
 This closure map should be read through the active plan when deciding what to break, delete, or
 gate.
 
@@ -86,6 +86,9 @@ Must-be-true outcomes for the next convergence pass:
 - Declarative identity, stable node liveness, retained placement, and view/entity identity are
   separate: `GlobalElementId`, `StableNodeHandle`, `NodeId`, `ViewId`, and `BoundaryId` are not
   interchangeable.
+- Current-frame topology, not repaired retained parent pointers, is the target authority for live
+  focus, scroll, command, semantics, layer attachment, cache-root lookup, and dirty propagation
+  queries. Any topology snapshot must carry a build/freeze/invalidate/consume epoch contract.
 - Dirty work is attributable by entity-first `ViewId` / `ViewBoundary`, with cache-root-first and
   boundary-node behavior treated as compatibility mappings rather than the final runtime model.
 - View-cache-owned layout/paint observations are recorded directly under boundary subscribers;
@@ -97,22 +100,33 @@ Must-be-true outcomes for the next convergence pass:
   stay window/layer-forest owned unless a later ADR proves a narrower owner.
 - Renderer/text costs for local edits are bounded by scene chunks with explicit closure metadata,
   render-plan reuse, dirty upload ranges, and explicit text/glyph/wasm cache budgets.
+- Flat renderer input is not normal-path evidence once a frame class is in the chunk-launch support
+  matrix. Supported native/web fixtures must render through authoritative chunk manifests with zero
+  normal-path `FlatCompat` usage; unsupported frames report structured reasons and stay outside
+  bridge-deletion evidence.
+- Text chunk/resource closure is not complete until WGPU `TextShape` residency metadata preserves
+  shaping cluster/run facts for ligatures, RTL, combining marks, fallback font runs,
+  selection/caret, decorations, and atlas reset generation.
 - Renderer dirty upload expansion is stream-class gated. Resource-free quad instances and
   `VertexColor`-only viewport vertices may use partial writes after payload-plan alignment and
   coverage gates pass; image, viewport-surface, text, path, mask, material, clip, and effect streams
-  stay on full upload until their closure metadata is complete.
+  stay on full upload until their closure metadata, fallback reasons, and per-stream write
+  count/byte budgets are complete.
 
 High-risk compatibility paths that need either deletion or an explicit retention gate:
 
 - hash-keyed retained identity fallback scans after stable-handle diagnostics exist,
-- parent repair and GC reachability work that can scale with the active retained tree,
+- parent repair and GC reachability work that can scale with the active retained tree; parent repair
+  deletion needs a non-mutating would-repair oracle, not only zero repair calls after the repair path
+  is disabled,
 - the deleted `ViewId(pub NodeId)` wrapper returning through implicit conversions,
 - the deleted `BoundaryId(NodeId)` wrapper and raw `NodeId`-keyed boundary storage returning,
 - layout dirty iteration regressing from boundary candidates back to raw dirty `NodeId` ownership,
 - cache-root observation collapse returning as a post-layout/post-paint pass,
 - flat `Scene` bridges used as the normal renderer input or the only replay unit for local
   text/caret/selection changes; production chunk payload replay through temporary flat scenes must
-  not return after the closure-supported native payload path,
+  not return after the closure-supported native payload path, and `FlatCompat` must remain explicit
+  debug/parity oracle only,
 - ambiguous renderer chunk inputs returning as `scene_chunks: Option<_>`; launch-owned manifests are
   diagnostics unless passed through an explicit authoritative chunk source,
 - full-blob text resource helpers returning to normal renderer chunk/resource paths; chunk keys use
@@ -123,6 +137,14 @@ High-risk compatibility paths that need either deletion or an explicit retention
 - first-party examples that make advanced/manual assembly look like the default app path,
 - source-policy allowlist entries that do not name an owner, reason, allowed seams, and retirement
   criteria.
+
+Phase 3 classifies remaining bridge matches as one of four buckets before closeout:
+
+- **Normal path:** must be deleted or split into a new owner lane with a failing deletion gate.
+- **Debug/parity oracle:** allowed only when opt-in and excluded from normal launch/runtime evidence.
+- **Compatibility alias/reader:** allowed only with old-bundle or migration tests.
+- **Explicit advanced/raw seam:** allowed only when the public/default path has a replacement and the
+  source-policy record names owner, reason, allowed seams, and retirement criteria.
 
 ---
 

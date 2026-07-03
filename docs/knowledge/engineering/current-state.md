@@ -2,28 +2,31 @@
 type: Current State
 title: Fret architecture planning current state
 tags: fret,architecture,planning
-timestamp: 2026-07-02
-related_plan: docs/plans/2026-07-02-001-refactor-ui-framework-phase2-plan.md
+timestamp: 2026-07-03
+related_plan: docs/plans/2026-07-03-001-refactor-ui-framework-phase3-retained-bridge-deletion-plan.md
 ---
 
 # Current State
 
-- Goal: execute `docs/plans/2026-07-02-001-refactor-ui-framework-phase2-plan.md` as a breaking Phase 2 UI framework refactor.
+- Goal: execute `docs/plans/2026-07-03-001-refactor-ui-framework-phase3-retained-bridge-deletion-plan.md` as a breaking Phase 3 retained-bridge deletion refactor.
 - Branch: `feat/ui-framework-phase2-refactor`.
-- Last verified: Phase 2 closeout tail passed formatting, layering, surface-policy,
-  consumption-profile, execution-surface, workstream-catalog, ADR-number, wiki-memory, and
-  whitespace gates on 2026-07-02.
+- Last verified: Phase 3 U1 contract freeze passed ADR-number, workstream-catalog, wiki-memory, and
+  whitespace gates on 2026-07-03.
 - Done: local ADR/workstream research, crate/perf snapshots, GPUI/Zed comparison, architecture boundary audit, framework consumer audit, performance audit, implementation-ready plan, U1 convergence contract freeze, U2 source-policy gate, U3 first slice (`workbench-lite` public scaffold), U4 identity/dirty graph observability slices, U5 `ViewId` / boundary frame-product ownership slices, U6 policy vocabulary demotion/cleanup slices, U7 renderer scene/upload observability plus retained scene chunk and guarded quad resident upload lanes, U8 text/glyph/wasm budget work through web runtime evidence, U9 modular consumption profiles and `AppUi` facade split, Phase 2 U9 VertexColor viewport partial upload, Phase 2 U10 workbench-lite public settings diagnostics, Phase 2 U11 public mutation/toast wrappers, workstream closeout audit, duplicate ADR ID `0324` resolution, and execution-surface allowlist alignment.
-- Latest done: Phase 2 closeout records U1-U14 as shipped with explicit retained bridges and
-  deletion gates.
-- In progress: none for the Phase 2 goal.
+- Latest done: Phase 3 plan created and committed; U1 contract freeze updated the runtime contract
+  matrix, UI closure map, ADR implementation convergence overlay, and this engineering memory so
+  retained bridge matches are classified as normal path, debug/parity oracle, compatibility
+  alias/reader, or explicit advanced/raw seam.
+- In progress: Phase 3 U1 contract freeze verification/commit, then U2 retained identity/liveness
+  pressure gates.
 - Blocked: none known after the boundary store migration.
-- Next action: choose one retained bridge and open a narrow follow-on before continuing
-  implementation.
+- Next action: finish U1 verification and commit, then implement U2 pressure gates with
+  non-mutating `parent_repair_would_repair` evidence before deleting normal parent repair.
 
 # Citations
 
 - [Phase 2 plan](../../plans/2026-07-02-001-refactor-ui-framework-phase2-plan.md)
+- [Phase 3 retained bridge deletion plan](../../plans/2026-07-03-001-refactor-ui-framework-phase3-retained-bridge-deletion-plan.md)
 - [Phase 1 convergence plan](../../plans/2026-06-30-001-refactor-ui-framework-architecture-plan.md)
 - [Subagent Findings](subagents/2026-06-30-ui-framework-architecture-audit-findings.md)
 - [U9 AppUi shell split audit](subagents/2026-07-02-u9-appui-shell-split-audit.md)
