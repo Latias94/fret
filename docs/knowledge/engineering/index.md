@@ -98,6 +98,7 @@ It is a sidecar for session recovery and subagent synthesis, not a replacement f
 - [Phase 3 U13 command facade cookbook migration](progress/2026-07-03-phase3-u13-command-facade-cookbook-migration.md)
 - [Phase 3 U13 router facade cookbook migration](progress/2026-07-03-phase3-u13-router-facade-cookbook-migration.md)
 - [Phase 3 U13 examples root internal harness](progress/2026-07-03-phase3-u13-examples-root-internal-harness.md)
+- [Phase 3 U13 virtual list facade cookbook migration](progress/2026-07-03-phase3-u13-virtual-list-facade-cookbook-migration.md)
 - [Phase 3 U13 advanced facade audits](subagents/2026-07-03-phase3-u13-advanced-facade-audits.md)
 - [Phase 2 U4 boundary store audit](subagents/2026-07-02-phase2-u4-boundary-store-audit.md)
 - [Phase 2 U4 durable ViewId audit](subagents/2026-07-02-phase2-u4-durable-viewid-audit.md)

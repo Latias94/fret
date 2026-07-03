@@ -536,3 +536,11 @@ timestamp: 2026-06-30
   raw seams are crate-private runner/helper glue, not copyable app authoring material. Verification
   passed for source-policy tests/gate, consumption-profile, execution-surface, layering,
   formatting, engineering-memory, and whitespace gates.
+- 2026-07-03: Phase 3 U13 virtual-list facade cookbook migration adds explicit
+  `fret::virtual_list` exports plus app-facing layout props on `fret::style`, migrates
+  `virtual_list_basics.rs` off direct `fret_ui` / `fret_core` imports, and moves it to default
+  clean source-policy coverage. Verification passed for virtual-list feature/example compile,
+  `fret-cookbook --all-targets`, focused `fret` facade tests, source-policy tests/gate,
+  consumption-profile, execution-surface, layering, formatting, engineering-memory, and whitespace;
+  the feature compile still shows pre-existing unused-import warnings in `fret-ui-shadcn` and
+  `fret`.

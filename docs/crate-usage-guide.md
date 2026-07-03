@@ -257,6 +257,10 @@ generated source.
 
 When app code needs explicit styling or icon nouns, keep them off the default prelude and import
 them intentionally from `fret::style::{...}` and `fret::icons::{icon, IconId}`.
+When app code intentionally builds low-level containers or virtualized lists, keep those nouns on
+explicit lanes too: use `fret::style::{ContainerProps, LayoutStyle, Length, ...}` for layout props
+and `fret::virtual_list::{VirtualListOptions, VirtualListScrollHandle, ...}` for virtualization
+state.
 When extracted app helpers need hover shells or attributed text leaves, prefer
 `fret_ui_kit::ui::hover_region(...)` and `fret_ui_kit::ui::rich_text(...)` over spelling
 `HoverRegionProps`, `StyledTextProps`, or `cx.elements()` directly.

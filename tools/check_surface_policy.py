@@ -137,6 +137,11 @@ DEFAULT_AUTHORING_SURFACES: tuple[SurfacePath, ...] = (
         "default router cookbook should stay on the explicit fret router facade",
     ),
     SurfacePath(
+        "apps/fret-cookbook/examples/virtual_list_basics.rs",
+        "default_app_clean",
+        "default virtual-list cookbook should stay on explicit fret style and virtual-list facades",
+    ),
+    SurfacePath(
         "apps/fret-cookbook/examples/toast_basics.rs",
         "default_app_clean",
         "default toast cookbook should stay on app-facing effect helpers",
@@ -576,11 +581,6 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
             "ElementContext",
             "UiTree",
         ),
-    ),
-    _cookbook_advanced_surface(
-        "virtual_list_basics.rs",
-        "virtual list still teaches low-level virtual-list mechanism types",
-        ("fret_core", "fret_ui"),
     ),
     SurfacePath(
         "apps/fret-examples/src/node_graph_demo.rs",

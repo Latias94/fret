@@ -6,12 +6,14 @@ use fret::app::prelude::*;
 use fret::{
     children::UiElementSinkExt as _,
     icons::IconId,
-    style::{LayoutRefinement, Space},
-};
-use fret_ui::{
-    ScrollStrategy,
-    element::{ContainerProps, LayoutStyle, Length, VirtualListKeyCacheMode, VirtualListOptions},
-    scroll::VirtualListScrollHandle,
+    style::{
+        ContainerProps, Corners, Edges, LayoutRefinement, LayoutStyle, Length, Overflow, SizeStyle,
+        Space,
+    },
+    virtual_list::{
+        ItemKey, ScrollStrategy, VirtualListKeyCacheMode, VirtualListOptions,
+        VirtualListScrollHandle,
+    },
 };
 
 mod act {
@@ -153,12 +155,12 @@ impl View for VirtualListBasicsView {
         }
 
         let list_layout = LayoutStyle {
-            size: fret_ui::element::SizeStyle {
+            size: SizeStyle {
                 width: Length::Fill,
                 height: Length::Px(Px(420.0)),
                 ..Default::default()
             },
-            overflow: fret_ui::element::Overflow::Clip,
+            overflow: Overflow::Clip,
             ..Default::default()
         };
 
@@ -171,12 +173,12 @@ impl View for VirtualListBasicsView {
                 index
             };
             if key_settings.index_keys {
-                index as fret_ui::ItemKey
+                index as ItemKey
             } else {
                 key_at_items
                     .get(mapped)
-                    .map(|it| it.id as fret_ui::ItemKey)
-                    .unwrap_or(index as fret_ui::ItemKey)
+                    .map(|it| it.id as ItemKey)
+                    .unwrap_or(index as ItemKey)
             }
         };
 
@@ -219,8 +221,8 @@ impl View for VirtualListBasicsView {
                         ContainerProps {
                             layout: row_layout,
                             background: Some(background),
-                            padding: fret_core::Edges::symmetric(Px(12.0), Px(0.0)).into(),
-                            border: fret_core::Edges {
+                            padding: Edges::symmetric(Px(12.0), Px(0.0)).into(),
+                            border: Edges {
                                 top: Px(0.0),
                                 right: Px(0.0),
                                 bottom: Px(1.0),
@@ -414,9 +416,9 @@ impl View for VirtualListBasicsView {
             ContainerProps {
                 layout: list_slot_layout,
                 background: Some(theme.color_token("background")),
-                border: fret_core::Edges::all(Px(1.0)),
+                border: Edges::all(Px(1.0)),
                 border_color: Some(theme.color_token("border")),
-                corner_radii: fret_core::Corners::all(Px(8.0)),
+                corner_radii: Corners::all(Px(8.0)),
                 ..Default::default()
             },
             |_cx| [list],

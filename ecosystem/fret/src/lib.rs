@@ -176,11 +176,19 @@ pub mod semantics {
 
 /// Explicit style/token nouns for app code that customizes layout or chrome beyond the default lane.
 pub mod style {
-    pub use fret_core::{Corners, TextAlign, TextOverflow, TextWrap};
+    pub use fret_core::{Corners, Edges, TextAlign, TextOverflow, TextWrap};
+    pub use fret_ui::element::{ContainerProps, LayoutStyle, Length, Overflow, SizeStyle};
     pub use fret_ui::{Theme, ThemeSnapshot};
     pub use fret_ui_kit::{
         ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, ShadowPreset, Size, Space,
     };
+}
+
+/// Explicit virtual-list mechanism vocabulary for app code that opts into low-level virtualization.
+pub mod virtual_list {
+    pub use fret_ui::element::{VirtualListKeyCacheMode, VirtualListOptions};
+    pub use fret_ui::scroll::VirtualListScrollHandle;
+    pub use fret_ui::{ItemKey, ScrollStrategy};
 }
 
 /// Explicit environment and responsive helpers/configuration nouns for app or component code that
@@ -4373,6 +4381,7 @@ mod authoring_surface_policy_tests {
             "overlay",
             "semantics",
             "style",
+            "virtual_list",
             "in_window_menubar",
         ]
         .into_iter()
@@ -4434,6 +4443,7 @@ mod authoring_surface_policy_tests {
         assert!(root_header.contains("pub mod icons {"));
         assert!(root_header.contains("pub mod semantics {"));
         assert!(root_header.contains("pub mod style {"));
+        assert!(root_header.contains("pub mod virtual_list {"));
         assert!(root_header.contains("pub use fret_ui_kit::{"));
         assert!(
             root_header.contains("on_activate, on_activate_notify, on_activate_request_redraw,")
@@ -4451,9 +4461,20 @@ mod authoring_surface_policy_tests {
         assert!(root_header.contains("pub use fret_core::SemanticsRole;"));
         assert!(root_header.contains("pub use fret_ui::element::SemanticsDecoration;"));
         assert!(
-            root_header
-                .contains("pub use fret_core::{Corners, TextAlign, TextOverflow, TextWrap};")
+            root_header.contains(
+                "pub use fret_core::{Corners, Edges, TextAlign, TextOverflow, TextWrap};"
+            )
         );
+        assert!(root_header.contains(
+            "pub use fret_ui::element::{ContainerProps, LayoutStyle, Length, Overflow, SizeStyle};"
+        ));
+        assert!(
+            root_header.contains(
+                "pub use fret_ui::element::{VirtualListKeyCacheMode, VirtualListOptions};"
+            )
+        );
+        assert!(root_header.contains("pub use fret_ui::scroll::VirtualListScrollHandle;"));
+        assert!(root_header.contains("pub use fret_ui::{ItemKey, ScrollStrategy};"));
         assert!(root_header.contains("pub use fret_ui::{Theme, ThemeSnapshot};"));
         assert!(root_header.contains("ChromeRefinement, ColorRef, LayoutRefinement, MetricRef"));
         assert!(root_header.contains("Radius, ShadowPreset, Size,"));
@@ -4704,8 +4725,16 @@ mod authoring_surface_policy_tests {
         assert!(!app_prelude_exports_symbol("UiPatchTarget"));
         assert!(!app_prelude_exports_symbol("HoverRegionProps"));
         assert!(!app_prelude_exports_symbol("Length"));
+        assert!(!app_prelude_exports_symbol("LayoutStyle"));
+        assert!(!app_prelude_exports_symbol("ContainerProps"));
+        assert!(!app_prelude_exports_symbol("Edges"));
         assert!(!app_prelude_exports_symbol("SemanticsProps"));
         assert!(!app_prelude_exports_symbol("UiElementSinkExt"));
+        assert!(!app_prelude_exports_symbol("VirtualListOptions"));
+        assert!(!app_prelude_exports_symbol("VirtualListScrollHandle"));
+        assert!(!app_prelude_exports_symbol("VirtualListKeyCacheMode"));
+        assert!(!app_prelude_exports_symbol("ScrollStrategy"));
+        assert!(!app_prelude_exports_symbol("ItemKey"));
         assert!(!app_prelude_exports_symbol("AdaptiveQuerySource"));
         assert!(!app_prelude_exports_symbol("DeviceAdaptiveClass"));
         assert!(!app_prelude_exports_symbol("DeviceAdaptivePolicy"));

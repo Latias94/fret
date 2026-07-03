@@ -10,14 +10,15 @@ related_plan: docs/plans/2026-07-03-001-refactor-ui-framework-phase3-retained-br
 
 - Goal: execute `docs/plans/2026-07-03-001-refactor-ui-framework-phase3-retained-bridge-deletion-plan.md` as a breaking Phase 3 retained-bridge deletion refactor.
 - Branch: `feat/ui-framework-phase2-refactor`.
-- Last verified: Phase 3 U13 examples root internal-harness classification passed source-policy
-  tests/gate, consumption-profile, execution-surface, layering, formatting, engineering-memory,
-  and whitespace gates on 2026-07-03. Full `fret-ui` nextest still has a local long-running caveat
-  for the two `stack_safety` deep-tree tests.
+- Last verified: Phase 3 U13 virtual-list facade cookbook migration passed virtual-list
+  feature/example compile, `fret-cookbook --all-targets`, focused `fret` facade tests,
+  source-policy tests/gate, consumption-profile, execution-surface, layering, formatting,
+  engineering-memory, and whitespace gates on 2026-07-03. Full `fret-ui` nextest still has a local
+  long-running caveat for the two `stack_safety` deep-tree tests.
 - Done: local ADR/workstream research, crate/perf snapshots, GPUI/Zed comparison, architecture boundary audit, framework consumer audit, performance audit, implementation-ready plan, U1 convergence contract freeze, U2 source-policy gate, U3 first slice (`workbench-lite` public scaffold), U4 identity/dirty graph observability slices, U5 `ViewId` / boundary frame-product ownership slices, U6 policy vocabulary demotion/cleanup slices, U7 renderer scene/upload observability plus retained scene chunk and guarded quad resident upload lanes, U8 text/glyph/wasm budget work through web runtime evidence, U9 modular consumption profiles and `AppUi` facade split, Phase 2 U9 VertexColor viewport partial upload, Phase 2 U10 workbench-lite public settings diagnostics, Phase 2 U11 public mutation/toast wrappers, Phase 3 U9 manifest closure v2, Phase 3 U10 authoritative chunk launch, Phase 3 U11 partial upload stream policy, Phase 3 U12 public app facade cleanup, workstream closeout audit, duplicate ADR ID `0324` resolution, and execution-surface allowlist alignment.
-- Latest done: Phase 3 U13 fourteenth slice moves `apps/fret-examples/src/lib.rs` from
-  `advanced_manual` quarantine to `internal_harness` because it is crate-private runner/helper
-  infrastructure rather than copyable app authoring material.
+- Latest done: Phase 3 U13 fifteenth slice adds explicit `fret::virtual_list` plus expanded
+  `fret::style` layout props, migrates `virtual_list_basics.rs` off direct `fret_ui`/`fret_core`
+  imports, and moves it from `advanced_manual` quarantine to default clean source-policy coverage.
 - In progress: Phase 3 retained bridge closeout / remaining U13 cookbook and quarantine
   classification,
   with the
@@ -61,12 +62,14 @@ related_plan: docs/plans/2026-07-03-001-refactor-ui-framework-phase3-retained-br
   [router facade cookbook migration](progress/2026-07-03-phase3-u13-router-facade-cookbook-migration.md)
   and the
   [examples root internal harness slice](progress/2026-07-03-phase3-u13-examples-root-internal-harness.md)
+  and the
+  [virtual list facade cookbook migration](progress/2026-07-03-phase3-u13-virtual-list-facade-cookbook-migration.md)
   leaving remaining U13 work to audit and migrate the still-advanced cookbook/example surfaces.
 - Blocked: none known after the boundary store migration.
 - Next action: continue U13 by shrinking exact cookbook/example records through code migration;
   highest-value candidates are moving `todo_demo` test harness glue out of the public view file,
-  migrating `virtual_list_basics.rs` through an explicit virtual-list facade lane, or migrating one
-  of the now-explicit `fret-examples` raw local-state helper clusters to app-facing helpers.
+  migrating `undo_basics.rs` raw action/model plumbing, or addressing the IMUI cookbook
+  import/facade gaps.
 
 # Citations
 
@@ -112,6 +115,7 @@ related_plan: docs/plans/2026-07-03-001-refactor-ui-framework-phase3-retained-br
 - [Phase 3 U13 command facade cookbook migration](progress/2026-07-03-phase3-u13-command-facade-cookbook-migration.md)
 - [Phase 3 U13 router facade cookbook migration](progress/2026-07-03-phase3-u13-router-facade-cookbook-migration.md)
 - [Phase 3 U13 examples root internal harness](progress/2026-07-03-phase3-u13-examples-root-internal-harness.md)
+- [Phase 3 U13 virtual list facade cookbook migration](progress/2026-07-03-phase3-u13-virtual-list-facade-cookbook-migration.md)
 - [Phase 3 U13 advanced facade audits](subagents/2026-07-03-phase3-u13-advanced-facade-audits.md)
 - [Phase 1 convergence plan](../../plans/2026-06-30-001-refactor-ui-framework-architecture-plan.md)
 - [Subagent Findings](subagents/2026-06-30-ui-framework-architecture-audit-findings.md)
