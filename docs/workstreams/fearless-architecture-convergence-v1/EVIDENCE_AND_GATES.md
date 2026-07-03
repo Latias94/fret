@@ -37,6 +37,8 @@ Last updated: 2026-07-02
 - `ecosystem/fret-node/Cargo.toml`
 - `ecosystem/fret-node/src/lib.rs`
 - `docs/plans/2026-06-30-001-refactor-ui-framework-architecture-plan.md`
+- `docs/plans/2026-07-02-001-refactor-ui-framework-phase2-plan.md`
+- `docs/plans/2026-07-02-001-refactor-ui-framework-phase2-closeout.md`
 - `docs/golden-architecture.md`
 - `docs/runtime-contract-matrix.md`
 - `docs/ui-closure-map.md`
@@ -45,6 +47,33 @@ Last updated: 2026-07-02
 - `tools/check_consumption_profiles.py`
 - `tools/perf/diag_u8_text_budget_gate.py`
 - `docs/knowledge/engineering/current-state.md`
+
+## 2026-07-02 - UI framework Phase 2 closeout
+
+Claim to verify:
+
+- U1-U14 of `docs/plans/2026-07-02-001-refactor-ui-framework-phase2-plan.md` are implemented or
+  explicitly retained with owner, reason, and deletion gate.
+- Retained bridges are not hidden behind broad success language: parent repair, retained-tree
+  liveness, flat launch input, text debug/parity helpers, non-quad upload fallbacks, quarantine
+  records, and historical perf keys remain named follow-ons.
+- The closed coordinator stays closed; future work starts from narrow retained-bridge follow-ons.
+
+Fresh validation:
+
+- `cargo fmt --all --check`
+- `python3 tools/check_layering.py`
+- `python3 tools/check_surface_policy.py`
+- `python3 tools/check_consumption_profiles.py`
+- `python3 tools/check_execution_surface.py`
+- `python3 tools/check_workstream_catalog.py`
+- `python3 tools/check_adr_numbers.py`
+- `git diff --check`
+
+Evidence:
+
+- `docs/plans/2026-07-02-001-refactor-ui-framework-phase2-closeout.md`
+- `docs/knowledge/engineering/progress/2026-07-02-phase2-closeout.md`
 
 ## 2026-07-02 - 2026 UI framework convergence closeout
 

@@ -32,8 +32,16 @@
       "path": "docs/workstreams/fearless-architecture-convergence-v1/CLOSEOUT_AUDIT_2026-07-02.md"
     },
     {
+      "role": "closeout",
+      "path": "docs/plans/2026-07-02-001-refactor-ui-framework-phase2-closeout.md"
+    },
+    {
       "role": "reference",
       "path": "docs/plans/2026-06-30-001-refactor-ui-framework-architecture-plan.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/plans/2026-07-02-001-refactor-ui-framework-phase2-plan.md"
     }
   ],
   "repro": {
@@ -83,6 +91,8 @@
     "docs/workstreams/fearless-architecture-convergence-v1/EVIDENCE_AND_GATES.md",
     "docs/workstreams/fearless-architecture-convergence-v1/HANDOFF.md",
     "docs/plans/2026-06-30-001-refactor-ui-framework-architecture-plan.md",
+    "docs/plans/2026-07-02-001-refactor-ui-framework-phase2-plan.md",
+    "docs/plans/2026-07-02-001-refactor-ui-framework-phase2-closeout.md",
     "docs/golden-architecture.md",
     "docs/runtime-contract-matrix.md",
     "docs/ui-closure-map.md",

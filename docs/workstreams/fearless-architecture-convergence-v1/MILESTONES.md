@@ -88,3 +88,20 @@ Evidence:
 
 - `docs/workstreams/fearless-architecture-convergence-v1/CLOSEOUT_AUDIT_2026-07-02.md`
 - `docs/knowledge/engineering/current-state.md`
+
+## M5 - UI Framework Phase 2 Closed
+
+Exit criteria:
+
+- U1-U14 from `docs/plans/2026-07-02-001-refactor-ui-framework-phase2-plan.md` have implementation
+  evidence or explicit retained-bridge ownership.
+- The closeout does not overclaim deletion where normal paths still retain parent repair, flat
+  launch input, retained-tree liveness, text debug/parity helpers, or unsupported stream fallbacks.
+- The next maintainer can choose a narrow follow-on from the retained-bridge table.
+
+Status: Complete with explicit retained bridges.
+
+Evidence:
+
+- `docs/plans/2026-07-02-001-refactor-ui-framework-phase2-closeout.md`
+- `docs/knowledge/engineering/progress/2026-07-02-phase2-closeout.md`

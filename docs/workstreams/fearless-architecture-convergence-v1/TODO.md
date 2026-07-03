@@ -92,6 +92,20 @@ Last updated: 2026-07-02
   Evidence: `docs/workstreams/fearless-architecture-convergence-v1/CLOSEOUT_AUDIT_2026-07-02.md`
   Handoff: Future work starts from the closeout audit's retained/deferred table.
 
+## FAC-M5 - UI Framework Phase 2 Fearless Refactor
+
+- [x] FAC-120 [owner=codex] [deps=FAC-110] [scope=docs/plans,docs/workstreams/fearless-architecture-convergence-v1,docs/knowledge/engineering]
+  Goal: Close `docs/plans/2026-07-02-001-refactor-ui-framework-phase2-plan.md` with evidence for
+  U1-U14 and explicit retained bridges instead of reopening the broad coordinator.
+  Validation: `cargo fmt --all --check`; `python3 tools/check_layering.py`;
+  `python3 tools/check_surface_policy.py`; `python3 tools/check_consumption_profiles.py`;
+  `python3 tools/check_execution_surface.py`; `python3 tools/check_workstream_catalog.py`;
+  `python3 tools/check_adr_numbers.py`; `git diff --check`
+  Evidence: `docs/plans/2026-07-02-001-refactor-ui-framework-phase2-closeout.md`
+  Handoff: Future work starts from the closeout retained-bridge table. Do not treat Phase 2 as a
+  claim that flat `Scene`, parent repair, full text shaping closure, or all non-quad partial upload
+  work has been deleted.
+
 ## Deferred Follow-Ons
 
 - Stable handle deletion after U4 observability.
@@ -107,3 +121,7 @@ Last updated: 2026-07-02
 - Full-blob text helper deletion after chunk-local text resource closure.
 - Full aggregate pre-release runs when release scope needs them; duplicate ADR ID `0324` was
   resolved by renumbering the later a11y state-description ADR to `0332`.
+- Phase 2 retained bridges: parent-pointer repair normal-path deletion, retained-tree GC liveness
+  shrink, flat launch input deletion, full shaping-aware text chunk closure, per-stream non-quad
+  partial upload gates, advanced/manual quarantine shrink, and historical observation-collapse perf
+  key retirement.

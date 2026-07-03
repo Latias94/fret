@@ -293,3 +293,7 @@ timestamp: 2026-06-30
   advanced/manual call sites now import them explicitly. Verification passed for `fret` facade
   tests, `fret-cookbook` and `fret-examples-imui` compile checks, surface-policy,
   execution-surface, consumption-profile, layering, formatting, and whitespace gates.
+- 2026-07-02: Phase 2 closeout records U1-U14 as shipped with explicit retained bridges instead of
+  overclaiming every strong DoD deletion. Retained follow-ons include parent-pointer repair,
+  retained-tree liveness, flat launch input, full text shaping closure, unsupported non-quad upload
+  streams, source-policy quarantine shrink, and historical observation-collapse perf-key retirement.

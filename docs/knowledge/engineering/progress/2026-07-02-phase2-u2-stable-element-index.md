@@ -5,19 +5,21 @@ tags: fret,ui,identity,phase2,ce-work
 timestamp: 2026-07-02
 related_plan: docs/plans/2026-07-02-001-refactor-ui-framework-phase2-plan.md
 git_branch: feat/ui-framework-phase2-refactor
-status: active
+status: closed
 ---
 
 # Summary
 
-Phase 2 U2 is partially implemented on `feat/ui-framework-phase2-refactor`.
+Phase 2 U2 is closed and superseded by the Phase 2 closeout on
+`feat/ui-framework-phase2-refactor`.
 The slice adds `StableNodeHandle`, a window-local `ElementNodeIndex`, identity-index frame stats,
 bootstrap diagnostics fields, and `fret-diag` perf-key registry coverage.
 
-The current implementation intentionally keeps the old fallback scan path for U3. Duplicate live
-declarative ids are diagnostic and no longer silently pick a retained fallback node in the seeded
-resolver. Indexed hits now revalidate retained attachment so a missed detach cleanup cannot turn a
-stale handle into an authoritative live result.
+The original U2 slice intentionally kept the old fallback scan path for U3. Later Phase 2 commits
+deleted the scan fallback from normal live element resolution and moved semantics relation lookup to
+the live index. Duplicate live declarative ids are diagnostic and no longer silently pick a retained
+fallback node in the seeded resolver. Indexed hits revalidate retained attachment so a missed detach
+cleanup cannot turn a stale handle into an authoritative live result.
 
 # Verification
 
@@ -35,7 +37,7 @@ Passed:
 - `python3 tools/check_layering.py`
 - `git diff --check`
 
-Failed:
+Historical baseline failure during this slice:
 
 - `cargo nextest run -p fret-ui --no-fail-fast`: 1155 passed, 23 failed.
 - Failures cluster around scroll/layout/text/prepaint/scroll-into-view behavior, including
@@ -58,14 +60,15 @@ identity-index diff. It grouped the failures into scroll/layout extent, wrapped-
 canvas prepaint manifest fingerprint, and barrier solve-cache clusters. The explorer did identify
 the U2 stale-index risk above; that has been fixed with focused coverage.
 
-# Next Action
+# Closeout State
 
-Commit U2 with focused identity evidence and record the full `fret-ui` gate as a known baseline
-blocker. The next implementation slice should fix the scroll/layout extent cluster first, starting
-from `scroll_rounds_scrollable_extent_up_to_next_pixel` or the layout primitives harness, before
-attempting higher-level scroll-into-view or combobox retained-active failures.
+Commit `db0de99ac0` landed the U2 slice. Follow-up commits `65e31accb2`, `02b987b9f6`,
+`f18008447a`, and `54fd844cd8` resolved the representative scroll/layout/semantics issues and
+deleted the live scan fallback path. The Phase 2 closeout owns the remaining retained bridge list:
+parent repair, retained-tree liveness, and identity pressure gates.
 
 # Citations
 
 - [Phase 2 plan](../../../plans/2026-07-02-001-refactor-ui-framework-phase2-plan.md)
+- [Phase 2 closeout](../../../plans/2026-07-02-001-refactor-ui-framework-phase2-closeout.md)
 - Explorer `019f21e5-3622-7111-a55e-0d7cddb35d15`
