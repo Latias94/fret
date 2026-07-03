@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use super::fs::sanitize_package_name;
 use super::{
     IconPack, NewMode, NewTemplate, ScaffoldOptions, init_empty_at, init_hello_at,
-    init_simple_todo_at, init_todo_at, init_workbench_lite_at,
+    init_mutation_workbench_at, init_simple_todo_at, init_todo_at, init_workbench_lite_at,
 };
 
 pub(super) fn new_wizard(mode: &NewMode) -> Result<(), String> {
@@ -26,6 +26,7 @@ pub(super) fn new_wizard(mode: &NewMode) -> Result<(), String> {
             ("simple-todo", NewTemplate::SimpleTodo),
             ("todo", NewTemplate::Todo),
             ("workbench-lite", NewTemplate::WorkbenchLite),
+            ("mutation-workbench", NewTemplate::MutationWorkbench),
         ],
         1,
     )?;
@@ -36,6 +37,7 @@ pub(super) fn new_wizard(mode: &NewMode) -> Result<(), String> {
         NewTemplate::SimpleTodo => "simple-todo-app",
         NewTemplate::Todo => "todo-app",
         NewTemplate::WorkbenchLite => "workbench-lite-app",
+        NewTemplate::MutationWorkbench => "mutation-workbench-app",
     };
 
     let name_raw = prompt_line("Package name", Some(default_name))?;
@@ -63,7 +65,7 @@ pub(super) fn new_wizard(mode: &NewMode) -> Result<(), String> {
 
     let command_palette = match template {
         NewTemplate::Empty => false,
-        NewTemplate::WorkbenchLite => true,
+        NewTemplate::WorkbenchLite | NewTemplate::MutationWorkbench => true,
         _ => prompt_yes_no("Enable command palette? (--command-palette)", false)?,
     };
 
@@ -108,6 +110,9 @@ pub(super) fn new_wizard(mode: &NewMode) -> Result<(), String> {
         NewTemplate::Todo => init_todo_at(mode, &out_dir, &package_name, opts, true),
         NewTemplate::WorkbenchLite => {
             init_workbench_lite_at(mode, &out_dir, &package_name, opts, true)
+        }
+        NewTemplate::MutationWorkbench => {
+            init_mutation_workbench_at(mode, &out_dir, &package_name, opts, true)
         }
     }
 }

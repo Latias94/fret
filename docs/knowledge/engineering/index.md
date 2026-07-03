@@ -65,6 +65,7 @@ It is a sidecar for session recovery and subagent synthesis, not a replacement f
 - [Phase 2 U9 VertexColor viewport partial upload](progress/2026-07-02-phase2-u9-viewport-partial-upload.md)
 - [Phase 2 U10 workbench-lite settings diagnostics](progress/2026-07-02-phase2-u10-workbench-settings-diagnostics.md)
 - [Phase 2 U11 public mutation and toast wrappers](progress/2026-07-02-phase2-u11-public-mutation-toast-wrappers.md)
+- [Phase 2 U12 mutation-workbench starter](progress/2026-07-02-phase2-u12-mutation-workbench-starter.md)
 - [Phase 2 U4 boundary store audit](subagents/2026-07-02-phase2-u4-boundary-store-audit.md)
 - [Phase 2 U4 durable ViewId audit](subagents/2026-07-02-phase2-u4-durable-viewid-audit.md)
 - [Phase 2 U5 boundary bridge audit](subagents/2026-07-02-phase2-u5-boundary-bridge-audit.md)

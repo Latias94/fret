@@ -85,7 +85,7 @@ Memorize the default app surface before you start editing:
 ### Path taxonomy
 
 - **Default**: `hello`, `simple-todo`, `todo`
-- **Second-hour**: `workbench-lite`
+- **Second-hour**: `workbench-lite`, then `mutation-workbench` when async submit/query feedback is the point
 - **Comparison**: `simple_todo_v2_target`
 - **Advanced**: gallery, viewport/interop, docking, renderer-heavy demos
 
@@ -123,6 +123,30 @@ separate from draft input, so Cancel/Escape discard edits and Save commits trimm
 script `tools/diag-scripts/public-app/workbench-lite-settings-dialog.json` locks the open, focus
 containment, save, cancel, Escape, and focus-restore behavior through stable `workbench_lite.*`
 selectors.
+
+When the simulated submit flow becomes too small, use the async mutation starter instead of
+copying advanced demos:
+
+```bash
+cargo run -p fretboard -- new mutation-workbench --name my-mutation-workbench
+cargo run --manifest-path my-mutation-workbench/Cargo.toml
+```
+
+Repo-local maintainer equivalent:
+
+```bash
+cargo run -p fretboard-dev -- new mutation-workbench --name my-mutation-workbench
+cargo run --manifest-path local/my-mutation-workbench/Cargo.toml
+```
+
+`mutation-workbench` keeps the same public app surface, but intentionally imports the explicit
+async nouns it needs from `fret::mutation` and `fret::query`. It demonstrates
+`cx.actions().mutation_submit(...)`, `cx.actions().mutation_retry_last(...)`,
+`cx.data().update_locals_after_mutation_completion(...)`,
+`cx.data().invalidate_query_namespace_after_mutation_success(...)`, and
+`cx.effects().toast_success(...)` / `toast_error(...)` without importing raw runtime seams.
+The script `tools/diag-scripts/public-app/mutation-workbench-flow.json` locks success, forced
+error, retry, query refresh, and toast feedback through stable `mutation_workbench.*` selectors.
 
 ## 3) The three things you should learn first
 
@@ -309,3 +333,4 @@ equivalent command is `cargo run -p fretboard -- ...`.
 | `hello` | `fretboard new hello` | view runtime + typed actions (smallest runnable UI surface) | selectors/queries |
 | `simple-todo` | `fretboard new simple-todo` | view runtime + typed actions + keyed lists | selectors/queries |
 | `todo` | `fretboard new todo` | richer third rung product baseline: selector/query seams + LocalState transactions | being the minimal starter |
+| `mutation-workbench` | `fretboard new mutation-workbench` | async submit/retry/query refresh/toast feedback on the public AppUi facade | raw runtime interop or editor shell ownership |

@@ -110,6 +110,11 @@ Desktop-first quick start:
   app scaffold before copying advanced demos. It still depends on `fret`, uses
   `fret::app::prelude::*`, and keeps settings/dialog/command/status/content composition on the
   app facade.
+- If the first real app needs async submit/retry/query refresh/toast feedback, use
+  `mutation-workbench` as the next public scaffold instead of copying raw runtime patterns from
+  advanced demos. It still uses `fret::app::prelude::*`, imports explicit `fret::mutation` /
+  `fret::query` nouns for async state, and keeps submit/retry/completion feedback on the grouped
+  `cx.actions()`, `cx.data()`, and `cx.effects()` facades.
 
 Web/wasm quick start:
 
@@ -209,6 +214,16 @@ Its settings dialog is also the public-app diagnostics reference for this rung:
 `tools/diag-scripts/public-app/workbench-lite-settings-dialog.json` covers committed/draft settings
 state, Cancel/Escape discard semantics, Save commit semantics, focus containment, and focus restore
 without requiring raw runtime imports in the generated source.
+
+The `mutation-workbench` scaffold is the async public-app reference for the same budget. It
+demonstrates `cx.actions().mutation_submit(...)`, `cx.actions().mutation_retry_last(...)`,
+`cx.data().update_locals_after_mutation_completion(...)`,
+`cx.data().invalidate_query_namespace_after_mutation_success(...)`, and
+`cx.effects().toast_success(...)` / `toast_error(...)` with an app-owned executor and in-memory
+service boundary. Its diagnostics reference is
+`tools/diag-scripts/public-app/mutation-workbench-flow.json`, which covers submit, success,
+forced error, retry, query refresh, and toast feedback without importing raw runtime seams in the
+generated source.
 
 When app code needs explicit styling or icon nouns, keep them off the default prelude and import
 them intentionally from `fret::style::{...}` and `fret::icons::{icon, IconId}`.
@@ -909,8 +924,9 @@ mutation completion. When app code needs explicit submit nouns, import them from
 `fret::mutation::{MutationPolicy, MutationState, ...}` instead of
 expecting them from `fret::app::prelude::*`.
 
-For a copyable "mutation stays authoritative, Sonner stays feedback-only" teaching surface, see
-`apps/fret-cookbook/examples/mutation_toast_feedback_basics.rs`.
+For a copyable "mutation stays authoritative, Sonner stays feedback-only" teaching surface, start
+with `fretboard new mutation-workbench --name my-mutation-workbench`. The smaller cookbook lesson
+remains available at `apps/fret-cookbook/examples/mutation_toast_feedback_basics.rs`.
 
 **Advanced/manual note:** keep raw `fret-executor` + `InboxDrainer` for app/driver surfaces that
 do not have `AppUi`, or when you intentionally own custom inbox/message multiplexing instead of

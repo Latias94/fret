@@ -182,6 +182,84 @@ pub(super) fn workbench_lite_template_cargo_toml_repo(
     )
 }
 
+pub(super) fn mutation_workbench_template_cargo_toml_public(
+    package_name: &str,
+    opts: ScaffoldOptions,
+    version: &str,
+) -> String {
+    mutation_workbench_template_cargo_toml_with(
+        package_name,
+        opts,
+        DependencySpec::Published { version },
+    )
+}
+
+pub(super) fn mutation_workbench_template_cargo_toml_repo(
+    package_name: &str,
+    opts: ScaffoldOptions,
+    workspace_prefix: &str,
+) -> String {
+    mutation_workbench_template_cargo_toml_with(
+        package_name,
+        opts,
+        DependencySpec::WorkspacePath { workspace_prefix },
+    )
+}
+
+fn mutation_workbench_template_cargo_toml_with(
+    package_name: &str,
+    opts: ScaffoldOptions,
+    deps: DependencySpec<'_>,
+) -> String {
+    let mut kit_features: Vec<&str> = vec![
+        "desktop",
+        "shadcn",
+        "state-query",
+        "state-mutation",
+        "command-palette",
+        "diagnostics",
+    ];
+    match opts.icon_pack {
+        IconPack::Lucide => {
+            kit_features.push("icons");
+            kit_features.push("preload-icon-svgs");
+        }
+        IconPack::Radix => {
+            // Radix icons are installed via an explicit dependency + install hook (no `fret` feature).
+        }
+        IconPack::None => {}
+    }
+
+    let kit_features = kit_features
+        .into_iter()
+        .map(|f| format!("\"{f}\""))
+        .collect::<Vec<_>>()
+        .join(", ");
+
+    let radix_dep = if matches!(opts.icon_pack, IconPack::Radix) {
+        deps.radix_dependency_line()
+    } else {
+        String::new()
+    };
+    let fret_dep = deps.fret_dependency_line(&kit_features);
+
+    format!(
+        r#"[package]
+name = "{package_name}"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1"
+{fret_dep}
+{radix_dep}
+tokio = {{ version = "1", default-features = false, features = ["rt-multi-thread", "time"] }}
+
+[workspace]
+"#
+    )
+}
+
 fn workbench_lite_template_cargo_toml_with(
     package_name: &str,
     opts: ScaffoldOptions,
@@ -1523,6 +1601,611 @@ fn main() -> anyhow::Result<()> {
         .replace("__PACKAGE_NAME__", package_name)
 }
 
+pub(super) fn mutation_workbench_template_main_rs(
+    package_name: &str,
+    opts: ScaffoldOptions,
+) -> String {
+    let install_app_binding = if matches!(opts.icon_pack, IconPack::Radix) {
+        "app"
+    } else {
+        "_app"
+    };
+    let install_icons = match opts.icon_pack {
+        IconPack::Radix => {
+            r#"    fret_icons_radix::app::install(app);
+"#
+        }
+        IconPack::Lucide | IconPack::None => "",
+    };
+
+    const TEMPLATE: &str = r#"use std::future::Future;
+use std::pin::Pin;
+use std::sync::{
+    Arc, Mutex,
+    atomic::{AtomicBool, Ordering},
+};
+use std::time::Duration;
+
+use fret::app::LocalState;
+use fret::app::prelude::*;
+use fret::mutation::{
+    CancellationToken, FutureSpawner, FutureSpawnerHandle, MutationError, MutationHandle,
+    MutationPolicy, MutationState,
+};
+use fret::query::{QueryError, QueryKey, QueryPolicy, QueryState};
+use fret::style::{ColorRef, Radius, Space, Theme, ThemeSnapshot};
+use fret::{FretApp, shadcn};
+
+mod act {
+    fret::actions!([
+        SavePreset = "__PACKAGE_NAME__.mutation_workbench.save_preset.v1",
+        RetrySave = "__PACKAGE_NAME__.mutation_workbench.retry_save.v1",
+        FailNextSave = "__PACKAGE_NAME__.mutation_workbench.fail_next_save.v1",
+        ClearCatalog = "__PACKAGE_NAME__.mutation_workbench.clear_catalog.v1"
+    ]);
+}
+
+const PRESET_QUERY_NS: &str = "__PACKAGE_NAME__.mutation_workbench.presets.v1";
+const EFFECT_APPLY_COMPLETION: u64 = 0xAFA0_3001;
+const EFFECT_INVALIDATE_QUERY: u64 = 0xAFA0_3002;
+const EFFECT_SUCCESS_TOAST: u64 = 0xAFA0_3003;
+const EFFECT_ERROR_TOAST: u64 = 0xAFA0_3004;
+
+const TEST_ID_ROOT: &str = "mutation_workbench.root";
+const TEST_ID_NAME: &str = "mutation_workbench.name";
+const TEST_ID_ENDPOINT: &str = "mutation_workbench.endpoint";
+const TEST_ID_SAVE: &str = "mutation_workbench.save";
+const TEST_ID_RETRY: &str = "mutation_workbench.retry";
+const TEST_ID_FAIL_NEXT: &str = "mutation_workbench.fail_next";
+const TEST_ID_CLEAR: &str = "mutation_workbench.clear";
+const TEST_ID_MUTATION_STATUS: &str = "mutation_workbench.mutation.status";
+const TEST_ID_QUERY_STATUS: &str = "mutation_workbench.query.status";
+const TEST_ID_ERROR: &str = "mutation_workbench.error";
+const TEST_ID_LAST_SAVED: &str = "mutation_workbench.last_saved";
+const TEST_ID_CATALOG_COUNT: &str = "mutation_workbench.catalog.count";
+const TEST_ID_CATALOG_EMPTY: &str = "mutation_workbench.catalog.empty";
+
+#[derive(Debug, Clone)]
+struct TokioRuntimeGlobal {
+    _rt: Arc<tokio::runtime::Runtime>,
+}
+
+#[derive(Clone)]
+struct TokioHandleSpawner(tokio::runtime::Handle);
+
+impl FutureSpawner for TokioHandleSpawner {
+    fn spawn_send(&self, fut: Pin<Box<dyn Future<Output = ()> + Send + 'static>>) {
+        let _ = self.0.spawn(fut);
+    }
+}
+
+fn install_async_runtime(app: &mut App) {
+    let rt = tokio::runtime::Builder::new_multi_thread()
+        .enable_time()
+        .build()
+        .expect("failed to build tokio runtime");
+    let rt = Arc::new(rt);
+    let spawner: FutureSpawnerHandle = Arc::new(TokioHandleSpawner(rt.handle().clone()));
+    app.set_global::<FutureSpawnerHandle>(spawner);
+    app.set_global::<TokioRuntimeGlobal>(TokioRuntimeGlobal { _rt: rt });
+}
+
+#[derive(Debug, Clone, Default)]
+struct PresetCatalog {
+    saved: Arc<Mutex<Vec<SavedPreset>>>,
+}
+
+#[derive(Debug, Clone)]
+struct PresetDraft {
+    name: Arc<str>,
+    endpoint: Arc<str>,
+    force_error_once: Arc<AtomicBool>,
+}
+
+#[derive(Debug, Clone)]
+struct SavedPreset {
+    name: Arc<str>,
+    endpoint: Arc<str>,
+    summary: Arc<str>,
+}
+
+#[derive(Clone)]
+struct MutationWorkbenchLocals {
+    name: LocalState<String>,
+    endpoint: LocalState<String>,
+    fail_next: LocalState<bool>,
+    note: LocalState<String>,
+    last_saved: LocalState<String>,
+}
+
+impl MutationWorkbenchLocals {
+    fn new(cx: &mut AppUi<'_, '_>) -> Self {
+        Self {
+            name: cx.state().local_init(|| "Create issue".to_string()),
+            endpoint: cx.state().local_init(|| "/api/issues".to_string()),
+            fail_next: cx.state().local_init(|| false),
+            note: cx
+                .state()
+                .local_init(|| "Submit a preset to exercise mutation + query refresh.".to_string()),
+            last_saved: cx
+                .state()
+                .local_init(|| "No preset has been saved yet.".to_string()),
+        }
+    }
+}
+
+struct MutationWorkbenchView;
+
+impl View for MutationWorkbenchView {
+    fn init(_app: &mut App, _window: WindowId) -> Self {
+        Self
+    }
+
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
+        let theme = Theme::global(cx.app()).snapshot();
+        let catalog = cx
+            .app()
+            .global::<PresetCatalog>()
+            .cloned()
+            .unwrap_or_default();
+        let locals = MutationWorkbenchLocals::new(cx);
+
+        let catalog_for_query = catalog.clone();
+        let presets = cx.data().query_async(
+            QueryKey::<Vec<SavedPreset>>::new(PRESET_QUERY_NS, &()),
+            QueryPolicy::default(),
+            move |_token| {
+                let catalog = catalog_for_query.clone();
+                async move { load_presets(catalog).await }
+            },
+        );
+
+        let catalog_for_save = catalog.clone();
+        let save = cx.data().mutation_async(MutationPolicy::default(), move |token, draft| {
+            let catalog = catalog_for_save.clone();
+            save_preset(catalog, token, draft)
+        });
+
+        bind_actions(cx, &locals, &save, &catalog);
+
+        let mutation = save.read_layout(cx);
+        let query = presets.read_layout(cx);
+        let _ = cx.data().invalidate_query_namespace_after_mutation_success(
+            EFFECT_INVALIDATE_QUERY,
+            &save,
+            PRESET_QUERY_NS,
+        );
+        let _ = cx
+            .data()
+            .update_locals_after_mutation_completion(EFFECT_APPLY_COMPLETION, &save, {
+                let locals = locals.clone();
+                move |tx, state| {
+                    if let Some(saved) = state.data.as_ref() {
+                        tx.set(&locals.last_saved, saved.summary.to_string())
+                            || tx.set(&locals.note, format!("Saved \"{}\".", saved.name))
+                    } else {
+                        let message = state
+                            .error
+                            .as_ref()
+                            .map(ToString::to_string)
+                            .unwrap_or_else(|| "Unknown save failure".to_string());
+                        tx.set(&locals.note, format!("Save failed: {message}"))
+                    }
+                }
+            });
+        emit_completion_feedback(cx, &save, &mutation);
+
+        let name = locals.name.layout_value(cx);
+        let endpoint = locals.endpoint.layout_value(cx);
+        let note = locals.note.layout_value(cx);
+        let last_saved = locals.last_saved.layout_value(cx);
+        let fail_next = locals.fail_next.layout_value(cx);
+        let can_submit = !name.trim().is_empty() && !endpoint.trim().is_empty() && !mutation.is_running();
+        let can_retry = mutation.input.is_some() && !mutation.is_running();
+
+        let content = content_panel(
+            &theme,
+            &locals,
+            &mutation,
+            &query,
+            note,
+            last_saved,
+            fail_next,
+            can_submit,
+            can_retry,
+        );
+
+        ui::single(
+            cx,
+            ui::container(|cx| {
+                ui::children![
+                    cx;
+                    content,
+                    shadcn::Toaster::new(),
+                ]
+            })
+                .bg(ColorRef::Color(theme.color_token("muted")))
+                .p(Space::N4)
+                .w_full()
+                .h_full()
+                .test_id(TEST_ID_ROOT),
+        )
+    }
+}
+
+fn bind_actions(
+    cx: &mut AppUi<'_, '_>,
+    locals: &MutationWorkbenchLocals,
+    save: &MutationHandle<PresetDraft, SavedPreset>,
+    catalog: &PresetCatalog,
+) {
+    cx.actions().mutation_submit::<act::SavePreset, _, _>(save, {
+        let locals = locals.clone();
+        move |tx| {
+            let name = tx.value_or(&locals.name, String::new());
+            let endpoint = tx.value_or(&locals.endpoint, String::new());
+            let force_error = tx.value_or(&locals.fail_next, false);
+            let _ = tx.set(&locals.fail_next, false);
+            let _ = tx.set(&locals.note, "Saving preset...".to_string());
+            Some(PresetDraft {
+                name: Arc::from(name),
+                endpoint: Arc::from(endpoint),
+                force_error_once: Arc::new(AtomicBool::new(force_error)),
+            })
+        }
+    });
+
+    cx.actions().mutation_retry_last::<act::RetrySave, _, _>(save, {
+        let locals = locals.clone();
+        move |tx| tx.set(&locals.note, "Retrying the last preset...".to_string())
+    });
+
+    cx.actions()
+        .local(&locals.fail_next)
+        .set::<act::FailNextSave>(true);
+
+    cx.actions().locals_with((&locals.note, &locals.last_saved)).on::<act::ClearCatalog>({
+        let catalog = catalog.clone();
+        move |tx, (note, last_saved)| {
+            if let Ok(mut saved) = catalog.saved.lock() {
+                saved.clear();
+            }
+            tx.set(&note, "Catalog cleared. Save again to repopulate the query.".to_string())
+                || tx.set(&last_saved, "No preset has been saved yet.".to_string())
+        }
+    });
+}
+
+fn content_panel(
+    theme: &ThemeSnapshot,
+    locals: &MutationWorkbenchLocals,
+    mutation: &MutationState<PresetDraft, SavedPreset>,
+    query: &QueryState<Vec<SavedPreset>>,
+    note: String,
+    last_saved: String,
+    fail_next: bool,
+    can_submit: bool,
+    can_retry: bool,
+) -> impl UiChild {
+    let muted = theme.color_token("muted-foreground");
+    let border = theme.color_token("border");
+    let background = theme.color_token("background");
+    let rows = query
+        .data
+        .as_ref()
+        .map(|rows| rows.as_ref().clone())
+        .unwrap_or_default();
+    let catalog_count = rows.len();
+    let mutation_status_text = format!("Mutation: {}", mutation.status.as_str());
+    let query_status_text = format!("Query: {}", query.status.as_str());
+    let catalog_count_text = format!("{catalog_count} saved");
+
+    let inputs = ui::v_flex(|cx| {
+        ui::children![
+            cx;
+            ui::v_flex(|cx| {
+                ui::children![
+                    cx;
+                    shadcn::Label::new("Preset name"),
+                    shadcn::Input::new(&locals.name)
+                        .a11y_label("Preset name")
+                        .placeholder("Create issue")
+                        .test_id(TEST_ID_NAME),
+                ]
+            })
+            .gap(Space::N1),
+            ui::v_flex(|cx| {
+                ui::children![
+                    cx;
+                    shadcn::Label::new("Endpoint"),
+                    shadcn::Input::new(&locals.endpoint)
+                        .a11y_label("Endpoint")
+                        .placeholder("/api/issues")
+                        .submit_action(act::SavePreset)
+                        .test_id(TEST_ID_ENDPOINT),
+                ]
+            })
+            .gap(Space::N1),
+        ]
+    })
+    .gap(Space::N3)
+    .w_full();
+
+    let actions = ui::h_flex(move |cx| {
+        ui::children![
+            cx;
+            shadcn::Button::new("Save preset")
+                .action(act::SavePreset)
+                .disabled(!can_submit)
+                .test_id(TEST_ID_SAVE),
+            shadcn::Button::new("Retry")
+                .variant(shadcn::ButtonVariant::Outline)
+                .action(act::RetrySave)
+                .disabled(!can_retry)
+                .test_id(TEST_ID_RETRY),
+            shadcn::Button::new(if fail_next { "Next save will fail" } else { "Fail next" })
+                .variant(shadcn::ButtonVariant::Ghost)
+                .action(act::FailNextSave)
+                .test_id(TEST_ID_FAIL_NEXT),
+            shadcn::Button::new("Clear")
+                .variant(shadcn::ButtonVariant::Outline)
+                .action(act::ClearCatalog)
+                .test_id(TEST_ID_CLEAR),
+        ]
+    })
+    .gap(Space::N2)
+    .items_center()
+    .w_full();
+
+    let status = ui::v_flex(move |cx| {
+        ui::children![
+            cx;
+            ui::h_flex(|cx| {
+                ui::children![
+                    cx;
+                    status_pill(
+                        mutation_status_text.clone(),
+                        TEST_ID_MUTATION_STATUS,
+                        ColorRef::Color(border),
+                        ColorRef::Color(background),
+                    ),
+                    status_pill(
+                        query_status_text.clone(),
+                        TEST_ID_QUERY_STATUS,
+                        ColorRef::Color(border),
+                        ColorRef::Color(background),
+                    ),
+                    status_pill(
+                        catalog_count_text.clone(),
+                        TEST_ID_CATALOG_COUNT,
+                        ColorRef::Color(border),
+                        ColorRef::Color(background),
+                    ),
+                ]
+            })
+            .gap(Space::N2)
+            .items_center(),
+            ui::text(note.clone())
+                .text_sm()
+                .text_color(ColorRef::Color(muted)),
+            ui::text(last_saved.clone())
+                .text_sm()
+                .test_id(TEST_ID_LAST_SAVED),
+            error_text(theme, mutation, query),
+        ]
+    })
+    .gap(Space::N2)
+    .w_full();
+
+    let catalog = catalog_panel(theme.clone(), rows);
+
+    shadcn::card(move |cx| {
+        ui::children![
+            cx;
+            shadcn::card_header(|cx| {
+                ui::children![
+                    cx;
+                    shadcn::card_title("Mutation Workbench"),
+                    shadcn::card_description(
+                        "Submit, retry, toast feedback, and query invalidation through the public AppUi facade.",
+                    ),
+                ]
+            }),
+            shadcn::card_content(|cx| {
+                ui::children![cx; inputs, actions, status, catalog]
+            }),
+        ]
+    })
+    .ui()
+    .w_full()
+    .max_w(Px(820.0))
+}
+
+fn status_pill(
+    label: String,
+    test_id: &'static str,
+    border: ColorRef,
+    background: ColorRef,
+) -> impl UiChild {
+    ui::container(move |cx| {
+        ui::single(
+            cx,
+            ui::text(label.clone())
+                .text_sm()
+                .font_medium()
+                .test_id(test_id),
+        )
+    })
+    .rounded(Radius::Full)
+    .border_1()
+    .border_color(border)
+    .bg(background)
+    .px_3()
+    .py_1()
+}
+
+fn error_text(
+    theme: &ThemeSnapshot,
+    mutation: &MutationState<PresetDraft, SavedPreset>,
+    query: &QueryState<Vec<SavedPreset>>,
+) -> impl UiChild {
+    let destructive = theme.color_token("destructive");
+    let message = mutation
+        .error
+        .as_ref()
+        .map(ToString::to_string)
+        .or_else(|| query.error.as_ref().map(ToString::to_string))
+        .unwrap_or_else(|| "No errors.".to_string());
+
+    ui::text(message)
+        .text_sm()
+        .text_color(ColorRef::Color(destructive))
+        .test_id(TEST_ID_ERROR)
+}
+
+fn catalog_panel(theme: ThemeSnapshot, rows: Vec<SavedPreset>) -> impl UiChild {
+    let border = theme.color_token("border");
+    let background = theme.color_token("background");
+
+    ui::v_flex(move |cx| {
+        if rows.is_empty() {
+            return ui::children![
+                cx;
+                ui::container(|cx| {
+                    ui::single(
+                        cx,
+                        ui::text("No saved presets yet.")
+                            .text_sm()
+                            .test_id(TEST_ID_CATALOG_EMPTY),
+                    )
+                })
+                .rounded(Radius::Md)
+                .border_1()
+                .border_color(ColorRef::Color(border))
+                .bg(ColorRef::Color(background))
+                .p(Space::N3)
+                .w_full()
+                .into_element(cx)
+            ];
+        }
+
+        ui::for_each_keyed(cx, rows.iter(), |row| row.summary.clone(), move |row| {
+            ui::h_flex(|cx| {
+                ui::children![
+                    cx;
+                    ui::text(row.name.clone()).text_sm().font_medium().flex_1().min_w_0(),
+                    ui::text(row.endpoint.clone()).text_sm(),
+                ]
+            })
+            .gap(Space::N2)
+            .items_center()
+            .w_full()
+            .rounded(Radius::Md)
+            .border_1()
+            .border_color(ColorRef::Color(border))
+            .bg(ColorRef::Color(background))
+            .p(Space::N3)
+        })
+    })
+    .gap(Space::N2)
+    .w_full()
+}
+
+fn emit_completion_feedback(
+    cx: &mut AppUi<'_, '_>,
+    save: &MutationHandle<PresetDraft, SavedPreset>,
+    state: &MutationState<PresetDraft, SavedPreset>,
+) {
+    if state.is_success() && cx.data().take_mutation_success(EFFECT_SUCCESS_TOAST, save) {
+        let Some(saved) = state.data.as_ref() else {
+            return;
+        };
+        cx.effects().toast_success(
+            "Preset saved",
+            shadcn::ToastMessageOptions::new().description(saved.summary.to_string()),
+        );
+        return;
+    }
+
+    if state.is_error() && cx.data().take_mutation_completion(EFFECT_ERROR_TOAST, save) {
+        let description = state
+            .error
+            .as_ref()
+            .map(ToString::to_string)
+            .unwrap_or_else(|| "Unknown save failure".to_string());
+        cx.effects().toast_error(
+            "Save failed",
+            shadcn::ToastMessageOptions::new().description(description),
+        );
+    }
+}
+
+async fn load_presets(catalog: PresetCatalog) -> Result<Vec<SavedPreset>, QueryError> {
+    tokio::time::sleep(Duration::from_millis(60)).await;
+    catalog
+        .saved
+        .lock()
+        .map(|saved| saved.clone())
+        .map_err(|_| QueryError::transient("catalog lock poisoned"))
+}
+
+async fn save_preset(
+    catalog: PresetCatalog,
+    token: CancellationToken,
+    input: Arc<PresetDraft>,
+) -> Result<SavedPreset, MutationError> {
+    tokio::time::sleep(Duration::from_millis(120)).await;
+    if token.is_cancelled() {
+        return Err(MutationError::transient("save cancelled"));
+    }
+    if input.force_error_once.swap(false, Ordering::SeqCst) {
+        return Err(MutationError::transient("forced save failure"));
+    }
+
+    let name = input.name.trim();
+    if name.is_empty() {
+        return Err(MutationError::permanent("Preset name is required"));
+    }
+    let endpoint = input.endpoint.trim();
+    if endpoint.is_empty() || !endpoint.starts_with('/') {
+        return Err(MutationError::permanent("Endpoint must start with `/`"));
+    }
+
+    let saved = SavedPreset {
+        name: Arc::from(name),
+        endpoint: Arc::from(endpoint),
+        summary: Arc::from(format!("{name} -> {endpoint}")),
+    };
+    let mut rows = catalog
+        .saved
+        .lock()
+        .map_err(|_| MutationError::transient("catalog lock poisoned"))?;
+    rows.insert(0, saved.clone());
+    Ok(saved)
+}
+
+fn install_app(__INSTALL_APP_BINDING__: &mut App) {
+__INSTALL_ICONS__
+    install_async_runtime(__INSTALL_APP_BINDING__);
+    __INSTALL_APP_BINDING__.set_global::<PresetCatalog>(PresetCatalog::default());
+}
+
+fn main() -> anyhow::Result<()> {
+    FretApp::new("__PACKAGE_NAME__")
+        .window("__PACKAGE_NAME__", (920.0, 680.0))
+        .setup(install_app)
+        .view::<MutationWorkbenchView>()?
+        .run()
+        .map_err(anyhow::Error::from)
+}
+"#;
+
+    TEMPLATE
+        .replace("__INSTALL_APP_BINDING__", install_app_binding)
+        .replace("__INSTALL_ICONS__", install_icons)
+        .replace("__PACKAGE_NAME__", package_name)
+}
+
 pub(super) fn hello_template_main_rs(package_name: &str, opts: ScaffoldOptions) -> String {
     let install_app_binding = if matches!(opts.icon_pack, IconPack::Radix) {
         "app"
@@ -2199,6 +2882,74 @@ through stable `workbench_lite.*` selectors.
     )
 }
 
+pub(super) fn mutation_workbench_template_readme_md(
+    package_name: &str,
+    opts: ScaffoldOptions,
+    new_bin_name: &str,
+) -> String {
+    let icons_line = match opts.icon_pack {
+        IconPack::Lucide => "- Icons: enabled (default Lucide pack)\n",
+        IconPack::Radix => "- Icons: Radix (via `fret-icons-radix` dependency)\n",
+        IconPack::None => "- Icons: disabled\n",
+    };
+
+    format!(
+        r#"# {package_name}
+
+Generated by `{new_bin_name} new mutation-workbench`.
+
+## Run
+
+```bash
+cargo run
+```
+
+## Common commands
+
+```bash
+cargo fmt
+cargo clippy -- -D warnings
+cargo run --release
+```
+
+## Diagnostics
+
+From the Fret repository, run the public mutation script against this app:
+
+```bash
+cargo run -p fretboard-dev -- diag run tools/diag-scripts/public-app/mutation-workbench-flow.json --launch -- cargo run --manifest-path path/to/{package_name}/Cargo.toml
+```
+
+The script covers submit, async success, query refresh, forced error, editable input preservation,
+retry, and toast feedback through stable `mutation_workbench.*` selectors.
+
+## Notes
+
+- Theme: shadcn new-york-v4 (Slate / Light)
+{icons_line}- Command palette: enabled (Cmd/Ctrl+Shift+P)
+- Diagnostics: enabled for scripted native/web public app checks.
+- Ladder position: async second-hour starter after `workbench-lite`.
+- Authoring surface: `use fret::app::prelude::*;` plus explicit `fret::mutation`, `fret::query`, and `fret::style` imports for advanced nouns.
+- Mutation path: `cx.actions().mutation_submit(...)` and `cx.actions().mutation_retry_last(...)` keep submit/retry on the public AppUi action facade.
+- Feedback path: `cx.data().update_locals_after_mutation_completion(...)` projects mutation completion into view-owned local state, while `cx.effects().toast_success(...)` / `toast_error(...)` keep Sonner feedback effect-only.
+- Query path: `cx.data().invalidate_query_namespace_after_mutation_success(...)` refreshes the saved preset list after a successful save.
+- Raw runtime policy: generated source intentionally avoids retained runtime trees, raw element erasure, host adapters, model-store plumbing, and framework-internal crates.
+- Stable diagnostics selectors are in `src/main.rs` as `TEST_ID_*` constants.
+
+## First cuts if you want a smaller app
+
+- Delete the forced-error button and retry action if your first mutation is fire-and-forget.
+- Delete the query list if completion feedback alone is enough.
+- Delete the app-owned Tokio runtime setup when your production shell installs a shared executor.
+
+## Next steps
+
+- Replace the in-memory `PresetCatalog` with your app service boundary.
+- Keep server payloads data-only and project completion into `LocalState<T>` or queries at the app facade.
+"#
+    )
+}
+
 pub(super) fn empty_template_readme_md(package_name: &str, new_bin_name: &str) -> String {
     format!(
         r#"# {package_name}
@@ -2589,6 +3340,85 @@ mod tests {
         assert!(
             readme.contains("tools/diag-scripts/public-app/workbench-lite-settings-dialog.json")
         );
+    }
+
+    #[test]
+    fn mutation_workbench_template_uses_public_app_facade_only() {
+        let src = mutation_workbench_template_main_rs("mutation-workbench-app", opts());
+        assert!(src.contains("use fret::app::prelude::*;"));
+        assert!(src.contains("use fret::app::LocalState;"));
+        assert!(src.contains("use fret::mutation::{"));
+        assert!(src.contains("use fret::query::{QueryError, QueryKey, QueryPolicy, QueryState};"));
+        assert!(src.contains("use fret::style::{ColorRef, Radius, Space, Theme, ThemeSnapshot};"));
+        assert!(src.contains("struct MutationWorkbenchLocals {"));
+        assert!(src.contains("struct MutationWorkbenchView;"));
+        assert!(src.contains("impl View for MutationWorkbenchView"));
+        assert!(src.contains(".view::<MutationWorkbenchView>()?"));
+        assert!(src.contains("cx.data().query_async("));
+        assert!(src.contains("cx.data().mutation_async("));
+        assert!(src.contains("cx.actions().mutation_submit::<act::SavePreset"));
+        assert!(src.contains("cx.actions().mutation_retry_last::<act::RetrySave"));
+        assert!(src.contains(".update_locals_after_mutation_completion"));
+        assert!(src.contains("cx.data().invalidate_query_namespace_after_mutation_success"));
+        assert!(src.contains("cx.effects().toast_success("));
+        assert!(src.contains("cx.effects().toast_error("));
+        assert!(src.contains("shadcn::Toaster::new()"));
+        assert!(src.contains("TEST_ID_ROOT"));
+        assert!(src.contains("TEST_ID_NAME"));
+        assert!(src.contains("TEST_ID_ENDPOINT"));
+        assert!(src.contains("TEST_ID_SAVE"));
+        assert!(src.contains("TEST_ID_RETRY"));
+        assert!(src.contains("TEST_ID_FAIL_NEXT"));
+        assert!(src.contains("TEST_ID_MUTATION_STATUS"));
+        assert!(src.contains("TEST_ID_QUERY_STATUS"));
+        assert!(src.contains("TEST_ID_ERROR"));
+        assert!(src.contains("TEST_ID_LAST_SAVED"));
+        assert!(src.contains("TEST_ID_CATALOG_COUNT"));
+        assert!(!src.contains(&format!("use {}::", "fret_ui")));
+        assert!(!src.contains(&format!("use {}::", "fret_core")));
+        assert!(!src.contains(&format!("use {}::", "fret_app")));
+        assert!(!src.contains(&format!("{}Element", "Any")));
+        assert!(!src.contains(&format!("{}Tree", "Ui")));
+        assert!(!src.contains("UiActionHostAdapter"));
+        assert!(!src.contains("fret_runtime::ModelStore"));
+        assert!(!src.contains(&format!("fret::{}::prelude::*", "advanced")));
+        assert!(!src.contains("handle.submit("));
+        assert!(!src.contains("handle.retry_last("));
+        assert!(!src.contains("LocalStateTxn"));
+
+        let into_element_count = src.matches(".into_element(cx)").count();
+        assert!(
+            into_element_count <= 1,
+            "expected <= 1 explicit `.into_element(cx)` calls, got {into_element_count}"
+        );
+    }
+
+    #[test]
+    fn mutation_workbench_template_cargo_toml_enables_async_state_features() {
+        let toml =
+            mutation_workbench_template_cargo_toml_repo("mutation-workbench-app", opts(), ".");
+        assert!(toml.contains("\"command-palette\""));
+        assert!(toml.contains("\"diagnostics\""));
+        assert!(toml.contains("\"desktop\""));
+        assert!(toml.contains("\"shadcn\""));
+        assert!(toml.contains("\"state-query\""));
+        assert!(toml.contains("\"state-mutation\""));
+        assert!(toml.contains("tokio = { version = \"1\""));
+        assert!(toml.contains("\"rt-multi-thread\""));
+        assert!(toml.contains("\"time\""));
+    }
+
+    #[test]
+    fn mutation_workbench_readme_documents_public_async_gate() {
+        let readme =
+            mutation_workbench_template_readme_md("mutation-workbench-app", opts(), "fretboard");
+        assert!(readme.contains("Generated by `fretboard new mutation-workbench`."));
+        assert!(readme.contains("Ladder position: async second-hour starter"));
+        assert!(readme.contains("cx.actions().mutation_submit(...)"));
+        assert!(readme.contains("cx.actions().mutation_retry_last(...)"));
+        assert!(readme.contains("cx.effects().toast_success(...)"));
+        assert!(readme.contains("model-store plumbing"));
+        assert!(readme.contains("tools/diag-scripts/public-app/mutation-workbench-flow.json"));
     }
 
     #[test]

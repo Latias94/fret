@@ -278,3 +278,10 @@ timestamp: 2026-06-30
   toast cookbook no longer imports `UiActionHostAdapter` or names `fret_runtime::ModelStore`.
   `MutationHandle` clone is now manual so app-facing handles do not require input/output payloads to
   implement `Clone`.
+- 2026-07-02: Phase 2 U12 adds the `mutation-workbench` public scaffold and diagnostics gate. The
+  generated app stays on `fret::app::prelude::*` plus explicit mutation/query/style nouns, mounts
+  Sonner as a typed child, uses one-shot forced failure so retry succeeds with the same payload, and
+  puts status/count selectors on text nodes for stable `label_contains` diagnostics. Verification
+  passed for scaffold tests, generated-app `cargo check`, the public mutation diag script, `fret
+  --lib`, formatting, layering, surface policy, consumption profiles, execution surface, and
+  whitespace.

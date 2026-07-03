@@ -61,13 +61,23 @@ In this repository, the public-surface equivalent is `cargo run -p fretboard -- 
    - Diagnostics: `tools/diag-scripts/public-app/workbench-lite-settings-dialog.json` covers
      settings draft/save/cancel, Escape, focus containment, and focus restore with stable
      `workbench_lite.*` selectors.
+5. `mutation-workbench` (template) — async second-hour app slice when the simulated submit flow is
+   too small. It proves mutation submit, retry, toast feedback, and query invalidation through the
+   public `AppUi` facade.
+   - Generate: `fretboard new mutation-workbench --name my-mutation-workbench`
+   - Note: this template keeps `use fret::app::prelude::*` as the app surface, imports explicit
+     `fret::mutation` / `fret::query` nouns for async work, and avoids framework-internal crates,
+     raw element erasure, retained tree mechanisms, host adapters, and model-store plumbing.
+   - Diagnostics: `tools/diag-scripts/public-app/mutation-workbench-flow.json` covers submit,
+     success, forced error, editable input preservation, retry, query refresh, and toast feedback
+     with stable `mutation_workbench.*` selectors.
 
 ## 0.1) Surface taxonomy
 
 Use these labels consistently:
 
 - **Default**: first-contact templates and stable cookbook lessons
-- **Second-hour**: copyable public app slices such as `workbench-lite`
+- **Second-hour**: copyable public app slices such as `workbench-lite` and `mutation-workbench`
 - **Comparison**: evidence-oriented side-by-side samples that help evaluate ergonomics, not onboarding
 - **Advanced**: gallery, interop, renderer, docking, and maintainer-oriented surfaces
 

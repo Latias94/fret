@@ -18,7 +18,8 @@ const ROOT_EXAMPLES: &str = r#"  fretboard assets manifest write --dir assets --
   fretboard new hello --name hello-world
   fretboard new simple-todo --name my-simple-todo
   fretboard new todo --name my-todo
-  fretboard new workbench-lite --name my-workbench"#;
+  fretboard new workbench-lite --name my-workbench
+  fretboard new mutation-workbench --name my-mutation-workbench"#;
 
 fn render_root_help() -> Result<String, String> {
     let mut help = super::contracts::render_command_help_path(&[])?;
@@ -56,5 +57,6 @@ mod tests {
         assert!(help.contains("fretboard icons import iconify-collection"));
         assert!(help.contains("fretboard new todo --name my-todo"));
         assert!(help.contains("fretboard new workbench-lite --name my-workbench"));
+        assert!(help.contains("fretboard new mutation-workbench --name my-mutation-workbench"));
     }
 }

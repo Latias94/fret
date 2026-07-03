@@ -352,6 +352,7 @@ mod tests {
         assert!(help.contains("simple-todo"));
         assert!(help.contains("todo"));
         assert!(help.contains("workbench-lite"));
+        assert!(help.contains("mutation-workbench"));
     }
 
     #[test]

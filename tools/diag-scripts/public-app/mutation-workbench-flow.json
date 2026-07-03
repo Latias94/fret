@@ -1,0 +1,179 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "mutation-workbench public app gate",
+    "required_capabilities": ["diag.script_v2"],
+    "tags": ["public-app", "mutation-workbench", "mutation", "query", "toast", "retry"],
+    "target_hints": [
+      "Run against a generated mutation-workbench app.",
+      "Covers submit, async success, query refresh, forced error, editable input preservation, retry, and toast feedback through stable mutation_workbench.* selectors."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "set_window_inner_size", "width_px": 980.0, "height_px": 680.0 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "mutation_workbench.root" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "mutation_workbench.catalog.count" },
+        "text": "0 saved"
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "value_equals",
+        "target": { "kind": "test_id", "id": "mutation_workbench.name" },
+        "text": "Create issue"
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "value_equals",
+        "target": { "kind": "test_id", "id": "mutation_workbench.endpoint" },
+        "text": "/api/issues"
+      }
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "mutation_workbench.save" },
+      "button": "left",
+      "stable_frames": 3,
+      "max_move_px": 1.0,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "mutation_workbench.mutation.status" },
+        "text": "Success"
+      },
+      "timeout_frames": 900
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "mutation_workbench.last_saved" },
+        "text": "Create issue -> /api/issues"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "mutation_workbench.catalog.count" },
+        "text": "1 saved"
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "set_text_value",
+      "target": { "kind": "test_id", "id": "mutation_workbench.name" },
+      "text": "Broken preset"
+    },
+    {
+      "type": "set_text_value",
+      "target": { "kind": "test_id", "id": "mutation_workbench.endpoint" },
+      "text": "/api/broken"
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "mutation_workbench.fail_next" },
+      "button": "left",
+      "stable_frames": 3,
+      "max_move_px": 1.0,
+      "timeout_frames": 600
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "mutation_workbench.save" },
+      "button": "left",
+      "stable_frames": 3,
+      "max_move_px": 1.0,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "mutation_workbench.mutation.status" },
+        "text": "Error"
+      },
+      "timeout_frames": 900
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "mutation_workbench.error" },
+        "text": "forced save failure"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "value_equals",
+        "target": { "kind": "test_id", "id": "mutation_workbench.name" },
+        "text": "Broken preset"
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "value_equals",
+        "target": { "kind": "test_id", "id": "mutation_workbench.endpoint" },
+        "text": "/api/broken"
+      }
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "mutation_workbench.retry" },
+      "button": "left",
+      "stable_frames": 3,
+      "max_move_px": 1.0,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "mutation_workbench.mutation.status" },
+        "text": "Success"
+      },
+      "timeout_frames": 900
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "mutation_workbench.last_saved" },
+        "text": "Broken preset -> /api/broken"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "mutation_workbench.catalog.count" },
+        "text": "2 saved"
+      },
+      "timeout_frames": 600
+    },
+    { "type": "capture_bundle", "label": "mutation-workbench-flow" }
+  ]
+}
