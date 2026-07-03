@@ -421,6 +421,49 @@ class SurfacePolicyTests(unittest.TestCase):
 
             self.assertEqual([], violations)
 
+    def test_public_example_scan_root_can_target_exact_file(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-examples/src/public_proof.rs",
+                """
+                use fret::{FretApp, advanced::prelude::*};
+                """,
+            )
+            write(
+                root / "apps/fret-examples/src/internal_harness.rs",
+                """
+                use fret_launch::FnDriver;
+                """,
+            )
+
+            violations = POLICY.check_surface_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+                public_example_scan_roots=["apps/fret-examples/src/public_proof.rs"],
+            )
+
+            self.assertEqual(1, len(violations))
+            self.assertEqual("public-example-unclassified-raw-seam", violations[0].rule)
+            self.assertEqual(
+                root / "apps/fret-examples/src/public_proof.rs",
+                violations[0].path,
+            )
+
+    def test_fret_examples_public_scan_roots_stay_precise(self) -> None:
+        self.assertIn(
+            "apps/fret-examples/src/simple_todo_demo.rs",
+            POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS,
+        )
+        self.assertIn(
+            "apps/fret-examples/src/todo_demo.rs",
+            POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS,
+        )
+        self.assertNotIn("apps/fret-examples/src", POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS)
+
     def test_policy_coded_fret_ui_root_export_is_rejected_without_classification(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

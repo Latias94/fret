@@ -142,6 +142,11 @@ COOKBOOK_ADVANCED_RETIREMENT = (
     "or is reclassified under explicit advanced driver/view/interop/raw docs."
 )
 
+FRET_EXAMPLES_ADVANCED_RETIREMENT = (
+    "Remove this quarantine record after the demo splits copyable app-view code from manual "
+    "runner/test harness glue or moves the remaining raw seams behind explicit public wrappers."
+)
+
 
 def _cookbook_advanced_surface(
     filename: str,
@@ -159,7 +164,31 @@ def _cookbook_advanced_surface(
     )
 
 
+def _fret_examples_advanced_surface(
+    filename: str,
+    reason: str,
+    allowed_raw_seams: tuple[str, ...],
+    owner: str | None = None,
+) -> SurfacePath:
+    stem = filename.removesuffix(".rs").replace("_", "-")
+    return SurfacePath(
+        f"apps/fret-examples/src/{filename}",
+        "advanced_manual",
+        f"{filename} remains classified as an advanced examples surface because {reason}",
+        owner=owner or f"examples-{stem}",
+        allowed_raw_seams=allowed_raw_seams,
+        retirement=FRET_EXAMPLES_ADVANCED_RETIREMENT,
+    )
+
+
 ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
+    _fret_examples_advanced_surface(
+        "lib.rs",
+        "the examples crate root owns shared native/web harness helpers, launch glue, and theme "
+        "interop helpers for demo shells",
+        ("fret::advanced", "fret_app", "fret_core", "fret_launch"),
+        owner="examples-harness-root",
+    ),
     SurfacePath(
         "apps/fret-examples/src/api_workbench_lite_demo.rs",
         "advanced_manual",
@@ -206,6 +235,133 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
             "Replace with a public workspace-shell starter once AppUi wrappers own command, "
             "overlay, virtual-list, diagnostics, and window lifecycle flows"
         ),
+    ),
+    _fret_examples_advanced_surface(
+        "simple_todo_demo.rs",
+        "the view body is app-facing but the file still mixes web/native runner glue and "
+        "lower-level text helper types",
+        (
+            "fret::advanced",
+            "fret_core",
+            "fret_launch",
+            "fret_runtime",
+            "fret_ui",
+            "AnyElement",
+            "ElementContext",
+        ),
+        owner="examples-simple-todo",
+    ),
+    _fret_examples_advanced_surface(
+        "todo_demo.rs",
+        "the app-facing view is also the semantics/runtime test harness for the golden-path demo",
+        (
+            "fret::advanced",
+            "fret_core",
+            "fret_runtime",
+            "fret_ui",
+            "AnyElement",
+            "ElementContext",
+            "UiTree",
+        ),
+        owner="examples-todo",
+    ),
+    _fret_examples_advanced_surface(
+        "components_gallery.rs",
+        "the gallery owns manual window lifecycle, component state matrices, file-dialog hooks, "
+        "and diagnostics integration",
+        (
+            "fret::advanced",
+            "fret_app",
+            "fret_core",
+            "fret_launch",
+            "fret_runtime",
+            "fret_ui",
+            "AnyElement",
+            "ElementContext",
+            "FnDriver",
+            "UiTree",
+        ),
+        owner="examples-components-gallery",
+    ),
+    _fret_examples_advanced_surface(
+        "docking_demo.rs",
+        "the docking proof owns manual driver state, retained tree integration, and docking model "
+        "wiring directly",
+        (
+            "fret::advanced",
+            "fret_app",
+            "fret_core",
+            "fret_launch",
+            "fret_runtime",
+            "fret_ui",
+            "AnyElement",
+            "ElementContext",
+            "FnDriver",
+            "UiTree",
+        ),
+        owner="examples-docking",
+    ),
+    _fret_examples_advanced_surface(
+        "docking_arbitration_demo.rs",
+        "the arbitration harness is ADR/conformance infrastructure for docking, viewports, "
+        "overlays, and launch hooks",
+        (
+            "fret::advanced",
+            "fret_app",
+            "fret_core",
+            "fret_launch",
+            "fret_runtime",
+            "fret_ui",
+            "AnyElement",
+            "ElementContext",
+            "FnDriver",
+            "UiTree",
+        ),
+        owner="examples-docking-arbitration",
+    ),
+    _fret_examples_advanced_surface(
+        "plot_demo.rs",
+        "the plot proof owns manual driver state and retained plot model integration",
+        (
+            "fret_app",
+            "fret_core",
+            "fret_launch",
+            "fret_runtime",
+            "fret_ui",
+            "FnDriver",
+            "UiTree",
+        ),
+        owner="examples-plot",
+    ),
+    _fret_examples_advanced_surface(
+        "plot_stress_demo.rs",
+        "the plot stress harness owns manual driver state and retained stress-model plumbing",
+        (
+            "fret_app",
+            "fret_core",
+            "fret_launch",
+            "fret_runtime",
+            "fret_ui",
+            "FnDriver",
+            "UiTree",
+        ),
+        owner="examples-plot-stress",
+    ),
+    _fret_examples_advanced_surface(
+        "gizmo3d_demo.rs",
+        "the 3D gizmo proof owns manual runner, retained viewport state, and low-level rendering "
+        "integration",
+        (
+            "fret::advanced",
+            "fret_app",
+            "fret_core",
+            "fret_launch",
+            "fret_runtime",
+            "fret_ui",
+            "FnDriver",
+            "UiTree",
+        ),
+        owner="examples-gizmo3d",
     ),
     SurfacePath(
         "apps/fret-cookbook/examples/canvas_pan_zoom_basics.rs",
@@ -500,6 +656,16 @@ RAW_SEAM_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
 
 PUBLIC_EXAMPLE_SCAN_ROOTS: tuple[str, ...] = (
     "apps/fret-cookbook/examples",
+    "apps/fret-examples/src/lib.rs",
+    "apps/fret-examples/src/api_workbench_lite_demo.rs",
+    "apps/fret-examples/src/simple_todo_demo.rs",
+    "apps/fret-examples/src/todo_demo.rs",
+    "apps/fret-examples/src/components_gallery.rs",
+    "apps/fret-examples/src/docking_demo.rs",
+    "apps/fret-examples/src/docking_arbitration_demo.rs",
+    "apps/fret-examples/src/plot_demo.rs",
+    "apps/fret-examples/src/plot_stress_demo.rs",
+    "apps/fret-examples/src/gizmo3d_demo.rs",
 )
 
 PUBLIC_EXAMPLE_CLASSIFICATION_PATTERNS: tuple[tuple[str, re.Pattern[str], str], ...] = (

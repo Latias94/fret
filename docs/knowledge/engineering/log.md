@@ -481,3 +481,8 @@ timestamp: 2026-06-30
   `fret_runtime` seams for those examples. Verification passed for focused examples, cookbook
   checks and nextest, surface/profile/execution/layering/ADR/workstream/wiki gates, formatting,
   whitespace, and static old-helper searches.
+- 2026-07-03: Phase 3 U13 `fret-examples` precise quarantine extends source-policy discovery to
+  selected high-visibility `apps/fret-examples/src` proof/harness files without adding a broad root
+  quarantine. `simple_todo_demo`, `todo_demo`, `components_gallery`, docking, plot, and gizmo proof
+  paths now have exact owner/reason/retirement records plus allowed-seam shrink checks. Verification
+  passed for source-policy unit tests/gate, consumption-profile, and execution-surface gates.
