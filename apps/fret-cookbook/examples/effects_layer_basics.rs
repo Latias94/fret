@@ -1,7 +1,10 @@
 use std::sync::Arc;
 
+use fret::app::AppComponentCx;
+use fret::app::LocalState;
+use fret::app::prelude::*;
 use fret::component::prelude::*;
-use fret::{FretApp, advanced::prelude::*, shadcn};
+use fret::{FretApp, shadcn};
 use fret_core::scene::{EffectChain, EffectMode, EffectStep};
 
 const TEST_ID_ROOT: &str = "cookbook.effects_layer_basics.root";
@@ -61,15 +64,13 @@ impl EffectKind {
 }
 
 struct EffectsLayerBasicsView {
-    effect: Model<Option<Arc<str>>>,
+    effect: LocalState<Option<Arc<str>>>,
 }
 
 impl View for EffectsLayerBasicsView {
-    fn init(app: &mut KernelApp, _window: AppWindowId) -> Self {
+    fn init(app: &mut App, _window: WindowId) -> Self {
         Self {
-            effect: app
-                .models_mut()
-                .insert(Some(Arc::from(EffectKind::None.as_str()))),
+            effect: app.local_state(Some(Arc::from(EffectKind::None.as_str()))),
         }
     }
 

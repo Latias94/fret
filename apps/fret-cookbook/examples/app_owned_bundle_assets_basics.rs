@@ -1,6 +1,7 @@
 use fret::app::AppComponentCx;
 use fret::app::prelude::*;
 use fret::component::prelude::*;
+use fret::style::ThemeSnapshot;
 use fret::{
     FretApp,
     assets::{
@@ -47,8 +48,12 @@ impl View for AppOwnedBundleAssetsBasicsView {
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let theme = cx.theme_snapshot();
-        let image_state = cx.use_image_source_state_from_asset_request(&self.image_request);
-        let svg_state = cx.svg_source_state_from_asset_request(&self.svg_request);
+        let image_state = cx
+            .elements()
+            .use_image_source_state_from_asset_request(&self.image_request);
+        let svg_state = cx
+            .elements()
+            .svg_source_state_from_asset_request(&self.svg_request);
 
         let callouts = ui::h_flex(|cx| {
             ui::children![
@@ -72,8 +77,8 @@ impl View for AppOwnedBundleAssetsBasicsView {
         .justify_center()
         .w_full();
 
-        let image_panel = render_image_panel(cx, &theme, image_state);
-        let svg_panel = render_svg_panel(cx, &theme, svg_state);
+        let image_panel = render_image_panel(cx.elements(), &theme, image_state);
+        let svg_panel = render_svg_panel(cx.elements(), &theme, svg_state);
 
         let card = shadcn::card(|cx| {
             ui::children![

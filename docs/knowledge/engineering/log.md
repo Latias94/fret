@@ -457,3 +457,11 @@ timestamp: 2026-06-30
   must shrink as seams disappear. Verification passed for `fret-examples-imui` and
   `fret-cookbook` checks, cookbook nextest, source-policy tests/gate, consumption-profile,
   execution-surface, layering, ADR-number, workstream-catalog, wiki, formatting, and diff gates.
+- 2026-07-03: Phase 3 U13 low-risk cookbook app surface migration moves
+  `assets_reload_epoch_basics` and `effects_layer_basics` off `advanced::prelude::*`, replaces the
+  reload example's raw request-animation-frame effect with `cx.request_animation_frame()`, uses
+  app-facing `LocalState` for the effects example, and fixes the hidden `cookbook-assets`
+  app-owned/icons asset helper paths through `cx.elements()`. Verification passed for cookbook
+  all-targets with and without `cookbook-assets`, `fret-examples-imui`, cookbook nextest,
+  surface/consumption/execution/layering/ADR/workstream gates, formatting, whitespace, and the
+  static no-advanced-symbol search over the touched cookbook examples.

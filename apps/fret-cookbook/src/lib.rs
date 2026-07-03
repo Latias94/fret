@@ -148,20 +148,6 @@ mod authoring_surface_policy_tests {
         assert!(!src.contains("cx.on_action_notify_"));
     }
 
-    fn assert_uses_app_surface_with_explicit_advanced_runtime_seams(src: &str) {
-        assert!(src.contains("app::prelude::*"));
-        assert!(src.contains("advanced::{KernelApp, prelude::Effect}"));
-        assert!(src.contains("fn init(app: &mut KernelApp, window: WindowId) -> Self"));
-        assert!(src.contains("fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui"));
-        assert!(!src.contains("advanced::prelude::*"));
-        assert!(!src.contains("use fret::prelude::*;"));
-        assert!(!src.contains("AppWindowId"));
-        assert!(!src.contains("AppUi<'_, '_, KernelApp>"));
-        assert!(!src.contains("ViewCx<'_, '_, KernelApp>"));
-        assert!(!src.contains("cx.use_local"));
-        assert!(!src.contains("cx.on_action_notify_"));
-    }
-
     fn assert_advanced_view_runtime_example_uses_app_ui_aliases(src: &str) {
         assert!(src.contains("fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui"));
         assert!(
@@ -1007,7 +993,6 @@ mod authoring_surface_policy_tests {
     #[test]
     fn advanced_examples_use_the_explicit_advanced_surface() {
         assert_uses_advanced_surface(DRAG_EXAMPLE);
-        assert_uses_advanced_surface(EFFECTS_LAYER_EXAMPLE);
         assert_uses_advanced_surface(CANVAS_PAN_ZOOM_EXAMPLE);
         assert_uses_advanced_surface(CHART_INTERACTIONS_EXAMPLE);
         assert_uses_advanced_surface(CUSTOM_V1_EXAMPLE);
@@ -1016,7 +1001,6 @@ mod authoring_surface_policy_tests {
         assert_uses_advanced_surface(EXTERNAL_TEXTURE_IMPORT_EXAMPLE);
         assert_uses_advanced_surface(GIZMO_EXAMPLE);
         assert_uses_advanced_surface(UTILITY_WINDOW_MATERIALS_EXAMPLE);
-        assert_uses_app_surface_with_explicit_advanced_runtime_seams(ASSETS_RELOAD_EPOCH_EXAMPLE);
 
         assert!(DRAG_EXAMPLE.contains("use fret::{FretApp, advanced::prelude::*, shadcn};"));
         assert!(DRAG_EXAMPLE.contains("use fret::component::prelude::*;"));
@@ -1103,8 +1087,7 @@ mod authoring_surface_policy_tests {
             APP_OWNED_BUNDLE_ASSETS_EXAMPLE.contains("without native-only file path assumptions.")
         );
         assert!(!APP_OWNED_BUNDLE_ASSETS_EXAMPLE.contains("ImageSource::from_file_path"));
-        assert!(ASSETS_RELOAD_EPOCH_EXAMPLE.contains("advanced::{KernelApp, prelude::Effect}"));
-        assert!(ASSETS_RELOAD_EPOCH_EXAMPLE.contains("app::prelude::*"));
+        assert!(ASSETS_RELOAD_EPOCH_EXAMPLE.contains("use fret::app::prelude::*;"));
         assert!(!ASSETS_RELOAD_EPOCH_EXAMPLE.contains("advanced::prelude::*"));
         assert!(ASSETS_RELOAD_EPOCH_EXAMPLE.contains("fret::assets::bump_asset_reload_epoch"));
         assert!(ASSETS_RELOAD_EPOCH_EXAMPLE.contains("fret::assets::asset_reload_epoch(cx.app())"));
@@ -1112,7 +1095,8 @@ mod authoring_surface_policy_tests {
             !ASSETS_RELOAD_EPOCH_EXAMPLE.contains("fret_ui_assets::bump_ui_assets_reload_epoch")
         );
         assert!(!ASSETS_RELOAD_EPOCH_EXAMPLE.contains("UiAssetsReloadEpoch"));
-        assert!(ASSETS_RELOAD_EPOCH_EXAMPLE.contains("Effect::RequestAnimationFrame"));
+        assert!(ASSETS_RELOAD_EPOCH_EXAMPLE.contains("cx.request_animation_frame()"));
+        assert!(!ASSETS_RELOAD_EPOCH_EXAMPLE.contains("Effect::RequestAnimationFrame"));
         assert!(ASSETS_RELOAD_EPOCH_EXAMPLE.contains("cx.state().local::<u64>()"));
         assert!(ASSETS_RELOAD_EPOCH_EXAMPLE.contains(".local(&bumps_state)"));
         assert!(ASSETS_RELOAD_EPOCH_EXAMPLE.contains(".update::<act::BumpReload>(|value| {"));
@@ -1211,7 +1195,9 @@ mod authoring_surface_policy_tests {
     fn low_risk_asset_and_effect_examples_use_the_app_surface() {
         for src in [
             APP_OWNED_BUNDLE_ASSETS_EXAMPLE,
+            ASSETS_RELOAD_EPOCH_EXAMPLE,
             DROP_SHADOW_EXAMPLE,
+            EFFECTS_LAYER_EXAMPLE,
             ICONS_AND_ASSETS_EXAMPLE,
         ] {
             assert_uses_app_surface(src);
@@ -1285,9 +1271,9 @@ mod authoring_surface_policy_tests {
             ASSETS_RELOAD_EPOCH_EXAMPLE,
             &[
                 "fn render_image_panel(_cx: &mut AppComponentCx<'_>,",
-                ") -> impl IntoUiElement<KernelApp> + use<>",
+                ") -> impl IntoUiElement<App> + use<>",
                 "fn render_svg_panel(_cx: &mut AppComponentCx<'_>,",
-                ") -> impl IntoUiElement<KernelApp> + use<>",
+                ") -> impl IntoUiElement<App> + use<>",
             ],
             &[
                 "fn render_image_panel(cx: &mut ElementContext<'_, KernelApp>,",

@@ -264,9 +264,10 @@ impl View for IconsAndAssetsBasicsView {
         .w_full()
         .test_id(TEST_ID_PANEL_ICONS);
 
-        let bundle_image_state =
-            cx.use_image_source_state_from_asset_request(&self.bundle_image_request);
-        let memory_image_state = cx.use_image_source_state(&self.memory_image);
+        let bundle_image_state = cx
+            .elements()
+            .use_image_source_state_from_asset_request(&self.bundle_image_request);
+        let memory_image_state = cx.elements().use_image_source_state(&self.memory_image);
 
         let image_status = match bundle_image_state.status {
             fret_ui_assets::image_asset_state::ImageLoadingStatus::Idle => "idle",
@@ -334,7 +335,9 @@ impl View for IconsAndAssetsBasicsView {
         .w_full()
         .test_id(TEST_ID_PANEL_IMAGE);
 
-        let svg_state = cx.svg_source_state_from_asset_request(&self.svg_request);
+        let svg_state = cx
+            .elements()
+            .svg_source_state_from_asset_request(&self.svg_request);
         let svg_status = if svg_state.source.is_some() {
             "ready"
         } else {

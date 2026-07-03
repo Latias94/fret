@@ -1,12 +1,10 @@
-use fret::{
-    advanced::{KernelApp, prelude::Effect},
-    app::prelude::*,
-    app::{AppComponentCx, RenderContextAccess as _},
-    assets::{AssetBundleId, AssetLocator, AssetRequest, AssetStartupMode, AssetStartupPlan},
-    children::UiElementSinkExt as _,
-    component::prelude::IntoUiElement,
-    style::{ColorRef, Radius, Space, ThemeSnapshot},
-};
+use fret::app::AppComponentCx;
+use fret::app::RenderContextAccess as _;
+use fret::app::prelude::*;
+use fret::assets::{AssetBundleId, AssetLocator, AssetRequest, AssetStartupMode, AssetStartupPlan};
+use fret::children::UiElementSinkExt as _;
+use fret::component::prelude::IntoUiElement;
+use fret::style::{ColorRef, Radius, Space, ThemeSnapshot};
 use fret_ui::element::{ImageProps, LayoutStyle, Length, SizeStyle, SvgIconProps};
 use fret_ui_assets::ui::{
     ImageSourceElementContextExt as _, SvgAssetElementContextExt as _, image_stats_in, svg_stats_in,
@@ -49,7 +47,7 @@ struct AssetsReloadEpochBasicsView {
 }
 
 impl View for AssetsReloadEpochBasicsView {
-    fn init(app: &mut KernelApp, window: WindowId) -> Self {
+    fn init(app: &mut App, window: WindowId) -> Self {
         // Optional: configure budgets explicitly so this example is self-contained.
         fret_ui_assets::UiAssets::configure(app, fret_ui_assets::UiAssetsBudgets::default());
 
@@ -78,9 +76,8 @@ impl View for AssetsReloadEpochBasicsView {
         if bumps != self.applied_bumps {
             fret::assets::bump_asset_reload_epoch(cx.app_mut());
             self.applied_bumps = bumps;
-            let app = cx.app_mut();
-            app.request_redraw(self.window);
-            app.push_effect(Effect::RequestAnimationFrame(self.window));
+            cx.app_mut().request_redraw(self.window);
+            cx.request_animation_frame();
         }
 
         let epoch = fret::assets::asset_reload_epoch(cx.app())
@@ -105,11 +102,15 @@ impl View for AssetsReloadEpochBasicsView {
         .gap(Space::N2)
         .items_center();
 
-        let file_image_state = cx.use_image_source_state_from_asset_request(&self.image_request);
-        let image_panel = render_image_panel(cx, &theme, file_image_state);
+        let file_image_state = cx
+            .elements()
+            .use_image_source_state_from_asset_request(&self.image_request);
+        let image_panel = render_image_panel(cx.elements(), &theme, file_image_state);
 
-        let svg_file_state = cx.svg_source_state_from_asset_request(&self.svg_request);
-        let svg_panel = render_svg_panel(cx, &theme, svg_file_state);
+        let svg_file_state = cx
+            .elements()
+            .svg_source_state_from_asset_request(&self.svg_request);
+        let svg_panel = render_svg_panel(cx.elements(), &theme, svg_file_state);
 
         let images = image_stats_in(cx);
         let svgs = svg_stats_in(cx);
@@ -160,7 +161,7 @@ fn render_image_panel(
     _cx: &mut AppComponentCx<'_>,
     theme: &ThemeSnapshot,
     st: fret_ui_assets::ImageSourceState,
-) -> impl IntoUiElement<KernelApp> + use<> {
+) -> impl IntoUiElement<App> + use<> {
     let status = match st.status {
         fret_ui_assets::image_asset_state::ImageLoadingStatus::Idle => "idle",
         fret_ui_assets::image_asset_state::ImageLoadingStatus::Loading => "loading",
@@ -241,7 +242,7 @@ fn render_svg_panel(
     _cx: &mut AppComponentCx<'_>,
     theme: &ThemeSnapshot,
     st: fret_ui_assets::ui::SvgAssetSourceState,
-) -> impl IntoUiElement<KernelApp> + use<> {
+) -> impl IntoUiElement<App> + use<> {
     let status = if st.error.is_some() {
         "error"
     } else if st.source.is_some() {
