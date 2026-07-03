@@ -1581,6 +1581,14 @@ pub(crate) const REGISTERED_FRAME_STATS_KEYS: &[PerfKey] = &[
         PerfKeyAggregate::Max,
     ),
     count_key(
+        "renderer_geometry_upload_resident_partial_write_budget_max_write_count",
+        PerfKeyAggregate::Max,
+    ),
+    byte_key(
+        "renderer_geometry_upload_resident_partial_write_budget_max_bytes",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
         "renderer_geometry_upload_resident_partial_write_dry_run_streams",
         PerfKeyAggregate::Max,
     ),
@@ -1614,6 +1622,14 @@ pub(crate) const REGISTERED_FRAME_STATS_KEYS: &[PerfKey] = &[
     ),
     count_key(
         "renderer_geometry_upload_resident_full_upload_fallbacks_stream_layout_changed",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_geometry_upload_resident_full_upload_fallbacks_stream_policy_unsupported",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_geometry_upload_resident_full_upload_fallbacks_partial_write_budget_exceeded",
         PerfKeyAggregate::Max,
     ),
     count_key(
@@ -2695,9 +2711,13 @@ mod tests {
             "renderer_geometry_upload_resident_dirty_range_bytes_estimate",
             "renderer_geometry_upload_resident_stream_coverage_gaps",
             "renderer_geometry_upload_resident_partial_write_dry_run_bytes_estimate",
+            "renderer_geometry_upload_resident_partial_write_budget_max_write_count",
+            "renderer_geometry_upload_resident_partial_write_budget_max_bytes",
             "renderer_geometry_upload_resident_stream_content_mismatches",
             "renderer_geometry_upload_resident_stream_hits",
             "renderer_geometry_upload_resident_full_upload_fallbacks_reassembly_blocked",
+            "renderer_geometry_upload_resident_full_upload_fallbacks_stream_policy_unsupported",
+            "renderer_geometry_upload_resident_full_upload_fallbacks_partial_write_budget_exceeded",
             "renderer_geometry_upload_text_vertex_write_count",
             "renderer_scene_encoding_cache_miss_scene_fingerprint_changed",
             "renderer_scene_chunk_input_chunks",

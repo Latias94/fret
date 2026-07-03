@@ -2377,6 +2377,20 @@
       "unit": "bytes"
     },
     {
+      "key": "renderer_geometry_upload_resident_partial_write_budget_max_write_count",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_geometry_upload_resident_partial_write_budget_max_bytes",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "bytes"
+    },
+    {
       "key": "renderer_geometry_upload_resident_partial_write_dry_run_streams",
       "kind": "counter",
       "scope": "frame",
@@ -2434,6 +2448,20 @@
     },
     {
       "key": "renderer_geometry_upload_resident_full_upload_fallbacks_stream_layout_changed",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_geometry_upload_resident_full_upload_fallbacks_stream_policy_unsupported",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_geometry_upload_resident_full_upload_fallbacks_partial_write_budget_exceeded",
       "kind": "counter",
       "scope": "frame",
       "suggested_aggregate": "max",

@@ -143,8 +143,11 @@ High-risk compatibility paths that need either deletion or an explicit retention
   diagnostics unless passed through an explicit authoritative chunk source,
 - full-blob text resource helpers returning to normal renderer chunk/resource paths; chunk keys use
   visible glyph residency, while shaping-aware cluster/run closure remains a gated follow-up,
-- non-quad stream partial uploads broadening without a per-stream closure owner, fallback reason,
-  write-count/byte counter, and coverage-gap proof,
+- non-quad stream partial uploads broadening without a per-stream closure owner, relocation/resource
+  dependency classification, fallback reason, finite write-count/byte budget where applicable, and
+  coverage-gap proof. The current allowed non-quad slice is resource-free `VertexColor` viewport
+  vertices; unsupported segment flags and unsupported streams must remain full-upload fallbacks with
+  explicit metrics,
 - `fret-ui` public names that encode Dialog/Popover/Menu/Tooltip/dismissal policy,
 - first-party examples that make advanced/manual assembly look like the default app path,
 - source-policy allowlist entries that do not name an owner, reason, allowed seams, and retirement

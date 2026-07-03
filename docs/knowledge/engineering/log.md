@@ -429,3 +429,10 @@ timestamp: 2026-06-30
   `RenderSceneSourcePolicy::flat_compat()`. Verification passed for renderer/launch/bootstrap/diag
   checks and nextest gates plus formatting, whitespace, layering, surface, consumption-profile,
   execution-surface, ADR-number, and workstream-catalog gates.
+- 2026-07-03: Phase 3 U11 partial upload stream policy slice makes resident geometry uploads
+  policy-table driven. `QuadInstances` and resource-free `VertexColor` viewport vertices are the
+  only partial-capable streams; viewport vertices carry a finite one-write / six-vertex budget.
+  Unsupported streams and viewport-vertex segments with image, viewport, mask, text, or path flags
+  stay on full upload with explicit fallback metrics. Verification passed for renderer/bootstrap/diag
+  checks and nextest gates plus formatting, whitespace, layering, surface, consumption-profile,
+  execution-surface, ADR-number, and workstream-catalog gates.

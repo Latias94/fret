@@ -2,6 +2,12 @@ use super::*;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 
+const VIEWPORT_VERTEX_MAX_PARTIAL_WRITE_COUNT: u64 = 1;
+const VIEWPORT_VERTEX_MAX_PARTIAL_WRITE_BYTES: u64 =
+    6 * std::mem::size_of::<ViewportVertex>() as u64;
+const UNBOUNDED_PARTIAL_WRITE_COUNT: u64 = u64::MAX;
+const UNBOUNDED_PARTIAL_WRITE_BYTES: u64 = u64::MAX;
+
 pub(super) struct GeometryUploadState {
     quad_instances: buffers::StorageRingBuffer<QuadInstance>,
     path_paints: buffers::StorageRingBuffer<PaintGpu>,
@@ -65,6 +71,79 @@ struct ResidentGeometryUploadInvalidations {
     text_glyph_instances: bool,
     text_vertices: bool,
     path_vertices: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ResidentGeometryUploadStreamId {
+    QuadInstances,
+    PathPaints,
+    TextPaints,
+    ViewportVertices,
+    TextGlyphInstances,
+    TextVertices,
+    PathVertices,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ResidentGeometryUploadClosureOwner {
+    SceneChunkPayloadReassemblyPlan,
+    Unsupported,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ResidentGeometryUploadRelocationDependencies {
+    QuadInstanceRanges,
+    VertexColorViewportVertices,
+    Unsupported,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ResidentGeometryUploadResourceDependencies {
+    None,
+    PaintOrTextOrPathResources,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ResidentGeometryUploadPolicyFallbackReason {
+    StreamPolicyUnsupported,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ResidentGeometryUploadStreamSupport {
+    Partial {
+        max_partial_write_count: u64,
+        max_partial_write_bytes: u64,
+    },
+    FullUpload {
+        fallback_reason: ResidentGeometryUploadPolicyFallbackReason,
+    },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct ResidentGeometryUploadStreamPolicy {
+    id: ResidentGeometryUploadStreamId,
+    closure_owner: ResidentGeometryUploadClosureOwner,
+    relocation_dependencies: ResidentGeometryUploadRelocationDependencies,
+    resource_dependencies: ResidentGeometryUploadResourceDependencies,
+    support: ResidentGeometryUploadStreamSupport,
+}
+
+impl ResidentGeometryUploadStreamPolicy {
+    fn full_upload(mut self, fallback_reason: ResidentGeometryUploadPolicyFallbackReason) -> Self {
+        self.support = ResidentGeometryUploadStreamSupport::FullUpload { fallback_reason };
+        self
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+struct ResidentGeometryUploadFramePolicies {
+    quad_instances: ResidentGeometryUploadStreamPolicy,
+    path_paints: ResidentGeometryUploadStreamPolicy,
+    text_paints: ResidentGeometryUploadStreamPolicy,
+    viewport_vertices: ResidentGeometryUploadStreamPolicy,
+    text_glyph_instances: ResidentGeometryUploadStreamPolicy,
+    text_vertices: ResidentGeometryUploadStreamPolicy,
+    path_vertices: ResidentGeometryUploadStreamPolicy,
 }
 
 #[derive(Default)]
@@ -179,16 +258,22 @@ impl ResidentGeometryUploadState {
             return write_plan;
         }
 
+        let policies = ResidentGeometryUploadFramePolicies::from_plan(
+            plan,
+            &payload_alignment.reassembly_plan,
+        );
         let signatures = ResidentGeometryUploadFrameSignatures::from_plan(
             plan,
             &payload_alignment.reassembly_plan,
             streams,
+            policies,
         );
         write_plan.quad_instances = self.quad_instances.record_frame(
             slots.quad_instances,
             invalidations.quad_instances,
             signatures.quad_instances,
             streams.quad_instances.len(),
+            policies.quad_instances,
             estimate_range_bytes::<QuadInstance>,
             upload.as_deref_mut(),
         );
@@ -197,6 +282,7 @@ impl ResidentGeometryUploadState {
             invalidations.path_paints,
             signatures.path_paints,
             streams.path_paints.len(),
+            policies.path_paints,
             estimate_range_bytes::<PaintGpu>,
             upload.as_deref_mut(),
         );
@@ -205,6 +291,7 @@ impl ResidentGeometryUploadState {
             invalidations.text_paints,
             signatures.text_paints,
             streams.text_paints.len(),
+            policies.text_paints,
             estimate_range_bytes::<PaintGpu>,
             upload.as_deref_mut(),
         );
@@ -213,6 +300,7 @@ impl ResidentGeometryUploadState {
             invalidations.viewport_vertices,
             signatures.viewport_vertices,
             streams.viewport_vertices.len(),
+            policies.viewport_vertices,
             estimate_range_bytes::<ViewportVertex>,
             upload.as_deref_mut(),
         );
@@ -221,6 +309,7 @@ impl ResidentGeometryUploadState {
             invalidations.text_glyph_instances,
             signatures.text_glyph_instances,
             streams.text_glyph_instances.len(),
+            policies.text_glyph_instances,
             estimate_range_bytes::<TextGlyphInstance>,
             upload.as_deref_mut(),
         );
@@ -229,6 +318,7 @@ impl ResidentGeometryUploadState {
             invalidations.text_vertices,
             signatures.text_vertices,
             streams.text_vertices.len(),
+            policies.text_vertices,
             estimate_range_bytes::<TextVertex>,
             upload.as_deref_mut(),
         );
@@ -237,10 +327,99 @@ impl ResidentGeometryUploadState {
             invalidations.path_vertices,
             signatures.path_vertices,
             streams.path_vertices.len(),
+            policies.path_vertices,
             estimate_range_bytes::<PathVertex>,
             upload.as_deref_mut(),
         );
         write_plan
+    }
+}
+
+impl ResidentGeometryUploadFramePolicies {
+    fn from_plan(plan: &RenderPlan, reassembly_plan: &SceneChunkPayloadReassemblyPlan) -> Self {
+        let mut policies = Self {
+            quad_instances: resident_geometry_upload_stream_policy(
+                ResidentGeometryUploadStreamId::QuadInstances,
+            ),
+            path_paints: resident_geometry_upload_stream_policy(
+                ResidentGeometryUploadStreamId::PathPaints,
+            ),
+            text_paints: resident_geometry_upload_stream_policy(
+                ResidentGeometryUploadStreamId::TextPaints,
+            ),
+            viewport_vertices: resident_geometry_upload_stream_policy(
+                ResidentGeometryUploadStreamId::ViewportVertices,
+            ),
+            text_glyph_instances: resident_geometry_upload_stream_policy(
+                ResidentGeometryUploadStreamId::TextGlyphInstances,
+            ),
+            text_vertices: resident_geometry_upload_stream_policy(
+                ResidentGeometryUploadStreamId::TextVertices,
+            ),
+            path_vertices: resident_geometry_upload_stream_policy(
+                ResidentGeometryUploadStreamId::PathVertices,
+            ),
+        };
+
+        for segment_index in reassembly_plan.safe_segment_indices() {
+            let Some(segment) = plan.segments.get(*segment_index) else {
+                continue;
+            };
+            if segment.stream_ranges.viewport_vertices.is_empty() {
+                continue;
+            }
+            if !segment_supports_viewport_vertex_partial_upload(segment) {
+                policies.viewport_vertices = policies.viewport_vertices.full_upload(
+                    ResidentGeometryUploadPolicyFallbackReason::StreamPolicyUnsupported,
+                );
+            }
+        }
+
+        policies
+    }
+}
+
+fn resident_geometry_upload_stream_policy(
+    id: ResidentGeometryUploadStreamId,
+) -> ResidentGeometryUploadStreamPolicy {
+    match id {
+        ResidentGeometryUploadStreamId::QuadInstances => ResidentGeometryUploadStreamPolicy {
+            id,
+            closure_owner: ResidentGeometryUploadClosureOwner::SceneChunkPayloadReassemblyPlan,
+            relocation_dependencies:
+                ResidentGeometryUploadRelocationDependencies::QuadInstanceRanges,
+            resource_dependencies: ResidentGeometryUploadResourceDependencies::None,
+            support: ResidentGeometryUploadStreamSupport::Partial {
+                max_partial_write_count: UNBOUNDED_PARTIAL_WRITE_COUNT,
+                max_partial_write_bytes: UNBOUNDED_PARTIAL_WRITE_BYTES,
+            },
+        },
+        ResidentGeometryUploadStreamId::ViewportVertices => ResidentGeometryUploadStreamPolicy {
+            id,
+            closure_owner: ResidentGeometryUploadClosureOwner::SceneChunkPayloadReassemblyPlan,
+            relocation_dependencies:
+                ResidentGeometryUploadRelocationDependencies::VertexColorViewportVertices,
+            resource_dependencies: ResidentGeometryUploadResourceDependencies::None,
+            support: ResidentGeometryUploadStreamSupport::Partial {
+                max_partial_write_count: VIEWPORT_VERTEX_MAX_PARTIAL_WRITE_COUNT,
+                max_partial_write_bytes: VIEWPORT_VERTEX_MAX_PARTIAL_WRITE_BYTES,
+            },
+        },
+        ResidentGeometryUploadStreamId::PathPaints
+        | ResidentGeometryUploadStreamId::TextPaints
+        | ResidentGeometryUploadStreamId::TextGlyphInstances
+        | ResidentGeometryUploadStreamId::TextVertices
+        | ResidentGeometryUploadStreamId::PathVertices => ResidentGeometryUploadStreamPolicy {
+            id,
+            closure_owner: ResidentGeometryUploadClosureOwner::Unsupported,
+            relocation_dependencies: ResidentGeometryUploadRelocationDependencies::Unsupported,
+            resource_dependencies:
+                ResidentGeometryUploadResourceDependencies::PaintOrTextOrPathResources,
+            support: ResidentGeometryUploadStreamSupport::FullUpload {
+                fallback_reason:
+                    ResidentGeometryUploadPolicyFallbackReason::StreamPolicyUnsupported,
+            },
+        },
     }
 }
 
@@ -249,6 +428,7 @@ impl ResidentGeometryUploadFrameSignatures {
         plan: &RenderPlan,
         reassembly_plan: &SceneChunkPayloadReassemblyPlan,
         streams: ResidentGeometryUploadStreams<'_>,
+        policies: ResidentGeometryUploadFramePolicies,
     ) -> Self {
         let mut quad_instances = ResidentGeometryUploadStreamAccumulator::default();
         let mut path_paints = ResidentGeometryUploadStreamAccumulator::default();
@@ -269,7 +449,11 @@ impl ResidentGeometryUploadFrameSignatures {
             quad_instances.include(ranges.quad_instances);
             path_paints.include(ranges.path_paints);
             text_paints.include(ranges.text_paints);
-            if segment_supports_viewport_vertex_partial_upload(segment) {
+            if matches!(
+                policies.viewport_vertices.support,
+                ResidentGeometryUploadStreamSupport::Partial { .. }
+            ) && segment_supports_viewport_vertex_partial_upload(segment)
+            {
                 viewport_vertices.include(ranges.viewport_vertices);
             }
             text_glyph_instances.include(ranges.text_glyph_instances);
@@ -339,9 +523,24 @@ impl ResidentGeometryUploadStreamState {
         invalidated: bool,
         signatures: Vec<ResidentGeometryUploadStreamSignature>,
         stream_len: usize,
+        policy: ResidentGeometryUploadStreamPolicy,
         estimate_bytes: fn(RenderPlanStreamRange) -> u64,
         upload: Option<&mut GeometryUploadPerfSnapshot>,
     ) -> ResidentGeometryUploadStreamWritePlan {
+        let ResidentGeometryUploadStreamSupport::Partial {
+            max_partial_write_count,
+            max_partial_write_bytes,
+        } = policy.support
+        else {
+            if stream_len > 0 {
+                self.invalidate_slot(slot);
+                if let Some(upload) = upload {
+                    upload.record_resident_full_upload_fallback_policy_unsupported();
+                }
+            }
+            return ResidentGeometryUploadStreamWritePlan::Full;
+        };
+
         if signatures.is_empty() {
             if stream_len > 0 {
                 self.invalidate_slot(slot);
@@ -352,6 +551,10 @@ impl ResidentGeometryUploadStreamState {
         let mut upload = upload;
         if let Some(upload) = upload.as_deref_mut() {
             upload.resident_stream_candidates = upload.resident_stream_candidates.saturating_add(1);
+            upload.record_resident_partial_write_budget(
+                max_partial_write_count,
+                max_partial_write_bytes,
+            );
         }
         if invalidated {
             self.slots.clear();
@@ -383,6 +586,9 @@ impl ResidentGeometryUploadStreamState {
                 let dirty_bytes =
                     estimate_changed_signature_bytes(previous, &signatures, estimate_bytes);
                 let changed_ranges = changed_signature_ranges(previous, &signatures);
+                let partial_write_budget_exceeded = covers_entire_stream
+                    && (changed_ranges.len() as u64 > max_partial_write_count
+                        || dirty_bytes > max_partial_write_bytes);
                 if let Some(upload) = upload.as_deref_mut() {
                     upload.record_resident_stream_miss(dirty_bytes);
                     upload.resident_stream_content_mismatches =
@@ -396,9 +602,12 @@ impl ResidentGeometryUploadStreamState {
                     upload.resident_full_upload_fallbacks_stream_content_changed = upload
                         .resident_full_upload_fallbacks_stream_content_changed
                         .saturating_add(1);
+                    if partial_write_budget_exceeded {
+                        upload.record_resident_full_upload_fallback_partial_write_budget_exceeded();
+                    }
                 }
                 self.slots[slot] = Some(signatures);
-                if covers_entire_stream {
+                if covers_entire_stream && !partial_write_budget_exceeded {
                     ResidentGeometryUploadStreamWritePlan::Partial(changed_ranges)
                 } else {
                     ResidentGeometryUploadStreamWritePlan::Full
@@ -441,6 +650,18 @@ impl ResidentGeometryUploadStreamState {
 }
 
 impl GeometryUploadPerfSnapshot {
+    fn record_resident_partial_write_budget(&mut self, max_write_count: u64, max_bytes: u64) {
+        if max_write_count != UNBOUNDED_PARTIAL_WRITE_COUNT {
+            self.resident_partial_write_budget_max_write_count = self
+                .resident_partial_write_budget_max_write_count
+                .max(max_write_count);
+        }
+        if max_bytes != UNBOUNDED_PARTIAL_WRITE_BYTES {
+            self.resident_partial_write_budget_max_bytes =
+                self.resident_partial_write_budget_max_bytes.max(max_bytes);
+        }
+    }
+
     fn record_resident_stream_miss(&mut self, dirty_bytes: u64) {
         self.resident_stream_misses = self.resident_stream_misses.saturating_add(1);
         self.resident_dirty_range_bytes_estimate = self
@@ -482,6 +703,19 @@ impl GeometryUploadPerfSnapshot {
         self.resident_full_upload_fallbacks_reassembly_blocked = self
             .resident_full_upload_fallbacks_reassembly_blocked
             .saturating_add(count);
+    }
+
+    fn record_resident_full_upload_fallback_policy_unsupported(&mut self) {
+        self.resident_full_upload_fallbacks = self.resident_full_upload_fallbacks.saturating_add(1);
+        self.resident_full_upload_fallbacks_stream_policy_unsupported = self
+            .resident_full_upload_fallbacks_stream_policy_unsupported
+            .saturating_add(1);
+    }
+
+    fn record_resident_full_upload_fallback_partial_write_budget_exceeded(&mut self) {
+        self.resident_full_upload_fallbacks_partial_write_budget_exceeded = self
+            .resident_full_upload_fallbacks_partial_write_budget_exceeded
+            .saturating_add(1);
     }
 }
 
@@ -1771,6 +2005,145 @@ mod tests {
     }
 
     #[test]
+    fn resident_stream_policy_names_viewport_vertex_budget_and_dependencies() {
+        let policy = resident_geometry_upload_stream_policy(
+            ResidentGeometryUploadStreamId::ViewportVertices,
+        );
+        assert_eq!(
+            policy.closure_owner,
+            ResidentGeometryUploadClosureOwner::SceneChunkPayloadReassemblyPlan
+        );
+        assert_eq!(
+            policy.relocation_dependencies,
+            ResidentGeometryUploadRelocationDependencies::VertexColorViewportVertices
+        );
+        assert_eq!(
+            policy.resource_dependencies,
+            ResidentGeometryUploadResourceDependencies::None
+        );
+        assert_eq!(
+            policy.support,
+            ResidentGeometryUploadStreamSupport::Partial {
+                max_partial_write_count: 1,
+                max_partial_write_bytes: VIEWPORT_VERTEX_MAX_PARTIAL_WRITE_BYTES,
+            }
+        );
+    }
+
+    #[test]
+    fn resident_stream_policy_names_unsupported_stream_fallbacks() {
+        for id in [
+            ResidentGeometryUploadStreamId::PathPaints,
+            ResidentGeometryUploadStreamId::TextPaints,
+            ResidentGeometryUploadStreamId::TextGlyphInstances,
+            ResidentGeometryUploadStreamId::TextVertices,
+            ResidentGeometryUploadStreamId::PathVertices,
+        ] {
+            let policy = resident_geometry_upload_stream_policy(id);
+            assert_eq!(policy.id, id);
+            assert_eq!(
+                policy.closure_owner,
+                ResidentGeometryUploadClosureOwner::Unsupported
+            );
+            assert_eq!(
+                policy.relocation_dependencies,
+                ResidentGeometryUploadRelocationDependencies::Unsupported
+            );
+            assert_eq!(
+                policy.resource_dependencies,
+                ResidentGeometryUploadResourceDependencies::PaintOrTextOrPathResources
+            );
+            assert_eq!(
+                policy.support,
+                ResidentGeometryUploadStreamSupport::FullUpload {
+                    fallback_reason:
+                        ResidentGeometryUploadPolicyFallbackReason::StreamPolicyUnsupported,
+                }
+            );
+        }
+    }
+
+    #[test]
+    fn resident_viewport_partial_upload_falls_back_when_write_budget_exceeded() {
+        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+        let mut upload_state = GeometryUploadState::new(&ctx.device);
+        let plan = plan_with_viewport_ranges(&[(0, 1, 7), (1, 2, 8)]);
+        let alignment = payload_alignment(&[0, 1]);
+        let first_vertices = viewport_vertices(2);
+        let mut changed_vertices = viewport_vertices(2);
+        changed_vertices[0].pos_px[0] = 1.0;
+        changed_vertices[1].pos_px[0] = 2.0;
+
+        for _ in 0..3 {
+            let mut frame_perf = RenderPerfStats::default();
+            let _ = upload_state.upload_frame_geometry(
+                &ctx.device,
+                &ctx.queue,
+                &plan,
+                &alignment,
+                &[],
+                &[],
+                &[],
+                &first_vertices,
+                &[],
+                &[],
+                &[],
+                true,
+                &mut frame_perf,
+            );
+        }
+
+        let mut changed_perf = RenderPerfStats::default();
+        let _ = upload_state.upload_frame_geometry(
+            &ctx.device,
+            &ctx.queue,
+            &plan,
+            &alignment,
+            &[],
+            &[],
+            &[],
+            &changed_vertices,
+            &[],
+            &[],
+            &[],
+            true,
+            &mut changed_perf,
+        );
+
+        let full_viewport_vertex_bytes = std::mem::size_of_val(changed_vertices.as_slice()) as u64;
+        assert_eq!(
+            changed_perf
+                .geometry_upload
+                .resident_partial_write_budget_max_write_count,
+            1
+        );
+        assert_eq!(
+            changed_perf
+                .geometry_upload
+                .resident_partial_write_budget_max_bytes,
+            VIEWPORT_VERTEX_MAX_PARTIAL_WRITE_BYTES
+        );
+        assert_eq!(
+            changed_perf
+                .geometry_upload
+                .resident_partial_write_dry_run_write_count_estimate,
+            2
+        );
+        assert_eq!(
+            changed_perf
+                .geometry_upload
+                .resident_full_upload_fallbacks_partial_write_budget_exceeded,
+            1
+        );
+        assert_eq!(changed_perf.geometry_upload.viewport_vertex_write_count, 1);
+        assert_eq!(
+            changed_perf.geometry_upload.viewport_vertex_bytes,
+            full_viewport_vertex_bytes
+        );
+        assert_eq!(changed_perf.vertex_bytes, full_viewport_vertex_bytes);
+    }
+
+    #[test]
     fn resident_viewport_partial_upload_skips_stable_slot_after_warmup() {
         let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
         let mut upload_state = GeometryUploadState::new(&ctx.device);
@@ -1888,35 +2261,44 @@ mod tests {
     }
 
     #[test]
-    fn resident_viewport_partial_upload_blocks_image_and_viewport_surface_flags() {
+    fn resident_viewport_partial_upload_blocks_unsupported_segment_flags() {
         let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
         let mut upload_state = GeometryUploadState::new(&ctx.device);
-        let image_plan = plan_with_viewport_ranges_and_flags(
-            &[(0, 1, 7), (1, 2, 8)],
+        let unsupported_flags = [
             RenderPlanSegmentFlags {
                 has_image: true,
                 ..Default::default()
             },
-        );
-        let viewport_surface_plan = plan_with_viewport_ranges_and_flags(
-            &[(0, 1, 7), (1, 2, 8)],
             RenderPlanSegmentFlags {
                 has_viewport: true,
                 ..Default::default()
             },
-        );
+            RenderPlanSegmentFlags {
+                has_mask: true,
+                ..Default::default()
+            },
+            RenderPlanSegmentFlags {
+                has_text: true,
+                ..Default::default()
+            },
+            RenderPlanSegmentFlags {
+                has_path: true,
+                ..Default::default()
+            },
+        ];
         let alignment = payload_alignment(&[0, 1]);
         let first_vertices = viewport_vertices(2);
         let mut changed_vertices = viewport_vertices(2);
         changed_vertices[1].pos_px[0] = 1.0;
 
-        for plan in [&image_plan, &viewport_surface_plan] {
+        for flags in unsupported_flags {
+            let plan = plan_with_viewport_ranges_and_flags(&[(0, 1, 7), (1, 2, 8)], flags);
             for _ in 0..3 {
                 let mut frame_perf = RenderPerfStats::default();
                 let _ = upload_state.upload_frame_geometry(
                     &ctx.device,
                     &ctx.queue,
-                    plan,
+                    &plan,
                     &alignment,
                     &[],
                     &[],
@@ -1934,7 +2316,7 @@ mod tests {
             let _ = upload_state.upload_frame_geometry(
                 &ctx.device,
                 &ctx.queue,
-                plan,
+                &plan,
                 &alignment,
                 &[],
                 &[],
@@ -1950,6 +2332,12 @@ mod tests {
             let full_viewport_vertex_bytes =
                 std::mem::size_of_val(changed_vertices.as_slice()) as u64;
             assert_eq!(changed_perf.geometry_upload.resident_stream_misses, 0);
+            assert_eq!(
+                changed_perf
+                    .geometry_upload
+                    .resident_full_upload_fallbacks_stream_policy_unsupported,
+                1
+            );
             assert_eq!(
                 changed_perf
                     .geometry_upload

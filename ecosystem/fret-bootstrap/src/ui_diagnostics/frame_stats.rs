@@ -949,6 +949,10 @@ pub struct UiFrameStatsV1 {
     #[serde(default)]
     pub renderer_geometry_upload_resident_partial_write_dry_run_bytes_estimate: u64,
     #[serde(default)]
+    pub renderer_geometry_upload_resident_partial_write_budget_max_write_count: u64,
+    #[serde(default)]
+    pub renderer_geometry_upload_resident_partial_write_budget_max_bytes: u64,
+    #[serde(default)]
     pub renderer_geometry_upload_resident_full_upload_fallbacks: u64,
     #[serde(default)]
     pub renderer_geometry_upload_resident_full_upload_fallbacks_no_candidate: u64,
@@ -964,6 +968,10 @@ pub struct UiFrameStatsV1 {
     pub renderer_geometry_upload_resident_full_upload_fallbacks_stream_content_changed: u64,
     #[serde(default)]
     pub renderer_geometry_upload_resident_full_upload_fallbacks_stream_layout_changed: u64,
+    #[serde(default)]
+    pub renderer_geometry_upload_resident_full_upload_fallbacks_stream_policy_unsupported: u64,
+    #[serde(default)]
+    pub renderer_geometry_upload_resident_full_upload_fallbacks_partial_write_budget_exceeded: u64,
     #[serde(default)]
     pub renderer_scene_encoding_cache_hits: u64,
     #[serde(default)]
@@ -1783,6 +1791,8 @@ impl UiFrameStatsV1 {
             renderer_geometry_upload_resident_partial_write_dry_run_streams: 0,
             renderer_geometry_upload_resident_partial_write_dry_run_write_count_estimate: 0,
             renderer_geometry_upload_resident_partial_write_dry_run_bytes_estimate: 0,
+            renderer_geometry_upload_resident_partial_write_budget_max_write_count: 0,
+            renderer_geometry_upload_resident_partial_write_budget_max_bytes: 0,
             renderer_geometry_upload_resident_full_upload_fallbacks: 0,
             renderer_geometry_upload_resident_full_upload_fallbacks_no_candidate: 0,
             renderer_geometry_upload_resident_full_upload_fallbacks_missing_payload: 0,
@@ -1791,6 +1801,8 @@ impl UiFrameStatsV1 {
             renderer_geometry_upload_resident_full_upload_fallbacks_buffer_resized: 0,
             renderer_geometry_upload_resident_full_upload_fallbacks_stream_content_changed: 0,
             renderer_geometry_upload_resident_full_upload_fallbacks_stream_layout_changed: 0,
+            renderer_geometry_upload_resident_full_upload_fallbacks_stream_policy_unsupported: 0,
+            renderer_geometry_upload_resident_full_upload_fallbacks_partial_write_budget_exceeded: 0,
             renderer_scene_encoding_cache_hits: 0,
             renderer_scene_encoding_cache_misses: 0,
             renderer_scene_encoding_cache_miss_cold_start: 0,
@@ -2248,6 +2260,10 @@ impl UiFrameStatsV1 {
             geometry_upload.resident_partial_write_dry_run_write_count_estimate;
         self.renderer_geometry_upload_resident_partial_write_dry_run_bytes_estimate =
             geometry_upload.resident_partial_write_dry_run_bytes_estimate;
+        self.renderer_geometry_upload_resident_partial_write_budget_max_write_count =
+            geometry_upload.resident_partial_write_budget_max_write_count;
+        self.renderer_geometry_upload_resident_partial_write_budget_max_bytes =
+            geometry_upload.resident_partial_write_budget_max_bytes;
         self.renderer_geometry_upload_resident_full_upload_fallbacks =
             geometry_upload.resident_full_upload_fallbacks;
         self.renderer_geometry_upload_resident_full_upload_fallbacks_no_candidate =
@@ -2264,6 +2280,11 @@ impl UiFrameStatsV1 {
             geometry_upload.resident_full_upload_fallbacks_stream_content_changed;
         self.renderer_geometry_upload_resident_full_upload_fallbacks_stream_layout_changed =
             geometry_upload.resident_full_upload_fallbacks_stream_layout_changed;
+        self.renderer_geometry_upload_resident_full_upload_fallbacks_stream_policy_unsupported =
+            geometry_upload.resident_full_upload_fallbacks_stream_policy_unsupported;
+        self
+            .renderer_geometry_upload_resident_full_upload_fallbacks_partial_write_budget_exceeded =
+            geometry_upload.resident_full_upload_fallbacks_partial_write_budget_exceeded;
         self.renderer_scene_encoding_cache_hits = sample.perf.scene_encoding_cache_hits;
         self.renderer_scene_encoding_cache_misses = sample.perf.scene_encoding_cache_misses;
         let miss_histogram = sample.perf.scene_encoding_cache_miss_histogram;

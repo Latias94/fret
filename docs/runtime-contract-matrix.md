@@ -129,9 +129,14 @@ Compatibility bridge policy for the active plan:
   None of those paths are normal runtime evidence. U10 diagnostics expose
   `renderer_render_scene_source_*` counters so bundle gates can distinguish authoritative chunk
   frames from unsupported `FlatCompat` fallbacks.
-- Non-quad partial uploads are not a broad bridge deletion yet. The only supported non-quad slice is
-  `VertexColor` viewport vertices; all other streams must continue to report full-upload fallback
-  reasons rather than silently accepting dirty-range writes.
+- Partial upload eligibility is stream-policy governed, not inferred from incidental range
+  signatures. `QuadInstances` remain resident-partial capable with unbounded write-budget metadata;
+  the only supported non-quad slice is resource-free `VertexColor` viewport vertices with a finite
+  one-write / six-vertex budget. All paint, text, glyph, text-vertex, and path streams, plus
+  viewport-vertex segments that carry image, viewport, mask, text, or path flags, must continue to
+  report explicit full-upload fallback reasons rather than silently accepting dirty-range writes.
+  U11 diagnostics expose the finite budget and distinguish unsupported stream policy from
+  partial-write budget overflow.
 - The deleted cache-root observation collapse bridge must not return. If observation fanout widens,
   it should widen from boundary/view subscribers rather than from descendant `NodeId` scans.
 - Every retained bridge needs an owner, reason, measurable deletion gate, and follow-up path. An

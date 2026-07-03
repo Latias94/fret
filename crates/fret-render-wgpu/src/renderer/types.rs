@@ -452,6 +452,10 @@ pub struct GeometryUploadPerfSnapshot {
     pub resident_partial_write_dry_run_write_count_estimate: u64,
     /// Estimated bytes that the resident partial-upload dry-run would write.
     pub resident_partial_write_dry_run_bytes_estimate: u64,
+    /// Maximum partial-write count budget advertised by finite stream policies in this frame.
+    pub resident_partial_write_budget_max_write_count: u64,
+    /// Maximum partial-write byte budget advertised by finite stream policies in this frame.
+    pub resident_partial_write_budget_max_bytes: u64,
     /// Full-upload fallback observations recorded by the resident diagnostics owner.
     pub resident_full_upload_fallbacks: u64,
     /// Fallbacks because no retained scene chunk upload candidate exists for the frame.
@@ -468,6 +472,10 @@ pub struct GeometryUploadPerfSnapshot {
     pub resident_full_upload_fallbacks_stream_content_changed: u64,
     /// Fallbacks because the selected ring slot has a different stream layout/signature.
     pub resident_full_upload_fallbacks_stream_layout_changed: u64,
+    /// Fallbacks because a stream has no partial-upload policy yet.
+    pub resident_full_upload_fallbacks_stream_policy_unsupported: u64,
+    /// Fallbacks because the changed resident ranges exceed the stream policy budget.
+    pub resident_full_upload_fallbacks_partial_write_budget_exceeded: u64,
 }
 
 impl GeometryUploadPerfSnapshot {
@@ -537,6 +545,12 @@ impl GeometryUploadPerfSnapshot {
         self.resident_partial_write_dry_run_bytes_estimate = self
             .resident_partial_write_dry_run_bytes_estimate
             .saturating_add(other.resident_partial_write_dry_run_bytes_estimate);
+        self.resident_partial_write_budget_max_write_count = self
+            .resident_partial_write_budget_max_write_count
+            .max(other.resident_partial_write_budget_max_write_count);
+        self.resident_partial_write_budget_max_bytes = self
+            .resident_partial_write_budget_max_bytes
+            .max(other.resident_partial_write_budget_max_bytes);
         self.resident_full_upload_fallbacks = self
             .resident_full_upload_fallbacks
             .saturating_add(other.resident_full_upload_fallbacks);
@@ -561,6 +575,12 @@ impl GeometryUploadPerfSnapshot {
         self.resident_full_upload_fallbacks_stream_layout_changed = self
             .resident_full_upload_fallbacks_stream_layout_changed
             .saturating_add(other.resident_full_upload_fallbacks_stream_layout_changed);
+        self.resident_full_upload_fallbacks_stream_policy_unsupported = self
+            .resident_full_upload_fallbacks_stream_policy_unsupported
+            .saturating_add(other.resident_full_upload_fallbacks_stream_policy_unsupported);
+        self.resident_full_upload_fallbacks_partial_write_budget_exceeded = self
+            .resident_full_upload_fallbacks_partial_write_budget_exceeded
+            .saturating_add(other.resident_full_upload_fallbacks_partial_write_budget_exceeded);
     }
 }
 
