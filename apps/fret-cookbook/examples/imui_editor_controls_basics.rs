@@ -1,7 +1,8 @@
 use std::sync::Arc;
 
-use fret::app::RenderContextAccess as _;
 use fret::app::prelude::*;
+use fret::app::LocalState;
+use fret::app::RenderContextAccess as _;
 use fret::imui::{
     editor::{
         self,
@@ -10,18 +11,17 @@ use fret::imui::{
             PropertyGroup, PropertyGroupOptions,
         },
         controls::{
-            ColorEdit, ColorEditOptions, DragValue, DragValueOptions, MiniSearchBox,
-            MiniSearchBoxOptions, NumericInput, NumericInputOptions, NumericPresentation,
-            TextAssistField, TextAssistFieldOptions, TextAssistFieldSurface, TextAssistItem,
-            TextFieldOptions,
+            ColorEdit, ColorEditLocalStateExt, ColorEditOptions, DragValue, DragValueLocalStateExt,
+            DragValueOptions, MiniSearchBox, MiniSearchBoxLocalStateExt, MiniSearchBoxOptions,
+            NumericInput, NumericInputLocalStateExt, NumericInputOptions, NumericPresentation,
+            TextAssistField, TextAssistFieldLocalStateExt, TextAssistFieldOptions,
+            TextAssistFieldSurface, TextAssistItem, TextFieldOptions,
         },
-        theme::{EditorThemePresetV1, install_editor_theme_preset_v1},
+        theme::{install_editor_theme_preset_v1, EditorThemePresetV1},
     },
     prelude::*,
 };
-use fret::style::{ColorRef, Space};
-use fret_core::Color;
-use fret_runtime::Model;
+use fret::style::{Color, ColorRef, Space};
 
 const TEST_ID_ROOT: &str = "cookbook.imui_editor_controls.root";
 const TEST_ID_EXPOSURE: &str = "cookbook.imui_editor_controls.exposure";
@@ -35,28 +35,26 @@ const TEST_ID_INSPECTOR: &str = "cookbook.imui_editor_controls.inspector";
 const TEST_ID_GRID: &str = "cookbook.imui_editor_controls.grid";
 
 struct ImUiEditorControlsBasicsView {
-    exposure: Model<f64>,
-    roughness: Model<f64>,
-    tint: Model<Color>,
-    search: Model<String>,
-    assist_query: Model<String>,
-    assist_dismissed_query: Model<String>,
-    assist_active_item_id: Model<Option<Arc<str>>>,
+    exposure: LocalState<f64>,
+    roughness: LocalState<f64>,
+    tint: LocalState<Color>,
+    search: LocalState<String>,
+    assist_query: LocalState<String>,
+    assist_dismissed_query: LocalState<String>,
+    assist_active_item_id: LocalState<Option<Arc<str>>>,
     assist_items: Arc<[TextAssistItem]>,
 }
 
 impl View for ImUiEditorControlsBasicsView {
     fn init(app: &mut App, _window: WindowId) -> Self {
         Self {
-            exposure: app.models_mut().insert(1.25),
-            roughness: app.models_mut().insert(0.42),
-            tint: app
-                .models_mut()
-                .insert(Color::from_srgb_hex_rgb(0x4f_8c_ff)),
-            search: app.models_mut().insert(String::from("Transform")),
-            assist_query: app.models_mut().insert(String::from("ca")),
-            assist_dismissed_query: app.models_mut().insert(String::new()),
-            assist_active_item_id: app.models_mut().insert(None::<Arc<str>>),
+            exposure: app.local_state(1.25),
+            roughness: app.local_state(0.42),
+            tint: app.local_state(Color::from_srgb_hex_rgb(0x4f_8c_ff)),
+            search: app.local_state(String::from("Transform")),
+            assist_query: app.local_state(String::from("ca")),
+            assist_dismissed_query: app.local_state(String::new()),
+            assist_active_item_id: app.local_state(None::<Arc<str>>),
             assist_items: vec![
                 TextAssistItem::new("camera", "Camera"),
                 TextAssistItem::new("canvas", "Canvas"),
@@ -96,9 +94,8 @@ impl View for ImUiEditorControlsBasicsView {
             })
             .gap(Space::N1);
 
-            let mut body = ui::children![cx; header];
-
-            body.extend(imui_raw(cx, move |ui| {
+            let editor_panel = ui::v_flex(move |cx| {
+                imui_in(cx, move |ui| {
                 let exposure = exposure.clone();
                 let roughness = roughness.clone();
                 let tint = tint.clone();
@@ -156,8 +153,8 @@ impl View for ImUiEditorControlsBasicsView {
                                                             cx,
                                                             |cx| row_cx.label_text(cx, "Exposure"),
                                                             |cx| {
-                                                                NumericInput::from_presentation(
-                                                                    exposure.clone(),
+                                                                NumericInput::from_local_presentation(
+                                                                    &exposure,
                                                                     exposure_presentation,
                                                                 )
                                                                 .options(NumericInputOptions {
@@ -176,8 +173,8 @@ impl View for ImUiEditorControlsBasicsView {
                                                             cx,
                                                             |cx| row_cx.label_text(cx, "Roughness"),
                                                             |cx| {
-                                                                DragValue::from_presentation(
-                                                                    roughness.clone(),
+                                                                DragValue::from_local_presentation(
+                                                                    &roughness,
                                                                     roughness_presentation,
                                                                 )
                                                                 .options(DragValueOptions {
@@ -196,7 +193,7 @@ impl View for ImUiEditorControlsBasicsView {
                                                             cx,
                                                             |cx| row_cx.label_text(cx, "Tint"),
                                                             |cx| {
-                                                                ColorEdit::new(tint.clone())
+                                                                ColorEdit::new_local(&tint)
                                                                     .options(ColorEditOptions {
                                                                         id_source: Some(Arc::from(
                                                                             "cookbook.imui_editor_controls.tint",
@@ -213,7 +210,7 @@ impl View for ImUiEditorControlsBasicsView {
                                                             cx,
                                                             |cx| row_cx.label_text(cx, "Filter"),
                                                             |cx| {
-                                                                MiniSearchBox::new(search.clone())
+                                                                MiniSearchBox::new_local(&search)
                                                                     .options(MiniSearchBoxOptions {
                                                                         test_id: Some(Arc::from(
                                                                             TEST_ID_SEARCH,
@@ -227,10 +224,10 @@ impl View for ImUiEditorControlsBasicsView {
                                                             cx,
                                                             |cx| row_cx.label_text(cx, "Asset"),
                                                             |cx| {
-                                                                TextAssistField::new(
-                                                                    assist_query.clone(),
-                                                                    assist_dismissed_query.clone(),
-                                                                    assist_active_item_id.clone(),
+                                                                TextAssistField::new_local(
+                                                                    &assist_query,
+                                                                    &assist_dismissed_query,
+                                                                    &assist_active_item_id,
                                                                     assist_items.clone(),
                                                                 )
                                                                 .options(TextAssistFieldOptions {
@@ -269,9 +266,10 @@ impl View for ImUiEditorControlsBasicsView {
                         ]
                     },
                 );
-            }));
+                })
+            });
 
-            body
+            ui::children![cx; header, editor_panel]
         })
         .w_full()
         .max_w(Px(560.0))

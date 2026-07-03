@@ -40,11 +40,13 @@ Two readonly explorers audited the remaining IMUI cookbook facade gaps.
 
 # Disposition
 
-The action example recommendation was implemented immediately: the GenUI panel was deleted, the
-example now uses `LocalState<String>`, `fret::commands`, and `imui_in(...)`, and the source-policy
-quarantine record was removed. Editor, debug draw, and plot remain follow-up slices.
+The action and editor recommendations were implemented immediately. The action example now uses
+`LocalState<String>`, `fret::commands`, and `imui_in(...)`; the editor controls example now uses
+editor-control `LocalState<T>` adapter traits and `fret::style::Color`. Both source-policy
+quarantine records were removed. Debug draw and plot remain follow-up slices.
 
 # Citations
 
 - [Phase 3 plan](../../../plans/2026-07-03-001-refactor-ui-framework-phase3-retained-bridge-deletion-plan.md)
 - [IMUI action local-state migration](../progress/2026-07-03-phase3-u13-imui-action-local-state.md)
+- [IMUI editor local-state migration](../progress/2026-07-03-phase3-u13-imui-editor-local-state.md)

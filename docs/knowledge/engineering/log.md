@@ -572,3 +572,11 @@ timestamp: 2026-06-30
   IMUI cookbook/fret facade tests, `fret-cookbook --all-targets`, source-policy tests/gate,
   consumption-profile, execution-surface, layering, ADR/workstream catalog, formatting, and
   whitespace.
+- 2026-07-03: Phase 3 U13 IMUI editor local-state migration adds explicit
+  `fret::style::Color` plus editor-control `LocalState<T>` adapter traits under
+  `fret::imui::editor::controls`, migrates `imui_editor_controls_basics.rs` off raw
+  `fret_runtime::Model` and `fret_core::Color`, replaces root `imui_raw(...)` with
+  `ui::v_flex(|cx| imui_in(cx, ...))`, and moves the example to default clean source-policy
+  coverage. Verification passed for editor example compile, `fret-cookbook --all-targets`,
+  focused cookbook/fret facade tests, source-policy tests/gate, consumption-profile,
+  execution-surface, and layering.

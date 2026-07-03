@@ -176,7 +176,7 @@ pub mod semantics {
 
 /// Explicit style/token nouns for app code that customizes layout or chrome beyond the default lane.
 pub mod style {
-    pub use fret_core::{Corners, Edges, FontWeight, TextAlign, TextOverflow, TextWrap};
+    pub use fret_core::{Color, Corners, Edges, FontWeight, TextAlign, TextOverflow, TextWrap};
     pub use fret_ui::element::{ContainerProps, LayoutStyle, Length, Overflow, SizeStyle};
     pub use fret_ui::{Theme, ThemeSnapshot};
     pub use fret_ui_kit::{
@@ -296,7 +296,134 @@ pub mod imui {
     /// Editor-grade controls and composites available on the immediate-mode lane.
     pub mod editor {
         pub use fret_ui_editor::imui::*;
-        pub use fret_ui_editor::{composites, controls, primitives, theme};
+        pub use fret_ui_editor::{composites, primitives, theme};
+
+        /// Editor controls plus app-facing `LocalState` constructors.
+        pub mod controls {
+            use std::sync::Arc;
+
+            pub use fret_ui_editor::controls::*;
+
+            use crate::view::{LocalState, LocalStateRawModelExt as _};
+            use fret_ui_editor::primitives::DragValueScalar;
+
+            pub trait NumericInputLocalStateExt<T>
+            where
+                T: Copy + Default + 'static,
+            {
+                fn new_local(
+                    local: &LocalState<T>,
+                    format: NumericFormatFn<T>,
+                    parse: NumericParseFn<T>,
+                ) -> Self;
+
+                fn from_local_presentation(
+                    local: &LocalState<T>,
+                    presentation: fret_ui_editor::primitives::NumericPresentation<T>,
+                ) -> Self;
+            }
+
+            impl<T> NumericInputLocalStateExt<T> for NumericInput<T>
+            where
+                T: Copy + Default + 'static,
+            {
+                fn new_local(
+                    local: &LocalState<T>,
+                    format: NumericFormatFn<T>,
+                    parse: NumericParseFn<T>,
+                ) -> Self {
+                    Self::new(local.clone_model(), format, parse)
+                }
+
+                fn from_local_presentation(
+                    local: &LocalState<T>,
+                    presentation: fret_ui_editor::primitives::NumericPresentation<T>,
+                ) -> Self {
+                    Self::from_presentation(local.clone_model(), presentation)
+                }
+            }
+
+            pub trait DragValueLocalStateExt<T>
+            where
+                T: DragValueScalar + Default,
+            {
+                fn new_local(
+                    local: &LocalState<T>,
+                    format: NumericFormatFn<T>,
+                    parse: NumericParseFn<T>,
+                ) -> Self;
+
+                fn from_local_presentation(
+                    local: &LocalState<T>,
+                    presentation: fret_ui_editor::primitives::NumericPresentation<T>,
+                ) -> Self;
+            }
+
+            impl<T> DragValueLocalStateExt<T> for DragValue<T>
+            where
+                T: DragValueScalar + Default,
+            {
+                fn new_local(
+                    local: &LocalState<T>,
+                    format: NumericFormatFn<T>,
+                    parse: NumericParseFn<T>,
+                ) -> Self {
+                    Self::new(local.clone_model(), format, parse)
+                }
+
+                fn from_local_presentation(
+                    local: &LocalState<T>,
+                    presentation: fret_ui_editor::primitives::NumericPresentation<T>,
+                ) -> Self {
+                    Self::from_presentation(local.clone_model(), presentation)
+                }
+            }
+
+            pub trait ColorEditLocalStateExt {
+                fn new_local(local: &LocalState<fret_core::Color>) -> Self;
+            }
+
+            impl ColorEditLocalStateExt for ColorEdit {
+                fn new_local(local: &LocalState<fret_core::Color>) -> Self {
+                    Self::new(local.clone_model())
+                }
+            }
+
+            pub trait MiniSearchBoxLocalStateExt {
+                fn new_local(local: &LocalState<String>) -> Self;
+            }
+
+            impl MiniSearchBoxLocalStateExt for MiniSearchBox {
+                fn new_local(local: &LocalState<String>) -> Self {
+                    Self::new(local.clone_model())
+                }
+            }
+
+            pub trait TextAssistFieldLocalStateExt {
+                fn new_local(
+                    query: &LocalState<String>,
+                    dismissed_query: &LocalState<String>,
+                    active_item_id: &LocalState<Option<Arc<str>>>,
+                    items: Arc<[TextAssistItem]>,
+                ) -> Self;
+            }
+
+            impl TextAssistFieldLocalStateExt for TextAssistField {
+                fn new_local(
+                    query: &LocalState<String>,
+                    dismissed_query: &LocalState<String>,
+                    active_item_id: &LocalState<Option<Arc<str>>>,
+                    items: Arc<[TextAssistItem]>,
+                ) -> Self {
+                    Self::new(
+                        query.clone_model(),
+                        dismissed_query.clone_model(),
+                        active_item_id.clone_model(),
+                        items,
+                    )
+                }
+            }
+        }
     }
 
     /// Docking helpers for immediate-mode authoring.
@@ -4088,6 +4215,7 @@ mod authoring_surface_policy_tests {
         assert!(!app_prelude_exports_symbol("icon"));
         assert!(!app_prelude_exports_symbol("IconId"));
         assert!(!app_prelude_exports_symbol("Theme"));
+        assert!(!app_prelude_exports_symbol("Color"));
         assert!(!app_prelude_exports_symbol("ChromeRefinement"));
         assert!(!app_prelude_exports_symbol("ColorRef"));
         assert!(!app_prelude_exports_symbol("LayoutRefinement"));
@@ -4233,6 +4361,7 @@ mod authoring_surface_policy_tests {
         assert!(LIB_RS.contains("pub use crate::view::LocalState;"));
         assert!(LIB_RS.contains("pub use crate::AppComponentCx;"));
         assert!(LIB_RS.contains("pub use crate::AppRenderCx;"));
+        assert!(LIB_RS.contains("pub use fret_core::{Color, Corners, Edges, FontWeight"));
         assert!(LIB_RS.contains(
             "AppLocalStateExt, AppRenderActionsExt, AppRenderContext, AppRenderDataExt, LocalState,"
         ));
@@ -4496,8 +4625,9 @@ mod authoring_surface_policy_tests {
         assert!(root_header.contains("pub use fret_core::SemanticsRole;"));
         assert!(root_header.contains("pub use fret_ui::element::SemanticsDecoration;"));
         assert!(root_header.contains(
-            "pub use fret_core::{Corners, Edges, FontWeight, TextAlign, TextOverflow, TextWrap};"
+            "pub use fret_core::{Color, Corners, Edges, FontWeight, TextAlign, TextOverflow,"
         ));
+        assert!(root_header.contains("TextWrap};"));
         assert!(root_header.contains(
             "pub use fret_ui::element::{ContainerProps, LayoutStyle, Length, Overflow, SizeStyle};"
         ));
@@ -4545,9 +4675,15 @@ mod authoring_surface_policy_tests {
         assert!(public_surface.contains("pub mod editor {"));
         assert!(public_surface.contains("pub use fret_ui_editor::imui::*;"));
         assert!(
-            public_surface
-                .contains("pub use fret_ui_editor::{composites, controls, primitives, theme};")
+            public_surface.contains("pub use fret_ui_editor::{composites, primitives, theme};")
         );
+        assert!(public_surface.contains("pub mod controls {"));
+        assert!(public_surface.contains("pub use fret_ui_editor::controls::*;"));
+        assert!(public_surface.contains("pub trait NumericInputLocalStateExt"));
+        assert!(public_surface.contains("pub trait DragValueLocalStateExt"));
+        assert!(public_surface.contains("pub trait ColorEditLocalStateExt"));
+        assert!(public_surface.contains("pub trait MiniSearchBoxLocalStateExt"));
+        assert!(public_surface.contains("pub trait TextAssistFieldLocalStateExt"));
         assert!(public_surface.contains("pub mod docking {"));
         assert!(public_surface.contains("pub use fret_docking::imui::*;"));
         assert!(public_surface.contains("pub mod prelude {"));
