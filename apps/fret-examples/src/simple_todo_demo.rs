@@ -1,16 +1,15 @@
 use std::sync::Arc;
 
 use fret::app::LocalState;
+use fret::app::RenderContextAccess as _;
 use fret::app::prelude::*;
+use fret::semantics::SemanticsDecoration;
 use fret::semantics::SemanticsRole;
 use fret::style::{ColorRef, Radius, Space, ThemeSnapshot};
 use fret_bootstrap::ui_app_driver;
-use fret_core::Color;
 use fret_icons::IconRegistry;
 use fret_runtime::PlatformCapabilities;
-use fret_ui::element::{AnyElement, SemanticsDecoration};
-use fret_ui::{ElementContext, UiHost};
-use fret_ui_kit::declarative::{ElementContextThemeExt as _, text as decl_text};
+use fret_ui_kit::declarative::text as decl_text;
 
 mod act {
     fret::actions!([
@@ -34,26 +33,33 @@ const TEST_ID_ROW_PREFIX: &str = "simple-todo.row.";
 const TEST_ID_DONE_PREFIX: &str = "simple-todo.done.";
 const TEST_ID_REMOVE_PREFIX: &str = "simple-todo.remove.";
 
-fn simple_todo_readout_text<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    text: impl Into<Arc<str>>,
-) -> AnyElement {
-    decl_text::text_control_readout(cx, text)
+fn simple_todo_readout_text<'a, Cx, T>(cx: &mut Cx, text: T) -> impl UiChild + use<Cx, T>
+where
+    Cx: AppRenderContext<'a>,
+    T: Into<Arc<str>>,
+{
+    decl_text::text_control_readout(cx.elements(), text)
 }
 
-fn simple_todo_compact_paragraph_text<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    text: impl Into<Arc<str>>,
-) -> AnyElement {
-    decl_text::text_compact_paragraph(cx, text)
+fn simple_todo_compact_paragraph_text<'a, Cx, T>(cx: &mut Cx, text: T) -> impl UiChild + use<Cx, T>
+where
+    Cx: AppRenderContext<'a>,
+    T: Into<Arc<str>>,
+{
+    decl_text::text_compact_paragraph(cx.elements(), text)
 }
 
-fn simple_todo_row_label_text<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    text: impl Into<Arc<str>>,
-    foreground: Color,
-) -> AnyElement {
-    decl_text::text_list_row_label(cx, text).inherit_foreground(foreground)
+fn simple_todo_row_label_text<'a, Cx, T>(
+    cx: &mut Cx,
+    text: T,
+    foreground: ColorRef,
+) -> impl UiChild + use<Cx, T>
+where
+    Cx: AppRenderContext<'a>,
+    T: Into<Arc<str>>,
+{
+    let foreground = cx.with_theme(|theme| foreground.resolve(theme));
+    decl_text::text_list_row_label(cx.elements(), text).inherit_foreground(foreground)
 }
 
 #[derive(Clone)]
@@ -188,7 +194,7 @@ impl View for SimpleTodoView {
                     .numeric_range(0.0, (total_count.max(1)) as f64),
             );
 
-        let summary = simple_todo_readout_text(cx.elements(), status_text);
+        let summary = simple_todo_readout_text(cx, status_text);
 
         let title_block = ui::v_flex(|cx| {
             ui::children![
@@ -357,7 +363,8 @@ fn todo_row(theme: ThemeSnapshot, row: &TodoRow) -> impl UiChild {
         .test_id(format!("{TEST_ID_REMOVE_PREFIX}{}", row.id));
 
     let leading = ui::h_flex(move |cx| {
-        let text = simple_todo_row_label_text(cx, row_text.clone(), row_text_foreground);
+        let text =
+            simple_todo_row_label_text(cx, row_text.clone(), ColorRef::Color(row_text_foreground));
         ui::children![cx; checkbox, text]
     })
     .gap(Space::N3)

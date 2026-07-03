@@ -280,16 +280,12 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
     ),
     _fret_examples_advanced_surface(
         "simple_todo_demo.rs",
-        "the view body is app-facing but the file still mixes web/native runner glue and "
-        "lower-level text helper types",
+        "the view body is app-facing but the file still owns web/native runner glue and launch "
+        "capability setup for the demo shells",
         (
             "fret::advanced",
-            "fret_core",
             "fret_launch",
             "fret_runtime",
-            "fret_ui",
-            "AnyElement",
-            "ElementContext",
         ),
         owner="examples-simple-todo",
     ),

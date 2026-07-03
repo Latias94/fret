@@ -267,7 +267,8 @@ When app code needs explicit local state-handle types in validators or helper si
 When app code needs explicit command identity values, import `fret::actions::CommandId` instead of
 expecting `CommandId` from the default prelude.
 When app code needs explicit semantics nouns, import them intentionally from
-`fret::semantics::SemanticsRole` instead of expecting them from `fret::app::prelude::*`.
+`fret::semantics::{SemanticsDecoration, SemanticsRole}` instead of expecting them from
+`fret::app::prelude::*`.
 When app code needs explicit selector/query nouns, keep them off the default prelude as well and
 import them intentionally from `fret::selector::ui::DepsBuilder`,
 `fret::selector::DepsSignature`, and `fret::query::{QueryKey, QueryPolicy, QueryState, ...}`.

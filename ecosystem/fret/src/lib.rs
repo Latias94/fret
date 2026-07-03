@@ -171,6 +171,7 @@ pub mod icons {
 /// Explicit accessibility/semantics nouns for app code that needs semantic-role overrides.
 pub mod semantics {
     pub use fret_core::SemanticsRole;
+    pub use fret_ui::element::SemanticsDecoration;
 }
 
 /// Explicit style/token nouns for app code that customizes layout or chrome beyond the default lane.
@@ -3356,7 +3357,9 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_USAGE_GUIDE.contains("`fret::style::{...}`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::style::ThemeSnapshot`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::icons::{icon, IconId}`"));
-        assert!(CRATE_USAGE_GUIDE.contains("`fret::semantics::SemanticsRole`"));
+        assert!(
+            CRATE_USAGE_GUIDE.contains("`fret::semantics::{SemanticsDecoration, SemanticsRole}`")
+        );
         assert!(CRATE_USAGE_GUIDE.contains("`fret::env::{...}`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::children::UiElementSinkExt as _`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::actions::ElementCommandGatingExt as _`"));
@@ -4010,6 +4013,7 @@ mod authoring_surface_policy_tests {
         assert!(!app_prelude_exports_symbol("Space"));
         assert!(!app_prelude_exports_symbol("TextOverflow"));
         assert!(!app_prelude_exports_symbol("TextWrap"));
+        assert!(!app_prelude_exports_symbol("SemanticsDecoration"));
         assert!(!app_prelude_exports_symbol("AdaptiveQuerySource"));
         assert!(!app_prelude_exports_symbol("DeviceAdaptiveClass"));
         assert!(!app_prelude_exports_symbol("DeviceAdaptivePolicy"));
@@ -4394,6 +4398,7 @@ mod authoring_surface_policy_tests {
         assert!(root_header.contains("pub use fret_icons::IconId;"));
         assert!(root_header.contains("pub use fret_ui_kit::declarative::icon;"));
         assert!(root_header.contains("pub use fret_core::SemanticsRole;"));
+        assert!(root_header.contains("pub use fret_ui::element::SemanticsDecoration;"));
         assert!(
             root_header
                 .contains("pub use fret_core::{Corners, TextAlign, TextOverflow, TextWrap};")

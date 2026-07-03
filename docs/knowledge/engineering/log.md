@@ -497,3 +497,12 @@ timestamp: 2026-06-30
   `hello_world_compare_demo`, and `imui_editor_proof_demo/authoring_parity` now have exact
   `comparison_surface` records, while `advanced_manual` keeps retirement semantics. Verification
   passed for source-policy tests/gate, consumption-profile, execution-surface, and layering gates.
+- 2026-07-03: Phase 3 U13 simple-todo app-surface shrink adds
+  `fret::semantics::SemanticsDecoration` as an explicit non-prelude app semantics noun and moves
+  `simple_todo_demo` view helper seams from raw `fret_core` / `fret_ui` imports to
+  `AppRenderContext` + `UiChild`. The simple todo source-policy record now allows only
+  launch/runtime glue (`fret::advanced`, `fret_launch`, `fret_runtime`). Verification passed for
+  focused `fret` facade tests, source-policy tests/gate, consumption-profile, execution-surface,
+  layering, wiki, formatting, and whitespace gates. `cargo check -p fret-examples --lib` still
+  fails in unrelated example files that need explicit `advanced::raw` imports or migration off raw
+  local-state helper traits; filtered output showed no remaining `simple_todo_demo.rs` errors.
