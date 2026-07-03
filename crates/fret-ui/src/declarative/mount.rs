@@ -623,6 +623,8 @@ where
             // inconsistencies before applying invalidations that may need to propagate across cache-root
             // boundaries.
             if ui.view_cache_enabled() {
+                let would_repair = ui.parent_pointers_would_repair_from_layer_roots();
+                ui.debug_record_parent_pointer_would_repair(would_repair);
                 let repaired = ui.repair_parent_pointers_from_layer_roots();
                 ui.debug_record_parent_pointer_repair(repaired);
             }
@@ -701,7 +703,7 @@ where
                 .is_some()
             {
                 with_window_frame(app, window, |window_frame| {
-                    touch_existing_declarative_subtree_seen(
+                    let scanned = touch_existing_declarative_subtree_seen(
                         ui,
                         window_state,
                         window_frame,
@@ -709,6 +711,7 @@ where
                         frame_id,
                         root_node,
                     );
+                    ui.debug_record_retained_subtree_membership_scan(scanned);
                 });
             }
 
@@ -1154,6 +1157,8 @@ where
             });
 
             if ui.view_cache_enabled() {
+                let would_repair = ui.parent_pointers_would_repair_from_layer_roots();
+                ui.debug_record_parent_pointer_would_repair(would_repair);
                 let repaired = ui.repair_parent_pointers_from_layer_roots();
                 ui.debug_record_parent_pointer_repair(repaired);
             }
@@ -1213,7 +1218,7 @@ where
                 .is_some()
             {
                 with_window_frame(app, window, |window_frame| {
-                    touch_existing_declarative_subtree_seen(
+                    let scanned = touch_existing_declarative_subtree_seen(
                         ui,
                         window_state,
                         window_frame,
@@ -1221,6 +1226,7 @@ where
                         frame_id,
                         root_node,
                     );
+                    ui.debug_record_retained_subtree_membership_scan(scanned);
                 });
             }
 
@@ -1853,7 +1859,7 @@ fn mount_element<H: UiHost + 'static>(
             // If a cache root transitions into reuse without having a recorded subtree list yet,
             // fall back to walking the retained subtree so GC liveness bookkeeping remains
             // correct on the first cache-hit frame.
-            mark_existing_declarative_subtree_seen(
+            let marked = mark_existing_declarative_subtree_seen(
                 ui,
                 window_state,
                 window_frame,
@@ -1861,17 +1867,17 @@ fn mount_element<H: UiHost + 'static>(
                 frame_id,
                 node,
             );
-            window_state.record_view_cache_subtree_elements(
-                id,
-                collect_declarative_elements_for_existing_subtree(
-                    ui,
-                    window_state,
-                    window_frame,
-                    node,
-                ),
+            ui.debug_record_retained_subtree_membership_scan(marked);
+            let (elements, scanned) = collect_declarative_elements_for_existing_subtree(
+                ui,
+                window_state,
+                window_frame,
+                node,
             );
+            ui.debug_record_retained_subtree_membership_scan(scanned);
+            window_state.record_view_cache_subtree_elements(id, elements);
         } else if !touched {
-            mark_existing_declarative_subtree_seen(
+            let marked = mark_existing_declarative_subtree_seen(
                 ui,
                 window_state,
                 window_frame,
@@ -1879,15 +1885,15 @@ fn mount_element<H: UiHost + 'static>(
                 frame_id,
                 node,
             );
-            window_state.record_view_cache_subtree_elements(
-                id,
-                collect_declarative_elements_for_existing_subtree(
-                    ui,
-                    window_state,
-                    window_frame,
-                    node,
-                ),
+            ui.debug_record_retained_subtree_membership_scan(marked);
+            let (elements, scanned) = collect_declarative_elements_for_existing_subtree(
+                ui,
+                window_state,
+                window_frame,
+                node,
             );
+            ui.debug_record_retained_subtree_membership_scan(scanned);
+            window_state.record_view_cache_subtree_elements(id, elements);
         }
 
         // View-cache reuse skips rerendering declarative closures, so component-owned action hooks
@@ -1957,10 +1963,10 @@ fn mount_element<H: UiHost + 'static>(
 
         // Keep a complete retained-subtree element list for this cache root so cache-hit frames
         // can refresh liveness without re-running the render closure.
-        window_state.record_view_cache_subtree_elements(
-            id,
-            collect_declarative_elements_for_existing_subtree(ui, window_state, window_frame, node),
-        );
+        let (elements, scanned) =
+            collect_declarative_elements_for_existing_subtree(ui, window_state, window_frame, node);
+        ui.debug_record_retained_subtree_membership_scan(scanned);
+        window_state.record_view_cache_subtree_elements(id, elements);
     } else {
         let mut child_nodes: Vec<NodeId> = Vec::with_capacity(children.len());
         for child in children.drain(..) {
@@ -3027,12 +3033,14 @@ fn mark_existing_declarative_subtree_seen<H: UiHost>(
     root_id: GlobalElementId,
     frame_id: FrameId,
     root: NodeId,
-) {
+) -> u64 {
+    let mut visited_nodes: u64 = 0;
     let mut stack: Vec<NodeId> = vec![root];
     while let Some(node) = stack.pop() {
         if !ui.node_exists(node) {
             continue;
         }
+        visited_nodes = visited_nodes.saturating_add(1);
         if let Some(element) = window_frame
             .instances
             .get(node)
@@ -3059,6 +3067,7 @@ fn mark_existing_declarative_subtree_seen<H: UiHost>(
 
         push_existing_subtree_children(ui, window_frame, node, &mut stack);
     }
+    visited_nodes
 }
 
 fn touch_existing_declarative_subtree_seen<H: UiHost>(
@@ -3068,12 +3077,14 @@ fn touch_existing_declarative_subtree_seen<H: UiHost>(
     root_id: GlobalElementId,
     frame_id: FrameId,
     root: NodeId,
-) {
+) -> u64 {
+    let mut visited_nodes: u64 = 0;
     let mut stack: Vec<NodeId> = vec![root];
     while let Some(node) = stack.pop() {
         if !ui.node_exists(node) {
             continue;
         }
+        visited_nodes = visited_nodes.saturating_add(1);
         if let Some(element) = window_frame
             .and_then(|window_frame| window_frame.instances.get(node).map(|r| r.element))
             .or_else(|| ui.node_element(node))
@@ -3104,6 +3115,7 @@ fn touch_existing_declarative_subtree_seen<H: UiHost>(
             }
         }
     }
+    visited_nodes
 }
 
 fn collect_declarative_elements_for_existing_subtree<H: UiHost>(
@@ -3111,14 +3123,16 @@ fn collect_declarative_elements_for_existing_subtree<H: UiHost>(
     window_state: &crate::elements::WindowElementState,
     window_frame: &WindowFrame,
     root: NodeId,
-) -> Vec<GlobalElementId> {
+) -> (Vec<GlobalElementId>, u64) {
     let mut out: Vec<GlobalElementId> = Vec::new();
     let mut seen: HashSet<GlobalElementId> = HashSet::new();
+    let mut visited_nodes: u64 = 0;
     let mut stack: Vec<NodeId> = vec![root];
     while let Some(node) = stack.pop() {
         if !ui.node_exists(node) {
             continue;
         }
+        visited_nodes = visited_nodes.saturating_add(1);
         if let Some(element) = window_frame
             .instances
             .get(node)
@@ -3132,11 +3146,11 @@ fn collect_declarative_elements_for_existing_subtree<H: UiHost>(
 
         push_existing_subtree_children(ui, window_frame, node, &mut stack);
     }
-    out
+    (out, visited_nodes)
 }
 
 fn refresh_view_cache_membership_for_ancestor_roots<H: UiHost>(
-    ui: &UiTree<H>,
+    ui: &mut UiTree<H>,
     window_state: &mut crate::elements::WindowElementState,
     window_frame: &WindowFrame,
     node: NodeId,
@@ -3148,15 +3162,14 @@ fn refresh_view_cache_membership_for_ancestor_roots<H: UiHost>(
             && matches!(record.instance, ElementInstance::ViewCache(_))
             && visited_roots.insert(record.element)
         {
-            window_state.record_view_cache_subtree_elements(
-                record.element,
-                collect_declarative_elements_for_existing_subtree(
-                    ui,
-                    window_state,
-                    window_frame,
-                    node,
-                ),
+            let (elements, scanned) = collect_declarative_elements_for_existing_subtree(
+                ui,
+                window_state,
+                window_frame,
+                node,
             );
+            ui.debug_record_retained_subtree_membership_scan(scanned);
+            window_state.record_view_cache_subtree_elements(record.element, elements);
         }
         current = ui.node_parent(node);
     }
@@ -3424,13 +3437,17 @@ mod tests {
 
         let mut window_state = crate::elements::WindowElementState::default();
 
-        touch_existing_declarative_subtree_seen(
+        let scanned = touch_existing_declarative_subtree_seen(
             &ui,
             &mut window_state,
             Some(&window_frame),
             root_id,
             FrameId(1),
             root_node,
+        );
+        assert_eq!(
+            scanned, 2,
+            "subtree touch pressure should include window-frame-only children"
         );
 
         let entry = window_state

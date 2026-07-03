@@ -62,6 +62,43 @@ impl<H: UiHost> UiTree<H> {
         repaired
     }
 
+    /// Count what `repair_parent_pointers_from_layer_roots` would repair without mutating nodes.
+    ///
+    /// This is the deletion oracle for the normal repair pass: later phases can require this to
+    /// stay at zero after warmup before demoting repair to a debug-only assertion.
+    pub(crate) fn parent_pointers_would_repair_from_layer_roots(&self) -> u32 {
+        let roots = self.all_layer_roots();
+        if roots.is_empty() {
+            return 0;
+        }
+
+        let mut would_repair: u32 = 0;
+        let mut visited: HashSet<NodeId> = HashSet::new();
+        let mut stack: Vec<(Option<NodeId>, NodeId)> = Vec::with_capacity(roots.len());
+        for root in roots {
+            stack.push((None, root));
+        }
+
+        while let Some((expected_parent, node)) = stack.pop() {
+            if !visited.insert(node) {
+                continue;
+            }
+
+            let Some(n) = self.nodes.get(node) else {
+                continue;
+            };
+            if n.parent != expected_parent {
+                would_repair = would_repair.saturating_add(1);
+            }
+
+            for &child in &n.children {
+                stack.push((Some(node), child));
+            }
+        }
+
+        would_repair
+    }
+
     pub fn node_parent(&self, node: NodeId) -> Option<NodeId> {
         self.nodes.get(node).and_then(|n| n.parent)
     }

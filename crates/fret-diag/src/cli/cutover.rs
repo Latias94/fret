@@ -1107,6 +1107,10 @@ fn parse_stats_command(
                 checks.check_hover_layout_max
             },
             check_gc_sweep_liveness: checks.check_gc_sweep_liveness,
+            check_parent_pointer_would_repair_max: checks.check_parent_pointer_would_repair_max,
+            check_gc_stale_liveness_offenders_max: checks.check_gc_stale_liveness_offenders_max,
+            check_retained_subtree_membership_scan_nodes_max: checks
+                .check_retained_subtree_membership_scan_nodes_max,
             check_notify_hotspot_file_max: parse_stats_notify_hotspot_file_max(
                 &checks.check_notify_hotspot_file_max,
             )?,
@@ -5025,6 +5029,12 @@ mod tests {
             "7".to_string(),
             "--check-view-cache-reuse-min".to_string(),
             "1".to_string(),
+            "--check-parent-pointer-would-repair-max".to_string(),
+            "0".to_string(),
+            "--check-gc-stale-liveness-offenders-max".to_string(),
+            "0".to_string(),
+            "--check-retained-subtree-membership-scan-nodes-max".to_string(),
+            "12".to_string(),
             "--check-ui-gallery-code-editor-torture-feature-payloads-stable".to_string(),
         ];
 
@@ -5048,6 +5058,12 @@ mod tests {
             vec![("src/view.rs".to_string(), 7)]
         );
         assert_eq!(ctx.check_view_cache_reuse_min, Some(1));
+        assert_eq!(ctx.check_parent_pointer_would_repair_max, Some(0));
+        assert_eq!(ctx.check_gc_stale_liveness_offenders_max, Some(0));
+        assert_eq!(
+            ctx.check_retained_subtree_membership_scan_nodes_max,
+            Some(12)
+        );
         assert!(ctx.check_ui_gallery_code_editor_torture_feature_payloads_stable);
     }
 

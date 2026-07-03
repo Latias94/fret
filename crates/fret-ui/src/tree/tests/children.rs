@@ -73,10 +73,19 @@ fn set_children_same_children_repairs_parent_pointers_and_reconnects_dirty_desce
     }
 
     ui.test_set_node_parent(child, None);
+    let would_repair = ui.parent_pointers_would_repair_from_layer_roots();
+    ui.debug_record_parent_pointer_would_repair(would_repair);
+    assert_eq!(
+        ui.node_parent(child),
+        None,
+        "shadow oracle must not mutate retained parent pointers"
+    );
     let repaired = ui.repair_parent_pointers_from_layer_roots();
     ui.debug_record_parent_pointer_repair(repaired);
 
     let stats = ui.debug_stats();
+    assert_eq!(stats.parent_pointer_would_repair_passes, 1);
+    assert_eq!(stats.parent_pointer_would_repair_nodes, 1);
     assert_eq!(stats.parent_pointer_repair_passes, 1);
     assert_eq!(stats.parent_pointer_repairs, 1);
 

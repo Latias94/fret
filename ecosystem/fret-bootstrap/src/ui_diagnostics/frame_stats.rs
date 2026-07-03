@@ -408,6 +408,14 @@ pub struct UiFrameStatsV1 {
     #[serde(default)]
     pub parent_pointer_repairs: u32,
     #[serde(default)]
+    pub parent_pointer_would_repair_passes: u32,
+    #[serde(default)]
+    pub parent_pointer_would_repair_nodes: u32,
+    #[serde(default)]
+    pub retained_subtree_membership_scan_roots: u32,
+    #[serde(default)]
+    pub retained_subtree_membership_scan_nodes: u64,
+    #[serde(default)]
     pub gc_reachability_layer_nodes: u64,
     #[serde(default)]
     pub gc_reachability_view_cache_nodes: u64,
@@ -415,6 +423,8 @@ pub struct UiFrameStatsV1 {
     pub gc_stale_candidates: u32,
     #[serde(default)]
     pub gc_stale_removed: u32,
+    #[serde(default)]
+    pub gc_stale_liveness_offenders: u32,
     #[serde(default)]
     pub model_change_invalidation_roots: u32,
     #[serde(default)]
@@ -1485,10 +1495,15 @@ impl UiFrameStatsV1 {
             dirty_frontier_contained_candidates: stats.dirty_frontier_contained_candidates,
             parent_pointer_repair_passes: stats.parent_pointer_repair_passes,
             parent_pointer_repairs: stats.parent_pointer_repairs,
+            parent_pointer_would_repair_passes: stats.parent_pointer_would_repair_passes,
+            parent_pointer_would_repair_nodes: stats.parent_pointer_would_repair_nodes,
+            retained_subtree_membership_scan_roots: stats.retained_subtree_membership_scan_roots,
+            retained_subtree_membership_scan_nodes: stats.retained_subtree_membership_scan_nodes,
             gc_reachability_layer_nodes: stats.gc_reachability_layer_nodes,
             gc_reachability_view_cache_nodes: stats.gc_reachability_view_cache_nodes,
             gc_stale_candidates: stats.gc_stale_candidates,
             gc_stale_removed: stats.gc_stale_removed,
+            gc_stale_liveness_offenders: stats.gc_stale_liveness_offenders,
             model_change_invalidation_roots: stats.model_change_invalidation_roots,
             model_change_models: stats.model_change_models,
             model_change_observation_edges: stats.model_change_observation_edges,

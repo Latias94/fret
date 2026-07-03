@@ -376,6 +376,34 @@ impl<H: UiHost> UiTree<H> {
             .saturating_add(repaired);
     }
 
+    pub(crate) fn debug_record_parent_pointer_would_repair(&mut self, would_repair: u32) {
+        if !self.debug_enabled {
+            return;
+        }
+        self.debug_stats.parent_pointer_would_repair_passes = self
+            .debug_stats
+            .parent_pointer_would_repair_passes
+            .saturating_add(1);
+        self.debug_stats.parent_pointer_would_repair_nodes = self
+            .debug_stats
+            .parent_pointer_would_repair_nodes
+            .saturating_add(would_repair);
+    }
+
+    pub(crate) fn debug_record_retained_subtree_membership_scan(&mut self, nodes: u64) {
+        if !self.debug_enabled {
+            return;
+        }
+        self.debug_stats.retained_subtree_membership_scan_roots = self
+            .debug_stats
+            .retained_subtree_membership_scan_roots
+            .saturating_add(1);
+        self.debug_stats.retained_subtree_membership_scan_nodes = self
+            .debug_stats
+            .retained_subtree_membership_scan_nodes
+            .saturating_add(nodes);
+    }
+
     pub(crate) fn debug_record_gc_layer_reachability_nodes(&mut self, nodes: u64) {
         if !self.debug_enabled {
             return;
@@ -412,6 +440,17 @@ impl<H: UiHost> UiTree<H> {
         }
         self.debug_stats.gc_stale_removed =
             self.debug_stats.gc_stale_removed.saturating_add(removed);
+    }
+
+    #[cfg(feature = "diagnostics")]
+    pub(crate) fn debug_record_gc_stale_liveness_offenders(&mut self, offenders: u32) {
+        if !self.debug_enabled {
+            return;
+        }
+        self.debug_stats.gc_stale_liveness_offenders = self
+            .debug_stats
+            .gc_stale_liveness_offenders
+            .saturating_add(offenders);
     }
 
     pub(crate) fn debug_record_dispatch_snapshot_cache_hit(&mut self) {

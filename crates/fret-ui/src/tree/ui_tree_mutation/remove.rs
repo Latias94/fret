@@ -123,6 +123,9 @@ impl<H: UiHost> UiTree<H> {
                     frame_context.and_then(|ctx| ctx.root_reachable_from_view_cache_roots);
                 let unreachable_from_liveness_roots = !reachable_from_layer_roots
                     && !matches!(reachable_from_view_cache_roots, Some(true));
+                if !unreachable_from_liveness_roots || root_layer_visible == Some(true) {
+                    self.debug_record_gc_stale_liveness_offenders(1);
+                }
                 let trigger_element = frame_context.and_then(|ctx| ctx.trigger_element);
                 let trigger_element_root = frame_context.and_then(|ctx| ctx.trigger_element_root);
                 let trigger_element_in_view_cache_keep_alive =
@@ -236,6 +239,9 @@ impl<H: UiHost> UiTree<H> {
                 frame_context.and_then(|ctx| ctx.root_reachable_from_view_cache_roots);
             let unreachable_from_liveness_roots = !reachable_from_layer_roots
                 && !matches!(reachable_from_view_cache_roots, Some(true));
+            if !unreachable_from_liveness_roots || root_layer_visible == Some(true) {
+                self.debug_record_gc_stale_liveness_offenders(1);
+            }
             let trigger_element = frame_context.and_then(|ctx| ctx.trigger_element);
             let trigger_element_root = frame_context.and_then(|ctx| ctx.trigger_element_root);
             let trigger_element_in_view_cache_keep_alive =

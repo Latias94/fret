@@ -49,6 +49,9 @@ pub(crate) struct StatsCmdContext {
     pub check_ui_gallery_code_editor_torture_feature_payloads_stable: bool,
     pub check_hover_layout_max: Option<u32>,
     pub check_gc_sweep_liveness: bool,
+    pub check_parent_pointer_would_repair_max: Option<u64>,
+    pub check_gc_stale_liveness_offenders_max: Option<u64>,
+    pub check_retained_subtree_membership_scan_nodes_max: Option<u64>,
     pub check_notify_hotspot_file_max: Vec<(String, u64)>,
     pub check_view_cache_reuse_stable_min: Option<u64>,
     pub check_view_cache_reuse_min: Option<u64>,
@@ -101,6 +104,9 @@ pub(crate) fn cmd_stats(ctx: StatsCmdContext) -> Result<(), String> {
         check_ui_gallery_code_editor_torture_feature_payloads_stable,
         check_hover_layout_max,
         check_gc_sweep_liveness,
+        check_parent_pointer_would_repair_max,
+        check_gc_stale_liveness_offenders_max,
+        check_retained_subtree_membership_scan_nodes_max,
         check_notify_hotspot_file_max,
         check_view_cache_reuse_stable_min,
         check_view_cache_reuse_min,
@@ -690,6 +696,24 @@ pub(crate) fn cmd_stats(ctx: StatsCmdContext) -> Result<(), String> {
         } else {
             stats::check_bundle_for_gc_sweep_liveness(bundle_path.as_path(), warmup_frames)?;
         }
+    }
+    let retained_pressure_gate_requested = check_parent_pointer_would_repair_max.is_some()
+        || check_gc_stale_liveness_offenders_max.is_some()
+        || check_retained_subtree_membership_scan_nodes_max.is_some();
+    if retained_pressure_gate_requested {
+        ensure_check_supported_in_stats_mode(
+            derived_from_frames_index,
+            "check-retained-identity-liveness-pressure",
+            &bundle_path,
+            warmup_frames,
+        )?;
+        stats::check_bundle_for_retained_identity_liveness_pressure(
+            bundle_path.as_path(),
+            check_parent_pointer_would_repair_max.unwrap_or(u64::MAX),
+            check_gc_stale_liveness_offenders_max.unwrap_or(u64::MAX),
+            check_retained_subtree_membership_scan_nodes_max.unwrap_or(u64::MAX),
+            warmup_frames,
+        )?;
     }
     if !check_notify_hotspot_file_max.is_empty() {
         ensure_check_supported_in_stats_mode(

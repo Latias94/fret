@@ -207,10 +207,15 @@ impl<H: UiHost> UiTree<H> {
         self.debug_stats.dirty_frontier_contained_candidates = 0;
         self.debug_stats.parent_pointer_repair_passes = 0;
         self.debug_stats.parent_pointer_repairs = 0;
+        self.debug_stats.parent_pointer_would_repair_passes = 0;
+        self.debug_stats.parent_pointer_would_repair_nodes = 0;
+        self.debug_stats.retained_subtree_membership_scan_roots = 0;
+        self.debug_stats.retained_subtree_membership_scan_nodes = 0;
         self.debug_stats.gc_reachability_layer_nodes = 0;
         self.debug_stats.gc_reachability_view_cache_nodes = 0;
         self.debug_stats.gc_stale_candidates = 0;
         self.debug_stats.gc_stale_removed = 0;
+        self.debug_stats.gc_stale_liveness_offenders = 0;
         self.debug_stats.model_change_invalidation_roots = 0;
         self.debug_stats.model_change_models = 0;
         self.debug_stats.model_change_observation_edges = 0;

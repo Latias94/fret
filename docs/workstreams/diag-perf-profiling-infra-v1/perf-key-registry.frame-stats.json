@@ -1726,6 +1726,13 @@
       "unit": "count"
     },
     {
+      "key": "gc_stale_liveness_offenders",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
       "key": "gc_stale_removed",
       "kind": "counter",
       "scope": "frame",
@@ -2021,6 +2028,34 @@
     },
     {
       "key": "parent_pointer_repairs",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "parent_pointer_would_repair_passes",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "parent_pointer_would_repair_nodes",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "retained_subtree_membership_scan_roots",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "retained_subtree_membership_scan_nodes",
       "kind": "counter",
       "scope": "frame",
       "suggested_aggregate": "max",

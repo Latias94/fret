@@ -54,4 +54,9 @@ fn removed_subtree_reachability_prefers_frame_context() {
         record.reachable_from_layer_roots,
         "expected remove-subtree reachability to prefer frame context over UiTree-only traversal"
     );
+    assert_eq!(
+        ui.debug_stats().gc_stale_liveness_offenders,
+        1,
+        "frame stats must count stale removals that still look live to liveness evidence"
+    );
 }

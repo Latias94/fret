@@ -30,6 +30,7 @@ use crate::stats::{
     check_bundle_for_layout_fast_path_min, check_bundle_for_node_graph_cull_window_shifts_max,
     check_bundle_for_node_graph_cull_window_shifts_min, check_bundle_for_notify_hotspot_file_max,
     check_bundle_for_overlay_synthesis_min_json, check_bundle_for_prepaint_actions_min,
+    check_bundle_for_retained_identity_liveness_pressure_json,
     check_bundle_for_retained_vlist_attach_detach_max_json,
     check_bundle_for_retained_vlist_keep_alive_budget_json,
     check_bundle_for_retained_vlist_keep_alive_reuse_min,
@@ -4056,6 +4057,84 @@ fn check_bundle_for_view_cache_reuse_min_counts_reused_cache_roots() {
 
     check_bundle_for_view_cache_reuse_min_json(&bundle, Path::new("bundle.json"), 2, 0)
         .expect("expected reuse>=2");
+}
+
+#[test]
+fn check_bundle_for_retained_identity_liveness_pressure_allows_legacy_missing_fields() {
+    let bundle = json!({
+        "schema_version": 1,
+        "windows": [
+            {
+                "window": 1,
+                "snapshots": [
+                    {
+                        "frame_id": 3,
+                        "debug": {
+                            "stats": {}
+                        }
+                    }
+                ]
+            }
+        ]
+    });
+
+    check_bundle_for_retained_identity_liveness_pressure_json(
+        &bundle,
+        Path::new("bundle.json"),
+        0,
+        0,
+        0,
+        0,
+    )
+    .expect("missing historical fields should default to zero");
+}
+
+#[test]
+fn check_bundle_for_retained_identity_liveness_pressure_reports_warm_frames() {
+    let bundle = json!({
+        "schema_version": 1,
+        "windows": [
+            {
+                "window": 1,
+                "snapshots": [
+                    {
+                        "frame_id": 0,
+                        "debug": {
+                            "stats": {
+                                "parent_pointer_would_repair_nodes": 9,
+                                "gc_stale_liveness_offenders": 9,
+                                "retained_subtree_membership_scan_nodes": 9
+                            }
+                        }
+                    },
+                    {
+                        "frame_id": 2,
+                        "debug": {
+                            "stats": {
+                                "parent_pointer_would_repair_nodes": 1,
+                                "gc_stale_liveness_offenders": 1,
+                                "retained_subtree_membership_scan_nodes": 1
+                            }
+                        }
+                    }
+                ]
+            }
+        ]
+    });
+
+    let err = check_bundle_for_retained_identity_liveness_pressure_json(
+        &bundle,
+        Path::new("bundle.json"),
+        0,
+        0,
+        0,
+        1,
+    )
+    .expect_err("warm frame pressure should fail zero-max gate");
+    assert!(err.contains("parent_pointer_would_repair_nodes=1"));
+    assert!(err.contains("gc_stale_liveness_offenders=1"));
+    assert!(err.contains("retained_subtree_membership_scan_nodes=1"));
+    assert!(!err.contains("frame_id=0"));
 }
 
 #[test]

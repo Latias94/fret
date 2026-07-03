@@ -394,6 +394,14 @@ pub struct UiDebugFrameStats {
     pub parent_pointer_repair_passes: u32,
     /// Parent pointers rewritten by repair passes during this frame.
     pub parent_pointer_repairs: u32,
+    /// Shadow parent-pointer repair passes that only counted reachable inconsistencies.
+    pub parent_pointer_would_repair_passes: u32,
+    /// Parent pointers the shadow oracle would have rewritten without mutating the tree.
+    pub parent_pointer_would_repair_nodes: u32,
+    /// Retained subtree membership scans performed for view-cache keep-alive bookkeeping.
+    pub retained_subtree_membership_scan_roots: u32,
+    /// Nodes visited by retained subtree membership scans during this frame.
+    pub retained_subtree_membership_scan_nodes: u64,
     /// Nodes marked reachable from layer or root liveness roots while preparing GC.
     pub gc_reachability_layer_nodes: u64,
     /// Nodes marked reachable from view-cache reuse roots or recorded memberships while preparing GC.
@@ -402,6 +410,8 @@ pub struct UiDebugFrameStats {
     pub gc_stale_candidates: u32,
     /// Retained nodes actually removed by stale-entry GC sweeps.
     pub gc_stale_removed: u32,
+    /// Stale removals that still looked live according to frame/layer/cache liveness evidence.
+    pub gc_stale_liveness_offenders: u32,
     /// Unique nodes observed as invalidation roots for model changes during the current frame.
     pub model_change_invalidation_roots: u32,
     /// Count of changed models consumed for propagation during the current frame.

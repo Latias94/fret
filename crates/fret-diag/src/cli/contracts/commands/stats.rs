@@ -79,6 +79,18 @@ pub(crate) struct StatsChecksArgs {
     #[arg(long = "check-gc-sweep-liveness")]
     pub check_gc_sweep_liveness: bool,
 
+    #[arg(long = "check-parent-pointer-would-repair-max", value_name = "N")]
+    pub check_parent_pointer_would_repair_max: Option<u64>,
+
+    #[arg(long = "check-gc-stale-liveness-offenders-max", value_name = "N")]
+    pub check_gc_stale_liveness_offenders_max: Option<u64>,
+
+    #[arg(
+        long = "check-retained-subtree-membership-scan-nodes-max",
+        value_name = "N"
+    )]
+    pub check_retained_subtree_membership_scan_nodes_max: Option<u64>,
+
     #[arg(
         long = "check-notify-hotspot-file-max",
         value_names = ["FILE", "MAX"],

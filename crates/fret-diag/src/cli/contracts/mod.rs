@@ -1471,6 +1471,12 @@ mod tests {
             "4",
             "--check-view-cache-reuse-min",
             "1",
+            "--check-parent-pointer-would-repair-max",
+            "0",
+            "--check-gc-stale-liveness-offenders-max",
+            "0",
+            "--check-retained-subtree-membership-scan-nodes-max",
+            "12",
             "--check-retained-vlist-attach-detach-max",
             "2",
         ])
@@ -1508,6 +1514,12 @@ mod tests {
         );
         assert_eq!(args.checks.check_asset_load_io_max, Some(4));
         assert_eq!(args.checks.check_view_cache_reuse_min, Some(1));
+        assert_eq!(args.checks.check_parent_pointer_would_repair_max, Some(0));
+        assert_eq!(args.checks.check_gc_stale_liveness_offenders_max, Some(0));
+        assert_eq!(
+            args.checks.check_retained_subtree_membership_scan_nodes_max,
+            Some(12)
+        );
         assert_eq!(args.checks.check_retained_vlist_attach_detach_max, Some(2));
     }
 

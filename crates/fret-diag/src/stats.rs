@@ -18,6 +18,7 @@ mod notify_gates_streaming;
 mod overlay_gates;
 mod pixels_changed;
 mod resource_loading;
+mod retained_pressure_gates;
 mod retained_vlist_gates;
 mod retained_vlist_gates_streaming;
 mod script_runtime;
@@ -94,6 +95,7 @@ pub(super) use resource_loading::{
     check_bundle_for_bundled_font_baseline_source,
     check_bundle_for_bundled_font_baseline_source_streaming,
 };
+pub(super) use retained_pressure_gates::check_bundle_for_retained_identity_liveness_pressure;
 pub(super) use retained_vlist_gates::{
     check_bundle_for_retained_vlist_attach_detach_max,
     check_bundle_for_retained_vlist_keep_alive_budget,
@@ -171,6 +173,9 @@ pub(super) use resource_loading::{
     check_bundle_for_asset_reload_fallback_reason_json,
     check_bundle_for_bundled_font_baseline_source_json,
 };
+#[cfg(test)]
+#[allow(unused_imports)]
+pub(super) use retained_pressure_gates::check_bundle_for_retained_identity_liveness_pressure_json;
 #[cfg(test)]
 #[allow(unused_imports)]
 pub(super) use retained_vlist_gates::{
