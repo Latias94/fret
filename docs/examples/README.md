@@ -28,7 +28,7 @@ single-local writes, keyed-row payload binding via `.action_payload(...)`, and
 `.action_payload(...)` / `.listen(...)` only when a control truly needs the activation bridge.
 Drop down to `cx.actions().models(...)` when coordinating shared `Model<T>` graphs.
 The only raw-model escape hatch is the explicit advanced import
-`use fret::advanced::AppUiRawModelExt;` plus `cx.raw_model::<T>()`; it is not part of the default
+`use fret::advanced::raw::AppUiRawModelExt;` plus `cx.raw_model::<T>()`; it is not part of the default
 ladder.
 This is the only blessed first-contact local-state story. For dynamic lists/subtrees, teach keyed
 identity first (`ui::for_each_keyed(...)` or `ui.id(key, ...)`); keep unkeyed iteration as the

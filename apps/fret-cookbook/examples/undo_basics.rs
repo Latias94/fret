@@ -1,5 +1,5 @@
 use fret::actions::CommandId;
-use fret::advanced::AppUiRawActionNotifyExt as _;
+use fret::advanced::raw::AppUiRawActionNotifyExt as _;
 use fret::app::RenderContextAccess as _;
 use fret::app::prelude::*;
 use fret::semantics::SemanticsRole;

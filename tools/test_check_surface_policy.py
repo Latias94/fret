@@ -276,7 +276,7 @@ class SurfacePolicyTests(unittest.TestCase):
             write(
                 root / "apps/fret-cookbook/examples/toast_basics.rs",
                 """
-                use fret::advanced::AppUiRawActionNotifyExt as _;
+                use fret::advanced::raw::AppUiRawActionNotifyExt as _;
                 use fret::app::prelude::*;
 
                 fn render(cx: &mut AppUi<'_, '_>) {

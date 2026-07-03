@@ -1,5 +1,5 @@
 use fret::actions::CommandId;
-use fret::advanced::LocalStateModelStoreExt as _;
+use fret::advanced::raw::LocalStateModelStoreExt as _;
 use fret::app::LocalState;
 use fret::app::prelude::*;
 use fret::semantics::SemanticsRole;

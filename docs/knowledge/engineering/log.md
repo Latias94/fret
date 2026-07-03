@@ -443,3 +443,9 @@ timestamp: 2026-06-30
   Verification passed for `fret` lib nextest, `fret-cookbook` all-targets/lib checks, surface,
   layering, consumption-profile, execution-surface, ADR-number, workstream-catalog, formatting, and
   diff gates.
+- 2026-07-03: Phase 3 U13 advanced raw/driver split adds `fret::advanced::raw` for raw
+  action/model hooks and `fret::advanced::driver` for driver/builder escape hatches.
+  `advanced::prelude::*` no longer wildcard-exports raw traits, and docs/cookbook call sites now
+  import raw hooks through `advanced::raw`. Verification passed for `fret` lib nextest,
+  `fret-cookbook` all-targets/lib checks, surface, layering, consumption-profile,
+  execution-surface, formatting, and diff gates.

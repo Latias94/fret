@@ -204,7 +204,7 @@ widget-owned app-facing helper, and keep the same action-first vocabulary there 
 `widget.listen(|host, acx| { ... })`. Drop down to `cx.actions().models::<A>(...)` for shared
 `Model<T>` graphs and `cx.actions().payload_models::<A>(...)` when the same graph needs typed
 payload actions without reopening the deleted payload-carrier namespace. There is one explicit
-advanced raw-model seam: import `use fret::advanced::AppUiRawModelExt;` and call
+advanced raw-model seam: import `use fret::advanced::raw::AppUiRawModelExt;` and call
 `cx.raw_model::<T>()` only when the raw handle itself is the point. Treat lower-level payload
 helpers, raw `AppUi::on_action_notify*`, and low-level `.on_activate(cx.actions().listen(...))`
 glue as advanced/reference host-side escape hatches; if you intentionally reopen that seam, keep it
@@ -981,7 +981,7 @@ Notes:
   helpers, and history action helpers (`back_on_action()`, `forward_on_action()`,
   `navigate_history_on_action(...)`).
 - Prefer wiring router history actions through
-  `use fret::advanced::AppUiRawActionNotifyExt as _;` plus
+  `use fret::advanced::raw::AppUiRawActionNotifyExt as _;` plus
   `cx.on_action_notify::<...>(store.back_on_action())` / `store.forward_on_action()` instead of
   hand-rolling window/host availability glue in app code.
 - Keep routing adoption explicit at the app boundary (`FretApp::setup(...)`, app-owned models, or

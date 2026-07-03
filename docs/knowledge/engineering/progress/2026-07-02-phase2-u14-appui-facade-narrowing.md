@@ -19,7 +19,7 @@ default `fret::app::prelude::*` stays focused on `LocalState<T>`, grouped `cx.st
 `ElementContext` bridge methods require importing the advanced lane.
 
 This slice is intentionally breaking for manual examples that called `read_in` as an inherent
-method. Those call sites now import `fret::advanced::LocalStateModelStoreExt as _`, making the raw
+method. Those call sites now import `fret::advanced::raw::LocalStateModelStoreExt as _`, making the raw
 store dependency visible.
 
 ## Changes

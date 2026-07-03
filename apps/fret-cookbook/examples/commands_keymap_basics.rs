@@ -1,5 +1,5 @@
 use fret::actions::{CommandId, ElementCommandGatingExt as _};
-use fret::advanced::LocalStateModelStoreExt as _;
+use fret::advanced::raw::LocalStateModelStoreExt as _;
 use fret::app::prelude::*;
 use fret::children::UiElementSinkExt as _;
 use fret::semantics::SemanticsRole;

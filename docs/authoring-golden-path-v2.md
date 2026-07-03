@@ -41,7 +41,7 @@ iteration as an explicit static-list exception rather than a peer onboarding sto
 | Query invalidation on app lane | `cx.data().invalidate_query(...)` / `cx.data().invalidate_query_namespace(...)` | Prefer this when invalidation happens inside `AppUi` / extracted `AppRenderContext<'a>` helpers; keep raw `with_query_client(...)` for pure app/driver code. |
 | Query maintenance / diagnostics on app lane | `cx.data().cancel_query(...)` / `cx.data().query_snapshot_entry(...)` | Use this when app-facing controls or status chrome need explicit cancellation or stale/inflight metadata without reopening raw query-client shell code. |
 | App-only effects | `cx.actions().transient::<A>(...)` + `cx.effects().take_transient(...)` | Consume transients in `render()` when `&mut App` is required. |
-| Explicit raw `Model<T>` hook (advanced) | `use fret::advanced::AppUiRawModelExt;` + `cx.raw_model::<T>()` | Only when you intentionally want the raw model handle instead of `LocalState<T>`. |
+| Explicit raw `Model<T>` hook (advanced) | `use fret::advanced::raw::AppUiRawModelExt;` + `cx.raw_model::<T>()` | Only when you intentionally want the raw model handle instead of `LocalState<T>`. |
 
 ## When to drop down to explicit `Model<T>` graphs
 
@@ -56,7 +56,7 @@ Otherwise, keep the default surface LocalState-first.
 If you intentionally need the raw model-backed hook, make that choice explicit in imports:
 
 ```rust,ignore
-use fret::advanced::AppUiRawModelExt;
+use fret::advanced::raw::AppUiRawModelExt;
 
 let shared = cx.raw_model::<MyState>();
 ```

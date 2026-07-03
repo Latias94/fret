@@ -767,21 +767,22 @@ pub mod advanced {
         pub use crate::interop::embedded_viewport;
         pub use crate::interop::run_native_with_compat_driver;
     }
-    /// Explicit raw action-registration hooks kept on the advanced lane.
+
+    /// Explicit raw hooks for advanced/manual assembly.
     ///
-    /// This keeps raw notify/payload-notify registration discoverable for advanced/manual assembly
-    /// and host-owned integrations while leaving
-    /// `fret::app::prelude::*` focused on `cx.actions()`.
-    pub use crate::view::AppUiRawActionNotifyExt;
-    /// Explicit raw-model hooks kept on the advanced lane.
-    ///
-    /// This keeps `raw_model(...)` discoverable for advanced/manual assembly and intentional
-    /// `Model<T>`-centric code while leaving `fret::app::prelude::*` focused on
-    /// `LocalState<T>` / `cx.state().local*`.
-    pub use crate::view::{
-        AppUiRawModelExt, LocalStateElementContextExt, LocalStateModelStoreExt,
-        LocalStateRawModelExt,
-    };
+    /// Import these from `fret::advanced::raw` at the call site that actually needs the raw
+    /// runtime seam. They intentionally stay out of `advanced::prelude::*` so advanced examples do
+    /// not acquire raw action/model hooks by accident.
+    pub mod raw {
+        /// Raw action-registration hooks for host-owned integrations.
+        pub use crate::view::AppUiRawActionNotifyExt;
+        /// Raw-model hooks for intentional `Model<T>`-centric code or manual model-store owners.
+        pub use crate::view::{
+            AppUiRawModelExt, LocalStateElementContextExt, LocalStateModelStoreExt,
+            LocalStateRawModelExt,
+        };
+    }
+
     #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
     pub use crate::{UiAppBuilder, UiAppDriver};
     pub use fret_app::App as KernelApp;
@@ -984,15 +985,38 @@ pub mod advanced {
         }
     }
 
+    /// Advanced driver/builder escape hatches.
+    #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+    pub mod driver {
+        pub use super::{
+            FretAppAdvancedExt, UiAppBuilderAdvancedExt, run_native_with_configured_fn_driver,
+            run_native_with_fn_driver, run_native_with_fn_driver_with_hooks, ui_app,
+            ui_app_with_hooks,
+        };
+        pub use crate::{UiAppBuilder, UiAppDriver};
+        pub use fret_bootstrap::ui_app_driver::ViewElements;
+    }
+
     /// Common imports for advanced/manual-assembly application code.
     pub mod prelude {
         pub use crate::AppComponentCx;
         pub use crate::AppRenderCx;
+        pub use crate::advanced::KernelApp;
+        #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+        pub use crate::advanced::driver::{FretAppAdvancedExt as _, UiAppBuilderAdvancedExt as _};
+        #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+        pub use crate::advanced::driver::{UiAppBuilder, UiAppDriver, ViewElements};
+        #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+        pub use crate::advanced::driver::{
+            run_native_with_configured_fn_driver, run_native_with_fn_driver,
+            run_native_with_fn_driver_with_hooks, ui_app, ui_app_with_hooks,
+        };
         #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
         pub use crate::advanced::interop::embedded_viewport::{
             EmbeddedViewportForeignUiAppDriverExt, EmbeddedViewportUiAppDriverExt,
         };
-        pub use crate::advanced::*;
+        #[cfg(feature = "desktop")]
+        pub use crate::advanced::kernel;
         pub use crate::view::AppRenderActionsExt as _;
         pub use crate::view::AppRenderDataExt as _;
         #[cfg(feature = "state-mutation")]
@@ -2802,6 +2826,14 @@ mod authoring_surface_policy_tests {
         &LIB_RS[advanced_start..error_start]
     }
 
+    fn advanced_common_prelude_source() -> &'static str {
+        let advanced = advanced_prelude_source();
+        let prelude_start = advanced
+            .find("/// Common imports for advanced/manual-assembly application code.")
+            .expect("advanced prelude marker should exist in fret facade");
+        &advanced[prelude_start..]
+    }
+
     fn app_prelude_exports_symbol(symbol: &str) -> bool {
         app_prelude_source()
             .split(';')
@@ -2809,8 +2841,8 @@ mod authoring_surface_policy_tests {
             .any(|statement| statement_exports_symbol(statement, symbol))
     }
 
-    fn advanced_prelude_exports_symbol(symbol: &str) -> bool {
-        advanced_prelude_source()
+    fn advanced_common_prelude_exports_symbol(symbol: &str) -> bool {
+        advanced_common_prelude_source()
             .split(';')
             .filter(|statement| statement.contains("pub use "))
             .any(|statement| statement_exports_symbol(statement, symbol))
@@ -3562,7 +3594,9 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_USAGE_GUIDE.contains("`fret::router::*`"));
         assert!(CRATE_USAGE_GUIDE.contains("`back_on_action()`"));
         assert!(CRATE_USAGE_GUIDE.contains("`forward_on_action()`"));
-        assert!(CRATE_USAGE_GUIDE.contains("`use fret::advanced::AppUiRawActionNotifyExt as _;`"));
+        assert!(
+            CRATE_USAGE_GUIDE.contains("`use fret::advanced::raw::AppUiRawActionNotifyExt as _;`")
+        );
         assert!(CRATE_USAGE_GUIDE.contains("`cx.on_action_notify::<...>(store.back_on_action())`"));
         assert!(CRATE_USAGE_GUIDE.contains("second default app runtime"));
     }
@@ -4132,46 +4166,62 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
-    fn advanced_prelude_reexports_app_facing_view_aliases() {
-        let advanced_prelude = advanced_prelude_source();
+    fn advanced_prelude_reexports_app_facing_view_aliases_without_raw_hooks() {
+        let advanced_surface = advanced_prelude_source();
+        let advanced_prelude = advanced_common_prelude_source();
         assert!(LIB_RS.contains("pub use crate::AppComponentCx;"));
         assert!(LIB_RS.contains("pub use crate::{AppUi, Ui};"));
         assert!(advanced_prelude.contains("pub use crate::AppRenderCx;"));
-        assert!(advanced_prelude_exports_symbol("KernelApp"));
-        assert!(advanced_prelude_exports_symbol("AppUiRawActionNotifyExt"));
-        assert!(!advanced_prelude_exports_symbol("AppUiRawStateExt"));
-        assert!(advanced_prelude_exports_symbol("AppUiRawModelExt"));
-        assert!(advanced_prelude_exports_symbol("LocalStateRawModelExt"));
-        assert!(advanced_prelude_exports_symbol("LocalStateModelStoreExt"));
-        assert!(advanced_prelude_exports_symbol(
+        assert!(advanced_common_prelude_exports_symbol("KernelApp"));
+        assert!(!advanced_common_prelude_exports_symbol(
+            "AppUiRawActionNotifyExt"
+        ));
+        assert!(!advanced_common_prelude_exports_symbol("AppUiRawStateExt"));
+        assert!(!advanced_common_prelude_exports_symbol("AppUiRawModelExt"));
+        assert!(!advanced_common_prelude_exports_symbol(
+            "LocalStateRawModelExt"
+        ));
+        assert!(!advanced_common_prelude_exports_symbol(
+            "LocalStateModelStoreExt"
+        ));
+        assert!(!advanced_common_prelude_exports_symbol(
             "LocalStateElementContextExt"
         ));
-        assert!(advanced_prelude_exports_symbol("AppComponentCx"));
-        assert!(advanced_prelude_exports_symbol("AppRenderCx"));
-        assert!(advanced_prelude_exports_symbol("AppUi"));
-        assert!(advanced_prelude_exports_symbol("Ui"));
-        assert!(!advanced_prelude_exports_symbol("UiCx"));
-        assert!(advanced_prelude_exports_symbol("ViewElements"));
-        assert!(advanced_prelude_exports_symbol("ElementContext"));
-        assert!(advanced_prelude_exports_symbol("UiTree"));
+        assert!(advanced_surface.contains("pub mod raw {"));
+        assert!(advanced_surface.contains("pub use crate::view::AppUiRawActionNotifyExt;"));
+        assert!(
+            advanced_surface.contains(
+                "AppUiRawModelExt, LocalStateElementContextExt, LocalStateModelStoreExt,"
+            )
+        );
+        assert!(advanced_surface.contains("pub mod driver {"));
+        assert!(advanced_prelude.contains("pub use crate::advanced::driver::{"));
+        assert!(advanced_common_prelude_exports_symbol("AppComponentCx"));
+        assert!(advanced_common_prelude_exports_symbol("AppRenderCx"));
+        assert!(advanced_common_prelude_exports_symbol("AppUi"));
+        assert!(advanced_common_prelude_exports_symbol("Ui"));
+        assert!(!advanced_common_prelude_exports_symbol("UiCx"));
+        assert!(advanced_common_prelude_exports_symbol("ViewElements"));
+        assert!(advanced_common_prelude_exports_symbol("ElementContext"));
+        assert!(advanced_common_prelude_exports_symbol("UiTree"));
         assert!(advanced_prelude.contains("pub use crate::view::QueryHandleReadLayoutExt as _;"));
         assert!(advanced_prelude.contains("pub use crate::view::AppRenderActionsExt as _;"));
         assert!(advanced_prelude.contains("pub use crate::view::AppRenderDataExt as _;"));
         assert!(
             advanced_prelude.contains("pub use fret_ui_kit::declarative::TrackedModelExt as _;")
         );
-        assert!(advanced_prelude_exports_symbol("UiServices"));
-        assert!(advanced_prelude_exports_symbol("TextProps"));
+        assert!(advanced_common_prelude_exports_symbol("UiServices"));
+        assert!(advanced_common_prelude_exports_symbol("TextProps"));
         assert!(!advanced_prelude.contains("pub use crate::component::prelude::*;"));
-        assert!(!advanced_prelude_exports_symbol("UiBuilder"));
-        assert!(!advanced_prelude_exports_symbol("UiPatchTarget"));
-        assert!(!advanced_prelude_exports_symbol("IntoUiElement"));
-        assert!(!advanced_prelude_exports_symbol("UiHost"));
-        assert!(!advanced_prelude_exports_symbol("AnyElement"));
-        assert!(!advanced_prelude_exports_symbol("Model"));
-        assert!(!advanced_prelude_exports_symbol("TrackedModelExt"));
-        assert!(!advanced_prelude_exports_symbol("ViewCx"));
-        assert!(!advanced_prelude_exports_symbol("Elements"));
+        assert!(!advanced_common_prelude_exports_symbol("UiBuilder"));
+        assert!(!advanced_common_prelude_exports_symbol("UiPatchTarget"));
+        assert!(!advanced_common_prelude_exports_symbol("IntoUiElement"));
+        assert!(!advanced_common_prelude_exports_symbol("UiHost"));
+        assert!(!advanced_common_prelude_exports_symbol("AnyElement"));
+        assert!(!advanced_common_prelude_exports_symbol("Model"));
+        assert!(!advanced_common_prelude_exports_symbol("TrackedModelExt"));
+        assert!(!advanced_common_prelude_exports_symbol("ViewCx"));
+        assert!(!advanced_common_prelude_exports_symbol("Elements"));
         assert!(
             !advanced_prelude
                 .contains("pub use crate::view::{LocalState, TrackedStateExt, View, ViewCx};")
@@ -4179,8 +4229,8 @@ mod authoring_surface_policy_tests {
         assert!(!advanced_prelude.contains(
             "pub use fret_ui::element::{Elements, HoverRegionProps, Length, SemanticsProps};"
         ));
-        assert!(advanced_prelude.contains("Explicit raw-model hooks kept on the advanced lane."));
-        assert!(advanced_prelude.contains("while leaving `fret::app::prelude::*` focused on"));
+        assert!(advanced_surface.contains("Import these from `fret::advanced::raw`"));
+        assert!(advanced_surface.contains("They intentionally stay out of `advanced::prelude::*`"));
     }
 
     #[test]

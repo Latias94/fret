@@ -42,7 +42,7 @@ ALLOWED_RAW_SHADCN_ESCAPES = [
 ]
 
 RAW_ACTION_NOTIFY_MARKERS = [
-    "use fret::advanced::AppUiRawActionNotifyExt as _;",
+    "use fret::advanced::raw::AppUiRawActionNotifyExt as _;",
     "cx.on_action_notify::<",
     "cx.on_payload_action_notify::<",
 ]

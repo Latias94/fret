@@ -1643,7 +1643,7 @@ mod authoring_surface_policy_tests {
             let file_name = path.file_name().unwrap().to_string_lossy().into_owned();
 
             let uses_raw_action_notify_trait =
-                source.contains("use fret::advanced::AppUiRawActionNotifyExt as _;");
+                source.contains("use fret::advanced::raw::AppUiRawActionNotifyExt as _;");
             let uses_raw_action_notify = source.contains("cx.on_action_notify::<");
             let uses_raw_payload_action_notify = source.contains("cx.on_payload_action_notify::<");
 

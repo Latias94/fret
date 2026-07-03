@@ -43,15 +43,20 @@ fn raw_state_hook_is_exposed_on_the_advanced_surface() {
 #[test]
 fn default_docs_keep_raw_state_as_an_explicit_advanced_seam() {
     assert!(!AUTHORING_GOLDEN_PATH.contains("AppUiRawStateExt"));
-    assert!(AUTHORING_GOLDEN_PATH.contains("use fret::advanced::AppUiRawModelExt;"));
+    assert!(AUTHORING_GOLDEN_PATH.contains("use fret::advanced::raw::AppUiRawModelExt;"));
     assert!(AUTHORING_GOLDEN_PATH.contains("cx.raw_model::<T>()"));
     assert!(!FEARLESS_REFACTORING.contains("AppUiRawStateExt"));
-    assert!(FEARLESS_REFACTORING.contains("use fret::advanced::AppUiRawModelExt;"));
+    assert!(FEARLESS_REFACTORING.contains("use fret::advanced::raw::AppUiRawModelExt;"));
     assert!(!FIRST_HOUR.contains("AppUiRawStateExt"));
-    assert!(FIRST_HOUR.contains("use fret::advanced::AppUiRawModelExt;"));
+    assert!(FIRST_HOUR.contains("use fret::advanced::raw::AppUiRawModelExt;"));
     assert!(FIRST_HOUR.contains("cx.raw_model::<T>()"));
     assert!(!TODO_APP_GOLDEN_PATH.contains("AppUiRawStateExt"));
-    assert!(TODO_APP_GOLDEN_PATH.contains("use fret::advanced::AppUiRawModelExt;"));
+    let old_raw_import = format!("use fret::advanced::{};", "AppUiRawModelExt");
+    assert!(!TODO_APP_GOLDEN_PATH.contains(&old_raw_import));
+    assert!(
+        TODO_APP_GOLDEN_PATH
+            .contains("move that code to an explicit advanced\nintegration document")
+    );
 }
 
 #[test]
