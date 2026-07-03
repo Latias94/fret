@@ -8,6 +8,7 @@ mod execute;
 mod executor;
 mod executor_lifecycle;
 mod executor_recorders;
+pub(super) mod frame_assembler;
 mod frame_bindings;
 mod frame_perf_init;
 mod frame_pipelines;

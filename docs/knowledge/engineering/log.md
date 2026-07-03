@@ -401,3 +401,13 @@ timestamp: 2026-06-30
   focused `text scene_chunk_encoding_cache` nextest filters, formatting, whitespace, layering,
   surface, consumption-profile, execution-surface, ADR-number, and workstream-catalog gates; nextest
   reported one existing leaky test while returning exit code 0.
+- 2026-07-03: Phase 3 U8 renderer source split and `FrameAssembler` slice removes the old
+  flat-with-diagnostic-chunks source constructor and replaces it with
+  `RenderSceneSourceSelection`, explicit `FlatCompat` / `ChunkManifest` sources, shared
+  `select_render_scene_source`, and `ChunkLaunchSupportMatrix`. Native/web launch still select
+  `FlatCompat` by policy, but the manifest is now an assembly sidecar instead of being embedded in
+  a flat source variant. Scene chunk payload/cache assembly state moved behind renderer
+  `FrameAssembler`. Verification passed for renderer/facade/launch/app checks, focused
+  `render_scene scene_chunk source_selection` nextest filters, static old-constructor search,
+  formatting, whitespace, layering, surface, consumption-profile, execution-surface, ADR-number,
+  and workstream-catalog gates.

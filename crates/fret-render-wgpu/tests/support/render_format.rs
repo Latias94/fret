@@ -1,5 +1,7 @@
 use fret_core::scene::Scene;
-use fret_render_wgpu::{ClearColor, RenderSceneParams, RenderSceneSource, Renderer, WgpuContext};
+use fret_render_wgpu::{
+    ClearColor, RenderSceneParams, RenderSceneSourceSelection, Renderer, WgpuContext,
+};
 
 mod readback;
 
@@ -35,7 +37,7 @@ pub fn render_scene_rgba8_with_format(
         RenderSceneParams {
             format,
             target_view: &view,
-            source: RenderSceneSource::flat(scene),
+            source: RenderSceneSourceSelection::flat_compat(scene),
             clear: ClearColor(wgpu::Color::TRANSPARENT),
             scale_factor,
             viewport_size: size,

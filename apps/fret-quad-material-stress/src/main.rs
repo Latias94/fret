@@ -7,7 +7,9 @@ use fret_core::scene::{
 use fret_core::{
     MaterialCatalogTextureKind, MaterialDescriptor, MaterialId, MaterialKind, MaterialService,
 };
-use fret_render::{ClearColor, RenderSceneParams, Renderer, WgpuContext};
+use fret_render::{
+    ClearColor, RenderSceneParams, RenderSceneSourceSelection, Renderer, WgpuContext,
+};
 use std::time::Instant;
 
 #[derive(Clone, Copy)]
@@ -277,8 +279,7 @@ fn run_headless(frames: u64, group_n: u32, wait_gpu: bool, wait_every: u64) -> a
             RenderSceneParams {
                 format,
                 target_view: &view,
-                scene: &scene,
-                scene_chunks: None,
+                source: RenderSceneSourceSelection::flat_compat(&scene),
                 clear: ClearColor::default(),
                 scale_factor,
                 viewport_size,

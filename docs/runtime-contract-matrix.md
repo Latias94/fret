@@ -94,6 +94,9 @@ The convergence target is GPUI-aligned but Fret-owned:
   split is authoritative `ChunkManifest` input for supported frame classes and explicit
   `FlatCompat` debug/parity oracle runs. Unsupported classes report structured unsupported reasons;
   they do not silently count as chunk-native launch evidence.
+  Evidence anchors: `crates/fret-render-wgpu/src/renderer/mod.rs`
+  (`RenderSceneSourceSelection`, `select_render_scene_source`, `ChunkLaunchSupportMatrix`) and
+  `crates/fret-render-wgpu/src/renderer/render_scene/frame_assembler.rs` (`FrameAssembler`).
 - Text chunk closure must be shaping-aware before full-blob text helpers are retired: WGPU
   `TextShape` residency metadata should preserve cluster/run facts derived from `fret-render-text`
   so ligatures, RTL, combining marks, fallback font runs, selection/caret, decorations, and atlas

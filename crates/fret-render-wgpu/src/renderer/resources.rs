@@ -459,8 +459,7 @@ impl Renderer {
             diagnostics_state: DiagnosticsState::default(),
             intermediate_state: IntermediateState::default(),
             gpu_resources: super::gpu_resources::GpuResources::default(),
-            scene_chunk_encoding_state:
-                super::scene_chunk_encoding_cache::SceneChunkEncodingState::default(),
+            frame_assembler: super::render_scene::frame_assembler::FrameAssembler::default(),
             scene_encoding_state: super::scene_encoding_cache::SceneEncodingState::default(),
             material_effect_state: MaterialEffectState::default(),
         }

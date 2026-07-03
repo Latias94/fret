@@ -92,6 +92,7 @@ use material_effects::*;
 use path::*;
 use render_plan::*;
 use render_plan_reporting::*;
+use render_scene::frame_assembler::FrameAssembler;
 use render_scene_config::*;
 use scene_chunk_encoding_cache::*;
 use scene_encoding_cache::SceneEncodingState;
@@ -154,7 +155,7 @@ pub struct Renderer {
 
     gpu_resources: GpuResources,
 
-    scene_chunk_encoding_state: SceneChunkEncodingState,
+    frame_assembler: FrameAssembler,
 
     scene_encoding_state: SceneEncodingState,
 
@@ -163,49 +164,217 @@ pub struct Renderer {
 pub struct RenderSceneParams<'a> {
     pub format: wgpu::TextureFormat,
     pub target_view: &'a wgpu::TextureView,
-    pub source: RenderSceneSource<'a>,
+    pub source: RenderSceneSourceSelection<'a>,
     pub clear: ClearColor,
     pub scale_factor: f32,
     pub viewport_size: (u32, u32),
 }
 
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub enum RenderSceneSource<'a> {
-    Flat {
+    FlatCompat {
         scene: &'a Scene,
-        diagnostic_chunks: Option<&'a fret_core::SceneChunkManifest>,
     },
-    ResourceFreeQuadChunks {
+    ChunkManifest {
         manifest: &'a fret_core::SceneChunkManifest,
         debug_scene: Option<&'a Scene>,
     },
 }
 
-impl<'a> RenderSceneSource<'a> {
-    pub fn flat(scene: &'a Scene) -> Self {
-        Self::Flat {
-            scene,
-            diagnostic_chunks: None,
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RenderSceneChunkAuthorityPolicy {
+    FlatCompat,
+    ChunkManifestWhenSupported,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RenderSceneDebugFlatOraclePolicy {
+    Disabled,
+    Requested,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct RenderSceneSourcePolicy {
+    pub chunk_authority: RenderSceneChunkAuthorityPolicy,
+    pub debug_flat_oracle: RenderSceneDebugFlatOraclePolicy,
+}
+
+impl RenderSceneSourcePolicy {
+    pub const fn flat_compat() -> Self {
+        Self {
+            chunk_authority: RenderSceneChunkAuthorityPolicy::FlatCompat,
+            debug_flat_oracle: RenderSceneDebugFlatOraclePolicy::Disabled,
         }
     }
 
-    pub fn flat_with_diagnostic_chunks(
-        scene: &'a Scene,
-        diagnostic_chunks: &'a fret_core::SceneChunkManifest,
-    ) -> Self {
-        Self::Flat {
-            scene,
-            diagnostic_chunks: Some(diagnostic_chunks),
+    pub const fn chunk_manifest_when_supported() -> Self {
+        Self {
+            chunk_authority: RenderSceneChunkAuthorityPolicy::ChunkManifestWhenSupported,
+            debug_flat_oracle: RenderSceneDebugFlatOraclePolicy::Disabled,
         }
     }
 
-    pub fn resource_free_quad_chunks(
+    pub const fn with_debug_flat_oracle(mut self) -> Self {
+        self.debug_flat_oracle = RenderSceneDebugFlatOraclePolicy::Requested;
+        self
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ChunkLaunchStreamClass {
+    ResourceFreeQuad,
+    ResourceFreeVertexColor,
+    Mixed,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ChunkLaunchUnsupportedReason {
+    NoManifest,
+    EmptyManifest,
+    StreamNotPromoted(ChunkLaunchStreamClass),
+    MixedStreams,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ChunkLaunchSupport {
+    Supported {
+        stream_class: ChunkLaunchStreamClass,
+    },
+    Unsupported {
+        stream_class: Option<ChunkLaunchStreamClass>,
+        reason: ChunkLaunchUnsupportedReason,
+    },
+}
+
+impl ChunkLaunchSupport {
+    pub const fn is_supported(self) -> bool {
+        matches!(self, Self::Supported { .. })
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct RenderSceneSourceSelection<'a> {
+    source: RenderSceneSource<'a>,
+    chunk_manifest: Option<&'a fret_core::SceneChunkManifest>,
+    chunk_support: ChunkLaunchSupport,
+    debug_flat_oracle_requested: bool,
+}
+
+impl<'a> RenderSceneSourceSelection<'a> {
+    pub fn flat_compat(scene: &'a Scene) -> Self {
+        Self {
+            source: RenderSceneSource::FlatCompat { scene },
+            chunk_manifest: None,
+            chunk_support: ChunkLaunchSupport::Unsupported {
+                stream_class: None,
+                reason: ChunkLaunchUnsupportedReason::NoManifest,
+            },
+            debug_flat_oracle_requested: false,
+        }
+    }
+
+    pub fn chunk_manifest(
         manifest: &'a fret_core::SceneChunkManifest,
         debug_scene: Option<&'a Scene>,
     ) -> Self {
-        Self::ResourceFreeQuadChunks {
-            manifest,
-            debug_scene,
+        Self {
+            source: RenderSceneSource::ChunkManifest {
+                manifest,
+                debug_scene,
+            },
+            chunk_manifest: Some(manifest),
+            chunk_support: ChunkLaunchSupportMatrix::evaluate(manifest),
+            debug_flat_oracle_requested: debug_scene.is_some(),
         }
+    }
+
+    pub fn source(self) -> RenderSceneSource<'a> {
+        self.source
+    }
+
+    pub fn assembly_manifest(self) -> Option<&'a fret_core::SceneChunkManifest> {
+        self.chunk_manifest
+    }
+
+    pub fn chunk_support(self) -> ChunkLaunchSupport {
+        self.chunk_support
+    }
+
+    pub fn debug_flat_oracle_requested(self) -> bool {
+        self.debug_flat_oracle_requested
+    }
+}
+
+pub struct ChunkLaunchSupportMatrix;
+
+impl ChunkLaunchSupportMatrix {
+    pub fn evaluate(manifest: &fret_core::SceneChunkManifest) -> ChunkLaunchSupport {
+        let mut stream_class = None;
+        for entry in manifest.entries() {
+            let entry_class = if entry.chunk().closure().is_resource_free_quad_only() {
+                ChunkLaunchStreamClass::ResourceFreeQuad
+            } else if entry.chunk().closure().is_resource_free_vertex_color_only() {
+                ChunkLaunchStreamClass::ResourceFreeVertexColor
+            } else {
+                ChunkLaunchStreamClass::Mixed
+            };
+
+            stream_class = match (stream_class, entry_class) {
+                (None, class) => Some(class),
+                (Some(existing), class) if existing == class => Some(existing),
+                _ => Some(ChunkLaunchStreamClass::Mixed),
+            };
+        }
+
+        match stream_class {
+            None => ChunkLaunchSupport::Unsupported {
+                stream_class: None,
+                reason: ChunkLaunchUnsupportedReason::EmptyManifest,
+            },
+            Some(ChunkLaunchStreamClass::ResourceFreeQuad) => ChunkLaunchSupport::Supported {
+                stream_class: ChunkLaunchStreamClass::ResourceFreeQuad,
+            },
+            Some(ChunkLaunchStreamClass::ResourceFreeVertexColor) => {
+                ChunkLaunchSupport::Unsupported {
+                    stream_class: Some(ChunkLaunchStreamClass::ResourceFreeVertexColor),
+                    reason: ChunkLaunchUnsupportedReason::StreamNotPromoted(
+                        ChunkLaunchStreamClass::ResourceFreeVertexColor,
+                    ),
+                }
+            }
+            Some(ChunkLaunchStreamClass::Mixed) => ChunkLaunchSupport::Unsupported {
+                stream_class: Some(ChunkLaunchStreamClass::Mixed),
+                reason: ChunkLaunchUnsupportedReason::MixedStreams,
+            },
+        }
+    }
+}
+
+pub fn select_render_scene_source<'a>(
+    scene: &'a Scene,
+    manifest: &'a fret_core::SceneChunkManifest,
+    policy: RenderSceneSourcePolicy,
+) -> RenderSceneSourceSelection<'a> {
+    let chunk_support = ChunkLaunchSupportMatrix::evaluate(manifest);
+    let chunk_manifest_is_authoritative = policy.chunk_authority
+        == RenderSceneChunkAuthorityPolicy::ChunkManifestWhenSupported
+        && chunk_support.is_supported();
+    let debug_flat_oracle_requested =
+        policy.debug_flat_oracle == RenderSceneDebugFlatOraclePolicy::Requested;
+
+    let source = if chunk_manifest_is_authoritative {
+        RenderSceneSource::ChunkManifest {
+            manifest,
+            debug_scene: debug_flat_oracle_requested.then_some(scene),
+        }
+    } else {
+        RenderSceneSource::FlatCompat { scene }
+    };
+
+    RenderSceneSourceSelection {
+        source,
+        chunk_manifest: Some(manifest),
+        chunk_support,
+        debug_flat_oracle_requested,
     }
 }

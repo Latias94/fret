@@ -53,7 +53,12 @@ pub use images::{
 };
 pub use perf_store::{RendererPerfFrameSample, RendererPerfFrameStore};
 pub use renderer::{BlurQualityCounters, BlurQualitySnapshot};
-pub use renderer::{ClearColor, RenderSceneParams, RenderSceneSource, Renderer};
+pub use renderer::{
+    ChunkLaunchStreamClass, ChunkLaunchSupport, ChunkLaunchSupportMatrix,
+    ChunkLaunchUnsupportedReason, ClearColor, RenderSceneChunkAuthorityPolicy,
+    RenderSceneDebugFlatOraclePolicy, RenderSceneParams, RenderSceneSource,
+    RenderSceneSourcePolicy, RenderSceneSourceSelection, Renderer, select_render_scene_source,
+};
 pub use renderer::{EffectDegradationCounters, EffectDegradationSnapshot};
 pub use renderer::{
     GeometryUploadPerfSnapshot, IntermediatePerfSnapshot, RenderPerfSnapshot,

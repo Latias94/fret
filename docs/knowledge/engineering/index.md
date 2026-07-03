@@ -77,6 +77,8 @@ It is a sidecar for session recovery and subagent synthesis, not a replacement f
 - [Phase 3 U5.5 retained parent query bridges](progress/2026-07-03-phase3-u5-5-retained-parent-query-bridges.md)
 - [Phase 3 U6 text cluster residency](progress/2026-07-03-phase3-u6-text-cluster-residency.md)
 - [Phase 3 U7 full-blob text helper scaffolding](progress/2026-07-03-phase3-u7-full-blob-text-helper-scaffolding.md)
+- [Phase 3 U8 renderer source split and FrameAssembler](progress/2026-07-03-phase3-u8-render-source-frame-assembler.md)
+- [Phase 3 U8 FrameAssembler audits](subagents/2026-07-03-phase3-u8-frame-assembler-audits.md)
 - [Phase 2 U4 boundary store audit](subagents/2026-07-02-phase2-u4-boundary-store-audit.md)
 - [Phase 2 U4 durable ViewId audit](subagents/2026-07-02-phase2-u4-durable-viewid-audit.md)
 - [Phase 2 U5 boundary bridge audit](subagents/2026-07-02-phase2-u5-boundary-bridge-audit.md)

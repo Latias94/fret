@@ -588,9 +588,9 @@ impl Renderer {
                     .collect::<Vec<_>>()
             })
             .unwrap_or_default();
-        let mut state = std::mem::take(&mut self.scene_chunk_encoding_state);
+        let mut frame_assembler = std::mem::take(&mut self.frame_assembler);
         let output_is_srgb = context.format.is_srgb();
-        let stats = state.begin_frame_with_payloads(
+        let stats = frame_assembler.begin_frame_with_payloads(
             scene_chunks,
             context,
             &entry_text_resource_keys,
@@ -603,7 +603,7 @@ impl Renderer {
                 )
             },
         );
-        self.scene_chunk_encoding_state = state;
+        self.frame_assembler = frame_assembler;
         if perf_enabled {
             frame_perf.scene_chunk_encoding_key_cache_entries = stats.entries;
             frame_perf.scene_chunk_encoding_key_cache_hits = stats.key_cache_hits;
@@ -627,7 +627,7 @@ impl Renderer {
         frame_perf: &mut RenderPerfStats,
     ) -> SceneChunkPayloadPlanAlignment {
         let alignment = self
-            .scene_chunk_encoding_state
+            .frame_assembler
             .record_payload_plan_alignment(plan, flat_encoding);
         if perf_enabled {
             let stats = alignment.stats;

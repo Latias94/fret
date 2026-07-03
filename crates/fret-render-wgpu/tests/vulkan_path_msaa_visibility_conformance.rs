@@ -2,7 +2,9 @@ use fret_core::PathService as _;
 use fret_core::geometry::{Point, Px, Rect, Size};
 use fret_core::scene::{Color, DrawOrder, Paint, Scene, SceneOp};
 use fret_core::{FillStyle, PathCommand, PathConstraints, PathStyle};
-use fret_render_wgpu::{ClearColor, RenderSceneParams, RenderSceneSource, Renderer, WgpuContext};
+use fret_render_wgpu::{
+    ClearColor, RenderSceneParams, RenderSceneSourceSelection, Renderer, WgpuContext,
+};
 use std::ffi::OsString;
 use std::sync::{Mutex, OnceLock};
 
@@ -147,7 +149,7 @@ fn vulkan_path_msaa_pipeline_is_visible_by_default() {
         RenderSceneParams {
             format,
             target_view: &target_view,
-            source: RenderSceneSource::flat(&scene),
+            source: RenderSceneSourceSelection::flat_compat(&scene),
             clear: ClearColor(wgpu::Color::TRANSPARENT),
             scale_factor: 1.0,
             viewport_size,
@@ -270,7 +272,7 @@ fn vulkan_path_msaa_can_be_disabled_via_env() {
         RenderSceneParams {
             format,
             target_view: &target_view,
-            source: RenderSceneSource::flat(&scene),
+            source: RenderSceneSourceSelection::flat_compat(&scene),
             clear: ClearColor(wgpu::Color::TRANSPARENT),
             scale_factor: 1.0,
             viewport_size,

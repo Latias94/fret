@@ -55,20 +55,23 @@
 
 #[cfg(feature = "backend-wgpu")]
 pub use fret_render_wgpu::{
-    ClearColor, ImageColorSpace, ImageDescriptor, RenderError, RenderSceneParams,
-    RenderSceneSource, RenderTargetAlphaMode, RenderTargetColorEncoding,
-    RenderTargetColorPrimaries, RenderTargetColorRange, RenderTargetColorSpace,
-    RenderTargetDescriptor, RenderTargetIngestStrategy, RenderTargetMatrixCoefficients,
-    RenderTargetMetadata, RenderTargetOrientation, RenderTargetRotation,
-    RenderTargetTransferFunction, Renderer, RendererCapabilities, RendererPerfFrameSample,
-    RendererPerfFrameStore, SurfaceAcquireError, SurfaceState, SvgAlphaMask, SvgRgbaImage,
-    SvgTextBridgeDiagnosticsSnapshot, SvgTextFontFallbackRecordSnapshot,
-    SvgTextFontSelectionMissSnapshot, SvgTextMissingGlyphRecordSnapshot, SystemFontRescanResult,
-    SystemFontRescanSeed, TextFontFamilyConfig, UploadedRgba8Image, WgpuAdapterSelectionSnapshot,
+    ChunkLaunchStreamClass, ChunkLaunchSupport, ChunkLaunchSupportMatrix,
+    ChunkLaunchUnsupportedReason, ClearColor, ImageColorSpace, ImageDescriptor, RenderError,
+    RenderSceneChunkAuthorityPolicy, RenderSceneDebugFlatOraclePolicy, RenderSceneParams,
+    RenderSceneSource, RenderSceneSourcePolicy, RenderSceneSourceSelection, RenderTargetAlphaMode,
+    RenderTargetColorEncoding, RenderTargetColorPrimaries, RenderTargetColorRange,
+    RenderTargetColorSpace, RenderTargetDescriptor, RenderTargetIngestStrategy,
+    RenderTargetMatrixCoefficients, RenderTargetMetadata, RenderTargetOrientation,
+    RenderTargetRotation, RenderTargetTransferFunction, Renderer, RendererCapabilities,
+    RendererPerfFrameSample, RendererPerfFrameStore, SurfaceAcquireError, SurfaceState,
+    SvgAlphaMask, SvgRgbaImage, SvgTextBridgeDiagnosticsSnapshot,
+    SvgTextFontFallbackRecordSnapshot, SvgTextFontSelectionMissSnapshot,
+    SvgTextMissingGlyphRecordSnapshot, SystemFontRescanResult, SystemFontRescanSeed,
+    TextFontFamilyConfig, UploadedRgba8Image, WgpuAdapterSelectionSnapshot,
     WgpuAllocatorReportFrameSample, WgpuAllocatorReportFrameStore, WgpuContext,
     WgpuHubReportCounts, WgpuHubReportFrameSample, WgpuHubReportFrameStore,
-    create_rgba8_image_storage, upload_alpha_mask, upload_rgba_image, upload_rgba8_image,
-    viewport_overlay, write_rgba8_texture_region,
+    create_rgba8_image_storage, select_render_scene_source, upload_alpha_mask, upload_rgba_image,
+    upload_rgba8_image, viewport_overlay, write_rgba8_texture_region,
 };
 
 #[cfg(feature = "backend-wgpu")]

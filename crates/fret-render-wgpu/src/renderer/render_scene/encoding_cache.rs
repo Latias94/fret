@@ -76,7 +76,7 @@ impl Renderer {
         frame_perf: &mut RenderPerfStats,
     ) -> Option<(SceneEncoding, bool)> {
         let assembled = self
-            .scene_chunk_encoding_state
+            .frame_assembler
             .assemble_resource_free_quad_frame_encoding(scene_chunks, context)?;
         let (cached_encoding, cache_hit) = self.scene_encoding_state.begin_frame(
             key,

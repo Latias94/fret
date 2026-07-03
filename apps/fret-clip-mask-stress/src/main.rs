@@ -7,8 +7,8 @@ use fret_core::scene::{
 };
 use fret_core::{FillRule, FillStyle, PathCommand, PathConstraints, PathService, PathStyle};
 use fret_render::{
-    ClearColor, ImageColorSpace, ImageDescriptor, RenderSceneParams, Renderer, SvgAlphaMask,
-    WgpuContext, upload_alpha_mask,
+    ClearColor, ImageColorSpace, ImageDescriptor, RenderSceneParams, RenderSceneSourceSelection,
+    Renderer, SvgAlphaMask, WgpuContext, upload_alpha_mask,
 };
 use std::f32::consts::TAU;
 use std::time::Instant;
@@ -248,8 +248,7 @@ fn run_headless(frames: u64, group_n: u32, wait_gpu: bool, wait_every: u64) -> a
             RenderSceneParams {
                 format,
                 target_view: &view,
-                scene: &scene,
-                scene_chunks: None,
+                source: RenderSceneSourceSelection::flat_compat(&scene),
                 clear: ClearColor::default(),
                 scale_factor,
                 viewport_size,

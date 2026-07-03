@@ -2,7 +2,9 @@ use fret_core::geometry::{Point, Px};
 use fret_core::geometry::{Rect, Size};
 use fret_core::scene::{Color, DrawOrder, Scene, SceneOp};
 use fret_core::{PathCommand, PathConstraints, PathService, PathStyle, StrokeStyle};
-use fret_render_wgpu::{ClearColor, RenderSceneParams, RenderSceneSource, Renderer, WgpuContext};
+use fret_render_wgpu::{
+    ClearColor, RenderSceneParams, RenderSceneSourceSelection, Renderer, WgpuContext,
+};
 
 #[path = "support/readback.rs"]
 mod support;
@@ -113,7 +115,7 @@ fn gpu_path_msaa_composite_vulkan_smoke() {
         RenderSceneParams {
             format,
             target_view: &view,
-            source: RenderSceneSource::flat(&scene),
+            source: RenderSceneSourceSelection::flat_compat(&scene),
             clear: ClearColor(wgpu::Color::TRANSPARENT),
             scale_factor: 1.0,
             viewport_size: size,

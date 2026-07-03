@@ -104,6 +104,9 @@ Must-be-true outcomes for the next convergence pass:
   matrix. Supported native/web fixtures must render through authoritative chunk manifests with zero
   normal-path `FlatCompat` usage; unsupported frames report structured reasons and stay outside
   bridge-deletion evidence.
+  Current source-selection evidence lives in `crates/fret-render-wgpu/src/renderer/mod.rs`, while
+  renderer-owned chunk payload/cache assembly state lives behind
+  `crates/fret-render-wgpu/src/renderer/render_scene/frame_assembler.rs`.
 - Text chunk/resource closure is not complete until WGPU `TextShape` residency metadata preserves
   shaping cluster/run facts for ligatures, RTL, combining marks, fallback font runs,
   selection/caret, decorations, and atlas reset generation.

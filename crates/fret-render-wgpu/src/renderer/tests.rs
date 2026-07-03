@@ -554,7 +554,7 @@ fn image_fit_cover_encodes_cropped_uvs() {
         super::RenderSceneParams {
             format,
             target_view: &target_view,
-            source: super::RenderSceneSource::flat(&scene),
+            source: super::RenderSceneSourceSelection::flat_compat(&scene),
             clear: super::ClearColor::default(),
             scale_factor: 1.0,
             viewport_size,
@@ -646,7 +646,7 @@ fn image_fit_contain_encodes_centered_draw_rect() {
         super::RenderSceneParams {
             format,
             target_view: &target_view,
-            source: super::RenderSceneSource::flat(&scene),
+            source: super::RenderSceneSourceSelection::flat_compat(&scene),
             clear: super::ClearColor::default(),
             scale_factor: 1.0,
             viewport_size,
@@ -739,7 +739,7 @@ fn vertex_color_quad_encodes_two_triangles_with_corner_colors() {
         super::RenderSceneParams {
             format,
             target_view: &target_view,
-            source: super::RenderSceneSource::flat(&scene),
+            source: super::RenderSceneSourceSelection::flat_compat(&scene),
             clear: super::ClearColor::default(),
             scale_factor: 1.0,
             viewport_size,
@@ -834,7 +834,7 @@ fn vertex_color_triangle_encodes_three_custom_vertices() {
         super::RenderSceneParams {
             format,
             target_view: &target_view,
-            source: super::RenderSceneSource::flat(&scene),
+            source: super::RenderSceneSourceSelection::flat_compat(&scene),
             clear: super::ClearColor::default(),
             scale_factor: 1.0,
             viewport_size,
@@ -943,7 +943,7 @@ fn image_quad_encodes_custom_points_uvs_and_tint() {
         super::RenderSceneParams {
             format,
             target_view: &target_view,
-            source: super::RenderSceneSource::flat(&scene),
+            source: super::RenderSceneSourceSelection::flat_compat(&scene),
             clear: super::ClearColor::default(),
             scale_factor: 1.0,
             viewport_size,
@@ -1070,7 +1070,7 @@ fn image_triangle_encodes_custom_uvs_and_vertex_colors() {
         super::RenderSceneParams {
             format,
             target_view: &target_view,
-            source: super::RenderSceneSource::flat(&scene),
+            source: super::RenderSceneSourceSelection::flat_compat(&scene),
             clear: super::ClearColor::default(),
             scale_factor: 1.0,
             viewport_size,
@@ -1146,7 +1146,7 @@ fn shadow_rrect_encodes_shadow_quad_instance() {
         super::RenderSceneParams {
             format,
             target_view: &target_view,
-            source: super::RenderSceneSource::flat(&scene),
+            source: super::RenderSceneSourceSelection::flat_compat(&scene),
             clear: super::ClearColor::default(),
             scale_factor: 1.0,
             viewport_size,
@@ -1198,7 +1198,7 @@ fn scene_encoding_cache_is_busted_by_text_quality_changes() {
     let make_params = || super::RenderSceneParams {
         format,
         target_view: &target_view,
-        source: super::RenderSceneSource::flat(&scene),
+        source: super::RenderSceneSourceSelection::flat_compat(&scene),
         clear: super::ClearColor::default(),
         scale_factor: 1.0,
         viewport_size,
@@ -1329,7 +1329,7 @@ fn diagnostic_scene_chunk_manifest_does_not_override_flat_scene_encoding() {
     let _ = renderer.render_scene(
         &ctx.device,
         &ctx.queue,
-        params(super::RenderSceneSource::flat(&scene)),
+        params(super::RenderSceneSourceSelection::flat_compat(&scene)),
     );
     let key_without_manifest = renderer
         .scene_encoding_state
@@ -1339,8 +1339,10 @@ fn diagnostic_scene_chunk_manifest_does_not_override_flat_scene_encoding() {
     let _ = renderer.render_scene(
         &ctx.device,
         &ctx.queue,
-        params(super::RenderSceneSource::flat_with_diagnostic_chunks(
-            &scene, &manifest,
+        params(super::select_render_scene_source(
+            &scene,
+            &manifest,
+            super::RenderSceneSourcePolicy::flat_compat(),
         )),
     );
     let key_with_diagnostic_manifest = renderer
@@ -1361,6 +1363,105 @@ fn diagnostic_scene_chunk_manifest_does_not_override_flat_scene_encoding() {
     assert_eq!(last.scene_chunk_input_chunks, 1);
     assert_eq!(last.scene_chunk_input_ops, chunk.ops_len() as u64);
     assert_eq!(last.scene_chunk_input_fingerprint, manifest.fingerprint());
+}
+
+#[test]
+fn source_selection_flat_compat_keeps_manifest_as_assembly_sidecar() {
+    let mut scene = Scene::default();
+    scene.push(SceneOp::Quad {
+        order: DrawOrder(0),
+        rect: Rect::new(Point::default(), fret_core::Size::new(Px(10.0), Px(10.0))),
+        background: Color {
+            r: 1.0,
+            g: 1.0,
+            b: 1.0,
+            a: 1.0,
+        }
+        .into(),
+        border: fret_core::Edges::all(Px(0.0)),
+        border_paint: Color::TRANSPARENT.into(),
+        corner_radii: Corners::all(Px(0.0)),
+    });
+    let chunk = fret_core::SceneChunk::from_scene(&scene);
+    let mut manifest = fret_core::SceneChunkManifest::default();
+    manifest.push(fret_core::SceneChunkManifestEntry::new(
+        chunk,
+        Rect::new(Point::default(), fret_core::Size::new(Px(10.0), Px(10.0))),
+        Point::default(),
+    ));
+
+    let selection = super::select_render_scene_source(
+        &scene,
+        &manifest,
+        super::RenderSceneSourcePolicy::flat_compat(),
+    );
+
+    assert!(matches!(
+        selection.source(),
+        super::RenderSceneSource::FlatCompat { .. }
+    ));
+    assert_eq!(
+        selection
+            .assembly_manifest()
+            .map(fret_core::SceneChunkManifest::len),
+        Some(1)
+    );
+    assert_eq!(
+        selection.chunk_support(),
+        super::ChunkLaunchSupport::Supported {
+            stream_class: super::ChunkLaunchStreamClass::ResourceFreeQuad,
+        }
+    );
+    assert!(!selection.debug_flat_oracle_requested());
+}
+
+#[test]
+fn source_selection_does_not_promote_vertex_color_before_support_matrix_allows_it() {
+    let points = [
+        Point::new(Px(0.0), Px(0.0)),
+        Point::new(Px(10.0), Px(0.0)),
+        Point::new(Px(10.0), Px(10.0)),
+        Point::new(Px(0.0), Px(10.0)),
+    ];
+    let colors = [Color {
+        r: 1.0,
+        g: 1.0,
+        b: 1.0,
+        a: 1.0,
+    }; 4];
+    let mut scene = Scene::default();
+    scene.push(SceneOp::VertexColorQuad {
+        order: DrawOrder(0),
+        points,
+        colors,
+    });
+    let chunk = fret_core::SceneChunk::from_scene(&scene);
+    let mut manifest = fret_core::SceneChunkManifest::default();
+    manifest.push(fret_core::SceneChunkManifestEntry::new(
+        chunk,
+        Rect::new(Point::default(), fret_core::Size::new(Px(10.0), Px(10.0))),
+        Point::default(),
+    ));
+
+    let selection = super::select_render_scene_source(
+        &scene,
+        &manifest,
+        super::RenderSceneSourcePolicy::chunk_manifest_when_supported(),
+    );
+
+    assert!(matches!(
+        selection.source(),
+        super::RenderSceneSource::FlatCompat { .. }
+    ));
+    assert_eq!(
+        selection.chunk_support(),
+        super::ChunkLaunchSupport::Unsupported {
+            stream_class: Some(super::ChunkLaunchStreamClass::ResourceFreeVertexColor),
+            reason: super::ChunkLaunchUnsupportedReason::StreamNotPromoted(
+                super::ChunkLaunchStreamClass::ResourceFreeVertexColor,
+            ),
+        }
+    );
 }
 
 #[test]
@@ -1422,7 +1523,7 @@ fn resource_free_quad_scene_chunk_manifest_uses_chunk_native_scene_encoding_key(
     let _ = renderer.render_scene(
         &ctx.device,
         &ctx.queue,
-        params(super::RenderSceneSource::flat(&scene)),
+        params(super::RenderSceneSourceSelection::flat_compat(&scene)),
     );
     let key_without_manifest = renderer
         .scene_encoding_state
@@ -1432,7 +1533,7 @@ fn resource_free_quad_scene_chunk_manifest_uses_chunk_native_scene_encoding_key(
     let _ = renderer.render_scene(
         &ctx.device,
         &ctx.queue,
-        params(super::RenderSceneSource::resource_free_quad_chunks(
+        params(super::RenderSceneSourceSelection::chunk_manifest(
             &manifest,
             Some(&scene),
         )),
@@ -1501,7 +1602,7 @@ fn resource_free_quad_scene_chunk_manifest_uses_chunk_native_scene_encoding_key(
     let _ = renderer.render_scene(
         &ctx.device,
         &ctx.queue,
-        params(super::RenderSceneSource::resource_free_quad_chunks(
+        params(super::RenderSceneSourceSelection::chunk_manifest(
             &manifest,
             Some(&scene),
         )),
@@ -1621,7 +1722,11 @@ fn unreferenced_text_atlas_churn_does_not_bust_scene_or_chunk_encoding_cache() {
     let params = || super::RenderSceneParams {
         format,
         target_view: &target_view,
-        source: super::RenderSceneSource::flat_with_diagnostic_chunks(&scene, &manifest),
+        source: super::select_render_scene_source(
+            &scene,
+            &manifest,
+            super::RenderSceneSourcePolicy::flat_compat(),
+        ),
         clear: super::ClearColor::default(),
         scale_factor: 1.0,
         viewport_size,
@@ -1754,7 +1859,7 @@ fn scene_chunk_payload_and_resident_upload_state_warm_without_perf() {
     let params = || super::RenderSceneParams {
         format,
         target_view: &target_view,
-        source: super::RenderSceneSource::resource_free_quad_chunks(&manifest, Some(&scene)),
+        source: super::RenderSceneSourceSelection::chunk_manifest(&manifest, Some(&scene)),
         clear: super::ClearColor::default(),
         scale_factor: 1.0,
         viewport_size,
@@ -1839,7 +1944,7 @@ fn perf_snapshot_counts_path_material_paint_degradation() {
         super::RenderSceneParams {
             format,
             target_view: &target_view,
-            source: super::RenderSceneSource::flat(&scene),
+            source: super::RenderSceneSourceSelection::flat_compat(&scene),
             clear: super::ClearColor::default(),
             scale_factor: 1.0,
             viewport_size,

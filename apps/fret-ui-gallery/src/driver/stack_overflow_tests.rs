@@ -230,8 +230,7 @@ fn nav_to_datatable_does_not_stack_overflow_with_wgpu_renderer_services() {
         fret_render::RenderSceneParams {
             format,
             target_view: &view,
-            scene: &scene,
-            scene_chunks: None,
+            source: fret_render::RenderSceneSourceSelection::flat_compat(&scene),
             clear: fret_render::ClearColor::default(),
             scale_factor: 1.0,
             viewport_size,
@@ -259,8 +258,7 @@ fn nav_to_datatable_does_not_stack_overflow_with_wgpu_renderer_services() {
         fret_render::RenderSceneParams {
             format,
             target_view: &view,
-            scene: &scene,
-            scene_chunks: None,
+            source: fret_render::RenderSceneSourceSelection::flat_compat(&scene),
             clear: fret_render::ClearColor::default(),
             scale_factor: 1.0,
             viewport_size,
@@ -347,8 +345,7 @@ fn nav_to_datatable_repro_on_small_stack() {
                 fret_render::RenderSceneParams {
                     format,
                     target_view: &view,
-                    scene: &scene,
-                    scene_chunks: None,
+                    source: fret_render::RenderSceneSourceSelection::flat_compat(&scene),
                     clear: fret_render::ClearColor::default(),
                     scale_factor: 1.0,
                     viewport_size,
@@ -388,8 +385,7 @@ fn nav_to_datatable_repro_on_small_stack() {
                 fret_render::RenderSceneParams {
                     format,
                     target_view: &view,
-                    scene: &scene,
-                    scene_chunks: None,
+                    source: fret_render::RenderSceneSourceSelection::flat_compat(&scene),
                     clear: fret_render::ClearColor::default(),
                     scale_factor: 1.0,
                     viewport_size,

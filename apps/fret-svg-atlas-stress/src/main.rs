@@ -5,7 +5,9 @@ use fret_launch::{
     WindowCreateSpec, WinitAppDriver, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
     run_app_with_event_loop,
 };
-use fret_render::{ClearColor, RenderSceneParams, Renderer, WgpuContext};
+use fret_render::{
+    ClearColor, RenderSceneParams, RenderSceneSourceSelection, Renderer, WgpuContext,
+};
 use fret_runtime::PlatformCapabilities;
 use std::time::{Duration, Instant};
 use winit::event_loop::EventLoop;
@@ -439,8 +441,7 @@ fn run_headless(
             RenderSceneParams {
                 format,
                 target_view: &view,
-                scene: &scene,
-                scene_chunks: None,
+                source: RenderSceneSourceSelection::flat_compat(&scene),
                 clear: ClearColor::default(),
                 scale_factor,
                 viewport_size,

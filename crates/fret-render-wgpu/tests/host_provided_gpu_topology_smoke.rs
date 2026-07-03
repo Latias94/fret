@@ -1,7 +1,7 @@
 use fret_core::geometry::{Edges, Point, Px, Rect, Size};
 use fret_core::scene::{Color, DrawOrder, Paint, Scene, SceneOp};
 use fret_render_wgpu::{
-    ClearColor, RenderSceneParams, RenderSceneSource, Renderer, RendererCapabilities,
+    ClearColor, RenderSceneParams, RenderSceneSourceSelection, Renderer, RendererCapabilities,
 };
 
 #[path = "support/readback.rs"]
@@ -103,7 +103,7 @@ fn renderer_accepts_host_provided_gpu_topology() {
         RenderSceneParams {
             format,
             target_view: &view,
-            source: RenderSceneSource::flat(&scene),
+            source: RenderSceneSourceSelection::flat_compat(&scene),
             clear: ClearColor(wgpu::Color::TRANSPARENT),
             scale_factor: 1.0,
             viewport_size: size,
