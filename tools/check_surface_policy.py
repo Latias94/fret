@@ -201,6 +201,22 @@ def _fret_examples_comparison_surface(
     )
 
 
+def _fret_examples_internal_harness(
+    path: str,
+    reason: str,
+    allowed_raw_seams: tuple[str, ...],
+    owner: str | None = None,
+) -> SurfacePath:
+    stem = path.removesuffix(".rs").replace("/", "-").replace("_", "-")
+    return SurfacePath(
+        f"apps/fret-examples/src/{path}",
+        "internal_harness",
+        f"{path} remains classified as an internal harness because {reason}",
+        owner=owner or f"examples-{stem}",
+        allowed_raw_seams=allowed_raw_seams,
+    )
+
+
 COMPARISON_SURFACES: tuple[SurfacePath, ...] = (
     _fret_examples_comparison_surface(
         "api_workbench_lite_demo.rs",
@@ -241,6 +257,42 @@ COMPARISON_SURFACES: tuple[SurfacePath, ...] = (
             "ElementContext",
         ),
         owner="examples-imui-authoring-parity",
+    ),
+)
+
+
+INTERNAL_HARNESS_SURFACES: tuple[SurfacePath, ...] = (
+    _fret_examples_internal_harness(
+        "docking_arbitration_demo.rs",
+        "the arbitration harness is ADR/conformance infrastructure for docking, viewports, "
+        "overlays, and launch hooks",
+        (
+            "fret::advanced",
+            "fret_app",
+            "fret_core",
+            "fret_launch",
+            "fret_runtime",
+            "fret_ui",
+            "AnyElement",
+            "ElementContext",
+            "FnDriver",
+            "UiTree",
+        ),
+        owner="examples-docking-arbitration",
+    ),
+    _fret_examples_internal_harness(
+        "plot_stress_demo.rs",
+        "the plot stress harness owns manual driver state and retained stress-model plumbing",
+        (
+            "fret_app",
+            "fret_core",
+            "fret_launch",
+            "fret_runtime",
+            "fret_ui",
+            "FnDriver",
+            "UiTree",
+        ),
+        owner="examples-plot-stress",
     ),
 )
 
@@ -340,24 +392,6 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
         owner="examples-docking",
     ),
     _fret_examples_advanced_surface(
-        "docking_arbitration_demo.rs",
-        "the arbitration harness is ADR/conformance infrastructure for docking, viewports, "
-        "overlays, and launch hooks",
-        (
-            "fret::advanced",
-            "fret_app",
-            "fret_core",
-            "fret_launch",
-            "fret_runtime",
-            "fret_ui",
-            "AnyElement",
-            "ElementContext",
-            "FnDriver",
-            "UiTree",
-        ),
-        owner="examples-docking-arbitration",
-    ),
-    _fret_examples_advanced_surface(
         "plot_demo.rs",
         "the plot proof owns manual driver state and retained plot model integration",
         (
@@ -370,20 +404,6 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
             "UiTree",
         ),
         owner="examples-plot",
-    ),
-    _fret_examples_advanced_surface(
-        "plot_stress_demo.rs",
-        "the plot stress harness owns manual driver state and retained stress-model plumbing",
-        (
-            "fret_app",
-            "fret_core",
-            "fret_launch",
-            "fret_runtime",
-            "fret_ui",
-            "FnDriver",
-            "UiTree",
-        ),
-        owner="examples-plot-stress",
     ),
     _fret_examples_advanced_surface(
         "gizmo3d_demo.rs",
@@ -1125,6 +1145,7 @@ def check_surface_policy(
     default_surfaces: Sequence[SurfacePath] = DEFAULT_AUTHORING_SURFACES,
     advanced_manual_surfaces: Sequence[SurfacePath] = ADVANCED_MANUAL_SURFACES,
     comparison_surfaces: Sequence[SurfacePath] = COMPARISON_SURFACES,
+    internal_harness_surfaces: Sequence[SurfacePath] = INTERNAL_HARNESS_SURFACES,
     policy_recipe_surfaces: Sequence[SurfacePath] = POLICY_RECIPE_SURFACES,
     mechanism_root_surfaces: Sequence[SurfacePath] = MECHANISM_ROOT_SURFACES,
     public_example_scan_roots: Sequence[str] = PUBLIC_EXAMPLE_SCAN_ROOTS,
@@ -1133,6 +1154,7 @@ def check_surface_policy(
         *default_surfaces,
         *advanced_manual_surfaces,
         *comparison_surfaces,
+        *internal_harness_surfaces,
         *policy_recipe_surfaces,
         *mechanism_root_surfaces,
     ]
@@ -1148,11 +1170,19 @@ def check_surface_policy(
     for spec in comparison_surfaces:
         violations.extend(_scan_classified_raw_surface(root, spec))
 
+    for spec in internal_harness_surfaces:
+        violations.extend(_scan_classified_raw_surface(root, spec))
+
     violations.extend(
         _scan_unclassified_public_examples(
             root,
             public_example_scan_roots,
-            [*default_surfaces, *advanced_manual_surfaces, *comparison_surfaces],
+            [
+                *default_surfaces,
+                *advanced_manual_surfaces,
+                *comparison_surfaces,
+                *internal_harness_surfaces,
+            ],
         )
     )
 

@@ -513,3 +513,8 @@ timestamp: 2026-06-30
   check is green again. Verification passed for `fret-examples` check, source-policy tests/gate,
   consumption-profile, execution-surface, layering, formatting, and whitespace gates; the check
   still reports the existing `fret-chart` dead-code warning for `visual_map_track_at`.
+- 2026-07-03: Phase 3 U13 internal-harness classification makes `internal_harness` a scanned
+  source-policy category. `docking_arbitration_demo.rs` and `plot_stress_demo.rs` moved out of
+  `advanced_manual` retirement records because they are conformance/stress infrastructure, not
+  copyable public examples waiting for wrapper replacement. Verification passed for source-policy
+  tests/gate, consumption-profile, execution-surface, layering, formatting, and whitespace gates.

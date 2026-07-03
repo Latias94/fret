@@ -32,6 +32,7 @@ def write(path: Path, text: str) -> None:
 
 def check_fixture_policy(root: Path, **kwargs):
     kwargs.setdefault("comparison_surfaces", [])
+    kwargs.setdefault("internal_harness_surfaces", [])
     return POLICY.check_surface_policy(root, **kwargs)
 
 
@@ -489,6 +490,69 @@ class SurfacePolicyTests(unittest.TestCase):
             )
             self.assertTrue(any("UiTree" in v.message for v in violations))
 
+    def test_internal_harness_allows_classified_raw_seam_without_retirement(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-examples/src/internal_harness.rs",
+                """
+                use fret_launch::FnDriver;
+                """,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[],
+                internal_harness_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/internal_harness.rs",
+                        "internal_harness",
+                        "fixture internal harness",
+                        owner="fixture-internal-harness",
+                        allowed_raw_seams=("fret_launch", "FnDriver"),
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+                public_example_scan_roots=["apps/fret-examples/src/internal_harness.rs"],
+            )
+
+            self.assertEqual([], violations)
+
+    def test_internal_harness_rejects_unlisted_raw_seam(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-examples/src/internal_harness.rs",
+                """
+                use fret_ui::UiTree;
+                """,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[],
+                internal_harness_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/internal_harness.rs",
+                        "internal_harness",
+                        "fixture internal harness",
+                        owner="fixture-internal-harness",
+                        allowed_raw_seams=("fret_ui",),
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            self.assertGreaterEqual(len(violations), 1)
+            self.assertTrue(
+                all(v.rule == "internal_harness-unlisted-raw-seam" for v in violations)
+            )
+            self.assertTrue(any("UiTree" in v.message for v in violations))
+
     def test_public_example_scan_root_can_target_exact_file(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -529,6 +593,22 @@ class SurfacePolicyTests(unittest.TestCase):
         self.assertIn(
             "apps/fret-examples/src/todo_demo.rs",
             POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS,
+        )
+        self.assertIn(
+            "apps/fret-examples/src/plot_stress_demo.rs",
+            POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS,
+        )
+        self.assertTrue(
+            any(
+                spec.path == "apps/fret-examples/src/plot_stress_demo.rs"
+                for spec in POLICY.INTERNAL_HARNESS_SURFACES
+            )
+        )
+        self.assertFalse(
+            any(
+                spec.path == "apps/fret-examples/src/plot_stress_demo.rs"
+                for spec in POLICY.ADVANCED_MANUAL_SURFACES
+            )
         )
         self.assertNotIn("apps/fret-examples/src", POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS)
 
