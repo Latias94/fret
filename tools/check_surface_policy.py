@@ -219,6 +219,26 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
         ),
     ),
     SurfacePath(
+        "apps/fret-examples-imui/src",
+        "advanced_manual",
+        (
+            "IMUI example app is an explicit immediate-mode interop lane that still demonstrates "
+            "raw local-state model binding and low-level element/context hooks"
+        ),
+        owner="examples-imui",
+        allowed_raw_seams=(
+            "fret::advanced",
+            "fret_core",
+            "fret_ui",
+            "AnyElement",
+            "ElementContext",
+        ),
+        retirement=(
+            "Remove raw local-state model hooks and low-level element/context imports after IMUI "
+            "controls expose app-facing bindings for model, update, and context-owned reads"
+        ),
+    ),
+    SurfacePath(
         "crates/fret-framework/src/lib.rs",
         "advanced_manual",
         "fret-framework is the manual assembly facade, not the default app crate",
@@ -433,13 +453,17 @@ def _scan_default_authoring_surface(root: Path, spec: SurfacePath) -> list[Surfa
 def _scan_advanced_manual_surface(root: Path, spec: SurfacePath) -> list[SurfaceViolation]:
     violations: list[SurfaceViolation] = []
     allowed_raw_seams = set(spec.allowed_raw_seams)
+    used_raw_seams: set[str] = set()
     for path in _iter_source_files(root / spec.path):
         text = _read_text(path)
         for line_no, line in _code_lines_for_scan(path, text):
             if path.suffix == ".rs" and _is_rust_source_line_ignorable(line):
                 continue
             for seam, pattern in RAW_SEAM_PATTERNS:
-                if seam in allowed_raw_seams or not pattern.search(line):
+                if not pattern.search(line):
+                    continue
+                used_raw_seams.add(seam)
+                if seam in allowed_raw_seams:
                     continue
                 violations.append(
                     SurfaceViolation(
@@ -453,6 +477,18 @@ def _scan_advanced_manual_surface(root: Path, spec: SurfacePath) -> list[Surface
                         source=line.strip(),
                     )
                 )
+    for seam in sorted(allowed_raw_seams - used_raw_seams):
+        violations.append(
+            SurfaceViolation(
+                rule="advanced-surface-unused-allowed-raw-seam",
+                path=root / spec.path,
+                line_no=1,
+                message=(
+                    f"advanced/manual surface lists raw seam `{seam}` in allowed_raw_seams, "
+                    "but the seam is no longer used; shrink the quarantine record"
+                ),
+            )
+        )
     return violations
 
 

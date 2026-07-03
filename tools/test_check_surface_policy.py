@@ -207,6 +207,37 @@ class SurfacePolicyTests(unittest.TestCase):
             )
             self.assertTrue(any("UiTree" in v.message for v in violations))
 
+    def test_advanced_manual_surface_rejects_unused_allowed_raw_seam(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/manual.rs",
+                """
+                use fret_ui::element::AnyElement;
+                """,
+            )
+
+            violations = POLICY.check_surface_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/manual.rs",
+                        "advanced_manual",
+                        "fixture manual assembly surface",
+                        owner="fixture-owner",
+                        allowed_raw_seams=("fret_ui", "AnyElement", "UiTree"),
+                        retirement="fixture retires once public UI wrappers cover this path",
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            self.assertEqual(len(violations), 1)
+            self.assertEqual(violations[0].rule, "advanced-surface-unused-allowed-raw-seam")
+            self.assertIn("UiTree", violations[0].message)
+
     def test_default_starter_raw_advanced_import_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

@@ -1,9 +1,10 @@
 use std::sync::Arc;
 
+use fret::app::AppComponentCx;
+use fret::app::prelude::*;
 use fret::component::prelude::*;
 use fret::{
     FretApp,
-    advanced::prelude::*,
     assets::{self, AssetBundleId, AssetLocator, AssetRequest, AssetRevision, StaticAssetEntry},
     integration::InstallIntoApp,
     shadcn,
@@ -72,7 +73,7 @@ fn render_image_preview(
     cx: &mut AppComponentCx<'_>,
     title: &'static str,
     image: Option<ImageId>,
-) -> impl IntoUiElement<KernelApp> + use<> {
+) -> impl IntoUiElement<App> + use<> {
     let theme = cx.theme_snapshot();
     let border = ColorRef::Color(theme.color_token("border"));
 
@@ -107,7 +108,7 @@ struct IconsAndAssetsBasicsView {
 }
 
 impl View for IconsAndAssetsBasicsView {
-    fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self {
+    fn init(_app: &mut App, _window: WindowId) -> Self {
         let bundle_image_request = AssetRequest::new(AssetLocator::bundle(
             demo_package_bundle(),
             PACKAGE_IMAGE_KEY,

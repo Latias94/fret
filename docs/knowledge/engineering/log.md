@@ -449,3 +449,11 @@ timestamp: 2026-06-30
   import raw hooks through `advanced::raw`. Verification passed for `fret` lib nextest,
   `fret-cookbook` all-targets/lib checks, surface, layering, consumption-profile,
   execution-surface, formatting, and diff gates.
+- 2026-07-03: Phase 3 U13 cookbook/IMUI quarantine tightening migrates
+  `app_owned_bundle_assets_basics`, `drop_shadow_basics`, and `icons_and_assets_basics` from
+  `advanced::prelude::*` to the app surface, makes `fret-examples-imui` raw local-state traits
+  explicit through `advanced::raw`, registers the IMUI example app as an advanced/manual
+  source-policy surface, and adds `advanced-surface-unused-allowed-raw-seam` so quarantine records
+  must shrink as seams disappear. Verification passed for `fret-examples-imui` and
+  `fret-cookbook` checks, cookbook nextest, source-policy tests/gate, consumption-profile,
+  execution-surface, layering, ADR-number, workstream-catalog, wiki, formatting, and diff gates.

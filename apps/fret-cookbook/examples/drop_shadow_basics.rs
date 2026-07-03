@@ -12,8 +12,10 @@
 
 #![cfg(not(target_arch = "wasm32"))]
 
+use fret::app::AppComponentCx;
+use fret::app::prelude::*;
 use fret::component::prelude::*;
-use fret::{FretApp, advanced::prelude::*, shadcn};
+use fret::{FretApp, shadcn};
 use fret_core::Point;
 use fret_core::scene::{Color, DropShadowV1, EffectChain, EffectMode, EffectStep};
 
@@ -45,7 +47,7 @@ fn shadow_card(
     title: String,
     enabled: bool,
     chain: EffectChain,
-) -> impl IntoUiElement<KernelApp> + use<> {
+) -> impl IntoUiElement<App> + use<> {
     let theme = cx.theme_snapshot();
     let background = ColorRef::Color(theme.color_token("background"));
     let border = ColorRef::Color(theme.color_token("border"));
@@ -85,7 +87,7 @@ fn shadow_card(
 }
 
 impl View for DropShadowBasicsView {
-    fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self {
+    fn init(_app: &mut App, _window: WindowId) -> Self {
         Self
     }
 

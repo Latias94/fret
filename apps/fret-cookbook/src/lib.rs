@@ -1008,8 +1008,6 @@ mod authoring_surface_policy_tests {
     fn advanced_examples_use_the_explicit_advanced_surface() {
         assert_uses_advanced_surface(DRAG_EXAMPLE);
         assert_uses_advanced_surface(EFFECTS_LAYER_EXAMPLE);
-        assert_uses_advanced_surface(DROP_SHADOW_EXAMPLE);
-        assert_uses_advanced_surface(ICONS_AND_ASSETS_EXAMPLE);
         assert_uses_advanced_surface(CANVAS_PAN_ZOOM_EXAMPLE);
         assert_uses_advanced_surface(CHART_INTERACTIONS_EXAMPLE);
         assert_uses_advanced_surface(CUSTOM_V1_EXAMPLE);
@@ -1210,6 +1208,21 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
+    fn low_risk_asset_and_effect_examples_use_the_app_surface() {
+        for src in [
+            APP_OWNED_BUNDLE_ASSETS_EXAMPLE,
+            DROP_SHADOW_EXAMPLE,
+            ICONS_AND_ASSETS_EXAMPLE,
+        ] {
+            assert_uses_app_surface(src);
+            assert!(src.contains("use fret::app::AppComponentCx;"));
+            assert!(!src.contains("advanced::prelude::*"));
+            assert!(!src.contains("advanced::raw::"));
+            assert!(!src.contains("use fret::advanced"));
+        }
+    }
+
+    #[test]
     fn theme_examples_use_curated_shadcn_theme_surface() {
         assert!(THEME_SWITCHING_EXAMPLE.contains("shadcn::themes::apply_shadcn_new_york("));
         assert!(THEME_SWITCHING_EXAMPLE.contains("shadcn::themes::ShadcnBaseColor::Slate"));
@@ -1245,7 +1258,7 @@ mod authoring_surface_policy_tests {
             &[
                 "fn shadow_card(",
                 "title: String,",
-                ") -> impl IntoUiElement<KernelApp> + use<>",
+                ") -> impl IntoUiElement<App> + use<>",
             ],
             &[
                 "let card = |cx: &mut ElementContext<'_, KernelApp>, title: String| -> AnyElement",
@@ -1259,7 +1272,7 @@ mod authoring_surface_policy_tests {
                 "ui::v_flex(|cx: &mut AppComponentCx<'_>| {",
                 "fn render_image_preview(",
                 "image: Option<ImageId>,",
-                ") -> impl IntoUiElement<KernelApp> + use<>",
+                ") -> impl IntoUiElement<App> + use<>",
             ],
             &[
                 "ui::v_flex(|cx: &mut ElementContext<'_, KernelApp>| {",

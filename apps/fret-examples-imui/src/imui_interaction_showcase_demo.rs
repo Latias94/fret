@@ -14,6 +14,9 @@
 
 use std::sync::Arc;
 
+use fret::advanced::raw::{
+    LocalStateElementContextExt as _, LocalStateModelStoreExt as _, LocalStateRawModelExt as _,
+};
 use fret::{FretApp, advanced::prelude::*, imui::prelude::*};
 use fret_core::Px;
 use fret_ui::Invalidation;

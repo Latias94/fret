@@ -11,6 +11,7 @@
 
 use std::sync::Arc;
 
+use fret::advanced::raw::{LocalStateModelStoreExt as _, LocalStateRawModelExt as _};
 use fret::{FretApp, advanced::prelude::*, imui::prelude::*};
 use fret_core::{Point, Px, Rect};
 

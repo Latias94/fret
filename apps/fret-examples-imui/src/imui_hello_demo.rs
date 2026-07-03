@@ -5,6 +5,9 @@
 //! Prefer `apps/fret-cookbook/examples/imui_action_basics.rs` for the generic/default immediate
 //! path, then `apps/fret-examples/src/imui_editor_proof_demo.rs` for the editor-grade path.
 
+use fret::advanced::raw::{
+    LocalStateElementContextExt as _, LocalStateModelStoreExt as _, LocalStateRawModelExt as _,
+};
 use fret::{FretApp, advanced::prelude::*, imui::prelude::*};
 
 const TEST_ID_COUNT_TEXT: &str = "imui-hello-demo.count-text";

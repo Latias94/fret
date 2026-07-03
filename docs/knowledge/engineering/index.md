@@ -85,6 +85,7 @@ It is a sidecar for session recovery and subagent synthesis, not a replacement f
 - [Phase 3 U11 partial upload stream policy](progress/2026-07-03-phase3-u11-partial-upload-stream-policy.md)
 - [Phase 3 U12 public app facade cleanup](progress/2026-07-03-phase3-u12-public-app-facade-cleanup.md)
 - [Phase 3 U13 advanced raw and driver split](progress/2026-07-03-phase3-u13-advanced-raw-driver-split.md)
+- [Phase 3 U13 cookbook app-surface and IMUI quarantine tightening](progress/2026-07-03-phase3-u13-cookbook-imui-quarantine.md)
 - [Phase 3 U13 advanced facade audits](subagents/2026-07-03-phase3-u13-advanced-facade-audits.md)
 - [Phase 2 U4 boundary store audit](subagents/2026-07-02-phase2-u4-boundary-store-audit.md)
 - [Phase 2 U4 durable ViewId audit](subagents/2026-07-02-phase2-u4-durable-viewid-audit.md)

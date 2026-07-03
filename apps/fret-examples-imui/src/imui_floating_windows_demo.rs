@@ -10,6 +10,7 @@
 
 use std::sync::Arc;
 
+use fret::advanced::raw::{LocalStateElementContextExt as _, LocalStateRawModelExt as _};
 use fret::{FretApp, advanced::prelude::*, imui::prelude::*};
 use fret_core::{Point, Px, Rect, SemanticsRole, Size};
 use fret_ui_kit::on_activate_notify;

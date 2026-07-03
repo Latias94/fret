@@ -1,7 +1,8 @@
+use fret::app::AppComponentCx;
+use fret::app::prelude::*;
 use fret::component::prelude::*;
 use fret::{
     FretApp,
-    advanced::prelude::*,
     assets::{
         AssetBundleId, AssetLocator, AssetRequest, AssetRevision, AssetStartupMode,
         AssetStartupPlan, StaticAssetEntry,
@@ -37,7 +38,7 @@ struct AppOwnedBundleAssetsBasicsView {
 }
 
 impl View for AppOwnedBundleAssetsBasicsView {
-    fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self {
+    fn init(_app: &mut App, _window: WindowId) -> Self {
         Self {
             image_request: AssetRequest::new(AssetLocator::bundle(demo_app_bundle(), IMAGE_KEY)),
             svg_request: AssetRequest::new(AssetLocator::bundle(demo_app_bundle(), SVG_KEY)),
@@ -110,7 +111,7 @@ fn render_image_panel(
     _cx: &mut AppComponentCx<'_>,
     theme: &ThemeSnapshot,
     state: fret_ui_assets::ImageSourceState,
-) -> impl IntoUiElement<KernelApp> + use<> {
+) -> impl IntoUiElement<App> + use<> {
     let status = match state.status {
         fret_ui_assets::image_asset_state::ImageLoadingStatus::Idle => "idle",
         fret_ui_assets::image_asset_state::ImageLoadingStatus::Loading => "loading",
@@ -208,7 +209,7 @@ fn render_svg_panel(
     _cx: &mut AppComponentCx<'_>,
     theme: &ThemeSnapshot,
     state: fret_ui_assets::ui::SvgAssetSourceState,
-) -> impl IntoUiElement<KernelApp> + use<> {
+) -> impl IntoUiElement<App> + use<> {
     let status = if state.error.is_some() {
         "error"
     } else if state.source.is_some() {
