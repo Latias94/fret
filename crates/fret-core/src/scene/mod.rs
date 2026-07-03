@@ -21,12 +21,14 @@ mod validate;
 pub use chunk::{
     SceneChunk, SceneChunkClosureMetadata, SceneChunkClosureUnsupportedReason,
     SceneChunkDrawStreamSummary, SceneChunkOpRange, SceneChunkResourceClosure,
-    SceneChunkScopeClosure, SceneChunkScopeKind,
+    SceneChunkScopeClosure, SceneChunkScopeKind, SceneChunkSideTableRequirements,
 };
 pub use composite::{BlendMode, CompositeGroupDesc};
 use fingerprint::mix_scene_op;
 pub use image_object_fit::{ImageObjectFitMapped, map_image_object_fit};
-pub use manifest::{SceneChunkManifest, SceneChunkManifestEntry};
+pub use manifest::{
+    SceneChunkManifest, SceneChunkManifestEntry, SceneChunkManifestUnsupportedReason,
+};
 pub use mask::Mask;
 pub use paint::{
     ColorSpace, GradientStop, LinearGradient, MAX_STOPS, MaterialParams, Paint, PaintBindingV1,
@@ -1573,6 +1575,48 @@ mod tests {
     }
 
     #[test]
+    fn scene_chunk_manifest_reports_side_table_requirements_for_balanced_scopes() {
+        let chunk = SceneChunk::from_ops(std::sync::Arc::<[SceneOp]>::from(vec![
+            SceneOp::PushClipRRect {
+                rect: Rect::new(Point::default(), Size::new(Px(10.0), Px(10.0))),
+                corner_radii: Corners::all(Px(2.0)),
+            },
+            SceneOp::Quad {
+                order: DrawOrder(0),
+                rect: Rect::new(Point::default(), Size::new(Px(10.0), Px(10.0))),
+                background: Paint::TRANSPARENT.into(),
+                border: Edges::all(Px(0.0)),
+                border_paint: Paint::TRANSPARENT.into(),
+                corner_radii: Corners::all(Px(0.0)),
+            },
+            SceneOp::PopClip,
+        ]));
+        assert!(chunk.closure().scope_unsupported_reasons().is_empty());
+        assert_eq!(chunk.closure().side_table_requirements().clip_scopes, 1);
+
+        let mut manifest = SceneChunkManifest::default();
+        manifest.push(SceneChunkManifestEntry::new(
+            chunk,
+            Rect::new(Point::default(), Size::new(Px(10.0), Px(10.0))),
+            Point::default(),
+        ));
+
+        assert_eq!(manifest.side_table_requirements().clip_scopes, 1);
+        assert_eq!(
+            manifest.assembly_unsupported_reasons(),
+            vec![
+                SceneChunkManifestUnsupportedReason::EntrySideTableRequired {
+                    entry_index: 0,
+                    requirements: SceneChunkSideTableRequirements {
+                        clip_scopes: 1,
+                        ..Default::default()
+                    },
+                }
+            ]
+        );
+    }
+
+    #[test]
     fn scene_chunk_translated_replay_wraps_ops_and_keeps_chunk_fingerprint_stable() {
         let first = text_blob_id(1);
         let ops = std::sync::Arc::<[SceneOp]>::from(vec![text_op(first)]);
@@ -1613,7 +1657,11 @@ mod tests {
         assert_eq!(manifest.len(), 1);
         assert_eq!(manifest.ops_len(), 1);
         assert_ne!(manifest.fingerprint(), 0);
+        assert_ne!(manifest.resource_fingerprint(), 0);
+        assert_eq!(manifest.draw_streams().text_ops, 1);
+        assert_eq!(manifest.entries()[0].order_index(), 0);
         assert_ne!(manifest.entries()[0].fingerprint(), chunk.fingerprint());
+        assert_ne!(manifest.entries()[0].ordered_fingerprint(), 0);
         assert_eq!(manifest.entries()[0].local_bounds().size.width, Px(10.0));
         assert_eq!(
             manifest.entries()[0].scene_origin(),
@@ -1644,6 +1692,8 @@ mod tests {
         let mut ordered = SceneChunkManifest::default();
         ordered.push(entry_a.clone());
         ordered.push(entry_b.clone());
+        assert_eq!(ordered.entries()[0].order_index(), 0);
+        assert_eq!(ordered.entries()[1].order_index(), 1);
         let mut reversed = SceneChunkManifest::default();
         reversed.push(entry_b);
         reversed.push(entry_a.clone());
@@ -1658,6 +1708,10 @@ mod tests {
         assert!(manifest.is_empty());
         assert_eq!(manifest.ops_len(), 0);
         assert_eq!(manifest.fingerprint(), 0);
+        assert_eq!(
+            manifest.assembly_unsupported_reasons(),
+            vec![SceneChunkManifestUnsupportedReason::EmptyManifest]
+        );
     }
 
     #[test]

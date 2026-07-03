@@ -371,7 +371,12 @@ impl fret_ui::tree::BoundarySceneFragmentDebug for RowSceneReplayPlan {
             .filter(|entry| !entry.retained.chunk.is_empty())
             .fold(0, |fingerprint, entry| {
                 let row = entry.row as u64;
-                let chunk = entry.retained.chunk.fingerprint();
+                let chunk = fret_core::SceneChunkManifestEntry::new(
+                    entry.retained.chunk.clone(),
+                    entry.local_bounds,
+                    entry.retained.origin_for_local_bounds(entry.local_bounds),
+                )
+                .fingerprint();
                 fingerprint
                     .rotate_left(7)
                     .wrapping_add(chunk ^ row.wrapping_mul(MIX))

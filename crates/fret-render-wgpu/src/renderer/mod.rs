@@ -231,7 +231,7 @@ pub enum ChunkLaunchStreamClass {
 pub enum ChunkLaunchUnsupportedReason {
     NoManifest,
     EmptyManifest,
-    StreamNotPromoted(ChunkLaunchStreamClass),
+    ManifestUnsupported(fret_core::SceneChunkManifestUnsupportedReason),
     MixedStreams,
 }
 
@@ -309,47 +309,63 @@ pub struct ChunkLaunchSupportMatrix;
 
 impl ChunkLaunchSupportMatrix {
     pub fn evaluate(manifest: &fret_core::SceneChunkManifest) -> ChunkLaunchSupport {
-        let mut stream_class = None;
-        for entry in manifest.entries() {
-            let entry_class = if entry.chunk().closure().is_resource_free_quad_only() {
-                ChunkLaunchStreamClass::ResourceFreeQuad
-            } else if entry.chunk().closure().is_resource_free_vertex_color_only() {
-                ChunkLaunchStreamClass::ResourceFreeVertexColor
-            } else {
-                ChunkLaunchStreamClass::Mixed
-            };
-
-            stream_class = match (stream_class, entry_class) {
-                (None, class) => Some(class),
-                (Some(existing), class) if existing == class => Some(existing),
-                _ => Some(ChunkLaunchStreamClass::Mixed),
-            };
-        }
+        let stream_class = manifest_stream_class(manifest);
 
         match stream_class {
             None => ChunkLaunchSupport::Unsupported {
                 stream_class: None,
                 reason: ChunkLaunchUnsupportedReason::EmptyManifest,
             },
-            Some(ChunkLaunchStreamClass::ResourceFreeQuad) => ChunkLaunchSupport::Supported {
-                stream_class: ChunkLaunchStreamClass::ResourceFreeQuad,
-            },
-            Some(ChunkLaunchStreamClass::ResourceFreeVertexColor) => {
-                ChunkLaunchSupport::Unsupported {
-                    stream_class: Some(ChunkLaunchStreamClass::ResourceFreeVertexColor),
-                    reason: ChunkLaunchUnsupportedReason::StreamNotPromoted(
-                        ChunkLaunchStreamClass::ResourceFreeVertexColor,
-                    ),
+            Some(stream_class) => {
+                if let Some(reason) = manifest.assembly_unsupported_reasons().first().copied() {
+                    return ChunkLaunchSupport::Unsupported {
+                        stream_class: Some(stream_class),
+                        reason: ChunkLaunchUnsupportedReason::ManifestUnsupported(reason),
+                    };
+                }
+
+                match stream_class {
+                    ChunkLaunchStreamClass::ResourceFreeQuad => ChunkLaunchSupport::Supported {
+                        stream_class: ChunkLaunchStreamClass::ResourceFreeQuad,
+                    },
+                    ChunkLaunchStreamClass::ResourceFreeVertexColor => {
+                        ChunkLaunchSupport::Supported {
+                            stream_class: ChunkLaunchStreamClass::ResourceFreeVertexColor,
+                        }
+                    }
+                    ChunkLaunchStreamClass::Mixed => ChunkLaunchSupport::Unsupported {
+                        stream_class: Some(ChunkLaunchStreamClass::Mixed),
+                        reason: ChunkLaunchUnsupportedReason::MixedStreams,
+                    },
                 }
             }
-            Some(ChunkLaunchStreamClass::Mixed) => ChunkLaunchSupport::Unsupported {
-                stream_class: Some(ChunkLaunchStreamClass::Mixed),
-                reason: ChunkLaunchUnsupportedReason::MixedStreams,
-            },
         }
     }
 }
 
+fn manifest_stream_class(
+    manifest: &fret_core::SceneChunkManifest,
+) -> Option<ChunkLaunchStreamClass> {
+    let mut stream_class = None;
+    for entry in manifest.entries() {
+        let streams = entry.chunk().closure().draw_streams();
+        let entry_class = if streams.is_quad_only() {
+            ChunkLaunchStreamClass::ResourceFreeQuad
+        } else if streams.is_vertex_color_only() {
+            ChunkLaunchStreamClass::ResourceFreeVertexColor
+        } else {
+            ChunkLaunchStreamClass::Mixed
+        };
+
+        stream_class = match (stream_class, entry_class) {
+            (None, class) => Some(class),
+            (Some(existing), class) if existing == class => Some(existing),
+            _ => Some(ChunkLaunchStreamClass::Mixed),
+        };
+    }
+
+    stream_class
+}
 pub fn select_render_scene_source<'a>(
     scene: &'a Scene,
     manifest: &'a fret_core::SceneChunkManifest,

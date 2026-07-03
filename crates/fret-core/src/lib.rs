@@ -94,9 +94,10 @@ pub use scene::{
     EffectMode, EffectParamsV1, EffectQuality, EffectStep, GradientStop, LinearGradient, MAX_STOPS,
     MaterialParams, Paint, RadialGradient, Scene, SceneChunk, SceneChunkClosureMetadata,
     SceneChunkClosureUnsupportedReason, SceneChunkDrawStreamSummary, SceneChunkManifest,
-    SceneChunkManifestEntry, SceneChunkOpRange, SceneChunkResourceClosure, SceneChunkScopeClosure,
-    SceneChunkScopeKind, SceneMeshVertex, SceneOp, SceneRecording, SceneValidationError,
-    SceneValidationErrorKind, SweepGradient, TileMode, UvPoint, UvRect,
+    SceneChunkManifestEntry, SceneChunkManifestUnsupportedReason, SceneChunkOpRange,
+    SceneChunkResourceClosure, SceneChunkScopeClosure, SceneChunkScopeKind,
+    SceneChunkSideTableRequirements, SceneMeshVertex, SceneOp, SceneRecording,
+    SceneValidationError, SceneValidationErrorKind, SweepGradient, TileMode, UvPoint, UvRect,
 };
 pub use semantics::{
     SemanticsActions, SemanticsCheckedState, SemanticsFlags, SemanticsInlineSpan, SemanticsInvalid,

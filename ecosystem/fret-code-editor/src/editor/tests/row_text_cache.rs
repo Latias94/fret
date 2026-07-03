@@ -635,11 +635,20 @@ fn row_scene_replay_plan_reports_scene_chunk_debug_metadata() {
     let mut manifest = fret_ui::tree::BoundarySceneChunkManifest::default();
     plan.append_boundary_scene_fragment_chunks(&mut manifest);
     assert_eq!(manifest.len(), 1);
-    assert_eq!(manifest.chunks()[0].fingerprint(), chunk_fingerprint);
+    assert_ne!(manifest.chunks()[0].fingerprint(), chunk_fingerprint);
     assert_eq!(manifest.chunks()[0].local_bounds(), replay_bounds);
     assert_eq!(
         manifest.chunks()[0].scene_origin(),
         Point::new(Px(14.0), Px(36.0))
+    );
+    assert_eq!(
+        manifest.chunks()[0].fingerprint(),
+        fret_core::SceneChunkManifestEntry::new(
+            manifest.chunks()[0].chunk().clone(),
+            replay_bounds,
+            Point::new(Px(14.0), Px(36.0)),
+        )
+        .fingerprint()
     );
 }
 

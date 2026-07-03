@@ -107,6 +107,9 @@ Must-be-true outcomes for the next convergence pass:
   Current source-selection evidence lives in `crates/fret-render-wgpu/src/renderer/mod.rs`, while
   renderer-owned chunk payload/cache assembly state lives behind
   `crates/fret-render-wgpu/src/renderer/render_scene/frame_assembler.rs`.
+  Manifest closure evidence lives in `crates/fret-core/src/scene/manifest.rs` and
+  `crates/fret-core/src/scene/chunk.rs`; boundary scene chunk diagnostics use entry
+  bounds/origin-sensitive fingerprints from `crates/fret-ui/src/tree/view_boundary.rs`.
 - Text chunk/resource closure is not complete until WGPU `TextShape` residency metadata preserves
   shaping cluster/run facts for ligatures, RTL, combining marks, fallback font runs,
   selection/caret, decorations, and atlas reset generation.

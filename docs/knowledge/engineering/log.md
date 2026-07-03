@@ -411,3 +411,12 @@ timestamp: 2026-06-30
   `render_scene scene_chunk source_selection` nextest filters, static old-constructor search,
   formatting, whitespace, layering, surface, consumption-profile, execution-surface, ADR-number,
   and workstream-catalog gates.
+- 2026-07-03: Phase 3 U9 manifest closure v2 slice adds explicit manifest entry order identity,
+  aggregate draw stream/resource/side-table closure, and structured assembly unsupported reasons.
+  `ChunkLaunchSupportMatrix` now supports resource-free quad and vertex-color manifests, blocks
+  side-table/resource manifests with manifest unsupported reasons, and `FrameAssembler` relocates
+  vertex-color `viewport_vertices` plus `first_vertex`/`uniform_index`. Boundary scene chunk
+  diagnostics now use bounds/origin-sensitive entry fingerprints instead of naked chunk
+  fingerprints or XOR-only summaries. Verification passed for `fret-core`, `fret-render-wgpu`,
+  `fret-render`, `fret-ui`, and `fret-code-editor` focused checks plus manifest/renderer/UI
+  nextest coverage.

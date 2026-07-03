@@ -1,4 +1,7 @@
-use super::SceneChunk;
+use super::{
+    SceneChunk, SceneChunkClosureUnsupportedReason, SceneChunkDrawStreamSummary,
+    SceneChunkSideTableRequirements,
+};
 use crate::geometry::{Point, Rect};
 
 #[derive(Debug, Clone)]
@@ -6,6 +9,7 @@ pub struct SceneChunkManifestEntry {
     chunk: SceneChunk,
     local_bounds: Rect,
     scene_origin: Point,
+    order_index: u32,
 }
 
 impl SceneChunkManifestEntry {
@@ -14,6 +18,7 @@ impl SceneChunkManifestEntry {
             chunk,
             local_bounds,
             scene_origin,
+            order_index: 0,
         }
     }
 
@@ -29,7 +34,11 @@ impl SceneChunkManifestEntry {
         self.scene_origin
     }
 
-    pub fn fingerprint(&self) -> u64 {
+    pub fn order_index(&self) -> u32 {
+        self.order_index
+    }
+
+    pub fn content_fingerprint(&self) -> u64 {
         let mut hash = 0x982d_3fc7_c4f1_6a5bu64;
         hash = mix_u64(hash, self.chunk.fingerprint());
         hash = mix_u64(hash, self.chunk.closure().fingerprint());
@@ -37,6 +46,31 @@ impl SceneChunkManifestEntry {
         hash = mix_rect(hash, self.local_bounds);
         mix_point(hash, self.scene_origin)
     }
+
+    pub fn ordered_fingerprint(&self) -> u64 {
+        mix_u64(self.content_fingerprint(), u64::from(self.order_index))
+    }
+
+    pub fn fingerprint(&self) -> u64 {
+        self.content_fingerprint()
+    }
+
+    fn set_order_index(&mut self, order_index: u32) {
+        self.order_index = order_index;
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SceneChunkManifestUnsupportedReason {
+    EmptyManifest,
+    EntryScopeUnsupported {
+        entry_index: u32,
+        reason: SceneChunkClosureUnsupportedReason,
+    },
+    EntrySideTableRequired {
+        entry_index: u32,
+        requirements: SceneChunkSideTableRequirements,
+    },
 }
 
 #[derive(Debug, Default, Clone)]
@@ -45,8 +79,9 @@ pub struct SceneChunkManifest {
 }
 
 impl SceneChunkManifest {
-    pub fn push(&mut self, entry: SceneChunkManifestEntry) {
+    pub fn push(&mut self, mut entry: SceneChunkManifestEntry) {
         if !entry.chunk.is_empty() {
+            entry.set_order_index(u32::try_from(self.entries.len()).unwrap_or(u32::MAX));
             self.entries.push(entry);
         }
     }
@@ -70,6 +105,63 @@ impl SceneChunkManifest {
             .sum()
     }
 
+    pub fn draw_streams(&self) -> SceneChunkDrawStreamSummary {
+        let mut summary = SceneChunkDrawStreamSummary::default();
+        for entry in &self.entries {
+            summary.add_assign(entry.chunk().closure().draw_streams());
+        }
+        summary
+    }
+
+    pub fn side_table_requirements(&self) -> SceneChunkSideTableRequirements {
+        let mut requirements = SceneChunkSideTableRequirements::default();
+        for entry in &self.entries {
+            requirements.add_assign(entry.chunk().closure().side_table_requirements());
+        }
+        requirements
+    }
+
+    pub fn resource_fingerprint(&self) -> u64 {
+        if self.entries.is_empty() {
+            return 0;
+        }
+
+        let mut hash = 0xa736_6d65_2c4b_91e7u64;
+        hash = mix_u64(hash, self.entries.len() as u64);
+        for entry in &self.entries {
+            hash = mix_u64(hash, u64::from(entry.order_index()));
+            hash = mix_u64(hash, entry.chunk().closure().resource_fingerprint());
+        }
+        hash
+    }
+
+    pub fn assembly_unsupported_reasons(&self) -> Vec<SceneChunkManifestUnsupportedReason> {
+        if self.entries.is_empty() {
+            return vec![SceneChunkManifestUnsupportedReason::EmptyManifest];
+        }
+
+        let mut reasons = Vec::new();
+        for entry in &self.entries {
+            for &reason in entry.chunk().closure().scope_unsupported_reasons() {
+                reasons.push(SceneChunkManifestUnsupportedReason::EntryScopeUnsupported {
+                    entry_index: entry.order_index(),
+                    reason,
+                });
+            }
+
+            let requirements = entry.chunk().closure().side_table_requirements();
+            if !requirements.is_empty() {
+                reasons.push(
+                    SceneChunkManifestUnsupportedReason::EntrySideTableRequired {
+                        entry_index: entry.order_index(),
+                        requirements,
+                    },
+                );
+            }
+        }
+        reasons
+    }
+
     pub fn fingerprint(&self) -> u64 {
         if self.entries.is_empty() {
             return 0;
@@ -77,7 +169,7 @@ impl SceneChunkManifest {
         let mut hash = 0x3c79_ac49_2ba7_b653u64;
         hash = mix_u64(hash, self.entries.len() as u64);
         for entry in &self.entries {
-            hash = mix_u64(hash, entry.fingerprint());
+            hash = mix_u64(hash, entry.ordered_fingerprint());
         }
         hash
     }

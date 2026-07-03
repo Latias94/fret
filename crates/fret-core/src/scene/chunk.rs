@@ -109,6 +109,17 @@ pub struct SceneChunkDrawStreamSummary {
 }
 
 impl SceneChunkDrawStreamSummary {
+    pub fn add_assign(&mut self, other: Self) {
+        self.quad_ops = self.quad_ops.saturating_add(other.quad_ops);
+        self.image_ops = self.image_ops.saturating_add(other.image_ops);
+        self.vertex_color_ops = self.vertex_color_ops.saturating_add(other.vertex_color_ops);
+        self.mask_image_ops = self.mask_image_ops.saturating_add(other.mask_image_ops);
+        self.svg_ops = self.svg_ops.saturating_add(other.svg_ops);
+        self.text_ops = self.text_ops.saturating_add(other.text_ops);
+        self.path_ops = self.path_ops.saturating_add(other.path_ops);
+        self.viewport_ops = self.viewport_ops.saturating_add(other.viewport_ops);
+    }
+
     pub fn draw_ops(self) -> u32 {
         self.quad_ops
             .saturating_add(self.image_ops)
@@ -126,6 +137,62 @@ impl SceneChunkDrawStreamSummary {
 
     pub fn is_vertex_color_only(self) -> bool {
         self.vertex_color_ops > 0 && self.draw_ops() == self.vertex_color_ops
+    }
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub struct SceneChunkSideTableRequirements {
+    pub clip_scopes: u32,
+    pub mask_scopes: u32,
+    pub effect_scopes: u32,
+    pub backdrop_source_scopes: u32,
+    pub composite_scopes: u32,
+    pub image_resources: u32,
+    pub svg_resources: u32,
+    pub path_resources: u32,
+    pub text_blob_resources: u32,
+    pub material_resources: u32,
+    pub effect_resources: u32,
+    pub render_target_resources: u32,
+}
+
+impl SceneChunkSideTableRequirements {
+    pub fn is_empty(self) -> bool {
+        self.clip_scopes == 0
+            && self.mask_scopes == 0
+            && self.effect_scopes == 0
+            && self.backdrop_source_scopes == 0
+            && self.composite_scopes == 0
+            && self.image_resources == 0
+            && self.svg_resources == 0
+            && self.path_resources == 0
+            && self.text_blob_resources == 0
+            && self.material_resources == 0
+            && self.effect_resources == 0
+            && self.render_target_resources == 0
+    }
+
+    pub fn add_assign(&mut self, other: Self) {
+        self.clip_scopes = self.clip_scopes.saturating_add(other.clip_scopes);
+        self.mask_scopes = self.mask_scopes.saturating_add(other.mask_scopes);
+        self.effect_scopes = self.effect_scopes.saturating_add(other.effect_scopes);
+        self.backdrop_source_scopes = self
+            .backdrop_source_scopes
+            .saturating_add(other.backdrop_source_scopes);
+        self.composite_scopes = self.composite_scopes.saturating_add(other.composite_scopes);
+        self.image_resources = self.image_resources.saturating_add(other.image_resources);
+        self.svg_resources = self.svg_resources.saturating_add(other.svg_resources);
+        self.path_resources = self.path_resources.saturating_add(other.path_resources);
+        self.text_blob_resources = self
+            .text_blob_resources
+            .saturating_add(other.text_blob_resources);
+        self.material_resources = self
+            .material_resources
+            .saturating_add(other.material_resources);
+        self.effect_resources = self.effect_resources.saturating_add(other.effect_resources);
+        self.render_target_resources = self
+            .render_target_resources
+            .saturating_add(other.render_target_resources);
     }
 }
 
@@ -246,6 +313,25 @@ impl SceneChunkClosureMetadata {
         self.is_scope_closed()
             && self.resources.is_empty()
             && self.draw_streams.is_vertex_color_only()
+    }
+
+    pub fn side_table_requirements(&self) -> SceneChunkSideTableRequirements {
+        let resources = self.resources();
+        SceneChunkSideTableRequirements {
+            clip_scopes: self.scope(SceneChunkScopeKind::Clip).pushes,
+            mask_scopes: self.scope(SceneChunkScopeKind::Mask).pushes,
+            effect_scopes: self.scope(SceneChunkScopeKind::Effect).pushes,
+            backdrop_source_scopes: self.scope(SceneChunkScopeKind::BackdropSource).pushes,
+            composite_scopes: self.scope(SceneChunkScopeKind::Composite).pushes,
+            image_resources: u32::try_from(resources.images().len()).unwrap_or(u32::MAX),
+            svg_resources: u32::try_from(resources.svgs().len()).unwrap_or(u32::MAX),
+            path_resources: u32::try_from(resources.paths().len()).unwrap_or(u32::MAX),
+            text_blob_resources: u32::try_from(resources.text_blobs().len()).unwrap_or(u32::MAX),
+            material_resources: u32::try_from(resources.materials().len()).unwrap_or(u32::MAX),
+            effect_resources: u32::try_from(resources.effects().len()).unwrap_or(u32::MAX),
+            render_target_resources: u32::try_from(resources.render_targets().len())
+                .unwrap_or(u32::MAX),
+        }
     }
 
     fn from_ops(ops: &[SceneOp], text_blob_ids: &[TextBlobId]) -> Self {

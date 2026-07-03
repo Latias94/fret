@@ -1416,7 +1416,7 @@ fn source_selection_flat_compat_keeps_manifest_as_assembly_sidecar() {
 }
 
 #[test]
-fn source_selection_does_not_promote_vertex_color_before_support_matrix_allows_it() {
+fn source_selection_promotes_resource_free_vertex_color_manifest() {
     let points = [
         Point::new(Px(0.0), Px(0.0)),
         Point::new(Px(10.0), Px(0.0)),
@@ -1451,14 +1451,68 @@ fn source_selection_does_not_promote_vertex_color_before_support_matrix_allows_i
 
     assert!(matches!(
         selection.source(),
+        super::RenderSceneSource::ChunkManifest { .. }
+    ));
+    assert_eq!(
+        selection.chunk_support(),
+        super::ChunkLaunchSupport::Supported {
+            stream_class: super::ChunkLaunchStreamClass::ResourceFreeVertexColor,
+        }
+    );
+}
+
+#[test]
+fn source_selection_blocks_side_table_manifest_with_structured_reason() {
+    let mut scene = Scene::default();
+    scene.push(SceneOp::PushClipRRect {
+        rect: Rect::new(Point::default(), Size::new(Px(10.0), Px(10.0))),
+        corner_radii: Corners::all(Px(2.0)),
+    });
+    scene.push(SceneOp::Quad {
+        order: DrawOrder(0),
+        rect: Rect::new(Point::default(), Size::new(Px(10.0), Px(10.0))),
+        background: Color {
+            r: 1.0,
+            g: 1.0,
+            b: 1.0,
+            a: 1.0,
+        }
+        .into(),
+        border: fret_core::Edges::all(Px(0.0)),
+        border_paint: Color::TRANSPARENT.into(),
+        corner_radii: Corners::all(Px(0.0)),
+    });
+    scene.push(SceneOp::PopClip);
+    let chunk = fret_core::SceneChunk::from_scene(&scene);
+    let mut manifest = fret_core::SceneChunkManifest::default();
+    manifest.push(fret_core::SceneChunkManifestEntry::new(
+        chunk,
+        Rect::new(Point::default(), Size::new(Px(10.0), Px(10.0))),
+        Point::default(),
+    ));
+
+    let selection = super::select_render_scene_source(
+        &scene,
+        &manifest,
+        super::RenderSceneSourcePolicy::chunk_manifest_when_supported(),
+    );
+
+    assert!(matches!(
+        selection.source(),
         super::RenderSceneSource::FlatCompat { .. }
     ));
     assert_eq!(
         selection.chunk_support(),
         super::ChunkLaunchSupport::Unsupported {
-            stream_class: Some(super::ChunkLaunchStreamClass::ResourceFreeVertexColor),
-            reason: super::ChunkLaunchUnsupportedReason::StreamNotPromoted(
-                super::ChunkLaunchStreamClass::ResourceFreeVertexColor,
+            stream_class: Some(super::ChunkLaunchStreamClass::ResourceFreeQuad),
+            reason: super::ChunkLaunchUnsupportedReason::ManifestUnsupported(
+                fret_core::SceneChunkManifestUnsupportedReason::EntrySideTableRequired {
+                    entry_index: 0,
+                    requirements: fret_core::SceneChunkSideTableRequirements {
+                        clip_scopes: 1,
+                        ..Default::default()
+                    },
+                },
             ),
         }
     );

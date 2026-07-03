@@ -47,7 +47,12 @@ impl BoundarySceneFragmentChunk {
     }
 
     pub fn fingerprint(&self) -> u64 {
-        self.chunk.fingerprint()
+        fret_core::SceneChunkManifestEntry::new(
+            self.chunk.clone(),
+            self.local_bounds,
+            self.scene_origin,
+        )
+        .fingerprint()
     }
 }
 
@@ -76,9 +81,17 @@ impl BoundarySceneChunkManifest {
     }
 
     pub fn fingerprint(&self) -> u64 {
-        self.chunks
-            .iter()
-            .fold(0, |fingerprint, chunk| fingerprint ^ chunk.fingerprint())
+        if self.chunks.is_empty() {
+            return 0;
+        }
+
+        let mut fingerprint = 0x1db3_6ac1_4f5e_9d27u64;
+        fingerprint = mix_u64(fingerprint, self.chunks.len() as u64);
+        for (index, chunk) in self.chunks.iter().enumerate() {
+            fingerprint = mix_u64(fingerprint, index as u64);
+            fingerprint = mix_u64(fingerprint, chunk.fingerprint());
+        }
+        fingerprint
     }
 
     pub fn append_to_scene_chunk_manifest(&self, out: &mut fret_core::SceneChunkManifest) {
@@ -90,6 +103,12 @@ impl BoundarySceneChunkManifest {
             ));
         }
     }
+}
+
+fn mix_u64(mut state: u64, value: u64) -> u64 {
+    state ^= value.wrapping_add(0x9E37_79B9_7F4A_7C15);
+    state = state.rotate_left(7);
+    state.wrapping_mul(0xD6E8_FEB8_6659_FD93)
 }
 
 slotmap::new_key_type! {

@@ -97,6 +97,10 @@ The convergence target is GPUI-aligned but Fret-owned:
   Evidence anchors: `crates/fret-render-wgpu/src/renderer/mod.rs`
   (`RenderSceneSourceSelection`, `select_render_scene_source`, `ChunkLaunchSupportMatrix`) and
   `crates/fret-render-wgpu/src/renderer/render_scene/frame_assembler.rs` (`FrameAssembler`).
+  `fret_core::SceneChunkManifestEntry` now carries explicit order identity and manifest-level
+  `assembly_unsupported_reasons()` exposes scope and side-table requirements. The currently
+  authoritative resource-free frame classes are quad and vertex-color; clip/mask/effect/resource
+  classes remain structured unsupported until relocation is proven.
 - Text chunk closure must be shaping-aware before full-blob text helpers are retired: WGPU
   `TextShape` residency metadata should preserve cluster/run facts derived from `fret-render-text`
   so ligatures, RTL, combining marks, fallback font runs, selection/caret, decorations, and atlas

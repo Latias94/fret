@@ -70,14 +70,17 @@ impl Renderer {
         key: SceneEncodingCacheKey,
         scene_chunks: &fret_core::SceneChunkManifest,
         context: SceneChunkEncodingContext,
+        stream_class: ChunkLaunchStreamClass,
         perf_enabled: bool,
         trace_enabled: bool,
         render_scene_span: &tracing::Span,
         frame_perf: &mut RenderPerfStats,
     ) -> Option<(SceneEncoding, bool)> {
-        let assembled = self
-            .frame_assembler
-            .assemble_resource_free_quad_frame_encoding(scene_chunks, context)?;
+        let assembled = self.frame_assembler.assemble_supported_frame_encoding(
+            scene_chunks,
+            context,
+            stream_class,
+        )?;
         let (cached_encoding, cache_hit) = self.scene_encoding_state.begin_frame(
             key,
             perf_enabled,

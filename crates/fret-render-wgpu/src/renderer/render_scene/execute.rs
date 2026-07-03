@@ -119,6 +119,14 @@ impl Renderer {
 
         let (key, encoding, cache_hit) = match source {
             RenderSceneSource::ChunkManifest { manifest, .. } => {
+                let ChunkLaunchSupport::Supported { stream_class } =
+                    source_selection.chunk_support()
+                else {
+                    panic!(
+                        "authoritative scene chunk manifest selected without launch support: {:?}",
+                        source_selection.chunk_support()
+                    );
+                };
                 let key = self.build_scene_encoding_cache_key_for_scene_chunks(
                     format,
                     viewport_size,
@@ -131,6 +139,7 @@ impl Renderer {
                         key,
                         manifest,
                         scene_chunk_encoding_context,
+                        stream_class,
                         perf_enabled,
                         trace_enabled,
                         &render_scene_span,

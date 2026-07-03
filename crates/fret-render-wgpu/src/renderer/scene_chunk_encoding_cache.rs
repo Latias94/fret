@@ -283,22 +283,34 @@ impl SceneChunkEncodingKey {
 }
 
 impl SceneChunkEncodingState {
-    pub(super) fn assemble_resource_free_quad_frame_encoding(
+    pub(super) fn assemble_supported_frame_encoding(
         &self,
         manifest: &fret_core::SceneChunkManifest,
         context: SceneChunkEncodingContext,
+        stream_class: ChunkLaunchStreamClass,
     ) -> Option<SceneEncoding> {
         let mut encoding = SceneEncoding::default();
         for entry in manifest.entries() {
-            if !entry.chunk().closure().is_resource_free_quad_only() {
-                return None;
+            let closure = entry.chunk().closure();
+            match stream_class {
+                ChunkLaunchStreamClass::ResourceFreeQuad => {
+                    if !closure.is_resource_free_quad_only() {
+                        return None;
+                    }
+                }
+                ChunkLaunchStreamClass::ResourceFreeVertexColor => {
+                    if !closure.is_resource_free_vertex_color_only() {
+                        return None;
+                    }
+                }
+                ChunkLaunchStreamClass::Mixed => return None,
             }
             let key = SceneChunkEncodingKey::new(context, entry, 0);
             let payload = self.payloads.get(&key)?;
             if payload.append_only_reassembly_blocker().is_some() {
                 return None;
             }
-            append_quad_payload_encoding(&mut encoding, &payload.encoding)?;
+            append_resource_free_payload_encoding(&mut encoding, &payload.encoding, stream_class)?;
         }
         Some(encoding)
     }
@@ -499,18 +511,24 @@ impl SceneChunkEncodingState {
     }
 }
 
-fn append_quad_payload_encoding(dst: &mut SceneEncoding, src: &SceneEncoding) -> Option<()> {
+fn append_resource_free_payload_encoding(
+    dst: &mut SceneEncoding,
+    src: &SceneEncoding,
+    stream_class: ChunkLaunchStreamClass,
+) -> Option<()> {
     let instance_base = u32::try_from(dst.instances.len()).ok()?;
+    let viewport_vertex_base = u32::try_from(dst.viewport_vertices.len()).ok()?;
     let uniform_base = u32::try_from(dst.uniforms.len()).ok()?;
 
     dst.instances.extend_from_slice(&src.instances);
+    dst.viewport_vertices
+        .extend_from_slice(&src.viewport_vertices);
     dst.uniforms.extend_from_slice(&src.uniforms);
     dst.uniform_mask_images
         .extend_from_slice(&src.uniform_mask_images);
 
     if src.path_paints.is_empty()
         && src.text_paints.is_empty()
-        && src.viewport_vertices.is_empty()
         && src.text_glyph_instances.is_empty()
         && src.text_vertices.is_empty()
         && src.path_vertices.is_empty()
@@ -519,13 +537,40 @@ fn append_quad_payload_encoding(dst: &mut SceneEncoding, src: &SceneEncoding) ->
         && src.masks.is_empty()
         && src.effect_markers.is_empty()
     {
-        for draw in &src.ordered_draws {
-            let OrderedDraw::Quad(mut quad) = *draw else {
+        match stream_class {
+            ChunkLaunchStreamClass::ResourceFreeQuad if !src.viewport_vertices.is_empty() => {
                 return None;
-            };
-            quad.first_instance = quad.first_instance.checked_add(instance_base)?;
-            quad.uniform_index = quad.uniform_index.checked_add(uniform_base)?;
-            dst.ordered_draws.push(OrderedDraw::Quad(quad));
+            }
+            ChunkLaunchStreamClass::ResourceFreeVertexColor if !src.instances.is_empty() => {
+                return None;
+            }
+            ChunkLaunchStreamClass::Mixed => return None,
+            _ => {}
+        }
+
+        for draw in &src.ordered_draws {
+            match (stream_class, draw) {
+                (ChunkLaunchStreamClass::ResourceFreeQuad, OrderedDraw::Quad(quad)) => {
+                    let mut quad = *quad;
+                    quad.first_instance = quad.first_instance.checked_add(instance_base)?;
+                    quad.uniform_index = quad.uniform_index.checked_add(uniform_base)?;
+                    dst.ordered_draws.push(OrderedDraw::Quad(quad));
+                }
+                (
+                    ChunkLaunchStreamClass::ResourceFreeVertexColor,
+                    OrderedDraw::VertexColor(vertex_color),
+                ) => {
+                    let mut vertex_color = *vertex_color;
+                    vertex_color.first_vertex = vertex_color
+                        .first_vertex
+                        .checked_add(viewport_vertex_base)?;
+                    vertex_color.uniform_index =
+                        vertex_color.uniform_index.checked_add(uniform_base)?;
+                    dst.ordered_draws
+                        .push(OrderedDraw::VertexColor(vertex_color));
+                }
+                _ => return None,
+            }
         }
         return Some(());
     }
@@ -840,7 +885,11 @@ mod tests {
         });
 
         let encoding = state
-            .assemble_resource_free_quad_frame_encoding(&frame, context(1))
+            .assemble_supported_frame_encoding(
+                &frame,
+                context(1),
+                ChunkLaunchStreamClass::ResourceFreeQuad,
+            )
             .expect("resource-free quad chunks should assemble");
 
         assert_eq!(encoding.instances.len(), 2);
@@ -856,6 +905,61 @@ mod tests {
         assert_eq!(first.first_instance, 0);
         assert_eq!(first.uniform_index, 0);
         assert_eq!(second.first_instance, 1);
+        assert_eq!(second.uniform_index, 1);
+    }
+
+    #[test]
+    fn resource_free_vertex_color_payloads_assemble_frame_encoding_with_relocated_indices() {
+        let mut state = SceneChunkEncodingState::default();
+        let frame = manifest(&[
+            SceneChunkManifestEntry::new(
+                SceneChunk::from_ops(Arc::from([vertex_color_quad_scene_op()])),
+                Rect::new(
+                    Point::default(),
+                    Size::new(fret_core::Px(10.0), fret_core::Px(10.0)),
+                ),
+                Point::default(),
+            ),
+            SceneChunkManifestEntry::new(
+                SceneChunk::from_ops(Arc::from([vertex_color_quad_scene_op()])),
+                Rect::new(
+                    Point::default(),
+                    Size::new(fret_core::Px(10.0), fret_core::Px(10.0)),
+                ),
+                Point::new(fret_core::Px(20.0), fret_core::Px(0.0)),
+            ),
+        ]);
+        state.begin_frame_with_payloads(Some(&frame), context(1), &[0, 0], |_| {
+            CachedSceneChunkEncoding::new(viewport_vertex_payload_encoding(
+                OrderedDraw::VertexColor(VertexColorDraw {
+                    scissor: ScissorRect::full(320, 200),
+                    uniform_index: 0,
+                    first_vertex: 0,
+                    vertex_count: 1,
+                }),
+            ))
+        });
+
+        let encoding = state
+            .assemble_supported_frame_encoding(
+                &frame,
+                context(1),
+                ChunkLaunchStreamClass::ResourceFreeVertexColor,
+            )
+            .expect("resource-free vertex-color chunks should assemble");
+
+        assert_eq!(encoding.viewport_vertices.len(), 2);
+        assert_eq!(encoding.uniforms.len(), 2);
+        assert_eq!(encoding.ordered_draws.len(), 2);
+        let OrderedDraw::VertexColor(first) = encoding.ordered_draws[0] else {
+            panic!("expected first vertex-color draw");
+        };
+        let OrderedDraw::VertexColor(second) = encoding.ordered_draws[1] else {
+            panic!("expected second vertex-color draw");
+        };
+        assert_eq!(first.first_vertex, 0);
+        assert_eq!(first.uniform_index, 0);
+        assert_eq!(second.first_vertex, 1);
         assert_eq!(second.uniform_index, 1);
     }
 
@@ -919,6 +1023,8 @@ mod tests {
 
     fn viewport_vertex_payload_encoding(draw: OrderedDraw) -> SceneEncoding {
         let mut encoding = SceneEncoding::default();
+        encoding.uniforms.push(bytemuck::Zeroable::zeroed());
+        encoding.uniform_mask_images.push(None);
         encoding
             .viewport_vertices
             .push(bytemuck::Zeroable::zeroed());

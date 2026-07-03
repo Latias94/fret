@@ -10,18 +10,16 @@ related_plan: docs/plans/2026-07-03-001-refactor-ui-framework-phase3-retained-br
 
 - Goal: execute `docs/plans/2026-07-03-001-refactor-ui-framework-phase3-retained-bridge-deletion-plan.md` as a breaking Phase 3 retained-bridge deletion refactor.
 - Branch: `feat/ui-framework-phase2-refactor`.
-- Last verified: Phase 3 U8 renderer source split and `FrameAssembler` slice passed relevant
-  renderer/facade/launch/app checks, focused `render_scene scene_chunk source_selection` nextest
-  filters, static old-source-constructor search, formatting, whitespace, layering, surface,
-  consumption-profile, execution-surface, ADR-number, and workstream-catalog gates on 2026-07-03.
-  Full `fret-ui` nextest still has a local long-running caveat for the two `stack_safety` deep-tree
-  tests.
-- Done: local ADR/workstream research, crate/perf snapshots, GPUI/Zed comparison, architecture boundary audit, framework consumer audit, performance audit, implementation-ready plan, U1 convergence contract freeze, U2 source-policy gate, U3 first slice (`workbench-lite` public scaffold), U4 identity/dirty graph observability slices, U5 `ViewId` / boundary frame-product ownership slices, U6 policy vocabulary demotion/cleanup slices, U7 renderer scene/upload observability plus retained scene chunk and guarded quad resident upload lanes, U8 text/glyph/wasm budget work through web runtime evidence, U9 modular consumption profiles and `AppUi` facade split, Phase 2 U9 VertexColor viewport partial upload, Phase 2 U10 workbench-lite public settings diagnostics, Phase 2 U11 public mutation/toast wrappers, workstream closeout audit, duplicate ADR ID `0324` resolution, and execution-surface allowlist alignment.
-- Latest done: Phase 3 U8 split renderer source selection into explicit `FlatCompat` and
-  `ChunkManifest` sources, added shared native/web `select_render_scene_source`, introduced
-  `ChunkLaunchSupportMatrix`, and moved scene chunk payload/cache assembly state behind renderer
-  `FrameAssembler`.
-- In progress: Phase 3 retained bridge closeout / U9 manifest closure and side-table relocation,
+- Last verified: Phase 3 U9 manifest closure v2 passed `fret-core`, `fret-render-wgpu`,
+  `fret-render`, `fret-ui`, and `fret-code-editor` focused checks plus manifest/renderer/UI
+  nextest coverage on 2026-07-03. Full `fret-ui` nextest still has a local long-running caveat for
+  the two `stack_safety` deep-tree tests.
+- Done: local ADR/workstream research, crate/perf snapshots, GPUI/Zed comparison, architecture boundary audit, framework consumer audit, performance audit, implementation-ready plan, U1 convergence contract freeze, U2 source-policy gate, U3 first slice (`workbench-lite` public scaffold), U4 identity/dirty graph observability slices, U5 `ViewId` / boundary frame-product ownership slices, U6 policy vocabulary demotion/cleanup slices, U7 renderer scene/upload observability plus retained scene chunk and guarded quad resident upload lanes, U8 text/glyph/wasm budget work through web runtime evidence, U9 modular consumption profiles and `AppUi` facade split, Phase 2 U9 VertexColor viewport partial upload, Phase 2 U10 workbench-lite public settings diagnostics, Phase 2 U11 public mutation/toast wrappers, Phase 3 U9 manifest closure v2, workstream closeout audit, duplicate ADR ID `0324` resolution, and execution-surface allowlist alignment.
+- Latest done: Phase 3 U9 promoted `SceneChunkManifest` into a fuller assembly contract with entry
+  order identity, aggregate stream/resource/side-table closure, structured unsupported reasons,
+  resource-free vertex-color authoritative assembly, and bounds/origin-sensitive boundary chunk
+  fingerprints.
+- In progress: Phase 3 retained bridge closeout / U10 normal launch to authoritative chunk manifest,
   with the
   [view boundary cache architecture research checkpoint](progress/2026-07-03-view-cache-architecture-research.md)
   confirming that the direction is correct and the
@@ -33,11 +31,12 @@ related_plan: docs/plans/2026-07-03-001-refactor-ui-framework-phase3-retained-br
   [text cluster residency slice](progress/2026-07-03-phase3-u6-text-cluster-residency.md), and
   [full-blob text helper scaffolding slice](progress/2026-07-03-phase3-u7-full-blob-text-helper-scaffolding.md)
   plus the [renderer source split and FrameAssembler slice](progress/2026-07-03-phase3-u8-render-source-frame-assembler.md)
-  leaving U9 to make `SceneChunkManifest` a fuller assembly contract.
+  and [manifest closure v2 slice](progress/2026-07-03-phase3-u9-manifest-closure-v2.md)
+  leaving U10 to route supported frame classes through authoritative chunk launch.
 - Blocked: none known after the boundary store migration.
-- Next action: implement U9 by extending manifest closure/unsupported-reason evidence and moving
-  side-table relocation proof behind `FrameAssembler` without moving normal launch behavior before
-  U10.
+- Next action: implement U10 by moving normal launch to authoritative `ChunkManifest` only for
+  supported resource-free frame classes; keep side-table/resource streams on `FlatCompat` until U11+
+  proves relocation and resource closure.
 
 # Citations
 
@@ -64,6 +63,8 @@ related_plan: docs/plans/2026-07-03-001-refactor-ui-framework-phase3-retained-br
 - [Phase 3 U7 full-blob text helper scaffolding](progress/2026-07-03-phase3-u7-full-blob-text-helper-scaffolding.md)
 - [Phase 3 U8 renderer source split and FrameAssembler](progress/2026-07-03-phase3-u8-render-source-frame-assembler.md)
 - [Phase 3 U8 FrameAssembler audits](subagents/2026-07-03-phase3-u8-frame-assembler-audits.md)
+- [Phase 3 U9 manifest closure v2](progress/2026-07-03-phase3-u9-manifest-closure-v2.md)
+- [Phase 3 U9 manifest closure audits](subagents/2026-07-03-phase3-u9-manifest-closure-audits.md)
 - [Phase 1 convergence plan](../../plans/2026-06-30-001-refactor-ui-framework-architecture-plan.md)
 - [Subagent Findings](subagents/2026-06-30-ui-framework-architecture-audit-findings.md)
 - [U9 AppUi shell split audit](subagents/2026-07-02-u9-appui-shell-split-audit.md)
