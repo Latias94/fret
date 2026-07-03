@@ -61,7 +61,7 @@ impl<H: UiHost> UiTree<H> {
         self.secondary_hit_test_for_roots(roots.as_slice(), position)
     }
 
-    fn snapshot_parent_or_retained(
+    fn snapshot_parent_or_child_edge(
         &self,
         snapshot: Option<&UiDispatchSnapshot>,
         node: NodeId,
@@ -78,7 +78,7 @@ impl<H: UiHost> UiTree<H> {
                 }
                 snapshot.parent.get(node).copied().flatten()
             }
-            None => self.nodes.get(node).and_then(|n| n.parent),
+            None => self.parent_in_layer_forest_via_children(node),
         }
     }
 
@@ -181,7 +181,7 @@ impl<H: UiHost> UiTree<H> {
                 {
                     return Some((record.element, id));
                 }
-                node = self.snapshot_parent_or_retained(snapshot, id);
+                node = self.snapshot_parent_or_child_edge(snapshot, id);
             }
             None
         })
@@ -418,7 +418,7 @@ impl<H: UiHost> UiTree<H> {
                     {
                         return Some((record.element, id));
                     }
-                    node = self.snapshot_parent_or_retained(snapshot, id);
+                    node = self.snapshot_parent_or_child_edge(snapshot, id);
                 }
                 None
             });

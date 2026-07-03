@@ -167,7 +167,7 @@ impl<H: UiHost> UiTree<H> {
                 Some(snapshot) if snapshot.pre.get(node_id).is_some() => {
                     snapshot.parent.get(node_id).copied().flatten()
                 }
-                _ => self.nodes.get(node_id).and_then(|n| n.parent),
+                _ => self.parent_in_layer_forest_via_children(node_id),
             };
             node_id = match parent {
                 Some(parent) => parent,

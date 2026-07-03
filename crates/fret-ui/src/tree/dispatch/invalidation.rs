@@ -81,11 +81,11 @@ impl<H: UiHost> UiTree<H> {
         let mut depth: u32 = 0;
         let mut current: Option<NodeId> = Some(node);
         while let Some(id) = current {
-            let Some(n) = self.nodes.get(id) else {
+            if !self.nodes.contains_key(id) {
                 break;
             };
             depth = depth.saturating_add(1);
-            current = n.parent;
+            current = self.parent_in_layer_forest_via_children(id);
         }
         depth
     }

@@ -2550,11 +2550,11 @@ impl<H: UiHost> UiTree<H> {
         // If the target itself is scrollable, attempting to scroll it “into view” via itself can
         // incorrectly mutate its offset (e.g. resetting a virtual list to top when it receives
         // focus).
-        let mut node = self.nodes.get(target).and_then(|n| n.parent);
+        let mut node = self.parent_in_layer_forest_via_children(target);
         let mut any_scrolled = false;
         let mut descendant_bounds = target_bounds;
         while let Some(id) = node {
-            let parent = self.nodes.get(id).and_then(|n| n.parent);
+            let parent = self.parent_in_layer_forest_via_children(id);
             node = parent;
 
             let Some(bounds) = self.nodes.get(id).map(|n| n.bounds) else {

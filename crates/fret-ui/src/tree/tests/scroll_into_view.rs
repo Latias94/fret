@@ -1,4 +1,5 @@
 use super::*;
+use crate::widget::{ScrollIntoViewCx, ScrollIntoViewResult};
 
 #[test]
 fn focus_traversal_scrolls_focused_descendant_into_view() {
@@ -247,6 +248,78 @@ fn scroll_node_into_view_does_not_scroll_scrollable_target_via_itself() {
         "expected scroll_node_into_view to avoid mutating the target's own offset: before={:?} after={:?}",
         before,
         after
+    );
+}
+
+#[test]
+fn scroll_node_into_view_uses_child_edges_under_stale_parent_pointers() {
+    struct SpyScroll {
+        calls: Arc<AtomicUsize>,
+    }
+
+    impl<H: UiHost> Widget<H> for SpyScroll {
+        fn can_scroll_descendant_into_view(&self) -> bool {
+            true
+        }
+
+        fn scroll_descendant_into_view(
+            &mut self,
+            _cx: &mut ScrollIntoViewCx<'_, H>,
+            _descendant_bounds: Rect,
+        ) -> ScrollIntoViewResult {
+            self.calls.fetch_add(1, Ordering::SeqCst);
+            ScrollIntoViewResult::Handled {
+                did_scroll: true,
+                propagated_bounds: None,
+            }
+        }
+
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            for &child in cx.children {
+                let _ = cx.layout_in(child, cx.bounds);
+            }
+            cx.available
+        }
+    }
+
+    let mut app = crate::test_host::TestHost::new();
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(AppWindowId::default());
+
+    let actual_calls = Arc::new(AtomicUsize::new(0));
+    let stale_calls = Arc::new(AtomicUsize::new(0));
+
+    let root = ui.create_node(TestStack);
+    let actual_scroll = ui.create_node(SpyScroll {
+        calls: actual_calls.clone(),
+    });
+    let stale_scroll = ui.create_node(SpyScroll {
+        calls: stale_calls.clone(),
+    });
+    let leaf = ui.create_node(TestStack);
+
+    ui.set_root(root);
+    ui.set_children(root, vec![actual_scroll, stale_scroll]);
+    ui.set_children(actual_scroll, vec![leaf]);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(100.0), Px(40.0)));
+    for id in [root, actual_scroll, stale_scroll, leaf] {
+        ui.nodes[id].bounds = bounds;
+        ui.nodes[id].measured_size = bounds.size;
+    }
+
+    ui.test_set_node_parent(leaf, Some(stale_scroll));
+
+    assert!(ui.scroll_node_into_view(&mut app, leaf));
+    assert_eq!(
+        actual_calls.load(Ordering::SeqCst),
+        1,
+        "scroll into view must use the actual child-edge scroll ancestor"
+    );
+    assert_eq!(
+        stale_calls.load(Ordering::SeqCst),
+        0,
+        "stale retained parents must not receive scroll-into-view requests"
     );
 }
 
