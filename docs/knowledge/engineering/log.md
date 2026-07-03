@@ -361,3 +361,11 @@ timestamp: 2026-06-30
   Verification passed for `cargo check -p fret-ui` and focused dirty/remove/view-cache/window
   snapshot tests, non-stack full `fret-ui` nextest, formatting, whitespace, layering, surface,
   consumption-profile, execution-surface, ADR-number, workstream-catalog, and wiki-memory gates.
+- 2026-07-03: Phase 3 U4 build-time view-cache membership slice deletes normal cache-hit retained
+  subtree touch/collect fallback helpers and the transition-reuse shim. View-cache membership is now
+  recorded from the built `AnyElement` subtree, including prebuilt child subtrees and empty nested
+  cache roots expanded from recorded child boundary membership. Cache-hit replay filters stale
+  recorded members instead of treating them as live proof. Verification passed for `cargo check -p
+  fret-ui`, focused view-cache/gc/retained-virtual-list tests, non-stack full `fret-ui` nextest,
+  formatting, whitespace, layering, surface, consumption-profile, execution-surface, ADR-number,
+  workstream-catalog, and wiki-memory gates.

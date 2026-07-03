@@ -72,6 +72,7 @@ It is a sidecar for session recovery and subagent synthesis, not a replacement f
 - [View boundary cache architecture research checkpoint](progress/2026-07-03-view-cache-architecture-research.md)
 - [Phase 3 U3 window snapshot and cache topology](progress/2026-07-03-phase3-u3-window-snapshot-cache-topology.md)
 - [Phase 3 U3 dirty/remove topology](progress/2026-07-03-phase3-u3-dirty-remove-topology.md)
+- [Phase 3 U4 build-time view-cache membership](progress/2026-07-03-phase3-u4-build-time-view-cache-membership.md)
 - [Phase 2 U4 boundary store audit](subagents/2026-07-02-phase2-u4-boundary-store-audit.md)
 - [Phase 2 U4 durable ViewId audit](subagents/2026-07-02-phase2-u4-durable-viewid-audit.md)
 - [Phase 2 U5 boundary bridge audit](subagents/2026-07-02-phase2-u5-boundary-bridge-audit.md)

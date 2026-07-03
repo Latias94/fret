@@ -242,8 +242,6 @@ struct ViewCacheBuildBoundaryStore {
     next: HashMap<GlobalElementId, ViewCacheBuildBoundaryFrame>,
     key_mismatch_roots: HashSet<GlobalElementId>,
     reuse_roots: HashSet<GlobalElementId>,
-    last_reused_frame: HashMap<GlobalElementId, FrameId>,
-    transitioned_reuse_roots: HashSet<GlobalElementId>,
     stack: Vec<GlobalElementId>,
 }
 
@@ -272,7 +270,6 @@ impl ViewCacheBuildBoundaryStore {
         std::mem::swap(&mut self.rendered, &mut self.next);
         self.next.clear();
         self.reuse_roots.clear();
-        self.transitioned_reuse_roots.clear();
         self.stack.clear();
     }
 
@@ -283,6 +280,18 @@ impl ViewCacheBuildBoundaryStore {
                 .entry(root)
                 .or_default()
                 .authoring_identities
+                .get_or_insert_with(Vec::new)
+                .push(element);
+        }
+    }
+
+    fn record_element_membership(&mut self, element: GlobalElementId) {
+        for idx in 0..self.stack.len() {
+            let root = self.stack[idx];
+            self.next
+                .entry(root)
+                .or_default()
+                .elements
                 .get_or_insert_with(Vec::new)
                 .push(element);
         }
@@ -305,7 +314,7 @@ impl ViewCacheBuildBoundaryStore {
         let frame = self.next.entry(root).or_default();
         frame.state_keys = None;
         frame.authoring_identities = None;
-        frame.elements = None;
+        frame.elements = Some(vec![root]);
         self.remove_empty_next(root);
     }
 
@@ -352,22 +361,6 @@ impl ViewCacheBuildBoundaryStore {
         roots.sort_by_key(|root| root.0);
         roots.dedup();
         roots
-    }
-
-    fn record_reuse_frame(&mut self, root: GlobalElementId, frame_id: FrameId) -> bool {
-        let transitioned = self
-            .last_reused_frame
-            .get(&root)
-            .is_none_or(|last| last.0.saturating_add(1) < frame_id.0);
-        self.last_reused_frame.insert(root, frame_id);
-        if transitioned {
-            self.transitioned_reuse_roots.insert(root);
-        }
-        transitioned
-    }
-
-    fn transitioned_reuse_roots(&self) -> impl Iterator<Item = GlobalElementId> + '_ {
-        self.transitioned_reuse_roots.iter().copied()
     }
 
     fn should_reuse_root(&self, root: GlobalElementId) -> bool {
@@ -1216,6 +1209,8 @@ impl WindowElementState {
         self.authoring_identities_current_frame.insert(element);
         self.view_cache_build_boundaries
             .record_authoring_identity(element);
+        self.view_cache_build_boundaries
+            .record_element_membership(element);
         #[cfg(feature = "diagnostics")]
         self.touch_debug_identity_for_element(self.prepared_frame, element);
     }
@@ -1649,25 +1644,6 @@ impl WindowElementState {
         self.view_cache_build_boundaries.mark_reuse_root(root);
     }
 
-    /// Returns `true` if this cache root was *not* reused in the immediately-previous frame.
-    ///
-    /// This is used to refresh liveness/recording when a view-cache root transitions into reuse,
-    /// avoiding GC sweeping stale-but-live subtrees on the first cache-hit frame.
-    pub(crate) fn record_view_cache_reuse_frame(
-        &mut self,
-        root: GlobalElementId,
-        frame_id: FrameId,
-    ) -> bool {
-        self.view_cache_build_boundaries
-            .record_reuse_frame(root, frame_id)
-    }
-
-    pub(crate) fn view_cache_transitioned_reuse_roots(
-        &self,
-    ) -> impl Iterator<Item = GlobalElementId> + '_ {
-        self.view_cache_build_boundaries.transitioned_reuse_roots()
-    }
-
     pub(crate) fn should_reuse_view_cache_root(&self, root: GlobalElementId) -> bool {
         self.view_cache_build_boundaries.should_reuse_root(root)
     }
@@ -1859,19 +1835,21 @@ impl WindowElementState {
 
         let mut authoritative_nodes: Vec<(GlobalElementId, NodeId, GlobalElementId)> =
             Vec::with_capacity(elements.len());
+        let mut authoritative_elements: Vec<GlobalElementId> = Vec::with_capacity(elements.len());
         for &element in &elements {
             let seeded_entry = self.nodes.get(&element).copied();
             let Some(node) =
                 resolve_live_attached_node(element, seeded_entry.map(|entry| entry.node))
             else {
-                return false;
+                continue;
             };
             let owner_root = seeded_entry.map(|entry| entry.root).unwrap_or(root_id);
+            authoritative_elements.push(element);
             authoritative_nodes.push((element, node, owner_root));
         }
 
         self.view_cache_build_boundaries
-            .record_subtree_elements(root, elements);
+            .record_subtree_elements(root, authoritative_elements);
 
         for (element, node, owner_root) in authoritative_nodes {
             // Touching a retained subtree must not reassign cross-root ownership (ADR 0176).
@@ -3404,7 +3382,6 @@ mod tests {
         state.begin_view_cache_scope(root);
         state.record_state_key_access(state_key);
         state.mark_authoring_identity_seen(child);
-        state.record_view_cache_subtree_elements(root, vec![root, child]);
         state.end_view_cache_scope(root);
         state.set_view_cache_key(root, cache_key);
         state.record_view_cache_key_mismatch(root);
@@ -3464,7 +3441,12 @@ mod tests {
         state.end_view_cache_scope(root);
 
         assert!(
-            state.view_cache_build_boundaries.next.get(&root).is_none(),
+            state
+                .view_cache_build_boundaries
+                .next
+                .get(&root)
+                .and_then(|frame| frame.state_keys.as_ref())
+                .is_none(),
             "missing optional state must not leave empty hook keys in the view-cache access set"
         );
 
@@ -3521,7 +3503,7 @@ mod tests {
             },
         );
         state.begin_view_cache_scope(root);
-        state.record_view_cache_subtree_elements(root, vec![root, child]);
+        state.mark_authoring_identity_seen(child);
         state.end_view_cache_scope(root);
 
         state.prepare_for_frame(FrameId(2), 0);
@@ -3555,6 +3537,35 @@ mod tests {
                 .view_cache_elements_for_root(root)
                 .expect("global membership remains keyed by the view-cache root"),
             &[root, child]
+        );
+    }
+
+    #[test]
+    fn view_cache_build_boundary_store_records_element_membership_from_scope_identities() {
+        let mut state = WindowElementState::default();
+        let root = GlobalElementId(1);
+        let child_root = GlobalElementId(2);
+        let leaf = GlobalElementId(3);
+
+        state.prepare_for_frame(FrameId(1), 0);
+        state.begin_view_cache_scope(root);
+        state.mark_authoring_identity_seen(child_root);
+        state.begin_view_cache_scope(child_root);
+        state.mark_authoring_identity_seen(leaf);
+        state.end_view_cache_scope(child_root);
+        state.end_view_cache_scope(root);
+
+        assert_eq!(
+            state
+                .view_cache_elements_for_root(root)
+                .expect("parent cache root should record build-time element membership"),
+            &[root, child_root, leaf]
+        );
+        assert_eq!(
+            state
+                .view_cache_elements_for_root(child_root)
+                .expect("nested cache root should record its own membership"),
+            &[child_root, leaf]
         );
     }
 

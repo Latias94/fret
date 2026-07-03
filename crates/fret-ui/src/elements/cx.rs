@@ -334,6 +334,34 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         AnyElement::new(id, kind, children).with_layout_direction(layout_direction)
     }
 
+    fn record_view_cache_declarative_subtree_membership(
+        &mut self,
+        root: GlobalElementId,
+        children: &[AnyElement],
+    ) {
+        let mut elements: Vec<GlobalElementId> = Vec::with_capacity(children.len() + 1);
+        elements.push(root);
+
+        let mut stack: Vec<&AnyElement> = children.iter().rev().collect();
+        while let Some(element) = stack.pop() {
+            elements.push(element.id);
+
+            if matches!(element.kind, ElementKind::ViewCache(_))
+                && element.children.is_empty()
+                && let Some(recorded) = self.window_state.view_cache_elements_for_root(element.id)
+            {
+                elements.extend(recorded.iter().copied().filter(|id| *id != element.id));
+            }
+
+            for child in element.children.iter().rev() {
+                stack.push(child);
+            }
+        }
+
+        self.window_state
+            .record_view_cache_subtree_elements(root, elements);
+    }
+
     /// Returns the nearest ancestor state value of type `S` in the current element scope stack.
     ///
     /// This is a lightweight building block for component-layer "provider" patterns (e.g. Radix
@@ -1556,6 +1584,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                 cx.window_state.begin_view_cache_scope(id);
                 let built = f(cx);
                 let children = cx.collect_children(built);
+                cx.record_view_cache_declarative_subtree_membership(id, &children);
                 cx.window_state.end_view_cache_scope(id);
 
                 let deps_key_next = (
@@ -1626,6 +1655,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
             cx.window_state.begin_view_cache_scope(id);
             let built = f(cx);
             let children = cx.collect_children(built);
+            cx.record_view_cache_declarative_subtree_membership(id, &children);
             cx.window_state.end_view_cache_scope(id);
 
             let deps_key_next = (

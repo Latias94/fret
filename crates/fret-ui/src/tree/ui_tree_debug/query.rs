@@ -390,20 +390,6 @@ impl<H: UiHost> UiTree<H> {
             .saturating_add(would_repair);
     }
 
-    pub(crate) fn debug_record_retained_subtree_membership_scan(&mut self, nodes: u64) {
-        if !self.debug_enabled {
-            return;
-        }
-        self.debug_stats.retained_subtree_membership_scan_roots = self
-            .debug_stats
-            .retained_subtree_membership_scan_roots
-            .saturating_add(1);
-        self.debug_stats.retained_subtree_membership_scan_nodes = self
-            .debug_stats
-            .retained_subtree_membership_scan_nodes
-            .saturating_add(nodes);
-    }
-
     pub(crate) fn debug_record_gc_layer_reachability_nodes(&mut self, nodes: u64) {
         if !self.debug_enabled {
             return;

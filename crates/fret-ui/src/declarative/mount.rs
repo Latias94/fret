@@ -692,30 +692,9 @@ where
                 }
             }
 
-            // If any cache root transitions into reuse this frame, proactively touch the entire
-            // retained subtree from the window root. This avoids GC sweeping still-live nodes in the
-            // transition frame when the producer subtree starts skipping renders.
-            if window_state
-                .view_cache_transitioned_reuse_roots()
-                .next()
-                .is_some()
-            {
-                with_window_frame(app, window, |window_frame| {
-                    let scanned = touch_existing_declarative_subtree_seen(
-                        ui,
-                        window_state,
-                        window_frame,
-                        root_id,
-                        frame_id,
-                        root_node,
-                    );
-                    ui.debug_record_retained_subtree_membership_scan(scanned);
-                });
-            }
-
             // Node GC is keyed off `last_seen_frame`. Cache-hit frames can legitimately skip
             // re-mounting cached subtrees, so view-cache reuse must keep the retained subtree alive
-            // via explicit liveness bookkeeping (ADR 0176).
+            // via build-time recorded membership (ADR 0176), not by scanning retained subtrees.
             //
             // We only sweep nodes that are both stale and unreachable from the window's liveness
             // roots:
@@ -1208,28 +1187,8 @@ where
                 }
             }
 
-            // See `render_root`: on the first cache-hit frame for a previously dirty root, ensure the
-            // overlay subtree stays alive even if it won't rerender this frame.
-            if window_state
-                .view_cache_transitioned_reuse_roots()
-                .next()
-                .is_some()
-            {
-                with_window_frame(app, window, |window_frame| {
-                    let scanned = touch_existing_declarative_subtree_seen(
-                        ui,
-                        window_state,
-                        window_frame,
-                        root_id,
-                        frame_id,
-                        root_node,
-                    );
-                    ui.debug_record_retained_subtree_membership_scan(scanned);
-                });
-            }
-
-            // See `render_root`: cache-hit frames can skip re-mounting cached subtrees, so we sweep
-            // only detached nodes that have been stale beyond the configured lag window.
+            // See `render_root`: cache-hit frames can skip re-mounting cached subtrees, so retained
+            // liveness comes from build-time recorded membership rather than retained subtree scans.
             let liveness_roots = ui.all_layer_roots();
             let keep_alive_roots = collect_live_retained_keep_alive_roots(ui, window_state);
             let mut stale: Vec<StaleNodeRecord> = Vec::new();
@@ -1845,7 +1804,6 @@ fn mount_element<H: UiHost + 'static>(
             sync_window_frame_children(window_frame, node, ui.children_ref(node));
         }
 
-        let transitioned_into_reuse = window_state.record_view_cache_reuse_frame(id, frame_id);
         window_state.touch_view_cache_authoring_identities_if_recorded(id);
         let touched = window_state.touch_view_cache_subtree_elements_if_recorded(
             id,
@@ -1853,45 +1811,13 @@ fn mount_element<H: UiHost + 'static>(
             root_id,
             |element, seeded| ui.resolve_live_attached_node_for_element_seeded(element, seeded),
         );
-        if transitioned_into_reuse && !touched {
-            // If a cache root transitions into reuse without having a recorded subtree list yet,
-            // fall back to walking the retained subtree so GC liveness bookkeeping remains
-            // correct on the first cache-hit frame.
-            let marked = mark_existing_declarative_subtree_seen(
-                ui,
-                window_state,
-                window_frame,
-                root_id,
-                frame_id,
-                node,
+        if !touched {
+            tracing::debug!(
+                element = ?id,
+                node = ?node,
+                frame_id = frame_id.0,
+                "view-cache reuse skipped retained subtree membership touch because no build-time membership was recorded"
             );
-            ui.debug_record_retained_subtree_membership_scan(marked);
-            let (elements, scanned) = collect_declarative_elements_for_existing_subtree(
-                ui,
-                window_state,
-                window_frame,
-                node,
-            );
-            ui.debug_record_retained_subtree_membership_scan(scanned);
-            window_state.record_view_cache_subtree_elements(id, elements);
-        } else if !touched {
-            let marked = mark_existing_declarative_subtree_seen(
-                ui,
-                window_state,
-                window_frame,
-                root_id,
-                frame_id,
-                node,
-            );
-            ui.debug_record_retained_subtree_membership_scan(marked);
-            let (elements, scanned) = collect_declarative_elements_for_existing_subtree(
-                ui,
-                window_state,
-                window_frame,
-                node,
-            );
-            ui.debug_record_retained_subtree_membership_scan(scanned);
-            window_state.record_view_cache_subtree_elements(id, elements);
         }
 
         // View-cache reuse skips rerendering declarative closures, so component-owned action hooks
@@ -1959,12 +1885,8 @@ fn mount_element<H: UiHost + 'static>(
         }
         sync_window_frame_children(window_frame, node, ui.children_ref(node));
 
-        // Keep a complete retained-subtree element list for this cache root so cache-hit frames
-        // can refresh liveness without re-running the render closure.
-        let (elements, scanned) =
-            collect_declarative_elements_for_existing_subtree(ui, window_state, window_frame, node);
-        ui.debug_record_retained_subtree_membership_scan(scanned);
-        window_state.record_view_cache_subtree_elements(id, elements);
+        // Build-time element membership is recorded while the view-cache scope is active.
+        // Cache-hit frames replay that membership without scanning retained subtrees.
     } else {
         let mut child_nodes: Vec<NodeId> = Vec::with_capacity(children.len());
         for child in children.drain(..) {
@@ -3024,127 +2946,27 @@ fn apply_pending_invalidations<H: UiHost>(ui: &mut UiTree<H>, pending: &mut Hash
     }
 }
 
-fn mark_existing_declarative_subtree_seen<H: UiHost>(
-    ui: &UiTree<H>,
-    window_state: &mut crate::elements::WindowElementState,
-    window_frame: &WindowFrame,
-    root_id: GlobalElementId,
-    frame_id: FrameId,
-    root: NodeId,
-) -> u64 {
-    let mut visited_nodes: u64 = 0;
-    let mut stack: Vec<NodeId> = vec![root];
-    while let Some(node) = stack.pop() {
-        if !ui.node_exists(node) {
-            continue;
-        }
-        visited_nodes = visited_nodes.saturating_add(1);
-        if let Some(element) = window_frame
-            .instances
-            .get(node)
-            .map(|r| r.element)
-            .or_else(|| ui.node_element(node))
-            .or_else(|| window_state.element_for_node(node))
-        {
-            let root = window_state
-                .node_entry(element)
-                .map(|e| e.root)
-                .unwrap_or(root_id);
-            window_state.set_node_entry(
-                element,
-                NodeEntry {
-                    node,
-                    last_seen_frame: frame_id,
-                    root,
-                },
-            );
-
-            #[cfg(feature = "diagnostics")]
-            window_state.touch_debug_identity_for_element(frame_id, element);
-        }
-
-        push_existing_subtree_children(ui, window_frame, node, &mut stack);
-    }
-    visited_nodes
-}
-
-fn touch_existing_declarative_subtree_seen<H: UiHost>(
-    ui: &UiTree<H>,
-    window_state: &mut crate::elements::WindowElementState,
-    window_frame: Option<&WindowFrame>,
-    root_id: GlobalElementId,
-    frame_id: FrameId,
-    root: NodeId,
-) -> u64 {
-    let mut visited_nodes: u64 = 0;
-    let mut stack: Vec<NodeId> = vec![root];
-    while let Some(node) = stack.pop() {
-        if !ui.node_exists(node) {
-            continue;
-        }
-        visited_nodes = visited_nodes.saturating_add(1);
-        if let Some(element) = window_frame
-            .and_then(|window_frame| window_frame.instances.get(node).map(|r| r.element))
-            .or_else(|| ui.node_element(node))
-            .or_else(|| window_state.element_for_node(node))
-        {
-            let root = window_state
-                .node_entry(element)
-                .map(|e| e.root)
-                .unwrap_or(root_id);
-            window_state.set_node_entry(
-                element,
-                NodeEntry {
-                    node,
-                    last_seen_frame: frame_id,
-                    root,
-                },
-            );
-
-            #[cfg(feature = "diagnostics")]
-            window_state.touch_debug_identity_for_element(frame_id, element);
-        }
-
-        if let Some(window_frame) = window_frame {
-            push_existing_subtree_children(ui, window_frame, node, &mut stack);
-        } else {
-            for child in ui.children(node) {
-                stack.push(child);
-            }
-        }
-    }
-    visited_nodes
-}
-
-fn collect_declarative_elements_for_existing_subtree<H: UiHost>(
-    ui: &UiTree<H>,
-    window_state: &crate::elements::WindowElementState,
+fn collect_declarative_elements_for_frame_subtree(
     window_frame: &WindowFrame,
     root: NodeId,
-) -> (Vec<GlobalElementId>, u64) {
+) -> Vec<GlobalElementId> {
     let mut out: Vec<GlobalElementId> = Vec::new();
     let mut seen: HashSet<GlobalElementId> = HashSet::new();
-    let mut visited_nodes: u64 = 0;
     let mut stack: Vec<NodeId> = vec![root];
     while let Some(node) = stack.pop() {
-        if !ui.node_exists(node) {
-            continue;
-        }
-        visited_nodes = visited_nodes.saturating_add(1);
-        if let Some(element) = window_frame
-            .instances
-            .get(node)
-            .map(|r| r.element)
-            .or_else(|| ui.node_element(node))
-            .or_else(|| window_state.element_for_node(node))
+        if let Some(element) = window_frame.instances.get(node).map(|r| r.element)
             && seen.insert(element)
         {
             out.push(element);
         }
 
-        push_existing_subtree_children(ui, window_frame, node, &mut stack);
+        if let Some(children) = window_frame.children.get(node) {
+            for &child in children.iter().rev() {
+                stack.push(child);
+            }
+        }
     }
-    (out, visited_nodes)
+    out
 }
 
 fn refresh_view_cache_membership_for_ancestor_roots<H: UiHost>(
@@ -3160,13 +2982,7 @@ fn refresh_view_cache_membership_for_ancestor_roots<H: UiHost>(
             && matches!(record.instance, ElementInstance::ViewCache(_))
             && visited_roots.insert(record.element)
         {
-            let (elements, scanned) = collect_declarative_elements_for_existing_subtree(
-                ui,
-                window_state,
-                window_frame,
-                node,
-            );
-            ui.debug_record_retained_subtree_membership_scan(scanned);
+            let elements = collect_declarative_elements_for_frame_subtree(window_frame, node);
             window_state.record_view_cache_subtree_elements(record.element, elements);
         }
         current = ui.node_parent_in_layer_tree(node);
@@ -3390,70 +3206,6 @@ mod tests {
         assert!(reachable.contains(&root));
         assert!(reachable.contains(&ui_child));
         assert!(reachable.contains(&frame_child));
-    }
-
-    #[test]
-    fn touch_existing_subtree_can_walk_window_frame_children() {
-        use crate::UiHost;
-        use crate::declarative::frame::WindowFrame;
-        use crate::tree::UiTree;
-        use crate::widget::{LayoutCx, PaintCx, Widget};
-        use fret_runtime::FrameId;
-
-        #[derive(Default)]
-        struct TestWidget;
-
-        impl<H: UiHost> Widget<H> for TestWidget {
-            fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
-                for &child in cx.children {
-                    let _ = cx.layout_in(child, cx.bounds);
-                }
-                cx.available
-            }
-
-            fn paint(&mut self, _cx: &mut PaintCx<'_, H>) {}
-        }
-
-        let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
-        ui.set_window(AppWindowId::default());
-
-        let root_node = ui.create_node(TestWidget);
-        let child_node = ui.create_node(TestWidget);
-
-        let root_element = GlobalElementId(1);
-        let child_element = GlobalElementId(2);
-        let root_id = GlobalElementId(999);
-
-        ui.set_node_element(root_node, Some(root_element));
-        ui.set_node_element(child_node, Some(child_element));
-
-        // Intentionally omit `ui.set_children(root_node, ..)` so `UiTree` has no child edges.
-        let mut window_frame = WindowFrame::default();
-        window_frame
-            .children
-            .insert(root_node, Arc::<[NodeId]>::from(vec![child_node]));
-
-        let mut window_state = crate::elements::WindowElementState::default();
-
-        let scanned = touch_existing_declarative_subtree_seen(
-            &ui,
-            &mut window_state,
-            Some(&window_frame),
-            root_id,
-            FrameId(1),
-            root_node,
-        );
-        assert_eq!(
-            scanned, 2,
-            "subtree touch pressure should include window-frame-only children"
-        );
-
-        let entry = window_state
-            .node_entry(child_element)
-            .expect("child touched");
-        assert_eq!(entry.node, child_node);
-        assert_eq!(entry.last_seen_frame, FrameId(1));
-        assert_eq!(entry.root, root_id);
     }
 
     #[test]
