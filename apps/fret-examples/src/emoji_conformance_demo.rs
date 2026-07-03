@@ -1,4 +1,5 @@
 use fret::advanced::prelude::LocalState;
+use fret::advanced::raw::LocalStateModelStoreExt as _;
 use fret::advanced::view::{AppUiRenderRootState, render_root_with_app_ui};
 use fret_app::{App, CommandId, Effect, WindowRequest};
 use fret_core::{AppWindowId, Event, FontId, Px, Rect, TextStyle, TextWrap, UiServices};

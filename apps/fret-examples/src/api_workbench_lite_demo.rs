@@ -5,6 +5,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use fret::advanced::prelude::LocalState;
+use fret::advanced::raw::LocalStateModelStoreExt as _;
 use fret::app::prelude::*;
 use fret::children::UiElementSinkExt as _;
 use fret::icons::IconId;

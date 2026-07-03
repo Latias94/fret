@@ -9,6 +9,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Context as _;
+use fret::advanced::raw::{LocalStateElementContextExt as _, LocalStateModelStoreExt as _};
 use fret::query::{QueryError, QueryKey, QueryPolicy, QueryStatus};
 use fret::{FretApp, advanced::prelude::*, component::prelude::*};
 use fret_core::{ImageColorSpace, Point, Px, SvgFit};

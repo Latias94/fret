@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use fret::advanced::prelude::*;
+use fret::advanced::raw::{LocalStateElementContextExt as _, LocalStateModelStoreExt as _};
 use fret_app::{CommandId, Effect, WindowRequest};
 use fret_core::Px;
 use fret_runtime::{

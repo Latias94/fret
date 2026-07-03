@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use fret::advanced::raw::LocalStateModelStoreExt as _;
 use fret::app::LocalState;
 use fret::app::prelude::*;
 use fret_app::Effect;

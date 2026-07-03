@@ -12,6 +12,7 @@
 
 use std::sync::Arc;
 
+use fret::advanced::raw::{LocalStateElementContextExt as _, LocalStateRawModelExt as _};
 use fret::app::AppRenderContext;
 use fret::{FretApp, advanced::prelude::*, component::prelude::*};
 use fret_core::scene::{

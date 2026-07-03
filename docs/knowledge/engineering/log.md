@@ -506,3 +506,10 @@ timestamp: 2026-06-30
   layering, wiki, formatting, and whitespace gates. `cargo check -p fret-examples --lib` still
   fails in unrelated example files that need explicit `advanced::raw` imports or migration off raw
   local-state helper traits; filtered output showed no remaining `simple_todo_demo.rs` errors.
+- 2026-07-03: Phase 3 U13 `fret-examples` explicit raw import slice restores
+  `cargo check -p fret-examples --lib` by importing raw local-state helper traits from
+  `fret::advanced::raw` in the advanced/manual example files that still need them. The raw helpers
+  stay out of `advanced::prelude::*`, so U13's prelude break remains enforced while the package
+  check is green again. Verification passed for `fret-examples` check, source-policy tests/gate,
+  consumption-profile, execution-surface, layering, formatting, and whitespace gates; the check
+  still reports the existing `fret-chart` dead-code warning for `visual_map_track_at`.

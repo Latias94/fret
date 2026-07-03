@@ -1,5 +1,6 @@
 use anyhow::Context as _;
 use fret::advanced::prelude::LocalState;
+use fret::advanced::raw::LocalStateModelStoreExt as _;
 use fret::advanced::view::{AppUiRenderRootState, render_root_with_app_ui};
 use fret::app::RenderContextAccess as _;
 use fret_app::{App, CommandId, Effect};

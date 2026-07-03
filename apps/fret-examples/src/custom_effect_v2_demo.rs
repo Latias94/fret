@@ -12,6 +12,7 @@
 
 use std::sync::Arc;
 
+use fret::advanced::raw::{LocalStateElementContextExt as _, LocalStateRawModelExt as _};
 use fret::{FretApp, advanced::prelude::*, component::prelude::*, shadcn};
 use fret_core::scene::{
     CustomEffectImageInputV1, EffectChain, EffectMode, EffectParamsV1, EffectQuality, EffectStep,

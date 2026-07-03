@@ -10,14 +10,14 @@ related_plan: docs/plans/2026-07-03-001-refactor-ui-framework-phase3-retained-br
 
 - Goal: execute `docs/plans/2026-07-03-001-refactor-ui-framework-phase3-retained-bridge-deletion-plan.md` as a breaking Phase 3 retained-bridge deletion refactor.
 - Branch: `feat/ui-framework-phase2-refactor`.
-- Last verified: Phase 3 U13 simple-todo app-surface shrink passed source-policy tests/gate,
-  consumption-profile, execution-surface, layering, focused `fret` facade tests, formatting, wiki,
-  and whitespace gates on 2026-07-03. Full `fret-ui` nextest still has a local long-running caveat
-  for the two `stack_safety` deep-tree tests.
+- Last verified: Phase 3 U13 `fret-examples` explicit raw import slice passed
+  `cargo check -p fret-examples --lib`, source-policy tests/gate, consumption-profile,
+  execution-surface, layering, formatting, and whitespace gates on 2026-07-03. Full `fret-ui`
+  nextest still has a local long-running caveat for the two `stack_safety` deep-tree tests.
 - Done: local ADR/workstream research, crate/perf snapshots, GPUI/Zed comparison, architecture boundary audit, framework consumer audit, performance audit, implementation-ready plan, U1 convergence contract freeze, U2 source-policy gate, U3 first slice (`workbench-lite` public scaffold), U4 identity/dirty graph observability slices, U5 `ViewId` / boundary frame-product ownership slices, U6 policy vocabulary demotion/cleanup slices, U7 renderer scene/upload observability plus retained scene chunk and guarded quad resident upload lanes, U8 text/glyph/wasm budget work through web runtime evidence, U9 modular consumption profiles and `AppUi` facade split, Phase 2 U9 VertexColor viewport partial upload, Phase 2 U10 workbench-lite public settings diagnostics, Phase 2 U11 public mutation/toast wrappers, Phase 3 U9 manifest closure v2, Phase 3 U10 authoritative chunk launch, Phase 3 U11 partial upload stream policy, Phase 3 U12 public app facade cleanup, workstream closeout audit, duplicate ADR ID `0324` resolution, and execution-surface allowlist alignment.
-- Latest done: Phase 3 U13 ninth slice exposes `SemanticsDecoration` through the explicit
-  `fret::semantics` lane and moves `simple_todo_demo` view helper seams off direct `fret_core` /
-  `fret_ui` imports. Its source-policy record now only allows launch/runtime glue.
+- Latest done: Phase 3 U13 tenth slice restores `fret-examples --lib` after raw local-state helper
+  traits were removed from `advanced::prelude::*`. Advanced/manual example files now import
+  `fret::advanced::raw` traits explicitly instead of reacquiring raw helpers through the prelude.
 - In progress: Phase 3 retained bridge closeout / remaining U13 cookbook and quarantine
   classification,
   with the
@@ -51,13 +51,14 @@ related_plan: docs/plans/2026-07-03-001-refactor-ui-framework-phase3-retained-br
   [comparison surface classification slice](progress/2026-07-03-phase3-u13-comparison-surface-classification.md)
   and the
   [simple todo app-surface shrink](progress/2026-07-03-phase3-u13-simple-todo-app-surface.md)
+  and the
+  [`fret-examples` explicit raw import slice](progress/2026-07-03-phase3-u13-fret-examples-raw-imports.md)
   leaving remaining U13 work to audit and migrate the still-advanced cookbook/example surfaces.
 - Blocked: none known after the boundary store migration.
 - Next action: continue U13 by shrinking exact cookbook/example records through code migration;
   highest-value candidates are splitting `simple_todo_demo` runner glue from the now-cleaner view
-  helper surface, moving `todo_demo` test harness glue out of the public view file, or migrating the
-  broader `fret-examples` raw local-state helper users that currently block
-  `cargo check -p fret-examples --lib`.
+  helper surface, moving `todo_demo` test harness glue out of the public view file, or migrating one
+  of the now-explicit `fret-examples` raw local-state helper clusters to app-facing helpers.
 
 # Citations
 
@@ -98,6 +99,7 @@ related_plan: docs/plans/2026-07-03-001-refactor-ui-framework-phase3-retained-br
 - [Phase 3 U13 form raw helper shrink](progress/2026-07-03-phase3-u13-form-raw-helper-shrink.md)
 - [Phase 3 U13 comparison surface classification](progress/2026-07-03-phase3-u13-comparison-surface-classification.md)
 - [Phase 3 U13 simple todo app-surface shrink](progress/2026-07-03-phase3-u13-simple-todo-app-surface.md)
+- [Phase 3 U13 fret-examples explicit raw imports](progress/2026-07-03-phase3-u13-fret-examples-raw-imports.md)
 - [Phase 3 U13 advanced facade audits](subagents/2026-07-03-phase3-u13-advanced-facade-audits.md)
 - [Phase 1 convergence plan](../../plans/2026-06-30-001-refactor-ui-framework-architecture-plan.md)
 - [Subagent Findings](subagents/2026-06-30-ui-framework-architecture-audit-findings.md)
