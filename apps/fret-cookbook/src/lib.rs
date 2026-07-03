@@ -631,15 +631,25 @@ mod authoring_surface_policy_tests {
     #[test]
     fn cookbook_data_table_example_prefers_local_state_table_bridges() {
         assert!(DATA_TABLE_EXAMPLE.contains("table_state: LocalState<TableState>,"));
+        assert!(
+            DATA_TABLE_EXAMPLE.contains("table_output: LocalState<shadcn::DataTableViewOutput>,")
+        );
         assert!(DATA_TABLE_EXAMPLE.contains("use fret::app::LocalState;"));
         assert!(DATA_TABLE_EXAMPLE.contains("table_state: app.local_state(state),"));
+        assert!(
+            DATA_TABLE_EXAMPLE
+                .contains("table_output: app.local_state(shadcn::DataTableViewOutput::default()),")
+        );
         assert!(!DATA_TABLE_EXAMPLE.contains("LocalState::new_in(app.models_mut(), state)"));
         assert!(DATA_TABLE_EXAMPLE.contains("shadcn::DataTableToolbar::new("));
         assert!(DATA_TABLE_EXAMPLE.contains(
             "shadcn::DataTablePagination::new(&self.table_state, self.table_output.clone())"
         ));
+        assert!(DATA_TABLE_EXAMPLE.contains(".into_element_in("));
         assert!(DATA_TABLE_EXAMPLE.contains("&self.table_state,"));
         assert!(!DATA_TABLE_EXAMPLE.contains("table_state: Model<TableState>,"));
+        assert!(!DATA_TABLE_EXAMPLE.contains("table_output: Model<"));
+        assert!(!DATA_TABLE_EXAMPLE.contains("use fret_runtime::Model;"));
     }
 
     #[test]

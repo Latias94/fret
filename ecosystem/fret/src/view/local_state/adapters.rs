@@ -33,6 +33,26 @@ impl fret_ui_kit::declarative::table::IntoTableStateModel
     }
 }
 
+impl fret_ui_kit::declarative::table::IntoTableViewOutputModel
+    for LocalState<fret_ui_kit::declarative::table::TableViewOutput>
+{
+    fn into_table_view_output_model(
+        self,
+    ) -> Model<fret_ui_kit::declarative::table::TableViewOutput> {
+        self.clone_model()
+    }
+}
+
+impl fret_ui_kit::declarative::table::IntoTableViewOutputModel
+    for &LocalState<fret_ui_kit::declarative::table::TableViewOutput>
+{
+    fn into_table_view_output_model(
+        self,
+    ) -> Model<fret_ui_kit::declarative::table::TableViewOutput> {
+        self.clone_model()
+    }
+}
+
 #[cfg(feature = "shadcn")]
 impl fret_ui_shadcn::facade::IntoBoolModel for LocalState<bool> {
     fn into_bool_model(self) -> Model<bool> {

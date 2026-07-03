@@ -12,7 +12,9 @@ use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_headless::table::{ColumnDef, ColumnId, ColumnPinPosition, TableState, pin_column};
 use fret_ui_kit::declarative::icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
-use fret_ui_kit::declarative::table::{IntoTableStateModel, TableViewOutput};
+use fret_ui_kit::declarative::table::{
+    IntoTableStateModel, IntoTableViewOutputModel, TableViewOutput,
+};
 use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space, ui};
 use serde_json::Value;
@@ -1627,10 +1629,10 @@ impl std::fmt::Debug for DataTablePagination {
 }
 
 impl DataTablePagination {
-    pub fn new(state: impl IntoTableStateModel, output: Model<TableViewOutput>) -> Self {
+    pub fn new(state: impl IntoTableStateModel, output: impl IntoTableViewOutputModel) -> Self {
         Self {
             state: state.into_table_state_model(),
-            output,
+            output: output.into_table_view_output_model(),
             page_sizes: Arc::from([10usize, 20, 25, 30, 40, 50]),
         }
     }

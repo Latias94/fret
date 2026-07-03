@@ -581,8 +581,8 @@ pub mod facade {
     pub use crate::u8_value_model::IntoU8ValueModel;
     pub use fret_ui_headless::calendar::{DateRange, DateRangeSelection};
     pub use fret_ui_headless::calendar_solar_hijri::SolarHijriMonth;
-    pub use fret_ui_kit::declarative::table::IntoTableStateModel;
     pub use fret_ui_kit::declarative::table::TableViewOutput as DataTableViewOutput;
+    pub use fret_ui_kit::declarative::table::{IntoTableStateModel, IntoTableViewOutputModel};
 
     /// Default high-performance data grid surface (canvas-rendered).
     ///

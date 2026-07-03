@@ -57,6 +57,26 @@ impl IntoTableStateModel for &Model<TableState> {
     }
 }
 
+/// Narrow interop bridge for table surfaces that publish view-output telemetry.
+///
+/// Keep this table-specific: default app code can pass `LocalState<TableViewOutput>` through the
+/// app facade, while lower-level/manual code can still use `Model<TableViewOutput>` directly.
+pub trait IntoTableViewOutputModel {
+    fn into_table_view_output_model(self) -> Model<TableViewOutput>;
+}
+
+impl IntoTableViewOutputModel for Model<TableViewOutput> {
+    fn into_table_view_output_model(self) -> Model<TableViewOutput> {
+        self
+    }
+}
+
+impl IntoTableViewOutputModel for &Model<TableViewOutput> {
+    fn into_table_view_output_model(self) -> Model<TableViewOutput> {
+        self.clone()
+    }
+}
+
 use crate::declarative::action_hooks::ActionHooksExt;
 use crate::declarative::collection_semantics::CollectionSemanticsExt as _;
 use crate::declarative::model_watch::ModelWatchExt as _;
@@ -922,6 +942,10 @@ mod tests {
         assert!(
             SOURCE.contains("pub trait IntoTableStateModel {"),
             "table surfaces should keep a dedicated TableState bridge instead of widening into a generic model conversion story"
+        );
+        assert!(
+            SOURCE.contains("pub trait IntoTableViewOutputModel {"),
+            "table surfaces should keep a dedicated TableViewOutput bridge instead of widening into a generic model conversion story"
         );
         assert!(
             SOURCE.contains("pub fn table_virtualized<H: UiHost, TData, IHeader, TH, ICell, TC>(")

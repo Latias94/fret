@@ -307,6 +307,39 @@ class SurfacePolicyTests(unittest.TestCase):
             self.assertTrue(all(v.rule == "default-app-clean" for v in violations))
             self.assertTrue(any("app.local_state" in v.message for v in violations))
 
+    def test_default_cookbook_raw_runtime_model_import_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-cookbook/examples/data_table_basics.rs",
+                """
+                use fret::app::prelude::*;
+                use fret_runtime::Model;
+
+                struct View {
+                    output: Model<shadcn::DataTableViewOutput>,
+                }
+                """,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-cookbook/examples/data_table_basics.rs",
+                        "default_app_clean",
+                        "fixture default cookbook",
+                    )
+                ],
+                advanced_manual_surfaces=[],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            self.assertGreaterEqual(len(violations), 1)
+            self.assertTrue(all(v.rule == "default-app-clean" for v in violations))
+            self.assertTrue(any("fret_runtime" in v.message for v in violations))
+
     def test_default_cookbook_raw_action_notify_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

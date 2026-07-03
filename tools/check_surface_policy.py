@@ -656,6 +656,10 @@ DEFAULT_FORBIDDEN_PATTERNS: tuple[tuple[str, str], ...] = (
         "default app/tutorial surfaces must not import `fret_core`; use the curated `fret` facade exports",
     ),
     (
+        r"\bfret_runtime::",
+        "default app/tutorial surfaces must not import `fret_runtime`; use app-facing `LocalState`, actions, and data helpers",
+    ),
+    (
         r"\bFnDriver\b",
         "`FnDriver` is an advanced/manual assembly seam, not a default app authoring noun",
     ),

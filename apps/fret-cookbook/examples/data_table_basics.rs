@@ -2,7 +2,6 @@ use fret::app::LocalState;
 use fret::app::RenderContextAccess as _;
 use fret::app::prelude::*;
 use fret::style::{ColorRef, Space};
-use fret_runtime::Model;
 use fret_ui_kit::headless::table::{ColumnDef, RowKey, TableState, create_column_helper};
 use std::sync::Arc;
 
@@ -19,7 +18,7 @@ struct DemoRow {
 
 struct DataTableBasicsView {
     table_state: LocalState<TableState>,
-    table_output: Model<shadcn::DataTableViewOutput>,
+    table_output: LocalState<shadcn::DataTableViewOutput>,
     rows: Arc<[DemoRow]>,
     columns: Arc<[ColumnDef<DemoRow>]>,
 }
@@ -50,9 +49,7 @@ impl View for DataTableBasicsView {
 
         Self {
             table_state: app.local_state(state),
-            table_output: app
-                .models_mut()
-                .insert(shadcn::DataTableViewOutput::default()),
+            table_output: app.local_state(shadcn::DataTableViewOutput::default()),
             rows,
             columns,
         }
@@ -87,7 +84,7 @@ impl View for DataTableBasicsView {
 
         let data_table = shadcn::DataTable::new()
             .output_model(self.table_output.clone())
-            .into_element(
+            .into_element_in(
                 cx,
                 Arc::clone(&self.rows),
                 1,

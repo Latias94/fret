@@ -100,6 +100,7 @@ It is a sidecar for session recovery and subagent synthesis, not a replacement f
 - [Phase 3 U13 examples root internal harness](progress/2026-07-03-phase3-u13-examples-root-internal-harness.md)
 - [Phase 3 U13 virtual list facade cookbook migration](progress/2026-07-03-phase3-u13-virtual-list-facade-cookbook-migration.md)
 - [Phase 3 U13 undo facade cookbook migration](progress/2026-07-03-phase3-u13-undo-facade-cookbook-migration.md)
+- [Phase 3 U13 data table output facade cleanup](progress/2026-07-03-phase3-u13-data-table-output-facade.md)
 - [Phase 3 U13 cookbook quarantine readonly audit](subagents/2026-07-03-phase3-u13-cookbook-quarantine-readonly-audit.md)
 - [Phase 3 U13 advanced facade audits](subagents/2026-07-03-phase3-u13-advanced-facade-audits.md)
 - [Phase 2 U4 boundary store audit](subagents/2026-07-02-phase2-u4-boundary-store-audit.md)

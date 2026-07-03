@@ -12,8 +12,8 @@ use fret_ui::{ElementContext, ElementContextAccess, Theme, ThemeSnapshot, UiHost
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::declarative::table::{
-    IntoTableStateModel, PointerRowSelectionPolicy, TableDebugIds, TableRowMeasureMode,
-    TableViewOutput, TableViewProps, table_virtualized,
+    IntoTableStateModel, IntoTableViewOutputModel, PointerRowSelectionPolicy, TableDebugIds,
+    TableRowMeasureMode, TableViewOutput, TableViewProps, table_virtualized,
 };
 use fret_ui_kit::typography;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, ui};
@@ -449,8 +449,8 @@ impl DataTable {
         self
     }
 
-    pub fn output_model(mut self, output: Model<TableViewOutput>) -> Self {
-        self.output = Some(output);
+    pub fn output_model(mut self, output: impl IntoTableViewOutputModel) -> Self {
+        self.output = Some(output.into_table_view_output_model());
         self
     }
 
@@ -694,6 +694,34 @@ impl DataTable {
                 cell_at,
             )
         }
+    }
+
+    #[track_caller]
+    pub fn into_element_in<'a, H: UiHost + 'static + 'a, Cx, TData>(
+        self,
+        cx: &mut Cx,
+        data: Arc<[TData]>,
+        data_revision: u64,
+        state: impl IntoTableStateModel,
+        columns: impl Into<Arc<[ColumnDef<TData>]>>,
+        get_row_key: impl Fn(&TData, usize, Option<&RowKey>) -> RowKey + 'static,
+        header_label: impl Fn(&ColumnDef<TData>) -> Arc<str> + 'static,
+        cell_at: impl Fn(&mut ElementContext<'_, H>, &ColumnDef<TData>, &TData) -> AnyElement + 'static,
+    ) -> AnyElement
+    where
+        Cx: ElementContextAccess<'a, H>,
+        TData: 'static,
+    {
+        self.into_element(
+            cx.elements(),
+            data,
+            data_revision,
+            state,
+            columns,
+            get_row_key,
+            header_label,
+            cell_at,
+        )
     }
 
     /// Like [`Self::into_element`], but allows overriding header cell rendering for specific columns.

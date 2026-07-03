@@ -553,3 +553,11 @@ timestamp: 2026-06-30
   Verification passed for undo feature/example compile, `fret-cookbook --all-targets`,
   cookbook/fret authoring surface suites, source-policy tests/gate, consumption-profile,
   execution-surface, layering, formatting, engineering-memory, and whitespace.
+- 2026-07-03: Phase 3 U13 data-table output facade cleanup adds the narrow
+  `IntoTableViewOutputModel` adapter, lets shadcn `DataTable::output_model(...)` and
+  `DataTablePagination::new(...)` accept app-facing `LocalState<DataTableViewOutput>`, adds
+  `DataTable::into_element_in(...)` for default `AppUi` landing, migrates `data_table_basics.rs`
+  off raw `fret_runtime::Model`, and tightens source policy so default app/tutorial surfaces reject
+  `fret_runtime::`. Verification passed for focused data-table cookbook/table/shadcn/fretboard
+  tests, `fret-cookbook --all-targets`, source-policy tests/gate, consumption-profile,
+  execution-surface, layering, formatting, and whitespace.

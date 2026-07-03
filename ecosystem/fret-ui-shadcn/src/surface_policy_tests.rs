@@ -2237,16 +2237,10 @@ fn selected_public_model_backed_seams_stay_on_audited_allowlist() {
             &["pub fn output_model(mut self, output: Model<DataGridCanvasOutput>) -> Self"][..],
         ),
         (
-            "data_table.rs",
-            DATA_TABLE_RS,
-            &["pub fn output_model(mut self, output: Model<TableViewOutput>) -> Self"][..],
-        ),
-        (
             "data_table_recipes.rs",
             DATA_TABLE_RECIPES_RS,
             &[
                 "pub fn faceted_filter_counts(mut self, counts: Model<HashMap<Arc<str>, usize>>) -> Self",
-                "pub fn new(state: impl IntoTableStateModel, output: Model<TableViewOutput>) -> Self",
             ][..],
         ),
         (
@@ -2590,8 +2584,10 @@ fn default_facing_clickable_widgets_keep_action_first_aliases_on_public_builders
 #[test]
 fn data_table_surfaces_keep_narrow_table_state_bridges() {
     assert!(
-        LIB_RS.contains("pub use fret_ui_kit::declarative::table::IntoTableStateModel;"),
-        "facade should re-export the dedicated table-state bridge so the LocalState-first path stays discoverable"
+        LIB_RS.contains(
+            "pub use fret_ui_kit::declarative::table::{IntoTableStateModel, IntoTableViewOutputModel};"
+        ),
+        "facade should re-export the dedicated table state/output bridges so the LocalState-first path stays discoverable"
     );
     assert!(
         LIB_RS.contains("pub use crate::data_table::{DataTable, DataTableVirtualizationStrategy};"),
@@ -2609,10 +2605,13 @@ fn data_table_surfaces_keep_narrow_table_state_bridges() {
                 "pub fn virtualization_strategy(mut self, strategy: DataTableVirtualizationStrategy) -> Self {",
                 "pub fn into_element_retained<H: UiHost + 'static, TData>(",
                 "pub fn into_element<H: UiHost + 'static, TData>(",
+                "pub fn into_element_in<'a, H: UiHost + 'static + 'a, Cx, TData>(",
                 "pub fn into_element_with_header_cell<H: UiHost + 'static, TData>(",
+                "pub fn output_model(mut self, output: impl IntoTableViewOutputModel) -> Self",
                 "state: impl IntoTableStateModel,",
             ][..],
             &[
+                "pub fn output_model(mut self, output: Model<TableViewOutput>) -> Self",
                 "pub fn into_element_retained<H: UiHost + 'static, TData>( self, cx: &mut ElementContext<'_, H>, data: Arc<[TData]>, data_revision: u64, state: Model<TableState>,",
                 "pub fn into_element<H: UiHost + 'static, TData>( self, cx: &mut ElementContext<'_, H>, data: Arc<[TData]>, data_revision: u64, state: Model<TableState>,",
                 "pub fn into_element_with_header_cell<H: UiHost + 'static, TData>( self, cx: &mut ElementContext<'_, H>, data: Arc<[TData]>, data_revision: u64, state: Model<TableState>,",
@@ -2637,7 +2636,7 @@ fn data_table_surfaces_keep_narrow_table_state_bridges() {
             DATA_TABLE_RECIPES_RS,
             &[
                 "pub fn new( state: impl IntoTableStateModel, columns: impl Into<Arc<[ColumnDef<TData>]>>, column_label: impl Fn(&ColumnDef<TData>) -> Arc<str> + 'static, ) -> Self",
-                "pub fn new(state: impl IntoTableStateModel, output: Model<TableViewOutput>) -> Self",
+                "pub fn new(state: impl IntoTableStateModel, output: impl IntoTableViewOutputModel) -> Self",
             ][..],
             &[
                 "pub fn new( state: Model<TableState>, columns: impl Into<Arc<[ColumnDef<TData>]>>,",
