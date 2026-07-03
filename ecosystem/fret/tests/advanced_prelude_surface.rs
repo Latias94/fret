@@ -20,6 +20,17 @@ fn advanced_prelude_slice() -> &'static str {
     &advanced_slice[prelude_start..advanced_end]
 }
 
+fn advanced_public_slice() -> &'static str {
+    let advanced_start = FRET_LIB_RS
+        .find("pub mod advanced {")
+        .expect("advanced module marker should exist");
+    let advanced_slice = &FRET_LIB_RS[advanced_start..];
+    let advanced_end = advanced_slice
+        .find("\n}\n\n#[derive(Debug, thiserror::Error)]")
+        .expect("advanced module end marker should exist");
+    &advanced_slice[..advanced_end]
+}
+
 fn advanced_prelude_exports_symbol(symbol: &str) -> bool {
     advanced_prelude_slice()
         .split(';')
@@ -69,11 +80,15 @@ fn advanced_prelude_stays_advanced_only_instead_of_smuggling_component_surface()
 #[test]
 fn advanced_prelude_keeps_manual_assembly_seams_explicit() {
     let advanced_prelude = advanced_prelude_slice();
+    let advanced_public = advanced_public_slice();
     assert!(advanced_prelude.contains("pub use crate::advanced::*;"));
     assert!(advanced_prelude.contains("pub use crate::AppRenderCx;"));
     assert!(advanced_prelude_exports_symbol("AppRenderCx"));
     assert!(advanced_prelude.contains("pub use crate::AppComponentCx;"));
     assert!(advanced_prelude.contains("pub use crate::{AppUi, Ui};"));
+    assert!(advanced_public.contains("LocalStateRawModelExt"));
+    assert!(advanced_public.contains("LocalStateModelStoreExt"));
+    assert!(advanced_public.contains("LocalStateElementContextExt"));
     assert!(advanced_prelude.contains("pub use fret_app::Effect;"));
     assert!(advanced_prelude.contains("pub use fret_core::{AppWindowId, Event, UiServices};"));
     assert!(advanced_prelude.contains("pub use fret_runtime::{ActionId, TypedAction};"));

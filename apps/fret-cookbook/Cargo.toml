@@ -94,6 +94,10 @@ cookbook-chart = ["dep:fret-chart", "dep:delinea", "cookbook-bootstrap"]
 cookbook-gizmo = ["dep:fret-gizmo", "dep:glam", "cookbook-bootstrap"]
 
 [[example]]
+name = "hello_counter"
+required-features = ["cookbook-assets"]
+
+[[example]]
 name = "icons_and_assets_basics"
 required-features = ["cookbook-assets"]
 

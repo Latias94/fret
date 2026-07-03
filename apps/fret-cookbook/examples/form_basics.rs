@@ -1,3 +1,4 @@
+use fret::advanced::LocalStateModelStoreExt as _;
 use fret::app::LocalState;
 use fret::app::prelude::*;
 use fret::children::UiElementSinkExt as _;

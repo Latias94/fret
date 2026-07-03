@@ -30,8 +30,14 @@ fn advanced_public_slice() -> &'static str {
 fn raw_state_hook_is_exposed_on_the_advanced_surface() {
     let advanced_slice = advanced_public_slice();
     assert!(!advanced_slice.contains("AppUiRawStateExt"));
-    assert!(advanced_slice.contains("pub use crate::view::AppUiRawModelExt;"));
+    assert!(advanced_slice.contains("AppUiRawModelExt"));
+    assert!(advanced_slice.contains("LocalStateRawModelExt"));
+    assert!(advanced_slice.contains("LocalStateModelStoreExt"));
+    assert!(advanced_slice.contains("LocalStateElementContextExt"));
     assert!(!app_prelude_slice().contains("AppUiRawModelExt"));
+    assert!(!app_prelude_slice().contains("LocalStateRawModelExt"));
+    assert!(!app_prelude_slice().contains("LocalStateModelStoreExt"));
+    assert!(!app_prelude_slice().contains("LocalStateElementContextExt"));
 }
 
 #[test]

@@ -10,16 +10,17 @@ related_plan: docs/plans/2026-07-02-001-refactor-ui-framework-phase2-plan.md
 
 - Goal: execute `docs/plans/2026-07-02-001-refactor-ui-framework-phase2-plan.md` as a breaking Phase 2 UI framework refactor.
 - Branch: `feat/ui-framework-phase2-refactor`.
-- Last verified: Phase 2 U13 passed surface-policy unit tests, source-policy gate,
-  execution-surface, consumption profiles, layering, formatting, and whitespace checks on
-  2026-07-02.
+- Last verified: Phase 2 U14 passed `fret` facade tests, cookbook and IMUI compile checks,
+  surface-policy, execution-surface, consumption profiles, layering, formatting, and whitespace
+  checks on 2026-07-02.
 - Done: local ADR/workstream research, crate/perf snapshots, GPUI/Zed comparison, architecture boundary audit, framework consumer audit, performance audit, implementation-ready plan, U1 convergence contract freeze, U2 source-policy gate, U3 first slice (`workbench-lite` public scaffold), U4 identity/dirty graph observability slices, U5 `ViewId` / boundary frame-product ownership slices, U6 policy vocabulary demotion/cleanup slices, U7 renderer scene/upload observability plus retained scene chunk and guarded quad resident upload lanes, U8 text/glyph/wasm budget work through web runtime evidence, U9 modular consumption profiles and `AppUi` facade split, Phase 2 U9 VertexColor viewport partial upload, Phase 2 U10 workbench-lite public settings diagnostics, Phase 2 U11 public mutation/toast wrappers, workstream closeout audit, duplicate ADR ID `0324` resolution, and execution-surface allowlist alignment.
-- Latest done: Phase 2 U13 turns advanced/manual source-policy allowlists into owned quarantine
-  records with owner, allowed raw seams, reason, and retirement metadata.
-- In progress: continue to U14 AppUi facade narrowing.
+- Latest done: Phase 2 U14 narrows the `AppUi` / `LocalState` facade by moving raw model,
+  `ModelStore`, and `ElementContext` bridges behind explicit advanced extension traits and smaller
+  modules.
+- In progress: Phase 2 closeout and commit tail.
 - Blocked: none known after the boundary store migration.
-- Next action: continue only to the next stream class or plan unit whose closure owner and fallback
-  proof are explicit.
+- Next action: commit U14, then close out the Phase 2 plan by recording shipped units, retained
+  bridges, verification evidence, and any remaining out-of-plan work.
 
 # Citations
 
@@ -47,6 +48,7 @@ related_plan: docs/plans/2026-07-02-001-refactor-ui-framework-phase2-plan.md
 - [Phase 2 U11 public mutation and toast wrappers](progress/2026-07-02-phase2-u11-public-mutation-toast-wrappers.md)
 - [Phase 2 U12 mutation-workbench starter](progress/2026-07-02-phase2-u12-mutation-workbench-starter.md)
 - [Phase 2 U13 surface quarantine records](progress/2026-07-02-phase2-u13-surface-quarantine-records.md)
+- [Phase 2 U14 AppUi facade narrowing](progress/2026-07-02-phase2-u14-appui-facade-narrowing.md)
 - [Phase 2 U4 boundary store audit](subagents/2026-07-02-phase2-u4-boundary-store-audit.md)
 - [Phase 2 U4 durable ViewId audit](subagents/2026-07-02-phase2-u4-durable-viewid-audit.md)
 - [Phase 2 U5 boundary bridge audit](subagents/2026-07-02-phase2-u5-boundary-bridge-audit.md)

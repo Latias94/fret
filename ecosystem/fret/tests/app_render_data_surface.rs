@@ -1,6 +1,7 @@
 const FRET_LIB_RS: &str = include_str!("../src/lib.rs");
 const VIEW_RS: &str = include_str!("../src/view.rs");
 const VIEW_DATA_RS: &str = include_str!("../src/view/data.rs");
+const VIEW_DATA_RENDER_RS: &str = include_str!("../src/view/data/render.rs");
 const ASYNC_PLAYGROUND_DEMO: &str =
     include_str!("../../../apps/fret-examples/src/async_playground_demo.rs");
 const QUERY_DEMO: &str = include_str!("../../../apps/fret-examples/src/query_demo.rs");
@@ -34,7 +35,7 @@ fn view_api_surface() -> String {
         .split("\n#[cfg(test)]\nmod tests")
         .next()
         .expect("view.rs test module marker should exist");
-    format!("{view_api}\n{VIEW_DATA_RS}")
+    format!("{view_api}\n{VIEW_DATA_RS}\n{VIEW_DATA_RENDER_RS}")
 }
 
 #[test]

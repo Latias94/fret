@@ -776,7 +776,10 @@ pub mod advanced {
     /// This keeps `raw_model(...)` discoverable for advanced/manual assembly and intentional
     /// `Model<T>`-centric code while leaving `fret::app::prelude::*` focused on
     /// `LocalState<T>` / `cx.state().local*`.
-    pub use crate::view::AppUiRawModelExt;
+    pub use crate::view::{
+        AppUiRawModelExt, LocalStateElementContextExt, LocalStateModelStoreExt,
+        LocalStateRawModelExt,
+    };
     #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
     pub use crate::{UiAppBuilder, UiAppDriver};
     pub use fret_app::App as KernelApp;
@@ -4129,6 +4132,11 @@ mod authoring_surface_policy_tests {
         assert!(advanced_prelude_exports_symbol("AppUiRawActionNotifyExt"));
         assert!(!advanced_prelude_exports_symbol("AppUiRawStateExt"));
         assert!(advanced_prelude_exports_symbol("AppUiRawModelExt"));
+        assert!(advanced_prelude_exports_symbol("LocalStateRawModelExt"));
+        assert!(advanced_prelude_exports_symbol("LocalStateModelStoreExt"));
+        assert!(advanced_prelude_exports_symbol(
+            "LocalStateElementContextExt"
+        ));
         assert!(advanced_prelude_exports_symbol("AppComponentCx"));
         assert!(advanced_prelude_exports_symbol("AppRenderCx"));
         assert!(advanced_prelude_exports_symbol("AppUi"));
@@ -4551,6 +4559,9 @@ mod authoring_surface_policy_tests {
         assert!(!app_prelude_exports_symbol("AppUiRawActionNotifyExt"));
         assert!(!app_prelude_exports_symbol("AppUiRawStateExt"));
         assert!(!app_prelude_exports_symbol("AppUiRawModelExt"));
+        assert!(!app_prelude_exports_symbol("LocalStateRawModelExt"));
+        assert!(!app_prelude_exports_symbol("LocalStateModelStoreExt"));
+        assert!(!app_prelude_exports_symbol("LocalStateElementContextExt"));
         assert!(!app_prelude_exports_symbol("Event"));
         assert!(!app_prelude_exports_symbol("ElementContext"));
         assert!(!app_prelude_exports_symbol("UiTree"));

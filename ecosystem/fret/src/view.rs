@@ -53,7 +53,8 @@ pub use data::{AppRenderData, AppRenderDataExt, AppUiData};
 pub use data::{LocalSelectorLayoutInputs, ModelSelectorInputs};
 pub use effects::AppUiEffects;
 pub use local_state::{
-    LocalActionCapture, LocalState, LocalStateTxn, TrackedStateExt, WatchedState,
+    LocalActionCapture, LocalState, LocalStateElementContextExt, LocalStateModelStoreExt,
+    LocalStateRawModelExt, LocalStateTxn, TrackedStateExt, WatchedState,
 };
 pub use raw::{
     AppUiComponentLaneRequiresExplicitElementsEscapeHatch, AppUiRawActionNotifyExt,
@@ -71,9 +72,10 @@ pub use state::AppUiState;
 mod tests {
     use super::{
         AppActivateExt, AppActivateSurface, AppRenderActionsExt as _, AppUiRenderRootState,
-        LocalActionCapture, LocalState, LocalStateTxn, OnActivate, View, ViewWindowState,
-        action_listener, dispatch_action_listener, dispatch_payload_action_listener,
-        render_root_with_app_ui, view_init_window, view_view,
+        LocalActionCapture, LocalState, LocalStateElementContextExt as _,
+        LocalStateModelStoreExt as _, LocalStateRawModelExt as _, LocalStateTxn, OnActivate, View,
+        ViewWindowState, action_listener, dispatch_action_listener,
+        dispatch_payload_action_listener, render_root_with_app_ui, view_init_window, view_view,
     };
     use std::any::Any;
     #[cfg(feature = "state-mutation")]
@@ -94,10 +96,13 @@ mod tests {
     const VIEW_RS_SOURCE: &str = include_str!("view.rs");
     const CONTEXT_RS_SOURCE: &str = include_str!("view/context.rs");
     const DATA_RS_SOURCE: &str = include_str!("view/data.rs");
+    const DATA_RENDER_RS_SOURCE: &str = include_str!("view/data/render.rs");
     const EFFECTS_RS_SOURCE: &str = include_str!("view/effects.rs");
     const LANE_BARRIERS_RS_SOURCE: &str = include_str!("view/lane_barriers.rs");
     const LAYOUT_QUERY_RS_SOURCE: &str = include_str!("view/layout_query.rs");
     const LOCAL_STATE_RS_SOURCE: &str = include_str!("view/local_state.rs");
+    const LOCAL_STATE_ADAPTERS_RS_SOURCE: &str = include_str!("view/local_state/adapters.rs");
+    const LOCAL_STATE_BRIDGES_RS_SOURCE: &str = include_str!("view/local_state/bridges.rs");
     const RAW_RS_SOURCE: &str = include_str!("view/raw.rs");
     const RUNTIME_RS_SOURCE: &str = include_str!("view/runtime.rs");
     const SCHEDULING_RS_SOURCE: &str = include_str!("view/scheduling.rs");
@@ -110,7 +115,7 @@ mod tests {
             .next()
             .expect("view.rs test module marker should exist");
         format!(
-            "{view_api}\n{ACTIVATION_RS_SOURCE}\n{ACTIONS_RS_SOURCE}\n{BRIDGES_RS_SOURCE}\n{CONTEXT_RS_SOURCE}\n{DATA_RS_SOURCE}\n{EFFECTS_RS_SOURCE}\n{LANE_BARRIERS_RS_SOURCE}\n{LAYOUT_QUERY_RS_SOURCE}\n{LOCAL_STATE_RS_SOURCE}\n{RAW_RS_SOURCE}\n{RUNTIME_RS_SOURCE}\n{SCHEDULING_RS_SOURCE}\n{SHELL_RS_SOURCE}\n{STATE_RS_SOURCE}"
+            "{view_api}\n{ACTIVATION_RS_SOURCE}\n{ACTIONS_RS_SOURCE}\n{BRIDGES_RS_SOURCE}\n{CONTEXT_RS_SOURCE}\n{DATA_RS_SOURCE}\n{DATA_RENDER_RS_SOURCE}\n{EFFECTS_RS_SOURCE}\n{LANE_BARRIERS_RS_SOURCE}\n{LAYOUT_QUERY_RS_SOURCE}\n{LOCAL_STATE_RS_SOURCE}\n{LOCAL_STATE_ADAPTERS_RS_SOURCE}\n{LOCAL_STATE_BRIDGES_RS_SOURCE}\n{RAW_RS_SOURCE}\n{RUNTIME_RS_SOURCE}\n{SCHEDULING_RS_SOURCE}\n{SHELL_RS_SOURCE}\n{STATE_RS_SOURCE}"
         )
     }
     use fret_core::{
@@ -1872,8 +1877,14 @@ mod tests {
             .expect("view.rs test module marker should exist");
         assert!(view_api.contains("mod local_state;"));
         assert!(view_api.contains("pub use local_state::{"));
+        assert!(LOCAL_STATE_RS_SOURCE.contains("mod adapters;"));
+        assert!(LOCAL_STATE_RS_SOURCE.contains("mod bridges;"));
+        assert!(LOCAL_STATE_RS_SOURCE.contains("pub use bridges::{"));
         assert!(view_api.contains("LocalActionCapture"));
         assert!(view_api.contains("LocalStateTxn"));
+        assert!(view_api.contains("LocalStateRawModelExt"));
+        assert!(view_api.contains("LocalStateModelStoreExt"));
+        assert!(view_api.contains("LocalStateElementContextExt"));
         assert!(view_api.contains("TrackedStateExt"));
         assert!(view_api.contains("WatchedState"));
         assert!(
@@ -1881,6 +1892,30 @@ mod tests {
                 .contains("Local view-owned state for the app-facing `View` authoring lane.")
         );
         assert!(!view_api.contains("pub struct LocalState<T>"));
+    }
+
+    #[test]
+    fn data_and_local_state_modules_stay_split_instead_of_regrowing_aggregators() {
+        assert!(DATA_RS_SOURCE.contains("mod render;"));
+        assert!(DATA_RS_SOURCE.contains("pub use render::{AppRenderData, AppRenderDataExt};"));
+        assert!(DATA_RENDER_RS_SOURCE.contains("pub struct AppRenderData"));
+        assert!(LOCAL_STATE_ADAPTERS_RS_SOURCE.contains("IntoBoolModel for LocalState<bool>"));
+        assert!(LOCAL_STATE_BRIDGES_RS_SOURCE.contains("pub trait LocalStateRawModelExt<T>"));
+        assert!(LOCAL_STATE_BRIDGES_RS_SOURCE.contains("pub trait LocalStateModelStoreExt<T>"));
+        assert!(
+            LOCAL_STATE_BRIDGES_RS_SOURCE.contains("pub trait LocalStateElementContextExt<T: Any>")
+        );
+
+        let data_lines = DATA_RS_SOURCE.lines().count();
+        let local_state_lines = LOCAL_STATE_RS_SOURCE.lines().count();
+        assert!(
+            data_lines <= 760,
+            "view/data.rs regrew to {data_lines} lines; split selector/query/mutation modules instead"
+        );
+        assert!(
+            local_state_lines <= 780,
+            "view/local_state.rs regrew to {local_state_lines} lines; keep adapters and advanced bridges split"
+        );
     }
 
     #[test]
@@ -2242,10 +2277,25 @@ mod tests {
         );
         assert!(api_source.contains("pub fn layout_read_ref<'a, H: UiHost + 'a, Cx, R>("));
         assert!(api_source.contains("pub fn paint_read_ref<'a, H: UiHost + 'a, Cx, R>("));
-        assert!(api_source.contains("pub fn layout_value_in<'cx, 'm, 'a, H: UiHost>("));
-        assert!(api_source.contains("pub fn layout_read_ref_in<'cx, 'm, 'a, H: UiHost, R>("));
-        assert!(api_source.contains("pub fn paint_value_in<'cx, 'm, 'a, H: UiHost>("));
-        assert!(api_source.contains("pub fn paint_read_ref_in<'cx, 'm, 'a, H: UiHost, R>("));
+        assert!(!LOCAL_STATE_RS_SOURCE.contains("pub trait LocalStateRawModelExt"));
+        assert!(!LOCAL_STATE_RS_SOURCE.contains("pub trait LocalStateModelStoreExt"));
+        assert!(!LOCAL_STATE_RS_SOURCE.contains("pub trait LocalStateElementContextExt"));
+        assert!(!LOCAL_STATE_RS_SOURCE.contains("pub fn from_model("));
+        assert!(!LOCAL_STATE_RS_SOURCE.contains("pub fn model(&self) -> &Model<T>"));
+        assert!(!LOCAL_STATE_RS_SOURCE.contains("pub fn clone_model(&self) -> Model<T>"));
+        assert!(!LOCAL_STATE_RS_SOURCE.contains("pub fn read_in<R>("));
+        assert!(!LOCAL_STATE_RS_SOURCE.contains("pub fn update_in("));
+        assert!(!LOCAL_STATE_RS_SOURCE.contains("pub fn set_in("));
+        assert!(!LOCAL_STATE_RS_SOURCE.contains("pub fn watch_in<"));
+        assert!(!LOCAL_STATE_RS_SOURCE.contains("pub fn layout_value_in<"));
+        assert!(!LOCAL_STATE_RS_SOURCE.contains("pub fn paint_value_in<"));
+        assert!(api_source.contains("pub trait LocalStateRawModelExt<T>"));
+        assert!(api_source.contains("pub trait LocalStateModelStoreExt<T>"));
+        assert!(api_source.contains("pub trait LocalStateElementContextExt<T: Any>"));
+        assert!(api_source.contains("fn layout_value_in<'cx, 'm, 'a, H: UiHost>("));
+        assert!(api_source.contains("fn layout_read_ref_in<'cx, 'm, 'a, H: UiHost, R>("));
+        assert!(api_source.contains("fn paint_value_in<'cx, 'm, 'a, H: UiHost>("));
+        assert!(api_source.contains("fn paint_read_ref_in<'cx, 'm, 'a, H: UiHost, R>("));
         assert!(!api_source.contains("pub fn use_selector<"));
         assert!(!api_source.contains("pub fn use_selector_keyed<"));
         assert!(!api_source.contains("pub fn use_query<"));
@@ -2508,23 +2558,19 @@ mod tests {
         let api_source = view_authoring_api_source();
         assert!(api_source.contains("Default app-facing handle for view-owned local state."));
         assert!(api_source.contains("Insert a new view-owned local slot into an existing"));
-        assert!(api_source.contains("Expose the underlying `Model<T>` as an explicit bridge."));
-        assert!(api_source.contains("Clone the underlying `Model<T>` as an explicit bridge."));
-        assert!(api_source.contains("Read this local through an explicit `ModelStore` bridge."));
-        assert!(api_source.contains(
-            "Query the underlying model revision through an explicit `ModelStore` bridge."
-        ));
-        assert!(api_source.contains(
-            "Clone the current local value through an explicit `ModelStore` bridge read."
-        ));
         assert!(
             api_source
-                .contains("Update this local slot through an explicit `ModelStore` transaction.")
+                .contains("Explicit raw `Model<T>` bridge for advanced/component/hybrid surfaces.")
         );
-        assert!(
-            api_source
-                .contains("Set this local slot through an explicit `ModelStore` transaction.")
-        );
+        assert!(api_source.contains(
+            "Explicit `ModelStore` bridge for advanced transactions and manual/hybrid surfaces."
+        ));
+        assert!(api_source.contains(
+            "Explicit `ElementContext` bridge for helper-heavy component or advanced surfaces."
+        ));
+        assert!(api_source.contains(
+            "Default app code should prefer `state.layout_value(cx)` / `state.paint_value(cx)`"
+        ));
         assert!(api_source.contains(
             "Read the current local value through a layout invalidation tracked read on the default app"
         ));
@@ -2536,22 +2582,6 @@ mod tests {
         ));
         assert!(api_source.contains(
             "Read a derived value from this local through a paint invalidation tracked borrow on the"
-        ));
-        assert!(
-            api_source
-                .contains("Observe/read this local from helper-heavy `ElementContext` surfaces.")
-        );
-        assert!(api_source.contains(
-            "Read the current local value through a paint invalidation tracked read on helper-heavy"
-        ));
-        assert!(api_source.contains(
-            "Read a derived value from this local through a paint invalidation tracked borrow on"
-        ));
-        assert!(api_source.contains(
-            "Read the current local value through a layout invalidation tracked read on helper-heavy"
-        ));
-        assert!(api_source.contains(
-            "Read a derived value from this local through a layout invalidation tracked borrow on"
         ));
         assert!(api_source.contains(
             "This trait is intentionally omitted from `fret::app::prelude::*` and reexported from"

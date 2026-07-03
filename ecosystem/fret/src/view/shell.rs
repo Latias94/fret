@@ -6,7 +6,10 @@ use fret_runtime::Model;
 use fret_ui::action::{OnCommand, OnCommandAvailability};
 use fret_ui::{ElementContext, UiHost};
 
-use super::{AppUiActions, AppUiData, AppUiEffects, AppUiState, LocalState, WatchedState};
+use super::{
+    AppUiActions, AppUiData, AppUiEffects, AppUiState, LocalState, LocalStateRawModelExt as _,
+    WatchedState,
+};
 
 /// Per-frame view construction context passed to [`super::View::render`].
 ///

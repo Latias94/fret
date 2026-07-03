@@ -286,3 +286,10 @@ timestamp: 2026-06-30
   passed for scaffold tests, generated-app `cargo check`, the public mutation diag script, `fret
   --lib`, formatting, layering, surface policy, consumption profiles, execution surface, and
   whitespace.
+- 2026-07-02: Phase 2 U14 narrows the app facade by splitting `AppRenderData` into
+  `view/data/render.rs`, moving `LocalState` raw `Model<T>`, `ModelStore`, and `ElementContext`
+  bridges into `view/local_state/bridges.rs`, and moving component model adapters into
+  `view/local_state/adapters.rs`. The default app prelude still omits these raw bridge traits;
+  advanced/manual call sites now import them explicitly. Verification passed for `fret` facade
+  tests, `fret-cookbook` and `fret-examples-imui` compile checks, surface-policy,
+  execution-surface, consumption-profile, layering, formatting, and whitespace gates.
