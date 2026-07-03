@@ -266,8 +266,9 @@ When extracted app helpers need hover shells or attributed text leaves, prefer
 `HoverRegionProps`, `StyledTextProps`, or `cx.elements()` directly.
 When app code needs explicit theme snapshot value types in extracted helper signatures, import
 `fret::style::ThemeSnapshot` instead of expecting it from `fret::app::prelude::*`.
-When app code needs explicit local state-handle types in validators or helper signatures, import
-`fret::app::LocalState` instead of expecting it from `fret::app::prelude::*`.
+When app code needs explicit local state-handle or transaction types in validators or helper
+signatures, import `fret::app::{LocalState, LocalStateTxn}` instead of expecting them from
+`fret::app::prelude::*`.
 When app code needs explicit command identity, metadata, availability, keybinding, keymap, or
 shortcut-display nouns, import them from `fret::commands::{...}` instead of importing `fret_app`,
 `fret_runtime`, `fret_core`, or `fret_ui` from default app/tutorial code.

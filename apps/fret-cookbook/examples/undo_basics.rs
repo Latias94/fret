@@ -1,17 +1,14 @@
-use fret::actions::CommandId;
-use fret::advanced::raw::AppUiRawActionNotifyExt as _;
 use fret::app::RenderContextAccess as _;
 use fret::app::prelude::*;
-use fret::semantics::SemanticsRole;
-use fret::style::{ColorRef, Space};
-use fret_app::Effect;
-use fret_app::{
-    CommandMeta, CommandScope, DefaultKeybinding, InputContext, KeyChord, KeymapService, Platform,
-    PlatformFilter, format_sequence,
+use fret::app::{LocalState, LocalStateTxn};
+use fret::commands::{
+    CommandAvailability, CommandId, CommandMeta, CommandScope, DefaultKeybinding, InputContext,
+    KeyChord, KeyCode, KeymapService, Modifiers, Platform, PlatformFilter, format_sequence,
+    install_command_default_keybindings_into_keymap,
 };
-use fret_core::{FontWeight, KeyCode, Modifiers};
-use fret_runtime::Model;
-use fret_ui::{CommandAvailability, element::SemanticsDecoration};
+use fret::semantics::SemanticsDecoration;
+use fret::semantics::SemanticsRole;
+use fret::style::{ColorRef, FontWeight, Space};
 use fret_undo::{CMD_EDIT_REDO, CMD_EDIT_UNDO, UndoHistory, UndoRecord, ValueTx};
 
 mod act {
@@ -38,9 +35,9 @@ const TEST_ID_NEXT_UNDO: &str = "cookbook.undo_basics.next_undo";
 const TEST_ID_NEXT_REDO: &str = "cookbook.undo_basics.next_redo";
 
 struct UndoBasicsView {
-    value: Model<i32>,
-    history: Model<UndoHistory<ValueTx<i32>>>,
-    coalesce: Model<bool>,
+    value: LocalState<i32>,
+    history: LocalState<UndoHistory<ValueTx<i32>>>,
+    coalesce: LocalState<bool>,
 }
 
 fn install_commands(app: &mut App) {
@@ -129,24 +126,24 @@ fn install_commands(app: &mut App) {
             ]),
     );
 
-    fret_app::install_command_default_keybindings_into_keymap(app);
+    install_command_default_keybindings_into_keymap(app);
 }
 
 fn record_value_tx(
-    models: &mut fret_runtime::ModelStore,
-    value: &Model<i32>,
-    history: &Model<UndoHistory<ValueTx<i32>>>,
+    tx: &mut LocalStateTxn<'_>,
+    value: &LocalState<i32>,
+    history: &LocalState<UndoHistory<ValueTx<i32>>>,
     label: &'static str,
     coalesce_key: Option<&'static str>,
     after: i32,
-) {
-    let before = models.read(value, |v| *v).ok().unwrap_or_default();
+) -> bool {
+    let before = tx.value_or(value, 0);
     if before == after {
-        return;
+        return false;
     }
 
-    let _ = models.update(value, |v| *v = after);
-    let _ = models.update(history, |h| {
+    let value_changed = tx.set(value, after);
+    let history_changed = tx.update(history, |h| {
         let record = UndoRecord::new(ValueTx::new(before, after)).label(label);
         if let Some(k) = coalesce_key {
             let mut record = record.coalesce_key(k);
@@ -161,14 +158,55 @@ fn record_value_tx(
             h.record(record);
         }
     });
+    value_changed || history_changed
+}
+
+fn undo_value_tx(
+    tx: &mut LocalStateTxn<'_>,
+    value: &LocalState<i32>,
+    history: &LocalState<UndoHistory<ValueTx<i32>>>,
+) -> bool {
+    let mut next_value = None;
+    let history_changed = tx.update_if(history, |h| {
+        h.undo_invertible(|rec| {
+            next_value = Some(rec.tx.after);
+            Ok::<(), ()>(())
+        })
+        .ok()
+        .unwrap_or(false)
+    });
+    let Some(next_value) = next_value else {
+        return false;
+    };
+    tx.set(value, next_value) || history_changed
+}
+
+fn redo_value_tx(
+    tx: &mut LocalStateTxn<'_>,
+    value: &LocalState<i32>,
+    history: &LocalState<UndoHistory<ValueTx<i32>>>,
+) -> bool {
+    let mut next_value = None;
+    let history_changed = tx.update_if(history, |h| {
+        h.redo_invertible(|rec| {
+            next_value = Some(rec.tx.after);
+            Ok::<(), ()>(())
+        })
+        .ok()
+        .unwrap_or(false)
+    });
+    let Some(next_value) = next_value else {
+        return false;
+    };
+    tx.set(value, next_value) || history_changed
 }
 
 impl View for UndoBasicsView {
     fn init(app: &mut App, _window: WindowId) -> Self {
         Self {
-            value: app.models_mut().insert(0),
-            history: app.models_mut().insert(UndoHistory::with_limit(64)),
-            coalesce: app.models_mut().insert(false),
+            value: app.local_state(0),
+            history: app.local_state(UndoHistory::with_limit(64)),
+            coalesce: app.local_state(false),
         }
     }
 
@@ -195,7 +233,7 @@ impl View for UndoBasicsView {
         let coalesce_label = if coalesce { "On" } else { "Off" };
 
         let undo_shortcut = cx
-            .app
+            .app()
             .global::<KeymapService>()
             .and_then(|svc| {
                 svc.keymap
@@ -205,7 +243,7 @@ impl View for UndoBasicsView {
             .unwrap_or_else(|| "Unbound".to_string());
 
         let redo_shortcut = cx
-            .app
+            .app()
             .global::<KeymapService>()
             .and_then(|svc| {
                 svc.keymap
@@ -337,146 +375,69 @@ impl View for UndoBasicsView {
         .w_full()
         .max_w(Px(760.0));
 
-        cx.actions().models::<act::Inc>({
-            let value = self.value.clone();
-            let history = self.history.clone();
-            let coalesce = self.coalesce.clone();
-            move |models| {
-                let coalesce = models.read(&coalesce, |v| *v).ok().unwrap_or(false);
-                let after = models
-                    .read(&value, |v| v.saturating_add(1))
-                    .ok()
-                    .unwrap_or(1);
+        cx.actions()
+            .locals_with((&self.value, &self.history, &self.coalesce))
+            .on::<act::Inc>(|tx, (value, history, coalesce)| {
+                let coalesce = tx.value_or(&coalesce, false);
+                let after = tx.value_or(&value, 0).saturating_add(1);
                 record_value_tx(
-                    models,
+                    tx,
                     &value,
                     &history,
                     "Increment",
                     coalesce.then_some("value"),
                     after,
-                );
-                true
-            }
-        });
+                )
+            });
 
-        cx.actions().models::<act::Dec>({
-            let value = self.value.clone();
-            let history = self.history.clone();
-            let coalesce = self.coalesce.clone();
-            move |models| {
-                let coalesce = models.read(&coalesce, |v| *v).ok().unwrap_or(false);
-                let after = models
-                    .read(&value, |v| v.saturating_sub(1))
-                    .ok()
-                    .unwrap_or(-1);
+        cx.actions()
+            .locals_with((&self.value, &self.history, &self.coalesce))
+            .on::<act::Dec>(|tx, (value, history, coalesce)| {
+                let coalesce = tx.value_or(&coalesce, false);
+                let after = tx.value_or(&value, 0).saturating_sub(1);
                 record_value_tx(
-                    models,
+                    tx,
                     &value,
                     &history,
                     "Decrement",
                     coalesce.then_some("value"),
                     after,
-                );
-                true
-            }
-        });
+                )
+            });
 
-        cx.actions().models::<act::Reset>({
-            let value = self.value.clone();
-            let history = self.history.clone();
-            move |models| {
-                record_value_tx(models, &value, &history, "Reset", None, 0);
-                true
-            }
-        });
+        cx.actions()
+            .locals_with((&self.value, &self.history))
+            .on::<act::Reset>(|tx, (value, history)| {
+                record_value_tx(tx, &value, &history, "Reset", None, 0)
+            });
 
-        // `Undo`/`Redo` stay on the advanced helper because history traversal is coupled
-        // to a host-side RAF effect for immediate visual refresh.
-        cx.on_action_notify::<act::Undo>({
-            let value = self.value.clone();
-            let history = self.history.clone();
-            move |host, acx| {
-                let next_value = host
-                    .models_mut()
-                    .update(&history, |h| {
-                        let mut next = None;
-                        let _ = h.undo_invertible(|rec| {
-                            next = Some(rec.tx.after);
-                            Ok::<(), ()>(())
-                        });
-                        next
-                    })
-                    .ok()
-                    .flatten();
+        cx.actions()
+            .locals_with((&self.value, &self.history))
+            .on::<act::Undo>(|tx, (value, history)| undo_value_tx(tx, &value, &history));
 
-                let Some(next_value) = next_value else {
-                    return false;
-                };
+        cx.actions()
+            .locals_with((&self.value, &self.history))
+            .on::<act::Redo>(|tx, (value, history)| redo_value_tx(tx, &value, &history));
 
-                let _ = host.models_mut().update(&value, |v| *v = next_value);
-                host.push_effect(Effect::RequestAnimationFrame(acx.window));
-                true
-            }
-        });
-
-        cx.on_action_notify::<act::Redo>({
-            let value = self.value.clone();
-            let history = self.history.clone();
-            move |host, acx| {
-                let next_value = host
-                    .models_mut()
-                    .update(&history, |h| {
-                        let mut next = None;
-                        let _ = h.redo_invertible(|rec| {
-                            next = Some(rec.tx.after);
-                            Ok::<(), ()>(())
-                        });
-                        next
-                    })
-                    .ok()
-                    .flatten();
-
-                let Some(next_value) = next_value else {
-                    return false;
-                };
-
-                let _ = host.models_mut().update(&value, |v| *v = next_value);
-                host.push_effect(Effect::RequestAnimationFrame(acx.window));
-                true
-            }
-        });
-
-        cx.actions().availability::<act::Undo>({
-            let history = self.history.clone();
-            move |host, _acx| {
-                let can = host
-                    .models_mut()
-                    .read(&history, |h| h.can_undo())
-                    .ok()
-                    .unwrap_or(false);
-                if can {
+        cx.actions()
+            .locals_with(&self.history)
+            .availability::<act::Undo>(|tx, history| {
+                if tx.value(&history).can_undo() {
                     CommandAvailability::Available
                 } else {
                     CommandAvailability::Blocked
                 }
-            }
-        });
+            });
 
-        cx.actions().availability::<act::Redo>({
-            let history = self.history.clone();
-            move |host, _acx| {
-                let can = host
-                    .models_mut()
-                    .read(&history, |h| h.can_redo())
-                    .ok()
-                    .unwrap_or(false);
-                if can {
+        cx.actions()
+            .locals_with(&self.history)
+            .availability::<act::Redo>(|tx, history| {
+                if tx.value(&history).can_redo() {
                     CommandAvailability::Available
                 } else {
                     CommandAvailability::Blocked
                 }
-            }
-        });
+            });
 
         fret_cookbook::scaffold::centered_page_background(cx, TEST_ID_ROOT, card).into()
     }

@@ -176,7 +176,7 @@ pub mod semantics {
 
 /// Explicit style/token nouns for app code that customizes layout or chrome beyond the default lane.
 pub mod style {
-    pub use fret_core::{Corners, Edges, TextAlign, TextOverflow, TextWrap};
+    pub use fret_core::{Corners, Edges, FontWeight, TextAlign, TextOverflow, TextWrap};
     pub use fret_ui::element::{ContainerProps, LayoutStyle, Length, Overflow, SizeStyle};
     pub use fret_ui::{Theme, ThemeSnapshot};
     pub use fret_ui_kit::{
@@ -560,7 +560,7 @@ pub mod app {
     /// Explicit helper types/traits for app helper signatures that intentionally name them.
     pub use crate::view::{
         AppLocalStateExt, AppRenderActionsExt, AppRenderContext, AppRenderDataExt, LocalState,
-        RenderContextAccess,
+        LocalStateTxn, RenderContextAccess,
     };
     /// Canonical app-facing runtime handle on the default `fret` surface.
     ///
@@ -3397,7 +3397,7 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_USAGE_GUIDE.contains("`cx.actions().transient::<A>(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`cx.effects().toast_message(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`cx.effects().toast_dismiss_all()`"));
-        assert!(CRATE_USAGE_GUIDE.contains("`fret::app::LocalState`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`fret::app::{LocalState, LocalStateTxn}`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::commands::{...}`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::style::{...}`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::style::ThemeSnapshot`"));
@@ -4003,6 +4003,7 @@ mod authoring_surface_policy_tests {
         assert!(app_prelude.contains("WindowId"));
         assert!(app_prelude_exports_symbol("Px"));
         assert!(!app_prelude_exports_symbol("LocalState"));
+        assert!(!app_prelude_exports_symbol("LocalStateTxn"));
         assert!(!app_prelude_exports_symbol("AppLocalStateExt"));
         assert!(!app_prelude_exports_symbol("CommandId"));
         assert!(!app_prelude_exports_symbol("ThemeSnapshot"));
@@ -4202,6 +4203,7 @@ mod authoring_surface_policy_tests {
         assert!(LIB_RS.contains(
             "AppLocalStateExt, AppRenderActionsExt, AppRenderContext, AppRenderDataExt, LocalState,"
         ));
+        assert!(LIB_RS.contains("LocalStateTxn, RenderContextAccess,"));
         assert!(!public_surface.contains("pub use crate::view::{UiCxActionsExt, UiCxDataExt};"));
         assert!(LIB_RS.contains("pub use fret_ui::{Theme, ThemeSnapshot};"));
     }
@@ -4460,11 +4462,9 @@ mod authoring_surface_policy_tests {
         assert!(root_header.contains("pub use fret_ui::CommandAvailability;"));
         assert!(root_header.contains("pub use fret_core::SemanticsRole;"));
         assert!(root_header.contains("pub use fret_ui::element::SemanticsDecoration;"));
-        assert!(
-            root_header.contains(
-                "pub use fret_core::{Corners, Edges, TextAlign, TextOverflow, TextWrap};"
-            )
-        );
+        assert!(root_header.contains(
+            "pub use fret_core::{Corners, Edges, FontWeight, TextAlign, TextOverflow, TextWrap};"
+        ));
         assert!(root_header.contains(
             "pub use fret_ui::element::{ContainerProps, LayoutStyle, Length, Overflow, SizeStyle};"
         ));

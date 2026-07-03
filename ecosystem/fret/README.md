@@ -192,8 +192,9 @@ them from `fret::style::{...}` and `fret::icons::{icon, IconId}` instead of expe
 `fret::app::prelude::*`.
 If app code intentionally owns low-level virtualized-list configuration, import it from
 `fret::virtual_list::{...}` and keep the related layout props on `fret::style::{...}`.
-If app code needs explicit `ThemeSnapshot` or `LocalState` nouns for helper signatures, import them
-intentionally from `fret::style::ThemeSnapshot` and `fret::app::LocalState`.
+If app code needs explicit `ThemeSnapshot`, `LocalState`, or `LocalStateTxn` nouns for helper
+signatures, import them intentionally from `fret::style::ThemeSnapshot` and
+`fret::app::{LocalState, LocalStateTxn}`.
 If app code needs command registration, availability, keybinding, or shortcut-display nouns, import
 them intentionally from `fret::commands::{...}` instead of teaching `fret_app`, `fret_runtime`,
 `fret_core`, or `fret_ui` in app code.

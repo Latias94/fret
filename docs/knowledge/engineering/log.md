@@ -544,3 +544,12 @@ timestamp: 2026-06-30
   consumption-profile, execution-surface, layering, formatting, engineering-memory, and whitespace;
   the feature compile still shows pre-existing unused-import warnings in `fret-ui-shadcn` and
   `fret`.
+- 2026-07-03: Phase 3 U13 undo facade cookbook migration adds LocalState-backed command
+  availability helpers, exports `LocalStateTxn` on the explicit `fret::app` lane, migrates
+  `undo_basics.rs` off raw action notify, raw runtime models, `fret_app::Effect`, and direct
+  `fret_core`/`fret_ui` imports, and moves it to default clean source-policy coverage. Readonly
+  explorer `019f29e6-cc07-7a63-9a77-7aad3adb17b7` also identified next U13 targets: IMUI facade
+  gaps and the default-clean `data_table_basics.rs` raw `Model<T>` policy blind spot.
+  Verification passed for undo feature/example compile, `fret-cookbook --all-targets`,
+  cookbook/fret authoring surface suites, source-policy tests/gate, consumption-profile,
+  execution-surface, layering, formatting, engineering-memory, and whitespace.

@@ -63,6 +63,22 @@ where
             f(&mut tx, captures.clone())
         });
     }
+
+    pub fn availability<A>(
+        self,
+        f: impl for<'m> Fn(&mut LocalStateTxn<'m>, C) -> fret_ui::CommandAvailability + 'static,
+    ) where
+        A: crate::TypedAction,
+    {
+        let captures = self.captures;
+        self.cx
+            .register_action_availability_handler::<A>(move |host, _action_cx| {
+                let mut tx = LocalStateTxn {
+                    models: host.models_mut(),
+                };
+                f(&mut tx, captures.clone())
+            });
+    }
 }
 
 impl<'view, 'cx, 'a, H: UiHost, T> AppUiActionLocal<'view, 'cx, 'a, H, T>
@@ -127,6 +143,21 @@ where
     {
         let captures = self.captures;
         app_render_on_action_notify::<A>(self.cx, move |host, _action_cx| {
+            let mut tx = LocalStateTxn {
+                models: host.models_mut(),
+            };
+            f(&mut tx, captures.clone())
+        });
+    }
+
+    pub fn availability<A>(
+        self,
+        f: impl for<'m> Fn(&mut LocalStateTxn<'m>, C) -> fret_ui::CommandAvailability + 'static,
+    ) where
+        A: crate::TypedAction,
+    {
+        let captures = self.captures;
+        app_render_on_action_availability::<A>(self.cx, move |host, _action_cx| {
             let mut tx = LocalStateTxn {
                 models: host.models_mut(),
             };

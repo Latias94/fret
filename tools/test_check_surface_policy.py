@@ -634,6 +634,7 @@ class SurfacePolicyTests(unittest.TestCase):
             "apps/fret-cookbook/examples/form_basics.rs",
             "apps/fret-cookbook/examples/router_basics.rs",
             "apps/fret-cookbook/examples/text_input_basics.rs",
+            "apps/fret-cookbook/examples/undo_basics.rs",
             "apps/fret-cookbook/examples/virtual_list_basics.rs",
         }
         default_paths = {spec.path for spec in POLICY.DEFAULT_AUTHORING_SURFACES}

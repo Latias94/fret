@@ -518,9 +518,10 @@ mod authoring_surface_policy_tests {
         assert!(!ROUTER_EXAMPLE.contains("use fret_router_ui::{"));
         assert!(ROUTER_EXAMPLE.contains("router_link_to_typed_route_with_test_id"));
         assert!(ROUTER_EXAMPLE.contains("models::<act::ClearIntents>"));
-        assert!(ROUTER_EXAMPLE.contains("on_action_notify::<act::RouterBack>"));
-        assert!(ROUTER_EXAMPLE.contains("self.store.back_on_action()"));
-        assert!(ROUTER_EXAMPLE.contains("self.store.forward_on_action()"));
+        assert!(ROUTER_EXAMPLE.contains("bind_history_actions(cx, &self.store"));
+        assert!(!ROUTER_EXAMPLE.contains("on_action_notify::<act::RouterBack>"));
+        assert!(!ROUTER_EXAMPLE.contains("self.store.back_on_action()"));
+        assert!(!ROUTER_EXAMPLE.contains("self.store.forward_on_action()"));
         assert!(
             ROUTER_EXAMPLE.contains("let intents = intents_model.layout(cx).value_or_default();")
         );
@@ -540,9 +541,18 @@ mod authoring_surface_policy_tests {
         assert!(DATA_TABLE_EXAMPLE.contains("use fret_runtime::Model;"));
         assert!(DATA_TABLE_EXAMPLE.contains("fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui"));
 
-        assert!(UNDO_EXAMPLE.contains("use fret_app::Effect;"));
-        assert!(UNDO_EXAMPLE.contains("models::<act::Inc>"));
-        assert!(UNDO_EXAMPLE.contains("on_action_notify::<act::Undo>"));
+        assert!(UNDO_EXAMPLE.contains("use fret::app::{LocalState, LocalStateTxn};"));
+        assert!(UNDO_EXAMPLE.contains("use fret::commands::{"));
+        assert!(
+            UNDO_EXAMPLE.contains(".locals_with((&self.value, &self.history, &self.coalesce))")
+        );
+        assert!(UNDO_EXAMPLE.contains(".on::<act::Inc>"));
+        assert!(UNDO_EXAMPLE.contains(".availability::<act::Undo>"));
+        assert!(!UNDO_EXAMPLE.contains("use fret_app::Effect;"));
+        assert!(!UNDO_EXAMPLE.contains("use fret_runtime::Model;"));
+        assert!(!UNDO_EXAMPLE.contains("AppUiRawActionNotifyExt"));
+        assert!(!UNDO_EXAMPLE.contains("on_action_notify::<act::Undo>"));
+        assert!(!UNDO_EXAMPLE.contains("Effect::RequestAnimationFrame"));
         assert!(UNDO_EXAMPLE.contains("let value = self.value.paint(cx).value_or_default();"));
         assert!(UNDO_EXAMPLE.contains("let history = self.history.paint(cx).value_or_default();"));
         assert!(
@@ -1665,11 +1675,7 @@ mod authoring_surface_policy_tests {
 
         assert_eq!(
             raw_action_notify_files,
-            vec![
-                "async_inbox_basics.rs".to_string(),
-                "router_basics.rs".to_string(),
-                "undo_basics.rs".to_string(),
-            ],
+            vec!["async_inbox_basics.rs".to_string()],
         );
     }
 

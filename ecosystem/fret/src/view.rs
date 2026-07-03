@@ -2455,6 +2455,9 @@ mod tests {
         assert!(api_source.contains(
             "pub fn on<A>(self, f: impl for<'m> Fn(&mut LocalStateTxn<'m>, C) -> bool + 'static)"
         ));
+        assert!(api_source.contains(
+            "pub fn availability<A>(\n        self,\n        f: impl for<'m> Fn(&mut LocalStateTxn<'m>, C) -> fret_ui::CommandAvailability"
+        ));
         assert!(!api_source.contains(
             "pub fn locals<A>(self, f: impl for<'m> Fn(&mut LocalStateTxn<'m>) -> bool + 'static)"
         ));

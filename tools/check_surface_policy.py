@@ -142,6 +142,11 @@ DEFAULT_AUTHORING_SURFACES: tuple[SurfacePath, ...] = (
         "default virtual-list cookbook should stay on explicit fret style and virtual-list facades",
     ),
     SurfacePath(
+        "apps/fret-cookbook/examples/undo_basics.rs",
+        "default_app_clean",
+        "default undo cookbook should stay on app-facing local-state and command facades",
+    ),
+    SurfacePath(
         "apps/fret-cookbook/examples/toast_basics.rs",
         "default_app_clean",
         "default toast cookbook should stay on app-facing effect helpers",
@@ -564,11 +569,6 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
         "imui_plot_basics.rs",
         "IMUI plot controls still expose raw runtime and low-level UI seams",
         ("fret_core", "fret_runtime", "fret_ui"),
-    ),
-    _cookbook_advanced_surface(
-        "undo_basics.rs",
-        "undo action effects still use raw action notify and model-store plumbing",
-        ("fret::advanced", "fret_app", "fret_core", "fret_runtime", "fret_ui", "ModelStore"),
     ),
     _cookbook_advanced_surface(
         "utility_window_materials_windows.rs",
