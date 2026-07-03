@@ -186,6 +186,28 @@ impl<T> LocalState<T> {
     }
 }
 
+/// App-facing constructor for local state created during `View::init`.
+///
+/// This keeps default examples on the app facade when they need a `LocalState<T>` handle before
+/// the first `AppUi` render. Use `cx.state().local*` inside render; keep `LocalState::new_in(...)`
+/// for advanced/manual surfaces that already own a raw `ModelStore`.
+pub trait AppLocalStateExt {
+    #[track_caller]
+    fn local_state<T>(&mut self, value: T) -> LocalState<T>
+    where
+        T: Any;
+}
+
+impl AppLocalStateExt for crate::app::App {
+    #[track_caller]
+    fn local_state<T>(&mut self, value: T) -> LocalState<T>
+    where
+        T: Any,
+    {
+        LocalState::new_in(self.models_mut(), value)
+    }
+}
+
 /// A narrow, LocalState-focused transaction wrapper used to keep the default authoring surface
 /// free of direct `ModelStore` plumbing.
 ///

@@ -71,6 +71,56 @@ DEFAULT_AUTHORING_SURFACES: tuple[SurfacePath, ...] = (
         "default_app_clean",
         "generated app templates are copied verbatim",
     ),
+    SurfacePath(
+        "apps/fret-cookbook/examples/hello.rs",
+        "default_app_clean",
+        "default cookbook basics should teach the app facade",
+    ),
+    SurfacePath(
+        "apps/fret-cookbook/examples/hello_counter.rs",
+        "default_app_clean",
+        "default cookbook basics should teach the app facade",
+    ),
+    SurfacePath(
+        "apps/fret-cookbook/examples/toggle_basics.rs",
+        "default_app_clean",
+        "default cookbook basics should teach the app facade",
+    ),
+    SurfacePath(
+        "apps/fret-cookbook/examples/date_picker_basics.rs",
+        "default_app_clean",
+        "default cookbook controls should stay on app-facing state helpers",
+    ),
+    SurfacePath(
+        "apps/fret-cookbook/examples/markdown_and_code_basics.rs",
+        "default_app_clean",
+        "default cookbook controls should stay on app-facing state helpers",
+    ),
+    SurfacePath(
+        "apps/fret-cookbook/examples/mutation_toast_feedback_basics.rs",
+        "default_app_clean",
+        "default mutation feedback cookbook should stay on app-facing data/effect helpers",
+    ),
+    SurfacePath(
+        "apps/fret-cookbook/examples/payload_actions_basics.rs",
+        "default_app_clean",
+        "default action cookbook should stay on app-facing typed action helpers",
+    ),
+    SurfacePath(
+        "apps/fret-cookbook/examples/theme_switching_basics.rs",
+        "default_app_clean",
+        "default cookbook theme controls should stay on app-facing state helpers",
+    ),
+    SurfacePath(
+        "apps/fret-cookbook/examples/data_table_basics.rs",
+        "default_app_clean",
+        "default data-table cookbook should not teach raw local-state construction",
+    ),
+    SurfacePath(
+        "apps/fret-cookbook/examples/toast_basics.rs",
+        "default_app_clean",
+        "default toast cookbook should stay on app-facing effect helpers",
+    ),
 )
 
 POLICY_RECIPE_SURFACES: tuple[SurfacePath, ...] = (
@@ -220,12 +270,32 @@ DEFAULT_FORBIDDEN_PATTERNS: tuple[tuple[str, str], ...] = (
         "`ElementContext` is a runtime/component seam; default app helpers should prefer `AppUi`, `AppRenderContext`, or typed children",
     ),
     (
+        r"\bfret::advanced\b",
+        "`fret::advanced` must stay off default app/tutorial surfaces",
+    ),
+    (
         r"\bfret::advanced::prelude::\*",
         "`fret::advanced::prelude::*` must stay off default app/tutorial surfaces",
     ),
     (
         r"\badvanced::prelude::\*",
         "`advanced::prelude::*` must stay off default app/tutorial surfaces",
+    ),
+    (
+        r"\bAppUiRawActionNotifyExt\b",
+        "`AppUiRawActionNotifyExt` is an advanced/raw action hook, not a default app authoring helper",
+    ),
+    (
+        r"\bcx\.on_(payload_)?action_notify::<",
+        "default app surfaces should use `cx.actions()` helpers instead of raw `on_action_notify` hooks",
+    ),
+    (
+        r"\bLocalState::new_in\b",
+        "default app surfaces should use `app.local_state(...)` in init or `cx.state().local*` in render",
+    ),
+    (
+        r"\bModelStore\b",
+        "`ModelStore` is a raw runtime seam; default app surfaces should use app-facing state/action/data helpers",
     ),
 )
 

@@ -5,9 +5,8 @@ use fret::app::prelude::*;
 use fret::{
     icons::{IconId, icon},
     semantics::SemanticsRole,
-    style::{ChromeRefinement, ColorRef, Radius, Space},
+    style::{ChromeRefinement, ColorRef, Corners, Radius, Space, TextAlign},
 };
-use fret_core::{Corners, TextAlign};
 
 mod act {
     fret::actions!([

@@ -53,8 +53,8 @@ pub use data::{AppRenderData, AppRenderDataExt, AppUiData};
 pub use data::{LocalSelectorLayoutInputs, ModelSelectorInputs};
 pub use effects::AppUiEffects;
 pub use local_state::{
-    LocalActionCapture, LocalState, LocalStateElementContextExt, LocalStateModelStoreExt,
-    LocalStateRawModelExt, LocalStateTxn, TrackedStateExt, WatchedState,
+    AppLocalStateExt, LocalActionCapture, LocalState, LocalStateElementContextExt,
+    LocalStateModelStoreExt, LocalStateRawModelExt, LocalStateTxn, TrackedStateExt, WatchedState,
 };
 pub use raw::{
     AppUiComponentLaneRequiresExplicitElementsEscapeHatch, AppUiRawActionNotifyExt,
@@ -71,8 +71,8 @@ pub use state::AppUiState;
 #[cfg(test)]
 mod tests {
     use super::{
-        AppActivateExt, AppActivateSurface, AppRenderActionsExt as _, AppUiRenderRootState,
-        LocalActionCapture, LocalState, LocalStateElementContextExt as _,
+        AppActivateExt, AppActivateSurface, AppLocalStateExt as _, AppRenderActionsExt as _,
+        AppUiRenderRootState, LocalActionCapture, LocalState, LocalStateElementContextExt as _,
         LocalStateModelStoreExt as _, LocalStateRawModelExt as _, LocalStateTxn, OnActivate, View,
         ViewWindowState, action_listener, dispatch_action_listener,
         dispatch_payload_action_listener, render_root_with_app_ui, view_init_window, view_view,
@@ -791,6 +791,14 @@ mod tests {
         let local = LocalState::new_in(&mut host.models, String::from("hello"));
 
         assert_eq!(local.value_in(&host.models), Some(String::from("hello")));
+    }
+
+    #[test]
+    fn app_local_state_constructor_allocates_without_exposing_model_store_callsite() {
+        let mut app = crate::app::App::new();
+        let local = app.local_state(String::from("hello"));
+
+        assert_eq!(local.value_in(app.models()), Some(String::from("hello")));
     }
 
     #[test]
@@ -2401,8 +2409,10 @@ mod tests {
         ));
         assert!(api_source.contains("pub fn mutation_submit<A, TIn, TOut>("));
         assert!(api_source.contains("pub fn mutation_retry_last<A, TIn, TOut>("));
+        assert!(api_source.contains("pub fn toast_message("));
         assert!(api_source.contains("pub fn toast_success("));
         assert!(api_source.contains("pub fn toast_error("));
+        assert!(api_source.contains("pub fn toast_dismiss_all("));
         assert!(api_source.contains("pub trait AppActivateSurface"));
         assert!(api_source.contains("pub trait AppActivateExt"));
         assert!(!api_source.contains("pub trait AppActivateCxMarker"));

@@ -1,4 +1,3 @@
-use fret::advanced::AppUiRawActionNotifyExt as _;
 use fret::app::prelude::*;
 use fret::style::Space;
 
@@ -14,6 +13,9 @@ const TEST_ID_ROOT: &str = "cookbook.toast_basics.root";
 const TEST_ID_DEFAULT: &str = "cookbook.toast_basics.default";
 const TEST_ID_SUCCESS: &str = "cookbook.toast_basics.success";
 const TEST_ID_DISMISS_ALL: &str = "cookbook.toast_basics.dismiss_all";
+const EFFECT_DEFAULT_TOAST: u64 = 0x7057_0001;
+const EFFECT_SUCCESS_TOAST: u64 = 0x7057_0002;
+const EFFECT_DISMISS_ALL: u64 = 0x7057_0003;
 
 struct ToastBasicsView;
 
@@ -23,44 +25,28 @@ impl View for ToastBasicsView {
     }
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
-        // Toast actions stay on the advanced helper because Sonner dispatch is a host-owned
-        // imperative integration: the handler needs `UiActionHost` + window, and the default
-        // model/transient teaching paths do not expose that host surface directly.
-        let sonner = shadcn::Sonner::global(cx.app_mut());
+        cx.actions()
+            .transient::<act::DefaultToast>(EFFECT_DEFAULT_TOAST);
+        cx.actions()
+            .transient::<act::SuccessToast>(EFFECT_SUCCESS_TOAST);
+        cx.actions()
+            .transient::<act::DismissAll>(EFFECT_DISMISS_ALL);
 
-        cx.on_action_notify::<act::DefaultToast>({
-            let sonner = sonner.clone();
-            move |host, acx| {
-                sonner.toast_message(
-                    host,
-                    acx.window,
-                    "Hello from Fret",
-                    shadcn::ToastMessageOptions::new().description("This is a default toast."),
-                );
-                true
-            }
-        });
-
-        cx.on_action_notify::<act::SuccessToast>({
-            let sonner = sonner.clone();
-            move |host, acx| {
-                sonner.toast_success_message(
-                    host,
-                    acx.window,
-                    "Saved",
-                    shadcn::ToastMessageOptions::new().description("Everything worked."),
-                );
-                true
-            }
-        });
-
-        cx.on_action_notify::<act::DismissAll>({
-            let sonner = sonner.clone();
-            move |host, acx| {
-                sonner.dismiss_all(host, acx.window);
-                true
-            }
-        });
+        if cx.effects().take_transient(EFFECT_DEFAULT_TOAST) {
+            cx.effects().toast_message(
+                "Hello from Fret",
+                shadcn::ToastMessageOptions::new().description("This is a default toast."),
+            );
+        }
+        if cx.effects().take_transient(EFFECT_SUCCESS_TOAST) {
+            cx.effects().toast_success(
+                "Saved",
+                shadcn::ToastMessageOptions::new().description("Everything worked."),
+            );
+        }
+        if cx.effects().take_transient(EFFECT_DISMISS_ALL) {
+            cx.effects().toast_dismiss_all();
+        }
 
         let buttons = ui::h_flex(|cx| {
             ui::children![

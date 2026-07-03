@@ -449,13 +449,18 @@ mod authoring_surface_policy_tests {
         assert!(EFFECTS_LAYER_EXAMPLE.contains("shadcn::ToggleGroup::single(&self.effect)"));
         assert!(EFFECTS_LAYER_EXAMPLE.contains(".deselectable(false)"));
 
-        assert!(TOAST_EXAMPLE.contains("on_action_notify::<act::DefaultToast>"));
+        assert!(TOAST_EXAMPLE.contains(".transient::<act::DefaultToast>("));
+        assert!(TOAST_EXAMPLE.contains(".transient::<act::SuccessToast>("));
+        assert!(TOAST_EXAMPLE.contains(".transient::<act::DismissAll>("));
+        assert!(TOAST_EXAMPLE.contains("cx.effects().toast_message("));
+        assert!(TOAST_EXAMPLE.contains("cx.effects().toast_success("));
+        assert!(TOAST_EXAMPLE.contains("cx.effects().toast_dismiss_all("));
         assert!(!TOAST_EXAMPLE.contains("availability::<act::DefaultToast>"));
         assert!(!TOAST_EXAMPLE.contains("availability::<act::SuccessToast>"));
         assert!(!TOAST_EXAMPLE.contains("availability::<act::DismissAll>"));
-        assert!(TOAST_EXAMPLE.contains("cx.on_action_notify::<act::DefaultToast>"));
-        assert!(TOAST_EXAMPLE.contains("cx.on_action_notify::<act::SuccessToast>"));
-        assert!(TOAST_EXAMPLE.contains("cx.on_action_notify::<act::DismissAll>"));
+        assert!(!TOAST_EXAMPLE.contains("cx.on_action_notify::<act::DefaultToast>"));
+        assert!(!TOAST_EXAMPLE.contains("cx.on_action_notify::<act::SuccessToast>"));
+        assert!(!TOAST_EXAMPLE.contains("cx.on_action_notify::<act::DismissAll>"));
 
         assert!(VIRTUAL_LIST_EXAMPLE.contains("use fret_runtime::Model;"));
         assert!(VIRTUAL_LIST_EXAMPLE.contains(".items"));
@@ -605,12 +610,23 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
+    fn toast_example_uses_app_effect_helpers_instead_of_raw_action_host() {
+        let normalized = TOAST_EXAMPLE.split_whitespace().collect::<String>();
+        assert!(normalized.contains("cx.actions().transient::<act::DefaultToast>("));
+        assert!(normalized.contains("cx.effects().toast_message("));
+        assert!(normalized.contains("cx.effects().toast_success("));
+        assert!(normalized.contains("cx.effects().toast_dismiss_all("));
+        assert!(!TOAST_EXAMPLE.contains("AppUiRawActionNotifyExt"));
+        assert!(!TOAST_EXAMPLE.contains("cx.on_action_notify::<"));
+        assert!(!TOAST_EXAMPLE.contains("Sonner::global"));
+    }
+
+    #[test]
     fn cookbook_data_table_example_prefers_local_state_table_bridges() {
         assert!(DATA_TABLE_EXAMPLE.contains("table_state: LocalState<TableState>,"));
-        assert!(
-            DATA_TABLE_EXAMPLE
-                .contains("table_state: LocalState::new_in(app.models_mut(), state),")
-        );
+        assert!(DATA_TABLE_EXAMPLE.contains("use fret::app::LocalState;"));
+        assert!(DATA_TABLE_EXAMPLE.contains("table_state: app.local_state(state),"));
+        assert!(!DATA_TABLE_EXAMPLE.contains("LocalState::new_in(app.models_mut(), state)"));
         assert!(DATA_TABLE_EXAMPLE.contains("shadcn::DataTableToolbar::new("));
         assert!(DATA_TABLE_EXAMPLE.contains(
             "shadcn::DataTablePagination::new(&self.table_state, self.table_output.clone())"
@@ -1644,7 +1660,6 @@ mod authoring_surface_policy_tests {
             vec![
                 "async_inbox_basics.rs".to_string(),
                 "router_basics.rs".to_string(),
-                "toast_basics.rs".to_string(),
                 "undo_basics.rs".to_string(),
             ],
         );

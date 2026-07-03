@@ -310,15 +310,8 @@ Default helper rule on this path:
   `fn page(...) -> impl UiChild` and late-land it from `render(...)` with
   `ui::single(cx, page(...))`.
 
-If a product intentionally needs the raw model-backed hook, keep that on the explicit
-`fret::advanced` lane rather than reintroducing it into the default todo authoring path.
-Make that choice explicit:
-
-```rust,ignore
-use fret::advanced::AppUiRawModelExt;
-
-let raw_model = cx.raw_model::<T>();
-```
+If a product intentionally needs raw model-backed hooks, move that code to an explicit advanced
+integration document rather than reintroducing it into the default todo authoring path.
 
 For the full runnable baseline, see the `fretboard new todo` scaffold template.
 

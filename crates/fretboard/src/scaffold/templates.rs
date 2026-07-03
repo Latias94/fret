@@ -3380,7 +3380,7 @@ mod tests {
         assert!(!src.contains(&format!("{}Element", "Any")));
         assert!(!src.contains(&format!("{}Tree", "Ui")));
         assert!(!src.contains("UiActionHostAdapter"));
-        assert!(!src.contains("fret_runtime::ModelStore"));
+        assert!(!src.contains(&format!("fret_runtime::{}Store", "Model")));
         assert!(!src.contains(&format!("fret::{}::prelude::*", "advanced")));
         assert!(!src.contains("handle.submit("));
         assert!(!src.contains("handle.retry_last("));

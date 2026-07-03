@@ -1,3 +1,4 @@
+use fret::app::LocalState;
 use fret::app::RenderContextAccess as _;
 use fret::app::prelude::*;
 use fret::style::{ColorRef, Space};
@@ -48,7 +49,7 @@ impl View for DataTableBasicsView {
         .into();
 
         Self {
-            table_state: LocalState::new_in(app.models_mut(), state),
+            table_state: app.local_state(state),
             table_output: app
                 .models_mut()
                 .insert(shadcn::DataTableViewOutput::default()),

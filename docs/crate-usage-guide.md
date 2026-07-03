@@ -180,7 +180,36 @@ facades.
 - keep the optional in-window menubar bridge explicit on `fret::in_window_menubar::*`; it is not a
   synonym for workspace shell ownership
 
-**Default authoring mental model:** when you take the `fret` golden path, start with `View` + `AppUi` + typed actions, prefer `local.layout_value(cx)` / `local.paint_value(cx)` for ordinary LocalState tracked reads, and use `local.layout_read_ref(cx, |value| ...)` / `local.paint_read_ref(cx, |value| ...)` when app code only needs a borrowed projection without cloning the full slot. Keep the first-contact handler surface to `cx.actions().locals_with((...)).on::<A>(|tx, (...)| ...)`, `cx.actions().local(&local).set::<A>(...)` / `.update::<A>(...)` / `.toggle_bool::<A>()`, `cx.actions().transient::<A>(...)`, plus widget `.action(...)` / `.action_payload(...)` whenever the control already exposes a stable action slot. For ordinary initialized locals inside `locals_with((...)).on::<A>(...)`, prefer `tx.value(&local)` for reads and keep `tx.value_or(...)` / `tx.value_or_else(...)` for explicit fallback cases only. For view-owned keyed lists, bind row payloads with `.action_payload(...)` and prefer `cx.actions().local(&rows_state).payload_update_if::<A>(...)` as the default row-write path. If a widget already exposes its own `.on_activate(...)` hook, stay on that component-owned surface instead of importing the activation bridge just to attach a no-op or side effect override. Only add `use fret::app::AppActivateExt as _;` for activation-only surfaces that do not yet offer a narrower widget-owned app-facing helper, and keep the same action-first vocabulary there via `widget.action(act::Save)`, `widget.action_payload(act::Remove, payload)`, and `widget.listen(|host, acx| { ... })`. Drop down to `cx.actions().models::<A>(...)` for shared `Model<T>` graphs and `cx.actions().payload_models::<A>(...)` when the same graph needs typed payload actions without reopening the deleted payload-carrier namespace. There is one explicit advanced raw-model seam: import `use fret::advanced::AppUiRawModelExt;` and call `cx.raw_model::<T>()` only when the raw handle itself is the point. Treat lower-level payload helpers, raw `AppUi::on_action_notify*`, and low-level `.on_activate(cx.actions().listen(...))` glue as cookbook/reference-only host-side escape hatches; if you intentionally reopen that seam, keep it on `cx.actions().listen(...)` or import `AppActivateExt` explicitly for activation-only typed dispatch.
+**Default authoring mental model:** when you take the `fret` golden path, start with `View` +
+`AppUi` + typed actions. In `View::init`, create view-owned local handles with
+`app.local_state(value)` instead of reaching for the raw model store. During render, prefer
+`local.layout_value(cx)` / `local.paint_value(cx)` for ordinary LocalState tracked reads, and use
+`local.layout_read_ref(cx, |value| ...)` / `local.paint_read_ref(cx, |value| ...)` when app code
+only needs a borrowed projection without cloning the full slot. Keep the first-contact handler
+surface to `cx.actions().locals_with((...)).on::<A>(|tx, (...)| ...)`,
+`cx.actions().local(&local).set::<A>(...)` / `.update::<A>(...)` / `.toggle_bool::<A>()`,
+`cx.actions().transient::<A>(...)`, plus widget `.action(...)` / `.action_payload(...)` whenever
+the control already exposes a stable action slot. Pair transient app-only actions with grouped
+effects such as `cx.effects().toast_message(...)`, `cx.effects().toast_success(...)`, or
+`cx.effects().toast_dismiss_all()`. For ordinary initialized locals inside
+`locals_with((...)).on::<A>(...)`, prefer `tx.value(&local)` for reads and keep
+`tx.value_or(...)` / `tx.value_or_else(...)` for explicit fallback cases only. For view-owned keyed
+lists, bind row payloads with `.action_payload(...)` and prefer
+`cx.actions().local(&rows_state).payload_update_if::<A>(...)` as the default row-write path. If a
+widget already exposes its own `.on_activate(...)` hook, stay on that component-owned surface
+instead of importing the activation bridge just to attach a no-op or side effect override. Only add
+`use fret::app::AppActivateExt as _;` for activation-only surfaces that do not yet offer a narrower
+widget-owned app-facing helper, and keep the same action-first vocabulary there via
+`widget.action(act::Save)`, `widget.action_payload(act::Remove, payload)`, and
+`widget.listen(|host, acx| { ... })`. Drop down to `cx.actions().models::<A>(...)` for shared
+`Model<T>` graphs and `cx.actions().payload_models::<A>(...)` when the same graph needs typed
+payload actions without reopening the deleted payload-carrier namespace. There is one explicit
+advanced raw-model seam: import `use fret::advanced::AppUiRawModelExt;` and call
+`cx.raw_model::<T>()` only when the raw handle itself is the point. Treat lower-level payload
+helpers, raw `AppUi::on_action_notify*`, and low-level `.on_activate(cx.actions().listen(...))`
+glue as advanced/reference host-side escape hatches; if you intentionally reopen that seam, keep it
+on `cx.actions().listen(...)` or import `AppActivateExt` explicitly for activation-only typed
+dispatch.
 
 `fret::app::AppActivateSurface` / `AppActivateExt` are intentionally narrow: they cover
 activation-only widgets that expose the standard `OnActivate` slot but still lack a tighter
@@ -199,7 +228,8 @@ their own app-facing action surface.
 `fret::app::prelude::*` is a closed Golden Path budget, not a staging area. Named exports are
 limited to first-contact app authoring nouns: `FretApp`, `App`, `AppRenderContext`, `AppRenderCx`,
 `AppUi`, `Ui`, `UiChild`, `WindowId`, `View`, `Px`, `ui`, and optional `shadcn`. Anonymous extension
-traits are also part of the budget: grouped app action/data helpers, `LocalState` observation,
+traits are also part of the budget: grouped app action/data helpers, `LocalState` construction and
+observation,
 state query/mutation read helpers when their features are enabled, `.ui()` / `.into_element*()`,
 style refinement, and a11y/test-id/semantics refinements. New styling nouns, command IDs, assets,
 environment/adaptive helpers, router/docking/editor ecosystems, activation bridges, raw model

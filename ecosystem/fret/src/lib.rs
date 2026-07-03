@@ -175,7 +175,7 @@ pub mod semantics {
 
 /// Explicit style/token nouns for app code that customizes layout or chrome beyond the default lane.
 pub mod style {
-    pub use fret_core::{TextOverflow, TextWrap};
+    pub use fret_core::{Corners, TextAlign, TextOverflow, TextWrap};
     pub use fret_ui::{Theme, ThemeSnapshot};
     pub use fret_ui_kit::{
         ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, ShadowPreset, Size, Space,
@@ -534,7 +534,8 @@ pub mod app {
     pub use crate::view::View;
     /// Explicit helper types/traits for app helper signatures that intentionally name them.
     pub use crate::view::{
-        AppRenderActionsExt, AppRenderContext, AppRenderDataExt, LocalState, RenderContextAccess,
+        AppLocalStateExt, AppRenderActionsExt, AppRenderContext, AppRenderDataExt, LocalState,
+        RenderContextAccess,
     };
     /// Canonical app-facing runtime handle on the default `fret` surface.
     ///
@@ -554,6 +555,7 @@ pub mod app {
         pub use crate::app::AppRenderCx;
         #[cfg(feature = "shadcn")]
         pub use crate::shadcn;
+        pub use crate::view::AppLocalStateExt as _;
         pub use crate::view::AppRenderActionsExt as _;
         pub use crate::view::AppRenderDataExt as _;
         #[cfg(feature = "state-mutation")]
@@ -3305,7 +3307,9 @@ mod authoring_surface_policy_tests {
 
     #[test]
     fn usage_docs_prefer_grouped_app_ui_actions() {
-        assert!(CRATE_USAGE_GUIDE.contains("start with `View` + `AppUi` + typed actions"));
+        assert!(CRATE_USAGE_GUIDE.contains("start with `View` +"));
+        assert!(CRATE_USAGE_GUIDE.contains("`AppUi` + typed actions"));
+        assert!(CRATE_USAGE_GUIDE.contains("`app.local_state(value)`"));
         assert!(
             CRATE_USAGE_GUIDE
                 .contains("`cx.actions().locals_with((...)).on::<A>(|tx, (...)| ...)`")
@@ -3313,6 +3317,8 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_USAGE_GUIDE.contains("`cx.actions().models::<A>(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`cx.actions().payload_models::<A>(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`cx.actions().transient::<A>(...)`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`cx.effects().toast_message(...)`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`cx.effects().toast_dismiss_all()`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::app::LocalState`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::actions::CommandId`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::style::{...}`"));
@@ -3909,6 +3915,7 @@ mod authoring_surface_policy_tests {
         assert!(app_prelude.contains("WindowId"));
         assert!(app_prelude_exports_symbol("Px"));
         assert!(!app_prelude_exports_symbol("LocalState"));
+        assert!(!app_prelude_exports_symbol("AppLocalStateExt"));
         assert!(!app_prelude_exports_symbol("CommandId"));
         assert!(!app_prelude_exports_symbol("ThemeSnapshot"));
         assert!(!app_prelude_exports_symbol("actions"));
@@ -3918,6 +3925,7 @@ mod authoring_surface_policy_tests {
         assert!(!app_prelude.contains("pub use crate::view::AppActivateExt as _;"));
         assert!(app_prelude.contains("pub use crate::view::QueryHandleReadLayoutExt as _;"));
         assert!(app_prelude.contains("pub use crate::view::TrackedStateExt as _;"));
+        assert!(app_prelude.contains("pub use crate::view::AppLocalStateExt as _;"));
         assert!(app_prelude.contains("pub use crate::view::AppRenderActionsExt as _;"));
         assert!(app_prelude.contains("pub use crate::view::AppRenderDataExt as _;"));
         assert!(
@@ -4018,6 +4026,7 @@ mod authoring_surface_policy_tests {
             "pub use crate::app::AppRenderContext;",
             "pub use crate::app::AppRenderCx;",
             "pub use crate::shadcn;",
+            "pub use crate::view::AppLocalStateExt as _;",
             "pub use crate::view::AppRenderActionsExt as _;",
             "pub use crate::view::AppRenderDataExt as _;",
             "pub use crate::view::MutationHandleReadLayoutExt as _;",
@@ -4101,9 +4110,9 @@ mod authoring_surface_policy_tests {
         assert!(LIB_RS.contains("pub use crate::view::LocalState;"));
         assert!(LIB_RS.contains("pub use crate::AppComponentCx;"));
         assert!(LIB_RS.contains("pub use crate::AppRenderCx;"));
-        assert!(
-            LIB_RS.contains("AppRenderActionsExt, AppRenderContext, AppRenderDataExt, LocalState,")
-        );
+        assert!(LIB_RS.contains(
+            "AppLocalStateExt, AppRenderActionsExt, AppRenderContext, AppRenderDataExt, LocalState,"
+        ));
         assert!(!public_surface.contains("pub use crate::view::{UiCxActionsExt, UiCxDataExt};"));
         assert!(LIB_RS.contains("pub use fret_ui::{Theme, ThemeSnapshot};"));
     }
@@ -4335,7 +4344,10 @@ mod authoring_surface_policy_tests {
         assert!(root_header.contains("pub use fret_icons::IconId;"));
         assert!(root_header.contains("pub use fret_ui_kit::declarative::icon;"));
         assert!(root_header.contains("pub use fret_core::SemanticsRole;"));
-        assert!(root_header.contains("pub use fret_core::{TextOverflow, TextWrap};"));
+        assert!(
+            root_header
+                .contains("pub use fret_core::{Corners, TextAlign, TextOverflow, TextWrap};")
+        );
         assert!(root_header.contains("pub use fret_ui::{Theme, ThemeSnapshot};"));
         assert!(root_header.contains("ChromeRefinement, ColorRef, LayoutRefinement, MetricRef"));
         assert!(root_header.contains("Radius, ShadowPreset, Size,"));

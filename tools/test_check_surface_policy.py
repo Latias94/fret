@@ -238,6 +238,71 @@ class SurfacePolicyTests(unittest.TestCase):
             self.assertTrue(all(v.rule == "default-app-clean" for v in violations))
             self.assertTrue(any("advanced" in v.message for v in violations))
 
+    def test_default_cookbook_raw_local_state_constructor_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-cookbook/examples/data_table_basics.rs",
+                """
+                use fret::app::prelude::*;
+
+                fn init(app: &mut App) {
+                    let _state = LocalState::new_in(app.models_mut(), TableState::default());
+                }
+                """,
+            )
+
+            violations = POLICY.check_surface_policy(
+                root,
+                default_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-cookbook/examples/data_table_basics.rs",
+                        "default_app_clean",
+                        "fixture default cookbook",
+                    )
+                ],
+                advanced_manual_surfaces=[],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            self.assertGreaterEqual(len(violations), 1)
+            self.assertTrue(all(v.rule == "default-app-clean" for v in violations))
+            self.assertTrue(any("app.local_state" in v.message for v in violations))
+
+    def test_default_cookbook_raw_action_notify_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-cookbook/examples/toast_basics.rs",
+                """
+                use fret::advanced::AppUiRawActionNotifyExt as _;
+                use fret::app::prelude::*;
+
+                fn render(cx: &mut AppUi<'_, '_>) {
+                    cx.on_action_notify::<act::Toast>(|_host, _acx| true);
+                }
+                """,
+            )
+
+            violations = POLICY.check_surface_policy(
+                root,
+                default_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-cookbook/examples/toast_basics.rs",
+                        "default_app_clean",
+                        "fixture default cookbook",
+                    )
+                ],
+                advanced_manual_surfaces=[],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            self.assertGreaterEqual(len(violations), 1)
+            self.assertTrue(all(v.rule == "default-app-clean" for v in violations))
+            self.assertTrue(any("cx.actions()" in v.message for v in violations))
+
     def test_policy_recipe_crate_may_consume_runtime_mechanisms(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

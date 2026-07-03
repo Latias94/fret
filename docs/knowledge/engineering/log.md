@@ -436,3 +436,10 @@ timestamp: 2026-06-30
   stay on full upload with explicit fallback metrics. Verification passed for renderer/bootstrap/diag
   checks and nextest gates plus formatting, whitespace, layering, surface, consumption-profile,
   execution-surface, ADR-number, and workstream-catalog gates.
+- 2026-07-03: Phase 3 U12 public app facade cleanup adds `app.local_state(value)`, app-facing toast
+  effect helpers, and `fret::style` exports for cookbook style nouns. Selected default cookbook
+  examples now avoid raw local-state constructors, raw action notify hooks, direct `fret_core`, and
+  direct `fret_ui`; `tools/check_surface_policy.py` gates those paths with negative fixtures.
+  Verification passed for `fret` lib nextest, `fret-cookbook` all-targets/lib checks, surface,
+  layering, consumption-profile, execution-surface, ADR-number, workstream-catalog, formatting, and
+  diff gates.
