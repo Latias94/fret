@@ -391,7 +391,7 @@ mod authoring_surface_policy_tests {
 
         assert!(FORM_EXAMPLE.contains("struct FormBasicsLocals {"));
         assert!(FORM_EXAMPLE.contains("let locals = FormBasicsLocals::new(cx);"));
-        assert!(FORM_EXAMPLE.contains("locals.bind_actions(cx);"));
+        assert!(FORM_EXAMPLE.contains("locals.bind_actions(cx, can_submit);"));
         assert!(FORM_EXAMPLE.contains(".locals_with((&self.name, &self.email, &self.error))"));
         assert!(FORM_EXAMPLE.contains(".on::<act::Submit>(|tx, (name, email, error)| {"));
         assert!(FORM_EXAMPLE.contains("availability::<act::Submit>"));
@@ -401,6 +401,9 @@ mod authoring_surface_policy_tests {
         assert!(FORM_EXAMPLE.contains("let name = tx.value(&name);"));
         assert!(FORM_EXAMPLE.contains("let email = tx.value(&email);"));
         assert!(!FORM_EXAMPLE.contains("tx.value_or_else(&name, String::new)"));
+        assert!(!FORM_EXAMPLE.contains("LocalStateModelStoreExt"));
+        assert!(!FORM_EXAMPLE.contains("fret_runtime::ModelStore"));
+        assert!(!FORM_EXAMPLE.contains("read_in(models"));
 
         assert!(DATE_PICKER_EXAMPLE.contains("cx.state().local_init(|| false)"));
         assert!(DATE_PICKER_EXAMPLE.contains("watch(&selected_state)"));

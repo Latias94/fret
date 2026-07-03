@@ -90,6 +90,7 @@ It is a sidecar for session recovery and subagent synthesis, not a replacement f
 - [Phase 3 U13 cookbook raw seam discovery gate](progress/2026-07-03-phase3-u13-cookbook-raw-seam-discovery.md)
 - [Phase 3 U13 cookbook raw helper shrink](progress/2026-07-03-phase3-u13-cookbook-raw-helper-shrink.md)
 - [Phase 3 U13 fret-examples precise quarantine](progress/2026-07-03-phase3-u13-fret-examples-precise-quarantine.md)
+- [Phase 3 U13 form raw helper shrink](progress/2026-07-03-phase3-u13-form-raw-helper-shrink.md)
 - [Phase 3 U13 advanced facade audits](subagents/2026-07-03-phase3-u13-advanced-facade-audits.md)
 - [Phase 2 U4 boundary store audit](subagents/2026-07-02-phase2-u4-boundary-store-audit.md)
 - [Phase 2 U4 durable ViewId audit](subagents/2026-07-02-phase2-u4-durable-viewid-audit.md)

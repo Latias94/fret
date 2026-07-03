@@ -456,8 +456,8 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
     ),
     _cookbook_advanced_surface(
         "form_basics.rs",
-        "form controls still use raw model store plumbing pending app-facing bindings",
-        ("fret::advanced", "fret_runtime", "fret_ui", "ModelStore"),
+        "form controls still use low-level command and semantics mechanism types",
+        ("fret_ui",),
     ),
     _cookbook_advanced_surface(
         "gizmo_basics.rs",

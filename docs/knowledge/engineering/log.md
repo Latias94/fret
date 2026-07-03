@@ -486,3 +486,9 @@ timestamp: 2026-06-30
   quarantine. `simple_todo_demo`, `todo_demo`, `components_gallery`, docking, plot, and gizmo proof
   paths now have exact owner/reason/retirement records plus allowed-seam shrink checks. Verification
   passed for source-policy unit tests/gate, consumption-profile, and execution-surface gates.
+- 2026-07-03: Phase 3 U13 form raw helper shrink removes `LocalStateModelStoreExt` and the
+  `fret_runtime::ModelStore` availability read from `form_basics`. Submit availability now captures
+  the frame-derived `can_submit` boolean, and the source-policy record dropped no-longer-used
+  `fret::advanced`, `fret_runtime`, and `ModelStore` seams. Verification passed for focused
+  cookbook check, cookbook source-policy nextest, source-policy tests/gate, consumption-profile,
+  execution-surface, layering, and formatting gates.

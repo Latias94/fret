@@ -1,4 +1,3 @@
-use fret::advanced::raw::LocalStateModelStoreExt as _;
 use fret::app::LocalState;
 use fret::app::prelude::*;
 use fret::children::UiElementSinkExt as _;
@@ -38,21 +37,7 @@ impl FormBasicsLocals {
         }
     }
 
-    fn validate_in(&self, models: &mut fret_runtime::ModelStore) -> Option<String> {
-        let name = self
-            .name
-            .read_in(models, Clone::clone)
-            .ok()
-            .unwrap_or_default();
-        let email = self
-            .email
-            .read_in(models, Clone::clone)
-            .ok()
-            .unwrap_or_default();
-        FormBasicsView::validate(&name, &email)
-    }
-
-    fn bind_actions(&self, cx: &mut AppUi<'_, '_>) {
+    fn bind_actions(&self, cx: &mut AppUi<'_, '_>, can_submit: bool) {
         cx.actions()
             .locals_with((&self.name, &self.email, &self.error))
             .on::<act::Submit>(|tx, (name, email, error)| {
@@ -71,9 +56,8 @@ impl FormBasicsLocals {
             });
 
         cx.actions().availability::<act::Submit>({
-            let locals = self.clone();
-            move |host, _acx| {
-                if locals.validate_in(host.models_mut()).is_none() {
+            move |_host, _acx| {
+                if can_submit {
                     CommandAvailability::Available
                 } else {
                     CommandAvailability::Blocked
@@ -109,13 +93,13 @@ impl View for FormBasicsView {
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let locals = FormBasicsLocals::new(cx);
-        locals.bind_actions(cx);
 
         let name = locals.name.layout_value(cx);
         let email = locals.email.layout_value(cx);
         let error = locals.error.layout_value(cx);
 
         let can_submit = FormBasicsView::validate(&name, &email).is_none();
+        locals.bind_actions(cx, can_submit);
 
         let name_input = ui::v_flex(|cx| {
             ui::children![cx;
