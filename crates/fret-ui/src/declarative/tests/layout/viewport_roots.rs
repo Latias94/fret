@@ -1103,6 +1103,116 @@ fn element_root_bounds_cache_uses_nearest_nested_viewport_root() {
 }
 
 #[test]
+fn element_root_bounds_cache_uses_child_edges_under_stale_parent_pointers() {
+    use crate::GlobalElementId;
+    use crate::elements::NodeEntry;
+    use fret_runtime::FrameId;
+
+    struct RegistersViewportRoot {
+        viewport: Rect,
+        child: NodeId,
+    }
+
+    impl<H: UiHost> Widget<H> for RegistersViewportRoot {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let _ = cx.layout_viewport_root(self.child, self.viewport);
+            cx.available
+        }
+    }
+
+    struct FillAvailable;
+
+    impl<H: UiHost> Widget<H> for FillAvailable {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let window_bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(900.0), Px(1000.0)),
+    );
+    let actual_viewport = Rect::new(
+        fret_core::Point::new(Px(260.0), Px(180.0)),
+        Size::new(Px(220.0), Px(160.0)),
+    );
+    let stale_viewport = Rect::new(
+        fret_core::Point::new(Px(40.0), Px(40.0)),
+        Size::new(Px(80.0), Px(80.0)),
+    );
+
+    let owner_element = GlobalElementId(0xCAFE_0001);
+    let actual_element = GlobalElementId(0xCAFE_0002);
+    let leaf_element = GlobalElementId(0xCAFE_0003);
+
+    let leaf_node = ui.create_node(FillAvailable);
+    let actual_viewport_node = ui.create_node(RegistersViewportRoot {
+        viewport: actual_viewport,
+        child: leaf_node,
+    });
+    let stale_leaf_node = ui.create_node(FillAvailable);
+    let stale_viewport_node = ui.create_node(RegistersViewportRoot {
+        viewport: stale_viewport,
+        child: stale_leaf_node,
+    });
+    struct Stack;
+
+    impl<H: UiHost> Widget<H> for Stack {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            for &child in cx.children {
+                let _ = cx.layout_in(child, cx.bounds);
+            }
+            cx.available
+        }
+    }
+
+    let root_node = ui.create_node(Stack);
+
+    ui.set_node_element(root_node, Some(owner_element));
+    ui.set_node_element(actual_viewport_node, Some(actual_element));
+    ui.set_node_element(leaf_node, Some(leaf_element));
+    ui.set_children(root_node, vec![actual_viewport_node, stale_viewport_node]);
+    ui.set_children(actual_viewport_node, vec![leaf_node]);
+    ui.set_root(root_node);
+
+    ui.test_set_node_parent(leaf_node, Some(stale_viewport_node));
+
+    crate::elements::with_window_state(&mut app, window, |window_state| {
+        for (element, node) in [
+            (owner_element, root_node),
+            (actual_element, actual_viewport_node),
+            (leaf_element, leaf_node),
+        ] {
+            window_state.set_node_entry(
+                element,
+                NodeEntry {
+                    node,
+                    last_seen_frame: FrameId(1),
+                    root: owner_element,
+                },
+            );
+        }
+        window_state.set_root_bounds(owner_element, window_bounds);
+    });
+
+    let mut text = FakeTextService::default();
+    ui.layout_all(&mut app, &mut text, window_bounds, 1.0);
+
+    let leaf_resolved = crate::elements::root_bounds_for_element(&mut app, window, leaf_element)
+        .expect("expected nearest viewport root bounds");
+
+    assert_eq!(
+        leaf_resolved, actual_viewport,
+        "viewport root lookup must follow child-edge topology, not stale retained parents"
+    );
+}
+
+#[test]
 fn element_root_bounds_cache_rebuilds_when_element_moves_between_viewport_roots() {
     use crate::GlobalElementId;
     use crate::elements::NodeEntry;

@@ -1134,21 +1134,12 @@ impl<H: UiHost> UiTree<H> {
             if node.bounds.size != Size::default() {
                 continue;
             }
-            let Some(parent) = node.parent else {
-                continue;
-            };
-            let Some(parent_bounds) = self.nodes.get(parent).map(|n| n.bounds) else {
-                continue;
-            };
-            let Some(local) = self.layout_engine_child_local_rect(parent, id) else {
+            let Some(new_bounds) =
+                self.bounds_from_child_edge_parent_layout_engine_rect(id, node.bounds)
+            else {
                 continue;
             };
 
-            let origin = Point::new(
-                Px(parent_bounds.origin.x.0 + local.origin.x.0),
-                Px(parent_bounds.origin.y.0 + local.origin.y.0),
-            );
-            let new_bounds = Rect::new(origin, local.size);
             targets.push((id, new_bounds, node.bounds.origin));
         }
 
@@ -1236,21 +1227,10 @@ impl<H: UiHost> UiTree<H> {
                 // bounds (stable barrier viewport), but fall back to resolving bounds from the parent
                 // layout-engine rect when needed (e.g. newly mounted nodes with default bounds).
                 let mut bounds = node.bounds;
-                if (bounds.size == Size::default() || bounds.origin == Point::default())
-                    && let Some(parent) = node.parent
-                    && let Some(parent_bounds) = self.nodes.get(parent).map(|n| n.bounds)
-                    && let Some(local) = self.layout_engine_child_local_rect(parent, root)
+                if let Some(resolved) =
+                    self.bounds_from_child_edge_parent_layout_engine_rect(root, bounds)
                 {
-                    let resolved = Rect::new(
-                        Point::new(
-                            Px(parent_bounds.origin.x.0 + local.origin.x.0),
-                            Px(parent_bounds.origin.y.0 + local.origin.y.0),
-                        ),
-                        local.size,
-                    );
-                    if resolved.size != Size::default() {
-                        bounds = resolved;
-                    }
+                    bounds = resolved;
                 }
 
                 if bounds.size == Size::default() {
@@ -1290,24 +1270,16 @@ impl<H: UiHost> UiTree<H> {
                 // After contained relayout, schedule a follow-up barrier relayout for the nearest
                 // scrollable ancestor so it can recompute scroll extents against the new subtree
                 // bounds without forcing a full ancestor relayout.
-                let mut current = self.nodes.get(root).and_then(|n| n.parent);
-                while let Some(id) = current {
-                    let can_scroll = self
-                        .nodes
-                        .get(id)
-                        .and_then(|n| n.widget.as_ref())
-                        .is_some_and(|w| w.can_scroll_descendant_into_view());
-                    if can_scroll {
-                        if scheduled_followups.insert(id) {
-                            self.schedule_barrier_relayout_with_source_and_detail(
-                                id,
-                                UiDebugInvalidationSource::Other,
-                                UiDebugInvalidationDetail::BarrierFollowupRelayout,
-                            );
-                        }
-                        break;
+                if let Some(scroll_ancestor) =
+                    self.nearest_scrollable_ancestor_via_child_edges(root)
+                {
+                    if scheduled_followups.insert(scroll_ancestor) {
+                        self.schedule_barrier_relayout_with_source_and_detail(
+                            scroll_ancestor,
+                            UiDebugInvalidationSource::Other,
+                            UiDebugInvalidationDetail::BarrierFollowupRelayout,
+                        );
                     }
-                    current = self.nodes.get(id).and_then(|n| n.parent);
                 }
 
                 self.flush_viewport_roots_after_root(
@@ -1603,15 +1575,13 @@ impl<H: UiHost> UiTree<H> {
                 return Some((*root, *bounds));
             }
 
-            let parent = self.nodes.get(node).and_then(|n| n.parent)?;
+            let parent = self.parent_in_layer_forest_via_children(node)?;
             node = parent;
         }
     }
 
     fn viewport_root_registration_owner(&self, root: NodeId) -> NodeId {
-        self.nodes
-            .get(root)
-            .and_then(|node| node.parent)
+        self.parent_in_layer_forest_via_children(root)
             .unwrap_or(root)
     }
 
@@ -2010,13 +1980,13 @@ impl<H: UiHost> UiTree<H> {
         for candidate in candidates {
             let id = candidate.root();
             let mut skip = false;
-            let mut parent = self.nodes.get(id).and_then(|n| n.parent);
+            let mut parent = self.parent_in_layer_forest_via_children(id);
             while let Some(p) = parent {
                 if candidate_set.contains(&p) {
                     skip = true;
                     break;
                 }
-                parent = self.nodes.get(p).and_then(|n| n.parent);
+                parent = self.parent_in_layer_forest_via_children(p);
             }
             if skip {
                 continue;
@@ -2034,21 +2004,10 @@ impl<H: UiHost> UiTree<H> {
             // Prefer the parent's solved layout-engine rect when available so the contained pass
             // runs in the same coordinate space as the parent placement.
             let mut bounds = node.bounds;
-            if (bounds.size == Size::default() || bounds.origin == Point::default())
-                && let Some(parent) = node.parent
-                && let Some(parent_bounds) = self.nodes.get(parent).map(|n| n.bounds)
-                && let Some(local) = self.layout_engine_child_local_rect(parent, id)
+            if let Some(resolved) =
+                self.bounds_from_child_edge_parent_layout_engine_rect(id, bounds)
             {
-                let resolved = Rect::new(
-                    Point::new(
-                        Px(parent_bounds.origin.x.0 + local.origin.x.0),
-                        Px(parent_bounds.origin.y.0 + local.origin.y.0),
-                    ),
-                    local.size,
-                );
-                if resolved.size != Size::default() {
-                    bounds = resolved;
-                }
+                bounds = resolved;
             }
 
             targets.push((id, bounds));
@@ -2119,24 +2078,14 @@ impl<H: UiHost> UiTree<H> {
             // ancestor that inferred its content extent earlier in the frame can be left with a
             // stale range. Re-run the nearest scrollable ancestor in the same frame so scroll
             // extents track the reconciled cache-root bounds immediately.
-            let mut current = self.nodes.get(root).and_then(|n| n.parent);
-            while let Some(id) = current {
-                let can_scroll = self
-                    .nodes
-                    .get(id)
-                    .and_then(|n| n.widget.as_ref())
-                    .is_some_and(|w| w.can_scroll_descendant_into_view());
-                if can_scroll {
-                    if scheduled_followups.insert(id) {
-                        self.schedule_barrier_relayout_with_source_and_detail(
-                            id,
-                            UiDebugInvalidationSource::Other,
-                            UiDebugInvalidationDetail::BarrierFollowupRelayout,
-                        );
-                    }
-                    break;
+            if let Some(scroll_ancestor) = self.nearest_scrollable_ancestor_via_child_edges(root) {
+                if scheduled_followups.insert(scroll_ancestor) {
+                    self.schedule_barrier_relayout_with_source_and_detail(
+                        scroll_ancestor,
+                        UiDebugInvalidationSource::Other,
+                        UiDebugInvalidationDetail::BarrierFollowupRelayout,
+                    );
                 }
-                current = self.nodes.get(id).and_then(|n| n.parent);
             }
         }
 
@@ -2149,6 +2098,43 @@ impl<H: UiHost> UiTree<H> {
                 viewport_cursor,
             );
         }
+    }
+
+    fn bounds_from_child_edge_parent_layout_engine_rect(
+        &self,
+        node: NodeId,
+        current_bounds: Rect,
+    ) -> Option<Rect> {
+        if current_bounds.size != Size::default() && current_bounds.origin != Point::default() {
+            return None;
+        }
+        let parent = self.parent_in_layer_forest_via_children(node)?;
+        let parent_bounds = self.nodes.get(parent).map(|n| n.bounds)?;
+        let local = self.layout_engine_child_local_rect(parent, node)?;
+        let resolved = Rect::new(
+            Point::new(
+                Px(parent_bounds.origin.x.0 + local.origin.x.0),
+                Px(parent_bounds.origin.y.0 + local.origin.y.0),
+            ),
+            local.size,
+        );
+        (resolved.size != Size::default()).then_some(resolved)
+    }
+
+    fn nearest_scrollable_ancestor_via_child_edges(&self, node: NodeId) -> Option<NodeId> {
+        let mut current = self.parent_in_layer_forest_via_children(node);
+        while let Some(id) = current {
+            if self
+                .nodes
+                .get(id)
+                .and_then(|n| n.widget.as_ref())
+                .is_some_and(|w| w.can_scroll_descendant_into_view())
+            {
+                return Some(id);
+            }
+            current = self.parent_in_layer_forest_via_children(id);
+        }
+        None
     }
 
     fn request_build_window_roots_if_final(

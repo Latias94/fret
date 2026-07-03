@@ -711,6 +711,98 @@ fn view_cache_nearest_root_uses_child_edges_under_stale_parent_pointers() {
 }
 
 #[test]
+fn contained_view_cache_relayout_uses_child_edges_for_candidate_pruning_and_scroll_followup() {
+    struct SpyScroll {
+        layout_count: Arc<AtomicUsize>,
+    }
+
+    impl<H: UiHost> Widget<H> for SpyScroll {
+        fn can_scroll_descendant_into_view(&self) -> bool {
+            true
+        }
+
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            self.layout_count.fetch_add(1, Ordering::SeqCst);
+            for &child in cx.children {
+                let _ = cx.layout_in(child, cx.bounds);
+            }
+            cx.available
+        }
+
+        fn paint(&mut self, _cx: &mut PaintCx<'_, H>) {}
+    }
+
+    let mut app = crate::test_host::TestHost::new();
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(AppWindowId::default());
+    ui.set_view_cache_enabled(true);
+    ui.set_debug_enabled(true);
+
+    let actual_scroll_layouts = Arc::new(AtomicUsize::new(0));
+    let stale_scroll_layouts = Arc::new(AtomicUsize::new(0));
+
+    let root = ui.create_node(TestStack);
+    let actual_scroll = ui.create_node(SpyScroll {
+        layout_count: actual_scroll_layouts.clone(),
+    });
+    let stale_scroll = ui.create_node(SpyScroll {
+        layout_count: stale_scroll_layouts.clone(),
+    });
+    let outer = ui.create_node(TestStack);
+    let inner = ui.create_node(TestStack);
+    let leaf = ui.create_node(TestStack);
+
+    ui.set_root(root);
+    ui.set_children(root, vec![actual_scroll, stale_scroll]);
+    ui.set_children(actual_scroll, vec![outer]);
+    ui.set_children(outer, vec![inner]);
+    ui.set_children(inner, vec![leaf]);
+
+    for id in [outer, inner] {
+        ui.set_node_view_cache_flags(id, true, true, true);
+        ui.nodes[id].view_cache.layout_definite = true;
+    }
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(100.0), Px(40.0)));
+    ui.nodes[root].bounds = bounds;
+    ui.nodes[root].measured_size = bounds.size;
+    for id in [actual_scroll, stale_scroll, outer, inner, leaf] {
+        ui.nodes[id].bounds = bounds;
+        ui.nodes[id].measured_size = bounds.size;
+    }
+
+    let mut services = FakeUiServices;
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    for id in [root, actual_scroll, stale_scroll, outer, inner, leaf] {
+        ui.test_clear_node_invalidations(id);
+    }
+    ui.test_set_node_parent(inner, Some(stale_scroll));
+    actual_scroll_layouts.store(0, Ordering::SeqCst);
+    stale_scroll_layouts.store(0, Ordering::SeqCst);
+
+    ui.test_set_layout_invalidation(outer, true);
+    ui.test_set_layout_invalidation(inner, true);
+    app.advance_frame();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert_eq!(
+        ui.debug_view_cache_contained_relayout_roots(),
+        &[outer],
+        "contained relayout candidate pruning must follow child-edge ancestors"
+    );
+    assert!(
+        actual_scroll_layouts.load(Ordering::SeqCst) > 0,
+        "scroll follow-up must target the actual child-edge scroll ancestor"
+    );
+    assert_eq!(
+        stale_scroll_layouts.load(Ordering::SeqCst),
+        0,
+        "stale retained parents must not receive scroll follow-up relayouts"
+    );
+}
+
+#[test]
 fn view_cache_auto_sized_repair_does_not_promote_hit_test_when_bounds_are_known() {
     let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
     ui.set_window(AppWindowId::default());

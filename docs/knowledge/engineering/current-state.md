@@ -10,17 +10,17 @@ related_plan: docs/plans/2026-07-03-001-refactor-ui-framework-phase3-retained-br
 
 - Goal: execute `docs/plans/2026-07-03-001-refactor-ui-framework-phase3-retained-bridge-deletion-plan.md` as a breaking Phase 3 retained-bridge deletion refactor.
 - Branch: `feat/ui-framework-phase2-refactor`.
-- Last verified: Phase 3 U3 child-edge topology first slice passed full `fret-ui` nextest,
+- Last verified: Phase 3 U3 layout/viewport topology slice passed full `fret-ui` nextest,
   layering, surface, formatting, and whitespace gates on 2026-07-03.
 - Done: local ADR/workstream research, crate/perf snapshots, GPUI/Zed comparison, architecture boundary audit, framework consumer audit, performance audit, implementation-ready plan, U1 convergence contract freeze, U2 source-policy gate, U3 first slice (`workbench-lite` public scaffold), U4 identity/dirty graph observability slices, U5 `ViewId` / boundary frame-product ownership slices, U6 policy vocabulary demotion/cleanup slices, U7 renderer scene/upload observability plus retained scene chunk and guarded quad resident upload lanes, U8 text/glyph/wasm budget work through web runtime evidence, U9 modular consumption profiles and `AppUi` facade split, Phase 2 U9 VertexColor viewport partial upload, Phase 2 U10 workbench-lite public settings diagnostics, Phase 2 U11 public mutation/toast wrappers, workstream closeout audit, duplicate ADR ID `0324` resolution, and execution-surface allowlist alignment.
-- Latest done: Phase 3 U3 first slice migrated boundary parent and view-cache root ancestry from
-  retained `Node.parent` to layer-forest child edges, with stale-parent regressions and full
-  `fret-ui` coverage.
-- In progress: Phase 3 U3 layout and viewport topology migration.
+- Latest done: Phase 3 U3 second slice migrated contained view-cache relayout pruning, layout
+  bounds fallback, scroll follow-up scheduling, viewport root bounds, and viewport registration
+  owner queries from retained `Node.parent` to layer-forest child edges.
+- In progress: Phase 3 U3 remaining normal-query retained parent audit.
 - Blocked: none known after the boundary store migration.
-- Next action: continue U3 by moving contained view-cache relayout candidate pruning, bounds
-  fallback, scroll ancestor follow-up, and viewport owner/bounds queries to the child-edge/frame
-  topology before U5 deletes or debug-demotes normal parent repair.
+- Next action: continue U3 by auditing and migrating the remaining non-debug normal-path retained
+  parent queries in semantics, invalidation walks, hit testing, shortcuts, and command/focus
+  fallback paths before U5 deletes or debug-demotes normal parent repair.
 
 # Citations
 
@@ -28,6 +28,7 @@ related_plan: docs/plans/2026-07-03-001-refactor-ui-framework-phase3-retained-br
 - [Phase 3 retained bridge deletion plan](../../plans/2026-07-03-001-refactor-ui-framework-phase3-retained-bridge-deletion-plan.md)
 - [Phase 3 U2 retained pressure gates](progress/2026-07-03-phase3-u2-retained-pressure-gates.md)
 - [Phase 3 U3 child-edge topology](progress/2026-07-03-phase3-u3-child-edge-topology.md)
+- [Phase 3 U3 layout and viewport topology](progress/2026-07-03-phase3-u3-layout-viewport-topology.md)
 - [Phase 1 convergence plan](../../plans/2026-06-30-001-refactor-ui-framework-architecture-plan.md)
 - [Subagent Findings](subagents/2026-06-30-ui-framework-architecture-audit-findings.md)
 - [U9 AppUi shell split audit](subagents/2026-07-02-u9-appui-shell-split-audit.md)
