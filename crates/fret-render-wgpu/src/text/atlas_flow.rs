@@ -32,28 +32,28 @@ impl TextSystem {
     }
 
     #[cfg(test)]
-    pub fn prepare_for_scene(&mut self, scene: &Scene, frame_index: u64) {
-        let _ = self.prepare_for_scene_with_perf(scene, frame_index, false);
+    pub(crate) fn test_prepare_full_scene_text(&mut self, scene: &Scene, frame_index: u64) {
+        let _ = self.test_prepare_full_scene_text_with_perf(scene, frame_index, false);
     }
 
     #[cfg(test)]
-    pub(crate) fn prepare_for_scene_with_perf(
+    pub(crate) fn test_prepare_full_scene_text_with_perf(
         &mut self,
         scene: &Scene,
         frame_index: u64,
         perf_enabled: bool,
     ) -> TextPrepareScenePerf {
-        self.prepare_for_text_blobs_with_perf(scene.text_blob_ids(), frame_index, perf_enabled)
+        self.test_prepare_full_blob_text_with_perf(scene.text_blob_ids(), frame_index, perf_enabled)
     }
 
     #[cfg(test)]
-    pub(crate) fn prepare_for_text_blobs_with_perf(
+    pub(crate) fn test_prepare_full_blob_text_with_perf(
         &mut self,
         text_blob_ids: &[TextBlobId],
         frame_index: u64,
         perf_enabled: bool,
     ) -> TextPrepareScenePerf {
-        let residency = self.text_residency_for_blobs(text_blob_ids);
+        let residency = self.test_full_blob_text_residency(text_blob_ids);
         self.prepare_for_text_residency_with_perf(&residency, frame_index, perf_enabled)
     }
 

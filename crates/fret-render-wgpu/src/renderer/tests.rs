@@ -1669,7 +1669,9 @@ fn unreferenced_text_atlas_churn_does_not_bust_scene_or_chunk_encoding_cache() {
         outline: None,
         shadow: None,
     });
-    renderer.text_system.prepare_for_scene(&scene_b, 99);
+    renderer
+        .text_system
+        .test_prepare_full_scene_text(&scene_b, 99);
     assert_ne!(
         renderer.text_system.atlas_revision(),
         atlas_revision_before,

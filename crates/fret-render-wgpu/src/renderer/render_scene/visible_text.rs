@@ -364,7 +364,7 @@ mod tests {
         assert!(visible_snapshot.glyphs > 0);
         assert_eq!(visible_snapshot.missing_glyph_resources, 0);
 
-        let offscreen_snapshot = text.text_resource_snapshot_for_blobs(&[offscreen_blob]);
+        let offscreen_snapshot = text.test_full_blob_text_resource_snapshot(&[offscreen_blob]);
         assert!(offscreen_snapshot.glyphs > 0);
         assert_eq!(
             offscreen_snapshot.missing_glyph_resources, offscreen_snapshot.glyphs,
@@ -385,7 +385,7 @@ mod tests {
             &style,
             TextConstraints::default(),
         );
-        let full_before = text.text_resource_snapshot_for_blobs(&[blob]);
+        let full_before = text.test_full_blob_text_resource_snapshot(&[blob]);
         assert!(full_before.glyphs > 4);
 
         let mut scene = Scene::default();
@@ -407,7 +407,7 @@ mod tests {
         assert_eq!(visible_snapshot.glyphs, residency.glyph_count() as u64);
         assert_eq!(visible_snapshot.missing_glyph_resources, 0);
 
-        let full_after = text.text_resource_snapshot_for_blobs(&[blob]);
+        let full_after = text.test_full_blob_text_resource_snapshot(&[blob]);
         assert_eq!(full_after.glyphs, full_before.glyphs);
         assert!(
             full_after.missing_glyph_resources > 0,
@@ -430,7 +430,7 @@ mod tests {
             &style,
             TextConstraints::default(),
         );
-        let full_before = text.text_resource_snapshot_for_blobs(&[blob]);
+        let full_before = text.test_full_blob_text_resource_snapshot(&[blob]);
         assert!(
             full_before.glyphs > 3,
             "test setup expects a visible combining cluster plus an offscreen suffix"

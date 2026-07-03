@@ -589,7 +589,7 @@ fn prepare_for_scene_retries_retained_keys_missing_from_reset_atlas() {
     let key = first_glyph_key_for_blob(&text, blob_id);
     let scene = scene_with_text(blob_id);
 
-    text.prepare_for_scene(&scene, 0);
+    text.test_prepare_full_scene_text(&scene, 0);
     assert!(
         text.atlas_runtime.contains_key(key),
         "initial prepare should cache the visible text glyph"
@@ -601,7 +601,7 @@ fn prepare_for_scene_retries_retained_keys_missing_from_reset_atlas() {
         "test setup should remove the cached glyph while leaving the pin bucket populated"
     );
 
-    text.prepare_for_scene(&scene, 3);
+    text.test_prepare_full_scene_text(&scene, 3);
     assert!(
         text.atlas_runtime.contains_key(key),
         "same-slot prepare should retry retained keys that are no longer present in the atlas"
@@ -639,7 +639,7 @@ fn prepare_does_not_insert_unreferenced_glyphs_into_atlas() {
 }
 
 #[test]
-fn scene_text_resource_snapshot_ignores_unreferenced_prepare() {
+fn full_blob_text_resource_oracle_ignores_unreferenced_prepare() {
     let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
     let mut text = super::TextSystem::new(&ctx.device);
     let style = TextStyle {
@@ -649,9 +649,9 @@ fn scene_text_resource_snapshot_ignores_unreferenced_prepare() {
     let (blob_a, _) = text.prepare("aaaa", &style, TextConstraints::default());
     let scene_a = scene_with_text(blob_a);
 
-    text.prepare_for_scene(&scene_a, 0);
+    text.test_prepare_full_scene_text(&scene_a, 0);
     let initial_revision = text.atlas_revision();
-    let initial = text.scene_text_resource_snapshot(&scene_a);
+    let initial = text.test_full_blob_text_resource_snapshot(scene_a.text_blob_ids());
     assert_ne!(initial.fingerprint, 0);
     assert_eq!(initial.text_blobs, 1);
     assert!(initial.glyphs > 0);
@@ -664,13 +664,13 @@ fn scene_text_resource_snapshot_ignores_unreferenced_prepare() {
         "unreferenced prepare should not change the glyph atlas"
     );
     assert_eq!(
-        text.scene_text_resource_snapshot(&scene_a),
+        text.test_full_blob_text_resource_snapshot(scene_a.text_blob_ids()),
         initial,
         "scene text resource key should ignore atlas churn from unreferenced text"
     );
 
     text.atlas_runtime.reset();
-    let reset = text.scene_text_resource_snapshot(&scene_a);
+    let reset = text.test_full_blob_text_resource_snapshot(scene_a.text_blob_ids());
     assert_ne!(reset.fingerprint, initial.fingerprint);
     assert_eq!(reset.text_blobs, initial.text_blobs);
     assert_eq!(reset.glyphs, initial.glyphs);
@@ -713,7 +713,7 @@ fn local_line_chunk_edit_preserves_unchanged_text_chunk_identity() {
         .enumerate()
         .map(|(row, &blob)| scene_chunk_with_text(blob, row))
         .collect::<Vec<_>>();
-    let before_prepare = text.prepare_for_text_blobs_with_perf(&before_blobs, 0, true);
+    let before_prepare = text.test_prepare_full_blob_text_with_perf(&before_blobs, 0, true);
     assert_eq!(before_prepare.scene_text_blobs, before.len() as u64);
     assert!(
         before_prepare.added_glyph_keys > 0,
@@ -722,7 +722,7 @@ fn local_line_chunk_edit_preserves_unchanged_text_chunk_identity() {
     let before_resource_keys = before_chunks
         .iter()
         .map(|chunk| {
-            text.text_resource_snapshot_for_blobs(chunk.text_blob_ids())
+            text.test_full_blob_text_resource_snapshot(chunk.text_blob_ids())
                 .fingerprint
         })
         .collect::<Vec<_>>();
@@ -736,12 +736,12 @@ fn local_line_chunk_edit_preserves_unchanged_text_chunk_identity() {
         .enumerate()
         .map(|(row, &blob)| scene_chunk_with_text(blob, row))
         .collect::<Vec<_>>();
-    let after_prepare = text.prepare_for_text_blobs_with_perf(&after_blobs, 1, true);
+    let after_prepare = text.test_prepare_full_blob_text_with_perf(&after_blobs, 1, true);
     assert_eq!(after_prepare.scene_text_blobs, after.len() as u64);
     let after_resource_keys = after_chunks
         .iter()
         .map(|chunk| {
-            text.text_resource_snapshot_for_blobs(chunk.text_blob_ids())
+            text.test_full_blob_text_resource_snapshot(chunk.text_blob_ids())
                 .fingerprint
         })
         .collect::<Vec<_>>();
@@ -788,7 +788,7 @@ fn local_line_chunk_edit_preserves_unchanged_text_chunk_identity() {
 fn empty_text_resource_snapshot_ignores_atlas_churn_and_reset() {
     let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
     let mut text = super::TextSystem::new(&ctx.device);
-    let initial = text.text_resource_snapshot_for_blobs(&[]);
+    let initial = text.test_full_blob_text_resource_snapshot(&[]);
     assert_eq!(initial, super::TextSceneResourceSnapshot::default());
 
     let style = TextStyle {
@@ -797,14 +797,14 @@ fn empty_text_resource_snapshot_ignores_atlas_churn_and_reset() {
     };
     let _ = text.prepare("aaaa", &style, TextConstraints::default());
     assert_eq!(
-        text.text_resource_snapshot_for_blobs(&[]),
+        text.test_full_blob_text_resource_snapshot(&[]),
         initial,
         "empty text chunks must not inherit unrelated atlas churn"
     );
 
     text.atlas_runtime.reset();
     assert_eq!(
-        text.text_resource_snapshot_for_blobs(&[]),
+        text.test_full_blob_text_resource_snapshot(&[]),
         initial,
         "empty text chunks must not inherit atlas reset generation"
     );
@@ -828,7 +828,7 @@ fn prepare_for_scene_pin_cache_removes_replaced_or_missing_blobs() {
     );
 
     let scene_ab = scene_with_texts(&[blob_a, blob_b]);
-    let initial = text.prepare_for_scene_with_perf(&scene_ab, 0, true);
+    let initial = text.test_prepare_full_scene_text_with_perf(&scene_ab, 0, true);
     assert_eq!(initial.scene_text_blobs, 2);
     assert!(initial.added_glyph_keys > 0);
     assert!(text.atlas_runtime.contains_key(key_a));
@@ -836,7 +836,7 @@ fn prepare_for_scene_pin_cache_removes_replaced_or_missing_blobs() {
 
     let _ = text.blob_state.blobs.remove(blob_b);
     let scene_a = scene_with_text(blob_a);
-    let replacement = text.prepare_for_scene_with_perf(&scene_a, 3, true);
+    let replacement = text.test_prepare_full_scene_text_with_perf(&scene_a, 3, true);
 
     assert_eq!(replacement.scene_text_blobs, 1);
     assert!(
@@ -862,7 +862,7 @@ fn prepare_for_scene_reuses_unchanged_ring_bucket_signature() {
     let scene_a = scene_with_text(blob_a);
     let scene_ab = scene_with_texts(&[blob_a, blob_b]);
 
-    let initial = text.prepare_for_scene_with_perf(&scene_a, 0, true);
+    let initial = text.test_prepare_full_scene_text_with_perf(&scene_a, 0, true);
     assert!(
         !initial.fast_scene_bucket_reused,
         "initial bucket fill must run the full pin path"
@@ -872,7 +872,7 @@ fn prepare_for_scene_reuses_unchanged_ring_bucket_signature() {
         "test setup should produce visible glyph pins"
     );
 
-    let reused = text.prepare_for_scene_with_perf(&scene_a, 3, true);
+    let reused = text.test_prepare_full_scene_text_with_perf(&scene_a, 3, true);
     assert!(
         reused.fast_scene_bucket_reused,
         "same ring bucket and same text scene should skip bucket diffing"
@@ -882,7 +882,7 @@ fn prepare_for_scene_reuses_unchanged_ring_bucket_signature() {
     assert_eq!(reused.added_glyph_keys, 0);
     assert_eq!(reused.removed_glyph_keys, 0);
 
-    let changed = text.prepare_for_scene_with_perf(&scene_ab, 6, true);
+    let changed = text.test_prepare_full_scene_text_with_perf(&scene_ab, 6, true);
     assert!(
         !changed.fast_scene_bucket_reused,
         "changed text scene must fall back to the full pin path"
@@ -903,14 +903,14 @@ fn prepare_for_scene_diffs_mutated_ring_bucket_incrementally() {
     let scene_ab = scene_with_texts(&[blob_a, blob_b]);
     let scene_a = scene_with_text(blob_a);
 
-    let initial = text.prepare_for_scene_with_perf(&scene_ab, 0, true);
+    let initial = text.test_prepare_full_scene_text_with_perf(&scene_ab, 0, true);
     assert!(
         initial.pinned_glyph_keys > 0,
         "test setup should produce visible glyph pins"
     );
     assert!(initial.added_glyph_keys > 0);
 
-    let changed = text.prepare_for_scene_with_perf(&scene_a, 3, true);
+    let changed = text.test_prepare_full_scene_text_with_perf(&scene_a, 3, true);
     assert!(
         !changed.fast_scene_bucket_reused,
         "changed text scene must still update pin state"
@@ -929,7 +929,7 @@ fn prepare_for_scene_diffs_mutated_ring_bucket_incrementally() {
         "removing a text blob from a prepared bucket should not prewarm new glyphs"
     );
 
-    let reused = text.prepare_for_scene_with_perf(&scene_a, 6, true);
+    let reused = text.test_prepare_full_scene_text_with_perf(&scene_a, 6, true);
     assert!(
         reused.fast_scene_bucket_reused,
         "post-delta bucket signature should support the stable-scene fast path"
@@ -1673,7 +1673,7 @@ fn prepare_does_not_probe_resident_atlas_glyphs() {
         "test setup expects regular text glyphs to use the mask atlas"
     );
     let scene = scene_with_text(seed_blob);
-    text.prepare_for_scene(&scene, 0);
+    text.test_prepare_full_scene_text(&scene, 0);
     assert!(
         seed_keys
             .iter()

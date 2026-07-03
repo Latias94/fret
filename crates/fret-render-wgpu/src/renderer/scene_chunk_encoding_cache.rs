@@ -1228,7 +1228,7 @@ mod tests {
 
         let full_before = renderer
             .text_system
-            .text_resource_snapshot_for_blobs(&[blob]);
+            .test_full_blob_text_resource_snapshot(&[blob]);
         assert!(
             full_before.glyphs > visible_snapshot.glyphs,
             "test setup expects the narrow viewport to leave a suffix outside chunk residency"
@@ -1253,13 +1253,14 @@ mod tests {
         );
         assert_eq!(first_perf.scene_chunk_encoding_key_cache_misses, 1);
 
-        let full_prepare = renderer
-            .text_system
-            .prepare_for_text_blobs_with_perf(&[blob], 1, true);
+        let full_prepare =
+            renderer
+                .text_system
+                .test_prepare_full_blob_text_with_perf(&[blob], 1, true);
         assert!(full_prepare.added_glyph_keys > 0);
         let full_after = renderer
             .text_system
-            .text_resource_snapshot_for_blobs(&[blob]);
+            .test_full_blob_text_resource_snapshot(&[blob]);
         assert_eq!(full_after.missing_glyph_resources, 0);
         assert_ne!(
             full_before.fingerprint, full_after.fingerprint,

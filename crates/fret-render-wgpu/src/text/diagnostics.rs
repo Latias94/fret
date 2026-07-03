@@ -189,19 +189,11 @@ impl TextSystem {
     }
 
     #[cfg(test)]
-    pub(crate) fn scene_text_resource_snapshot(
-        &self,
-        scene: &fret_core::Scene,
-    ) -> TextSceneResourceSnapshot {
-        self.text_resource_snapshot_for_blobs(scene.text_blob_ids())
-    }
-
-    #[cfg(test)]
-    pub(crate) fn text_resource_snapshot_for_blobs(
+    pub(crate) fn test_full_blob_text_resource_snapshot(
         &self,
         text_blob_ids: &[TextBlobId],
     ) -> TextSceneResourceSnapshot {
-        let residency = self.text_residency_for_blobs(text_blob_ids);
+        let residency = self.test_full_blob_text_residency(text_blob_ids);
         self.text_resource_snapshot_for_residency(&residency)
     }
 

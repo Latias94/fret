@@ -393,3 +393,11 @@ timestamp: 2026-06-30
   fret-render-wgpu`, focused cluster/visible-text tests, broader `text` and `visible_text
   scene_chunk_encoding_cache` nextest filters, formatting, whitespace, layering, surface,
   consumption-profile, execution-surface, ADR-number, and workstream-catalog gates.
+- 2026-07-03: Phase 3 U7 full-blob text helper scaffolding slice renames remaining normal-looking
+  full-blob text helper entrypoints to explicit `test_full_blob_*` / `test_prepare_full_*` oracles,
+  deletes the redundant `scene_text_resource_snapshot` wrapper, and keeps full-blob residency behind
+  `#[cfg(test)]` while normal chunk/resource keys continue through cluster-aware residency. Static
+  old-helper-name search is clean. Verification passed for `cargo check -p fret-render-wgpu`,
+  focused `text scene_chunk_encoding_cache` nextest filters, formatting, whitespace, layering,
+  surface, consumption-profile, execution-surface, ADR-number, and workstream-catalog gates; nextest
+  reported one existing leaky test while returning exit code 0.

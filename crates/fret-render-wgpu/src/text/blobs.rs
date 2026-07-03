@@ -51,7 +51,7 @@ impl TextSystem {
     }
 
     #[cfg(test)]
-    pub(crate) fn text_residency_for_blobs(
+    pub(crate) fn test_full_blob_text_residency(
         &self,
         text_blob_ids: &[TextBlobId],
     ) -> TextFrameResidency {
