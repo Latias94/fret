@@ -119,6 +119,42 @@ fn render_transform_affects_hit_testing_and_pointer_event_coordinates() {
 }
 
 #[test]
+fn map_window_point_to_node_layout_space_uses_child_edges_under_stale_parent_pointers() {
+    struct ChildTranslate {
+        delta: Point,
+    }
+
+    impl<H: UiHost> Widget<H> for ChildTranslate {
+        fn children_render_transform(&self, _bounds: Rect) -> Option<Transform2D> {
+            Some(Transform2D::translation(self.delta))
+        }
+    }
+
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(AppWindowId::default());
+
+    let root = ui.create_node(TestStack);
+    let actual_parent = ui.create_node(ChildTranslate {
+        delta: Point::new(Px(20.0), Px(0.0)),
+    });
+    let stale_parent = ui.create_node(ChildTranslate {
+        delta: Point::new(Px(80.0), Px(0.0)),
+    });
+    let leaf = ui.create_node(TestStack);
+
+    ui.set_root(root);
+    ui.set_children(root, vec![actual_parent, stale_parent]);
+    ui.set_children(actual_parent, vec![leaf]);
+    ui.test_set_node_parent(leaf, Some(stale_parent));
+
+    assert_eq!(
+        ui.map_window_point_to_node_layout_space(leaf, Point::new(Px(30.0), Px(5.0))),
+        Some(Point::new(Px(10.0), Px(5.0))),
+        "window-to-node coordinate mapping must follow child-edge ancestry, not stale retained parents"
+    );
+}
+
+#[test]
 fn nested_render_transforms_compose_for_pointer_event_coordinates() {
     struct TranslateRoot {
         delta: Point,

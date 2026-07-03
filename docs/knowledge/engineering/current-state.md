@@ -10,17 +10,17 @@ related_plan: docs/plans/2026-07-03-001-refactor-ui-framework-phase3-retained-br
 
 - Goal: execute `docs/plans/2026-07-03-001-refactor-ui-framework-phase3-retained-bridge-deletion-plan.md` as a breaking Phase 3 retained-bridge deletion refactor.
 - Branch: `feat/ui-framework-phase2-refactor`.
-- Last verified: Phase 3 U3 semantics topology slice passed focused semantics tests, full
+- Last verified: Phase 3 U3 widget coordinate topology slice passed focused transform tests, full
   `fret-ui` nextest, layering, surface, formatting, and whitespace gates on 2026-07-03.
 - Done: local ADR/workstream research, crate/perf snapshots, GPUI/Zed comparison, architecture boundary audit, framework consumer audit, performance audit, implementation-ready plan, U1 convergence contract freeze, U2 source-policy gate, U3 first slice (`workbench-lite` public scaffold), U4 identity/dirty graph observability slices, U5 `ViewId` / boundary frame-product ownership slices, U6 policy vocabulary demotion/cleanup slices, U7 renderer scene/upload observability plus retained scene chunk and guarded quad resident upload lanes, U8 text/glyph/wasm budget work through web runtime evidence, U9 modular consumption profiles and `AppUi` facade split, Phase 2 U9 VertexColor viewport partial upload, Phase 2 U10 workbench-lite public settings diagnostics, Phase 2 U11 public mutation/toast wrappers, workstream closeout audit, duplicate ADR ID `0324` resolution, and execution-surface allowlist alignment.
-- Latest done: Phase 3 U3 seventh slice migrated semantics snapshot parent assignment from
-  retained `Node.parent` to traversal-carried child-edge parents.
+- Latest done: Phase 3 U3 eighth slice migrated window-to-node coordinate mapping from retained
+  `Node.parent` to layer-forest child-edge parents.
 - In progress: Phase 3 U3 remaining normal-query retained parent audit.
 - Blocked: none known after the boundary store migration.
-- Next action: continue U3 by classifying the remaining parent uses: migrate widget coordinate
-  mapping, propagation depth, bounds-tree prepaint parent reconstruction, and remaining
-  invalidation/debug-only parent reads where they are normal query paths; keep retained storage
-  mutation and U5 parent repair/dirty-count work separate.
+- Next action: continue U3 by classifying the remaining parent uses: migrate propagation depth,
+  bounds-tree prepaint parent reconstruction, and remaining invalidation/debug-only parent reads
+  where they are normal query paths; keep retained storage mutation and U5 parent repair/dirty-count
+  work separate.
 
 # Citations
 
@@ -34,6 +34,7 @@ related_plan: docs/plans/2026-07-03-001-refactor-ui-framework-phase3-retained-br
 - [Phase 3 U3 input ancestry topology](progress/2026-07-03-phase3-u3-input-ancestry-topology.md)
 - [Phase 3 U3 hit-test topology](progress/2026-07-03-phase3-u3-hit-test-topology.md)
 - [Phase 3 U3 semantics topology](progress/2026-07-03-phase3-u3-semantics-topology.md)
+- [Phase 3 U3 widget coordinate topology](progress/2026-07-03-phase3-u3-widget-coordinate-topology.md)
 - [Phase 1 convergence plan](../../plans/2026-06-30-001-refactor-ui-framework-architecture-plan.md)
 - [Subagent Findings](subagents/2026-06-30-ui-framework-architecture-audit-findings.md)
 - [U9 AppUi shell split audit](subagents/2026-07-02-u9-appui-shell-split-audit.md)

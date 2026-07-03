@@ -315,3 +315,10 @@ timestamp: 2026-06-30
   stale retained sibling as parent and now publishes the actual child-edge parent. Verification
   passed for focused semantics tests, `cargo check -p fret-ui`, full `cargo nextest run -p fret-ui
   --no-fail-fast` (1193 passed), formatting, whitespace, layering, and surface-policy gates.
+- 2026-07-03: Phase 3 U3 widget coordinate topology slice migrates window-to-node coordinate mapping
+  from retained `Node.parent` to layer-forest child-edge parents. Red/green proof:
+  `map_window_point_to_node_layout_space_uses_child_edges_under_stale_parent_pointers` failed by
+  applying the stale sibling's child transform and now applies the actual parent transform.
+  Verification passed for focused transform tests, `cargo check -p fret-ui`, full `cargo nextest
+  run -p fret-ui --no-fail-fast` (1194 passed), formatting, whitespace, layering, and
+  surface-policy gates.
