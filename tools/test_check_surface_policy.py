@@ -362,6 +362,65 @@ class SurfacePolicyTests(unittest.TestCase):
 
             self.assertEqual([], violations)
 
+    def test_public_example_raw_seam_requires_surface_classification(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-cookbook/examples/raw_demo.rs",
+                """
+                use fret::{FretApp, advanced::prelude::*};
+
+                struct RawDemo {
+                    value: Model<i32>,
+                }
+                """,
+            )
+
+            violations = POLICY.check_surface_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+                public_example_scan_roots=["apps/fret-cookbook/examples"],
+            )
+
+            self.assertGreaterEqual(len(violations), 1)
+            self.assertTrue(
+                all(v.rule == "public-example-unclassified-raw-seam" for v in violations)
+            )
+            self.assertTrue(any("advanced-facade" in v.message for v in violations))
+
+    def test_classified_public_example_raw_seam_is_allowed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-cookbook/examples/raw_demo.rs",
+                """
+                use fret::{FretApp, advanced::prelude::*};
+                """,
+            )
+
+            violations = POLICY.check_surface_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-cookbook/examples/raw_demo.rs",
+                        "advanced_manual",
+                        "fixture classified advanced cookbook example",
+                        owner="fixture-cookbook",
+                        allowed_raw_seams=("fret::advanced",),
+                        retirement="fixture retires when the raw demo has an app-facing wrapper",
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+                public_example_scan_roots=["apps/fret-cookbook/examples"],
+            )
+
+            self.assertEqual([], violations)
+
     def test_policy_coded_fret_ui_root_export_is_rejected_without_classification(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

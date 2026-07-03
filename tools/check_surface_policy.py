@@ -136,6 +136,29 @@ POLICY_RECIPE_SURFACES: tuple[SurfacePath, ...] = (
     ),
 )
 
+
+COOKBOOK_ADVANCED_RETIREMENT = (
+    "Remove this quarantine record after the example either moves to default app facade wrappers "
+    "or is reclassified under explicit advanced driver/view/interop/raw docs."
+)
+
+
+def _cookbook_advanced_surface(
+    filename: str,
+    reason: str,
+    allowed_raw_seams: tuple[str, ...],
+) -> SurfacePath:
+    owner = f"cookbook-{filename.removesuffix('.rs').removesuffix('_basics').replace('_', '-')}"
+    return SurfacePath(
+        f"apps/fret-cookbook/examples/{filename}",
+        "advanced_manual",
+        f"{filename} remains classified as an advanced cookbook surface because {reason}",
+        owner=owner,
+        allowed_raw_seams=allowed_raw_seams,
+        retirement=COOKBOOK_ADVANCED_RETIREMENT,
+    )
+
+
 ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
     SurfacePath(
         "apps/fret-examples/src/api_workbench_lite_demo.rs",
@@ -203,6 +226,147 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
             "Move to the public cookbook lane after canvas action and painter wrappers hide "
             "raw pointer host/cx and CanvasPainter types from app authors"
         ),
+    ),
+    _cookbook_advanced_surface(
+        "async_inbox_basics.rs",
+        "it still teaches raw async inbox model and element return seams",
+        ("fret::advanced", "fret_runtime", "fret_ui", "AnyElement"),
+    ),
+    _cookbook_advanced_surface(
+        "chart_interactions_basics.rs",
+        "chart interaction wiring still owns retained tree, model, and low-level element seams",
+        (
+            "fret::advanced",
+            "fret_app",
+            "fret_core",
+            "fret_runtime",
+            "fret_ui",
+            "AnyElement",
+            "ElementContext",
+            "UiTree",
+        ),
+    ),
+    _cookbook_advanced_surface(
+        "commands_keymap_basics.rs",
+        "command availability and keymap wiring still use advanced action seams",
+        ("fret::advanced", "fret_app", "fret_core", "fret_ui"),
+    ),
+    _cookbook_advanced_surface(
+        "compositing_alpha_basics.rs",
+        "the alpha compositing example still owns a manual driver/window setup path",
+        ("fret::advanced", "fret_app", "fret_core", "fret_launch", "FnDriver"),
+    ),
+    _cookbook_advanced_surface(
+        "customv1_basics.rs",
+        "custom effect authoring still exposes manual kernel and low-level element seams",
+        ("fret::advanced", "fret_core", "fret_ui", "AnyElement"),
+    ),
+    _cookbook_advanced_surface(
+        "docking_basics.rs",
+        "docking still demonstrates retained tree and low-level element interop",
+        (
+            "fret::advanced",
+            "fret_app",
+            "fret_core",
+            "fret_runtime",
+            "fret_ui",
+            "AnyElement",
+            "ElementContext",
+            "UiTree",
+        ),
+    ),
+    _cookbook_advanced_surface(
+        "drag_basics.rs",
+        "drag still needs raw pointer-action and model seams until a pointer wrapper exists",
+        ("fret::advanced", "fret_core", "fret_runtime", "fret_ui", "AnyElement"),
+    ),
+    _cookbook_advanced_surface(
+        "embedded_viewport_basics.rs",
+        "embedded viewport interop still needs manual kernel, model, and element context seams",
+        ("fret::advanced", "fret_core", "fret_runtime", "fret_ui", "ElementContext"),
+    ),
+    _cookbook_advanced_surface(
+        "external_texture_import_basics.rs",
+        "external texture import still owns manual launch, tree, and interop seams",
+        (
+            "fret::advanced",
+            "fret_core",
+            "fret_launch",
+            "fret_runtime",
+            "fret_ui",
+            "ElementContext",
+            "UiTree",
+        ),
+    ),
+    _cookbook_advanced_surface(
+        "form_basics.rs",
+        "form controls still use raw model store plumbing pending app-facing bindings",
+        ("fret::advanced", "fret_runtime", "fret_ui", "ModelStore"),
+    ),
+    _cookbook_advanced_surface(
+        "gizmo_basics.rs",
+        "gizmo rendering still owns retained tree, model, and low-level element seams",
+        (
+            "fret::advanced",
+            "fret_app",
+            "fret_core",
+            "fret_runtime",
+            "fret_ui",
+            "ElementContext",
+            "UiTree",
+        ),
+    ),
+    _cookbook_advanced_surface(
+        "image_asset_cache_basics.rs",
+        "image asset cache stress still owns a manual driver/window setup path",
+        ("fret::advanced", "fret_app", "fret_core", "fret_launch", "FnDriver"),
+    ),
+    _cookbook_advanced_surface(
+        "imui_action_basics.rs",
+        "IMUI action examples still use raw runtime and low-level UI seams",
+        ("fret_runtime", "fret_ui"),
+    ),
+    _cookbook_advanced_surface(
+        "imui_editor_controls_basics.rs",
+        "IMUI editor controls still expose raw runtime models",
+        ("fret_core", "fret_runtime"),
+    ),
+    _cookbook_advanced_surface(
+        "imui_plot_basics.rs",
+        "IMUI plot controls still expose raw runtime and low-level UI seams",
+        ("fret_core", "fret_runtime", "fret_ui"),
+    ),
+    _cookbook_advanced_surface(
+        "router_basics.rs",
+        "router action binding still uses a raw action notify hook",
+        ("fret::advanced", "fret_ui"),
+    ),
+    _cookbook_advanced_surface(
+        "text_input_basics.rs",
+        "text-input availability still uses raw model-store bindings",
+        ("fret::advanced", "fret_app", "fret_ui"),
+    ),
+    _cookbook_advanced_surface(
+        "undo_basics.rs",
+        "undo action effects still use raw action notify and model-store plumbing",
+        ("fret::advanced", "fret_app", "fret_core", "fret_runtime", "fret_ui", "ModelStore"),
+    ),
+    _cookbook_advanced_surface(
+        "utility_window_materials_windows.rs",
+        "utility window materials still owns retained tree and manual window/material seams",
+        (
+            "fret::advanced",
+            "fret_app",
+            "fret_core",
+            "fret_runtime",
+            "ElementContext",
+            "UiTree",
+        ),
+    ),
+    _cookbook_advanced_surface(
+        "virtual_list_basics.rs",
+        "virtual list still uses raw runtime model reads pending app-facing row state helpers",
+        ("fret_core", "fret_runtime", "fret_ui"),
     ),
     SurfacePath(
         "apps/fret-examples/src/node_graph_demo.rs",
@@ -332,6 +496,38 @@ RAW_SEAM_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("ModelStore", re.compile(r"\bModelStore\b")),
     ("UiActionHostAdapter", re.compile(r"\bUiActionHostAdapter\b")),
     ("UiTree", re.compile(r"\bUiTree\b")),
+)
+
+PUBLIC_EXAMPLE_SCAN_ROOTS: tuple[str, ...] = (
+    "apps/fret-cookbook/examples",
+)
+
+PUBLIC_EXAMPLE_CLASSIFICATION_PATTERNS: tuple[tuple[str, re.Pattern[str], str], ...] = (
+    (
+        "advanced-facade",
+        re.compile(r"\bfret::advanced\b|\badvanced::prelude::\*|\badvanced::raw\b"),
+        "`fret::advanced` usage in public examples must be classified as default-clean or advanced/manual",
+    ),
+    (
+        "manual-kernel-app",
+        re.compile(r"\bKernelApp\b|\bAppWindowId\b"),
+        "`KernelApp` and `AppWindowId` are manual runtime nouns and require an advanced/manual classification",
+    ),
+    (
+        "manual-driver",
+        re.compile(r"\bFnDriver\b|\bfret_launch::"),
+        "`FnDriver` and direct launch imports are manual driver seams and require classification",
+    ),
+    (
+        "raw-model-store",
+        re.compile(r"\bModelStore\b|\bLocalState::new_in\b|\bModel<"),
+        "raw model-store/model usage in public examples must be classified or replaced with app-facing state helpers",
+    ),
+    (
+        "retained-ui-tree",
+        re.compile(r"\bUiTree\b"),
+        "`UiTree` is a retained runtime mechanism and public examples must classify direct usage",
+    ),
 )
 
 POLICY_CODED_EXPORT_TERMS: tuple[str, ...] = (
@@ -666,6 +862,52 @@ def _validate_existing_classified_surfaces(
     return violations
 
 
+def _path_is_covered_by_specs(root: Path, path: Path, specs: Sequence[SurfacePath]) -> bool:
+    resolved_path = path.resolve()
+    for spec in specs:
+        resolved_spec_path = (root / spec.path).resolve()
+        try:
+            resolved_path.relative_to(resolved_spec_path)
+            return True
+        except ValueError:
+            continue
+    return False
+
+
+def _scan_unclassified_public_examples(
+    root: Path,
+    scan_roots: Sequence[str],
+    classified_specs: Sequence[SurfacePath],
+) -> list[SurfaceViolation]:
+    violations: list[SurfaceViolation] = []
+    for scan_root in scan_roots:
+        for path in _iter_source_files(root / scan_root):
+            if _path_is_covered_by_specs(root, path, classified_specs):
+                continue
+            for line_no, line in _code_lines_for_scan(path, _read_text(path)):
+                if path.suffix == ".rs" and _is_rust_source_line_ignorable(line):
+                    continue
+                for seam, pattern, message in PUBLIC_EXAMPLE_CLASSIFICATION_PATTERNS:
+                    if not pattern.search(line):
+                        continue
+                    violations.append(
+                        SurfaceViolation(
+                            rule="public-example-unclassified-raw-seam",
+                            path=path,
+                            line_no=line_no,
+                            message=(
+                                f"{message}. Public example uses high-risk seam `{seam}` without an "
+                                "explicit surface classification. Add an app/default wrapper, "
+                                "move the example to an explicit advanced lane, or add a "
+                                "temporary quarantine record with owner and retirement."
+                            ),
+                            source=line.strip(),
+                        )
+                    )
+                    break
+    return violations
+
+
 def check_surface_policy(
     root: Path,
     *,
@@ -673,6 +915,7 @@ def check_surface_policy(
     advanced_manual_surfaces: Sequence[SurfacePath] = ADVANCED_MANUAL_SURFACES,
     policy_recipe_surfaces: Sequence[SurfacePath] = POLICY_RECIPE_SURFACES,
     mechanism_root_surfaces: Sequence[SurfacePath] = MECHANISM_ROOT_SURFACES,
+    public_example_scan_roots: Sequence[str] = PUBLIC_EXAMPLE_SCAN_ROOTS,
 ) -> list[SurfaceViolation]:
     specs = [
         *default_surfaces,
@@ -688,6 +931,14 @@ def check_surface_policy(
 
     for spec in advanced_manual_surfaces:
         violations.extend(_scan_advanced_manual_surface(root, spec))
+
+    violations.extend(
+        _scan_unclassified_public_examples(
+            root,
+            public_example_scan_roots,
+            [*default_surfaces, *advanced_manual_surfaces],
+        )
+    )
 
     # Policy/recipe surfaces are intentionally classified here. Dependency direction and backend
     # leakage remain owned by `tools/check_layering.py`; this checker only prevents treating their

@@ -87,6 +87,7 @@ It is a sidecar for session recovery and subagent synthesis, not a replacement f
 - [Phase 3 U13 advanced raw and driver split](progress/2026-07-03-phase3-u13-advanced-raw-driver-split.md)
 - [Phase 3 U13 cookbook app-surface and IMUI quarantine tightening](progress/2026-07-03-phase3-u13-cookbook-imui-quarantine.md)
 - [Phase 3 U13 low-risk cookbook app surface migration](progress/2026-07-03-phase3-u13-low-risk-cookbook-app-surface.md)
+- [Phase 3 U13 cookbook raw seam discovery gate](progress/2026-07-03-phase3-u13-cookbook-raw-seam-discovery.md)
 - [Phase 3 U13 advanced facade audits](subagents/2026-07-03-phase3-u13-advanced-facade-audits.md)
 - [Phase 2 U4 boundary store audit](subagents/2026-07-02-phase2-u4-boundary-store-audit.md)
 - [Phase 2 U4 durable ViewId audit](subagents/2026-07-02-phase2-u4-durable-viewid-audit.md)

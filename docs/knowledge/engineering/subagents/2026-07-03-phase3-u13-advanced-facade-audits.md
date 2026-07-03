@@ -58,6 +58,7 @@ Land U13 in two slices:
 
 # Disposition
 
-The advanced raw/driver split and the first two cookbook migration slices have been implemented
-locally and verified. The next U13 action should be either source-policy discovery/taxonomy or the
+The advanced raw/driver split, the first two cookbook migration slices, and cookbook high-risk seam
+discovery/quarantine records have been implemented locally and verified. The next U13 action should
+extend discovery to `apps/fret-examples/src` without adding a broad root quarantine, or apply the
 no-new-API raw-helper replacements before taking on helper design work.

@@ -465,3 +465,11 @@ timestamp: 2026-06-30
   all-targets with and without `cookbook-assets`, `fret-examples-imui`, cookbook nextest,
   surface/consumption/execution/layering/ADR/workstream gates, formatting, whitespace, and the
   static no-advanced-symbol search over the touched cookbook examples.
+- 2026-07-03: Phase 3 U13 cookbook raw seam discovery gate makes
+  `tools/check_surface_policy.py` scan `apps/fret-cookbook/examples` for unclassified high-risk
+  public example seams (`fret::advanced`, `KernelApp`/`AppWindowId`, `FnDriver`/`fret_launch`,
+  raw model store usage, and `UiTree`). Existing advanced cookbook examples now have exact
+  owner/reason/retirement quarantine records whose `allowed_raw_seams` are checked for both
+  unlisted and unused seams. Verification passed for source-policy unit tests and gate,
+  consumption-profile, execution-surface, layering, ADR-number, workstream-catalog, wiki,
+  cookbook check, formatting, and whitespace gates.
