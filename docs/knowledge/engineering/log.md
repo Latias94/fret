@@ -492,3 +492,8 @@ timestamp: 2026-06-30
   `fret::advanced`, `fret_runtime`, and `ModelStore` seams. Verification passed for focused
   cookbook check, cookbook source-policy nextest, source-policy tests/gate, consumption-profile,
   execution-surface, layering, and formatting gates.
+- 2026-07-03: Phase 3 U13 comparison-surface classification separates long-lived ergonomics/parity
+  comparisons from temporary `advanced_manual` quarantine records. `api_workbench_lite_demo`,
+  `hello_world_compare_demo`, and `imui_editor_proof_demo/authoring_parity` now have exact
+  `comparison_surface` records, while `advanced_manual` keeps retirement semantics. Verification
+  passed for source-policy tests/gate, consumption-profile, execution-surface, and layering gates.

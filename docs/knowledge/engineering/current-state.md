@@ -10,13 +10,13 @@ related_plan: docs/plans/2026-07-03-001-refactor-ui-framework-phase3-retained-br
 
 - Goal: execute `docs/plans/2026-07-03-001-refactor-ui-framework-phase3-retained-bridge-deletion-plan.md` as a breaking Phase 3 retained-bridge deletion refactor.
 - Branch: `feat/ui-framework-phase2-refactor`.
-- Last verified: Phase 3 U13 form raw helper shrink passed focused cookbook check, cookbook
-  source-policy nextest, source-policy tests/gate, consumption-profile, execution-surface,
-  layering, and formatting gates on 2026-07-03. Full `fret-ui` nextest still has a local
-  long-running caveat for the two `stack_safety` deep-tree tests.
+- Last verified: Phase 3 U13 comparison-surface classification passed source-policy tests/gate,
+  consumption-profile, execution-surface, and layering gates on 2026-07-03. Full `fret-ui` nextest
+  still has a local long-running caveat for the two `stack_safety` deep-tree tests.
 - Done: local ADR/workstream research, crate/perf snapshots, GPUI/Zed comparison, architecture boundary audit, framework consumer audit, performance audit, implementation-ready plan, U1 convergence contract freeze, U2 source-policy gate, U3 first slice (`workbench-lite` public scaffold), U4 identity/dirty graph observability slices, U5 `ViewId` / boundary frame-product ownership slices, U6 policy vocabulary demotion/cleanup slices, U7 renderer scene/upload observability plus retained scene chunk and guarded quad resident upload lanes, U8 text/glyph/wasm budget work through web runtime evidence, U9 modular consumption profiles and `AppUi` facade split, Phase 2 U9 VertexColor viewport partial upload, Phase 2 U10 workbench-lite public settings diagnostics, Phase 2 U11 public mutation/toast wrappers, Phase 3 U9 manifest closure v2, Phase 3 U10 authoritative chunk launch, Phase 3 U11 partial upload stream policy, Phase 3 U12 public app facade cleanup, workstream closeout audit, duplicate ADR ID `0324` resolution, and execution-surface allowlist alignment.
-- Latest done: Phase 3 U13 seventh slice removes `form_basics` raw model-store availability reads
-  and shrinks its source-policy quarantine record to the remaining low-level UI mechanism seam.
+- Latest done: Phase 3 U13 eighth slice splits comparison surfaces from temporary
+  `advanced_manual` quarantine records and classifies `api_workbench_lite_demo`,
+  `hello_world_compare_demo`, and IMUI authoring parity under exact comparison records.
 - In progress: Phase 3 retained bridge closeout / remaining U13 cookbook and quarantine
   classification,
   with the
@@ -46,6 +46,8 @@ related_plan: docs/plans/2026-07-03-001-refactor-ui-framework-phase3-retained-br
   [`fret-examples` precise quarantine slice](progress/2026-07-03-phase3-u13-fret-examples-precise-quarantine.md)
   and the
   [form raw helper shrink slice](progress/2026-07-03-phase3-u13-form-raw-helper-shrink.md)
+  plus the
+  [comparison surface classification slice](progress/2026-07-03-phase3-u13-comparison-surface-classification.md)
   leaving remaining U13 work to audit and migrate the still-advanced cookbook/example surfaces.
 - Blocked: none known after the boundary store migration.
 - Next action: continue U13 by shrinking exact cookbook/example records through code migration;
@@ -90,6 +92,7 @@ related_plan: docs/plans/2026-07-03-001-refactor-ui-framework-phase3-retained-br
 - [Phase 3 U13 cookbook raw helper shrink](progress/2026-07-03-phase3-u13-cookbook-raw-helper-shrink.md)
 - [Phase 3 U13 fret-examples precise quarantine](progress/2026-07-03-phase3-u13-fret-examples-precise-quarantine.md)
 - [Phase 3 U13 form raw helper shrink](progress/2026-07-03-phase3-u13-form-raw-helper-shrink.md)
+- [Phase 3 U13 comparison surface classification](progress/2026-07-03-phase3-u13-comparison-surface-classification.md)
 - [Phase 3 U13 advanced facade audits](subagents/2026-07-03-phase3-u13-advanced-facade-audits.md)
 - [Phase 1 convergence plan](../../plans/2026-06-30-001-refactor-ui-framework-architecture-plan.md)
 - [Subagent Findings](subagents/2026-06-30-ui-framework-architecture-audit-findings.md)

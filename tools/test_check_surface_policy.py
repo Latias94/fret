@@ -30,6 +30,11 @@ def write(path: Path, text: str) -> None:
     path.write_text(textwrap.dedent(text).lstrip(), encoding="utf-8")
 
 
+def check_fixture_policy(root: Path, **kwargs):
+    kwargs.setdefault("comparison_surfaces", [])
+    return POLICY.check_surface_policy(root, **kwargs)
+
+
 class SurfacePolicyTests(unittest.TestCase):
     def test_default_tutorial_raw_runtime_import_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -45,7 +50,7 @@ class SurfacePolicyTests(unittest.TestCase):
                 """,
             )
 
-            violations = POLICY.check_surface_policy(
+            violations = check_fixture_policy(
                 root,
                 default_surfaces=[
                     POLICY.SurfacePath(
@@ -78,7 +83,7 @@ class SurfacePolicyTests(unittest.TestCase):
                 """,
             )
 
-            violations = POLICY.check_surface_policy(
+            violations = check_fixture_policy(
                 root,
                 default_surfaces=[
                     POLICY.SurfacePath(
@@ -108,7 +113,7 @@ class SurfacePolicyTests(unittest.TestCase):
                 """,
             )
 
-            default_violations = POLICY.check_surface_policy(
+            default_violations = check_fixture_policy(
                 root,
                 default_surfaces=[
                     POLICY.SurfacePath(
@@ -121,7 +126,7 @@ class SurfacePolicyTests(unittest.TestCase):
                 policy_recipe_surfaces=[],
                 mechanism_root_surfaces=[],
             )
-            advanced_violations = POLICY.check_surface_policy(
+            advanced_violations = check_fixture_policy(
                 root,
                 default_surfaces=[],
                 advanced_manual_surfaces=[
@@ -146,7 +151,7 @@ class SurfacePolicyTests(unittest.TestCase):
             root = Path(tmp)
             write(root / "apps/manual.rs", "use fret_launch::FnDriver;\n")
 
-            violations = POLICY.check_surface_policy(
+            violations = check_fixture_policy(
                 root,
                 default_surfaces=[],
                 advanced_manual_surfaces=[
@@ -162,9 +167,9 @@ class SurfacePolicyTests(unittest.TestCase):
 
             self.assertEqual(
                 {
-                    "advanced-surface-quarantine-owner",
-                    "advanced-surface-quarantine-retirement",
-                    "advanced-surface-quarantine-raw-seams",
+                    "advanced-surface-classification-owner",
+                    "advanced-surface-classification-retirement",
+                    "advanced-surface-classification-raw-seams",
                     "advanced-surface-unlisted-raw-seam",
                 },
                 {violation.rule for violation in violations},
@@ -184,7 +189,7 @@ class SurfacePolicyTests(unittest.TestCase):
                 """,
             )
 
-            violations = POLICY.check_surface_policy(
+            violations = check_fixture_policy(
                 root,
                 default_surfaces=[],
                 advanced_manual_surfaces=[
@@ -217,7 +222,7 @@ class SurfacePolicyTests(unittest.TestCase):
                 """,
             )
 
-            violations = POLICY.check_surface_policy(
+            violations = check_fixture_policy(
                 root,
                 default_surfaces=[],
                 advanced_manual_surfaces=[
@@ -251,7 +256,7 @@ class SurfacePolicyTests(unittest.TestCase):
                 """,
             )
 
-            violations = POLICY.check_surface_policy(
+            violations = check_fixture_policy(
                 root,
                 default_surfaces=[
                     POLICY.SurfacePath(
@@ -283,7 +288,7 @@ class SurfacePolicyTests(unittest.TestCase):
                 """,
             )
 
-            violations = POLICY.check_surface_policy(
+            violations = check_fixture_policy(
                 root,
                 default_surfaces=[
                     POLICY.SurfacePath(
@@ -316,7 +321,7 @@ class SurfacePolicyTests(unittest.TestCase):
                 """,
             )
 
-            violations = POLICY.check_surface_policy(
+            violations = check_fixture_policy(
                 root,
                 default_surfaces=[
                     POLICY.SurfacePath(
@@ -346,7 +351,7 @@ class SurfacePolicyTests(unittest.TestCase):
                 """,
             )
 
-            violations = POLICY.check_surface_policy(
+            violations = check_fixture_policy(
                 root,
                 default_surfaces=[],
                 advanced_manual_surfaces=[],
@@ -376,7 +381,7 @@ class SurfacePolicyTests(unittest.TestCase):
                 """,
             )
 
-            violations = POLICY.check_surface_policy(
+            violations = check_fixture_policy(
                 root,
                 default_surfaces=[],
                 advanced_manual_surfaces=[],
@@ -401,7 +406,7 @@ class SurfacePolicyTests(unittest.TestCase):
                 """,
             )
 
-            violations = POLICY.check_surface_policy(
+            violations = check_fixture_policy(
                 root,
                 default_surfaces=[],
                 advanced_manual_surfaces=[
@@ -421,6 +426,69 @@ class SurfacePolicyTests(unittest.TestCase):
 
             self.assertEqual([], violations)
 
+    def test_comparison_surface_allows_classified_raw_seam_without_retirement(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-examples/src/compare_demo.rs",
+                """
+                use fret::{FretApp, advanced::prelude::*};
+                """,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[],
+                comparison_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/compare_demo.rs",
+                        "comparison_surface",
+                        "fixture comparison surface",
+                        owner="fixture-comparison",
+                        allowed_raw_seams=("fret::advanced",),
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+                public_example_scan_roots=["apps/fret-examples/src/compare_demo.rs"],
+            )
+
+            self.assertEqual([], violations)
+
+    def test_comparison_surface_rejects_unlisted_raw_seam(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-examples/src/compare_demo.rs",
+                """
+                use fret_ui::UiTree;
+                """,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[],
+                comparison_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/compare_demo.rs",
+                        "comparison_surface",
+                        "fixture comparison surface",
+                        owner="fixture-comparison",
+                        allowed_raw_seams=("fret_ui",),
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            self.assertGreaterEqual(len(violations), 1)
+            self.assertTrue(
+                all(v.rule == "comparison_surface-unlisted-raw-seam" for v in violations)
+            )
+            self.assertTrue(any("UiTree" in v.message for v in violations))
+
     def test_public_example_scan_root_can_target_exact_file(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -437,7 +505,7 @@ class SurfacePolicyTests(unittest.TestCase):
                 """,
             )
 
-            violations = POLICY.check_surface_policy(
+            violations = check_fixture_policy(
                 root,
                 default_surfaces=[],
                 advanced_manual_surfaces=[],
@@ -475,7 +543,7 @@ class SurfacePolicyTests(unittest.TestCase):
                 """,
             )
 
-            violations = POLICY.check_surface_policy(
+            violations = check_fixture_policy(
                 root,
                 default_surfaces=[],
                 advanced_manual_surfaces=[],
@@ -504,7 +572,7 @@ class SurfacePolicyTests(unittest.TestCase):
                 """,
             )
 
-            violations = POLICY.check_surface_policy(
+            violations = check_fixture_policy(
                 root,
                 default_surfaces=[],
                 advanced_manual_surfaces=[],
@@ -542,7 +610,7 @@ class SurfacePolicyTests(unittest.TestCase):
                 """,
             )
 
-            violations = POLICY.check_surface_policy(
+            violations = check_fixture_policy(
                 root,
                 default_surfaces=[],
                 advanced_manual_surfaces=[],
@@ -575,7 +643,7 @@ class SurfacePolicyTests(unittest.TestCase):
                 """,
             )
 
-            violations = POLICY.check_surface_policy(
+            violations = check_fixture_policy(
                 root,
                 default_surfaces=[],
                 advanced_manual_surfaces=[],
@@ -604,7 +672,7 @@ class SurfacePolicyTests(unittest.TestCase):
                 """,
             )
 
-            violations = POLICY.check_surface_policy(
+            violations = check_fixture_policy(
                 root,
                 default_surfaces=[],
                 advanced_manual_surfaces=[],
@@ -631,7 +699,7 @@ class SurfacePolicyTests(unittest.TestCase):
                 """,
             )
 
-            violations = POLICY.check_surface_policy(
+            violations = check_fixture_policy(
                 root,
                 default_surfaces=[],
                 advanced_manual_surfaces=[],
@@ -658,7 +726,7 @@ class SurfacePolicyTests(unittest.TestCase):
                 """,
             )
 
-            violations = POLICY.check_surface_policy(
+            violations = check_fixture_policy(
                 root,
                 default_surfaces=[],
                 advanced_manual_surfaces=[],
@@ -679,7 +747,7 @@ class SurfacePolicyTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
 
-            violations = POLICY.check_surface_policy(
+            violations = check_fixture_policy(
                 root,
                 default_surfaces=[],
                 advanced_manual_surfaces=[

@@ -147,6 +147,10 @@ FRET_EXAMPLES_ADVANCED_RETIREMENT = (
     "runner/test harness glue or moves the remaining raw seams behind explicit public wrappers."
 )
 
+CLASSIFIED_RAW_SURFACE_CATEGORIES = frozenset(
+    {"advanced_manual", "comparison_surface", "internal_harness"}
+)
+
 
 def _cookbook_advanced_surface(
     filename: str,
@@ -181,23 +185,28 @@ def _fret_examples_advanced_surface(
     )
 
 
-ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
-    _fret_examples_advanced_surface(
-        "lib.rs",
-        "the examples crate root owns shared native/web harness helpers, launch glue, and theme "
-        "interop helpers for demo shells",
-        ("fret::advanced", "fret_app", "fret_core", "fret_launch"),
-        owner="examples-harness-root",
-    ),
-    SurfacePath(
-        "apps/fret-examples/src/api_workbench_lite_demo.rs",
-        "advanced_manual",
+def _fret_examples_comparison_surface(
+    path: str,
+    reason: str,
+    allowed_raw_seams: tuple[str, ...],
+    owner: str | None = None,
+) -> SurfacePath:
+    stem = path.removesuffix(".rs").replace("/", "-").replace("_", "-")
+    return SurfacePath(
+        f"apps/fret-examples/src/{path}",
+        "comparison_surface",
+        f"{path} remains classified as a comparison surface because {reason}",
+        owner=owner or f"examples-{stem}",
+        allowed_raw_seams=allowed_raw_seams,
+    )
+
+
+COMPARISON_SURFACES: tuple[SurfacePath, ...] = (
+    _fret_examples_comparison_surface(
+        "api_workbench_lite_demo.rs",
+        "it is an API ergonomics and migration reference while public workbench-lite and "
+        "mutation-workbench starters cover default onboarding flows",
         (
-            "advanced API comparison demo retained as a migration reference while public "
-            "workbench-lite and mutation-workbench starters replace default onboarding coverage"
-        ),
-        owner="examples-api-workbench",
-        allowed_raw_seams=(
             "fret::advanced",
             "fret_app",
             "fret_core",
@@ -206,10 +215,43 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
             "AnyElement",
             "ModelStore",
         ),
-        retirement=(
-            "Delete or move behind explicit advanced docs after public workbench-lite and "
-            "mutation-workbench diagnostics cover the same command, data, and feedback flows"
+        owner="examples-api-workbench",
+    ),
+    _fret_examples_comparison_surface(
+        "hello_world_compare_demo.rs",
+        "it is a GPUI/Fret comparison and runtime diagnostics proof rather than an app-authoring "
+        "tutorial",
+        (
+            "fret::advanced",
+            "fret_core",
+            "fret_runtime",
+            "fret_ui",
+            "AnyElement",
         ),
+        owner="examples-hello-world-compare",
+    ),
+    _fret_examples_comparison_surface(
+        "imui_editor_proof_demo/authoring_parity",
+        "it compares declarative and immediate-mode authoring surfaces inside the editor proof",
+        (
+            "fret::advanced",
+            "fret_core",
+            "fret_runtime",
+            "fret_ui",
+            "ElementContext",
+        ),
+        owner="examples-imui-authoring-parity",
+    ),
+)
+
+
+ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
+    _fret_examples_advanced_surface(
+        "lib.rs",
+        "the examples crate root owns shared native/web harness helpers, launch glue, and theme "
+        "interop helpers for demo shells",
+        ("fret::advanced", "fret_app", "fret_core", "fret_launch"),
+        owner="examples-harness-root",
     ),
     SurfacePath(
         "apps/fret-examples/src/workspace_shell_demo",
@@ -658,6 +700,8 @@ PUBLIC_EXAMPLE_SCAN_ROOTS: tuple[str, ...] = (
     "apps/fret-cookbook/examples",
     "apps/fret-examples/src/lib.rs",
     "apps/fret-examples/src/api_workbench_lite_demo.rs",
+    "apps/fret-examples/src/hello_world_compare_demo.rs",
+    "apps/fret-examples/src/imui_editor_proof_demo/authoring_parity",
     "apps/fret-examples/src/simple_todo_demo.rs",
     "apps/fret-examples/src/todo_demo.rs",
     "apps/fret-examples/src/components_gallery.rs",
@@ -812,10 +856,15 @@ def _scan_default_authoring_surface(root: Path, spec: SurfacePath) -> list[Surfa
     return violations
 
 
-def _scan_advanced_manual_surface(root: Path, spec: SurfacePath) -> list[SurfaceViolation]:
+def _classified_raw_rule_prefix(spec: SurfacePath) -> str:
+    return "advanced-surface" if spec.category == "advanced_manual" else spec.category
+
+
+def _scan_classified_raw_surface(root: Path, spec: SurfacePath) -> list[SurfaceViolation]:
     violations: list[SurfaceViolation] = []
     allowed_raw_seams = set(spec.allowed_raw_seams)
     used_raw_seams: set[str] = set()
+    rule_prefix = _classified_raw_rule_prefix(spec)
     for path in _iter_source_files(root / spec.path):
         text = _read_text(path)
         for line_no, line in _code_lines_for_scan(path, text):
@@ -829,12 +878,12 @@ def _scan_advanced_manual_surface(root: Path, spec: SurfacePath) -> list[Surface
                     continue
                 violations.append(
                     SurfaceViolation(
-                        rule="advanced-surface-unlisted-raw-seam",
+                        rule=f"{rule_prefix}-unlisted-raw-seam",
                         path=path,
                         line_no=line_no,
                         message=(
-                            f"advanced/manual surface uses raw seam `{seam}` without listing it "
-                            "in the quarantine record's allowed_raw_seams"
+                            f"{spec.category} surface uses raw seam `{seam}` without listing it "
+                            "in the classification record's allowed_raw_seams"
                         ),
                         source=line.strip(),
                     )
@@ -842,12 +891,12 @@ def _scan_advanced_manual_surface(root: Path, spec: SurfacePath) -> list[Surface
     for seam in sorted(allowed_raw_seams - used_raw_seams):
         violations.append(
             SurfaceViolation(
-                rule="advanced-surface-unused-allowed-raw-seam",
+                rule=f"{rule_prefix}-unused-allowed-raw-seam",
                 path=root / spec.path,
                 line_no=1,
                 message=(
-                    f"advanced/manual surface lists raw seam `{seam}` in allowed_raw_seams, "
-                    "but the seam is no longer used; shrink the quarantine record"
+                    f"{spec.category} surface lists raw seam `{seam}` in allowed_raw_seams, "
+                    "but the seam is no longer used; shrink the classification record"
                 ),
             )
         )
@@ -964,33 +1013,33 @@ def _validate_surface_specs(specs: Sequence[SurfacePath]) -> list[SurfaceViolati
                     message=f"{spec.category} surface classification must include a reason",
                 )
             )
-        if spec.category != "advanced_manual":
+        if spec.category not in CLASSIFIED_RAW_SURFACE_CATEGORIES:
             continue
         if not spec.owner.strip():
             violations.append(
                 SurfaceViolation(
-                    rule="advanced-surface-quarantine-owner",
+                    rule=f"{_classified_raw_rule_prefix(spec)}-classification-owner",
                     path=Path(spec.path),
                     line_no=1,
-                    message="advanced/manual surface quarantine must include an owner",
+                    message=f"{spec.category} surface classification must include an owner",
                 )
             )
-        if not spec.retirement.strip():
+        if spec.category == "advanced_manual" and not spec.retirement.strip():
             violations.append(
                 SurfaceViolation(
-                    rule="advanced-surface-quarantine-retirement",
+                    rule="advanced-surface-classification-retirement",
                     path=Path(spec.path),
                     line_no=1,
-                    message="advanced/manual surface quarantine must include a retirement condition",
+                    message="advanced/manual surface classification must include a retirement condition",
                 )
             )
         if not spec.allowed_raw_seams or any(not seam.strip() for seam in spec.allowed_raw_seams):
             violations.append(
                 SurfaceViolation(
-                    rule="advanced-surface-quarantine-raw-seams",
+                    rule=f"{_classified_raw_rule_prefix(spec)}-classification-raw-seams",
                     path=Path(spec.path),
                     line_no=1,
-                    message="advanced/manual surface quarantine must list allowed raw seams",
+                    message=f"{spec.category} surface classification must list allowed raw seams",
                 )
             )
     for symbol, reason in MECHANISM_ROOT_EXPORT_CLASSIFICATIONS.items():
@@ -1079,6 +1128,7 @@ def check_surface_policy(
     *,
     default_surfaces: Sequence[SurfacePath] = DEFAULT_AUTHORING_SURFACES,
     advanced_manual_surfaces: Sequence[SurfacePath] = ADVANCED_MANUAL_SURFACES,
+    comparison_surfaces: Sequence[SurfacePath] = COMPARISON_SURFACES,
     policy_recipe_surfaces: Sequence[SurfacePath] = POLICY_RECIPE_SURFACES,
     mechanism_root_surfaces: Sequence[SurfacePath] = MECHANISM_ROOT_SURFACES,
     public_example_scan_roots: Sequence[str] = PUBLIC_EXAMPLE_SCAN_ROOTS,
@@ -1086,6 +1136,7 @@ def check_surface_policy(
     specs = [
         *default_surfaces,
         *advanced_manual_surfaces,
+        *comparison_surfaces,
         *policy_recipe_surfaces,
         *mechanism_root_surfaces,
     ]
@@ -1096,13 +1147,16 @@ def check_surface_policy(
         violations.extend(_scan_default_authoring_surface(root, spec))
 
     for spec in advanced_manual_surfaces:
-        violations.extend(_scan_advanced_manual_surface(root, spec))
+        violations.extend(_scan_classified_raw_surface(root, spec))
+
+    for spec in comparison_surfaces:
+        violations.extend(_scan_classified_raw_surface(root, spec))
 
     violations.extend(
         _scan_unclassified_public_examples(
             root,
             public_example_scan_roots,
-            [*default_surfaces, *advanced_manual_surfaces],
+            [*default_surfaces, *advanced_manual_surfaces, *comparison_surfaces],
         )
     )
 
