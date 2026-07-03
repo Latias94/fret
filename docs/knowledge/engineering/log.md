@@ -531,3 +531,8 @@ timestamp: 2026-06-30
   `fret-cookbook --all-targets`, focused `fret` facade tests, source-policy tests/gate,
   consumption-profile, execution-surface, layering, formatting, engineering-memory, and whitespace
   gates.
+- 2026-07-03: Phase 3 U13 examples root internal-harness classification moves
+  `apps/fret-examples/src/lib.rs` out of `advanced_manual` and into `internal_harness` because its
+  raw seams are crate-private runner/helper glue, not copyable app authoring material. Verification
+  passed for source-policy tests/gate, consumption-profile, execution-surface, layering,
+  formatting, engineering-memory, and whitespace gates.

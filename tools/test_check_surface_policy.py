@@ -587,6 +587,10 @@ class SurfacePolicyTests(unittest.TestCase):
 
     def test_fret_examples_public_scan_roots_stay_precise(self) -> None:
         self.assertIn(
+            "apps/fret-examples/src/lib.rs",
+            POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS,
+        )
+        self.assertIn(
             "apps/fret-examples/src/simple_todo_demo.rs",
             POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS,
         )
@@ -604,9 +608,21 @@ class SurfacePolicyTests(unittest.TestCase):
                 for spec in POLICY.INTERNAL_HARNESS_SURFACES
             )
         )
+        self.assertTrue(
+            any(
+                spec.path == "apps/fret-examples/src/lib.rs"
+                for spec in POLICY.INTERNAL_HARNESS_SURFACES
+            )
+        )
         self.assertFalse(
             any(
                 spec.path == "apps/fret-examples/src/plot_stress_demo.rs"
+                for spec in POLICY.ADVANCED_MANUAL_SURFACES
+            )
+        )
+        self.assertFalse(
+            any(
+                spec.path == "apps/fret-examples/src/lib.rs"
                 for spec in POLICY.ADVANCED_MANUAL_SURFACES
             )
         )

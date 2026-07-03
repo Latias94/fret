@@ -283,6 +283,13 @@ COMPARISON_SURFACES: tuple[SurfacePath, ...] = (
 
 INTERNAL_HARNESS_SURFACES: tuple[SurfacePath, ...] = (
     _fret_examples_internal_harness(
+        "lib.rs",
+        "the examples crate root owns shared native/web harness helpers, launch glue, and theme "
+        "interop helpers for demo shells",
+        ("fret::advanced", "fret_app", "fret_core", "fret_launch"),
+        owner="examples-harness-root",
+    ),
+    _fret_examples_internal_harness(
         "docking_arbitration_demo.rs",
         "the arbitration harness is ADR/conformance infrastructure for docking, viewports, "
         "overlays, and launch hooks",
@@ -318,13 +325,6 @@ INTERNAL_HARNESS_SURFACES: tuple[SurfacePath, ...] = (
 
 
 ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
-    _fret_examples_advanced_surface(
-        "lib.rs",
-        "the examples crate root owns shared native/web harness helpers, launch glue, and theme "
-        "interop helpers for demo shells",
-        ("fret::advanced", "fret_app", "fret_core", "fret_launch"),
-        owner="examples-harness-root",
-    ),
     SurfacePath(
         "apps/fret-examples/src/workspace_shell_demo",
         "advanced_manual",
