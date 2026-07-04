@@ -11,6 +11,7 @@ pub struct UiDebugDispatchSnapshotNode {
 #[derive(Debug, Clone)]
 pub struct UiDebugDispatchSnapshot {
     pub frame_id: FrameId,
+    pub topology_epoch: u64,
     pub window: Option<AppWindowId>,
     pub active_layer_roots: Vec<NodeId>,
     pub barrier_root: Option<NodeId>,
@@ -20,6 +21,7 @@ pub struct UiDebugDispatchSnapshot {
 #[derive(Debug, Clone)]
 pub struct UiDebugDispatchSnapshotParityReport {
     pub frame_id: FrameId,
+    pub topology_epoch: u64,
     pub window: Option<AppWindowId>,
     pub active_layer_roots: Vec<NodeId>,
     pub barrier_root: Option<NodeId>,
@@ -54,6 +56,7 @@ impl UiDebugDispatchSnapshot {
         }
         Self {
             frame_id: snapshot.frame_id,
+            topology_epoch: snapshot.topology_epoch.as_u64(),
             window: snapshot.window,
             active_layer_roots: snapshot.active_layer_roots.clone(),
             barrier_root: snapshot.barrier_root,

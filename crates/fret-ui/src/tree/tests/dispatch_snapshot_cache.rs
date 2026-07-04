@@ -26,6 +26,12 @@ fn dispatch_snapshot_cache_reuses_forest_across_frames_until_structure_changes()
     assert!(Arc::ptr_eq(&snapshot_a.parent, &snapshot_b.parent));
     assert!(Arc::ptr_eq(&snapshot_a.pre, &snapshot_b.pre));
     assert!(Arc::ptr_eq(&snapshot_a.post, &snapshot_b.post));
+    assert_eq!(snapshot_a.topology_epoch, ui.live_topology_epoch());
+    assert_eq!(snapshot_b.topology_epoch, snapshot_a.topology_epoch);
+    assert_eq!(
+        ui.debug_stats().live_topology_epoch,
+        snapshot_a.topology_epoch.as_u64()
+    );
     let stats = ui.debug_stats();
     assert_eq!(stats.dispatch_snapshot_cache_misses, 1);
     assert_eq!(stats.dispatch_snapshot_cache_hits, 1);
@@ -42,20 +48,38 @@ fn dispatch_snapshot_cache_reuses_forest_across_frames_until_structure_changes()
         "dispatch snapshot cache entries should be owned by the frame-product state"
     );
 
+    ui.set_children(root, vec![child_a]);
+    let snapshot_same_topology = ui.cached_dispatch_snapshot_for_layer_roots(
+        FrameId(3),
+        active_roots.as_slice(),
+        barrier_root,
+    );
+    assert!(Arc::ptr_eq(
+        &snapshot_a.nodes,
+        &snapshot_same_topology.nodes
+    ));
+    assert_eq!(
+        snapshot_same_topology.topology_epoch,
+        snapshot_a.topology_epoch
+    );
+
     let child_b = ui.create_node(TestStack);
     ui.set_children(root, vec![child_a, child_b]);
     let (active_roots, barrier_root) = ui.active_input_layers();
     let snapshot_c = ui.cached_dispatch_snapshot_for_layer_roots(
-        FrameId(3),
+        FrameId(4),
         active_roots.as_slice(),
         barrier_root,
     );
 
     assert!(!Arc::ptr_eq(&snapshot_a.nodes, &snapshot_c.nodes));
+    assert!(snapshot_c.topology_epoch > snapshot_a.topology_epoch);
+    assert_eq!(snapshot_c.topology_epoch, ui.live_topology_epoch());
     assert!(snapshot_c.pre.get(child_b).is_some());
     let stats = ui.debug_stats();
     assert!(stats.dispatch_snapshot_cache_invalidations >= 1);
     assert_eq!(stats.dispatch_snapshot_cache_misses, 2);
+    assert_eq!(stats.dispatch_snapshot_cache_hits, 2);
     assert_eq!(stats.dispatch_snapshot_builds, 2);
     assert_eq!(stats.dispatch_snapshot_built_nodes, 5);
     assert!(

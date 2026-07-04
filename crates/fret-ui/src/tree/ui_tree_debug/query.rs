@@ -1007,6 +1007,7 @@ impl<H: UiHost> UiTree<H> {
 
         UiDebugDispatchSnapshotParityReport {
             frame_id,
+            topology_epoch: snapshot.topology_epoch.as_u64(),
             window: snapshot.window,
             active_layer_roots: snapshot.active_layer_roots,
             barrier_root: snapshot.barrier_root,

@@ -5,6 +5,7 @@ const DISPATCH_SNAPSHOT_CACHE_CAPACITY: usize = 8;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct UiDispatchSnapshotCacheKey {
     generation: u64,
+    topology_epoch: LiveTopologyEpoch,
     window: Option<AppWindowId>,
     active_layer_roots: Vec<NodeId>,
     barrier_root: Option<NodeId>,
@@ -39,12 +40,14 @@ impl DispatchSnapshotFrameProductState {
 
     fn cache_key(
         &self,
+        topology_epoch: LiveTopologyEpoch,
         window: Option<AppWindowId>,
         active_layer_roots: &[NodeId],
         barrier_root: Option<NodeId>,
     ) -> UiDispatchSnapshotCacheKey {
         UiDispatchSnapshotCacheKey {
             generation: self.generation,
+            topology_epoch,
             window,
             active_layer_roots: active_layer_roots.to_vec(),
             barrier_root,
@@ -77,6 +80,7 @@ impl DispatchSnapshotFrameProductState {
 #[derive(Debug, Clone)]
 pub(crate) struct UiDispatchSnapshot {
     pub(crate) frame_id: FrameId,
+    pub(crate) topology_epoch: LiveTopologyEpoch,
     pub(crate) window: Option<AppWindowId>,
     pub(crate) active_layer_roots: Vec<NodeId>,
     pub(crate) barrier_root: Option<NodeId>,
@@ -123,8 +127,13 @@ impl<H: UiHost> UiTree<H> {
         active_layer_roots: &[NodeId],
         barrier_root: Option<NodeId>,
     ) -> UiDispatchSnapshotCacheKey {
-        self.dispatch_snapshot_products
-            .cache_key(self.window, active_layer_roots, barrier_root)
+        let topology_epoch = self.live_topology_epoch();
+        self.dispatch_snapshot_products.cache_key(
+            topology_epoch,
+            self.window,
+            active_layer_roots,
+            barrier_root,
+        )
     }
 
     pub(in crate::tree) fn cached_dispatch_snapshot_for_layer_roots(
@@ -233,6 +242,7 @@ impl<H: UiHost> UiTree<H> {
 
         UiDispatchSnapshot {
             frame_id,
+            topology_epoch: self.live_topology_epoch(),
             window: self.window,
             active_layer_roots,
             barrier_root,

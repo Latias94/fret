@@ -31,7 +31,7 @@ mod dispatch_snapshot;
 mod frame_arena;
 mod hit_test;
 mod identity;
-use identity::LiveTopologyIndex;
+use identity::{LiveTopologyEpoch, LiveTopologyIndex};
 mod invalidation_dedup;
 mod layers;
 mod layout;
@@ -273,6 +273,7 @@ impl From<&InputContext> for WindowCommandActionAvailabilityInputSignature {
 pub(crate) struct WindowFocusTraversalAvailabilityCacheKey {
     pub(crate) frame_id: FrameId,
     pub(crate) dispatch_snapshot_generation: u64,
+    pub(crate) dispatch_snapshot_topology_epoch: LiveTopologyEpoch,
     pub(crate) window: Option<AppWindowId>,
     pub(crate) active_layer_roots: Vec<NodeId>,
     pub(crate) barrier_root: Option<NodeId>,
