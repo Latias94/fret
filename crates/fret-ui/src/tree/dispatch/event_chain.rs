@@ -30,7 +30,7 @@ impl<H: UiHost> UiTree<H> {
                 let mut cur = Some(start);
                 while let Some(id) = cur {
                     chain.push(id);
-                    cur = self.parent_in_layer_forest_via_children(id);
+                    cur = self.live_parent_in_layer_forest(id);
                 }
             }
         }

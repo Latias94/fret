@@ -102,7 +102,7 @@ impl<H: UiHost> UiTree<H> {
                 return Some(id);
             }
 
-            node = self.parent_in_layer_forest_via_children(id);
+            node = self.live_parent_in_layer_forest(id);
         }
         None
     }

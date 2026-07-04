@@ -78,7 +78,7 @@ impl<H: UiHost> UiTree<H> {
                 }
                 snapshot.parent.get(node).copied().flatten()
             }
-            None => self.parent_in_layer_forest_via_children(node),
+            None => self.live_parent_in_layer_forest(node),
         }
     }
 

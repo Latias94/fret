@@ -282,10 +282,7 @@ impl<H: UiHost> UiTree<H> {
         self.live_topology.contains_live_node(node)
     }
 
-    pub(in crate::tree) fn parent_in_layer_forest_via_children(
-        &self,
-        node: NodeId,
-    ) -> Option<NodeId> {
+    pub(in crate::tree) fn live_parent_in_layer_forest(&self, node: NodeId) -> Option<NodeId> {
         if !self.nodes.contains_key(node) || self.root_to_layer.contains_key(&node) {
             return None;
         }
@@ -324,7 +321,7 @@ impl<H: UiHost> UiTree<H> {
     }
 
     pub fn node_parent_in_layer_tree(&self, node: NodeId) -> Option<NodeId> {
-        self.parent_in_layer_forest_via_children(node)
+        self.live_parent_in_layer_forest(node)
     }
 
     pub(crate) fn live_topology_epoch(&self) -> LiveTopologyEpoch {

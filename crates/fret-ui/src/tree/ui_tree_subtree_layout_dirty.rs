@@ -43,7 +43,7 @@ impl<H: UiHost> UiTree<H> {
             }
             remaining = remaining.saturating_sub(1);
 
-            let parent = self.parent_in_layer_forest_via_children(current);
+            let parent = self.live_parent_in_layer_forest(current);
             let underflow = {
                 let Some(entry) = self.nodes.get_mut(current) else {
                     break;
@@ -69,7 +69,7 @@ impl<H: UiHost> UiTree<H> {
     }
 
     fn rebuild_subtree_semantics_dirty_counts_from(&mut self, root: NodeId) {
-        let root_parent = self.parent_in_layer_forest_via_children(root);
+        let root_parent = self.live_parent_in_layer_forest(root);
         let old_root_count = self
             .nodes
             .get(root)
@@ -133,7 +133,7 @@ impl<H: UiHost> UiTree<H> {
             }
             remaining = remaining.saturating_sub(1);
 
-            let parent = self.parent_in_layer_forest_via_children(id);
+            let parent = self.live_parent_in_layer_forest(id);
             let underflow = {
                 let Some(entry) = self.nodes.get_mut(id) else {
                     break;
@@ -186,7 +186,7 @@ impl<H: UiHost> UiTree<H> {
     }
 
     pub(in crate::tree) fn node_layout_dirty_suppressed_by_ancestor(&self, node: NodeId) -> bool {
-        let mut current = self.parent_in_layer_forest_via_children(node);
+        let mut current = self.live_parent_in_layer_forest(node);
         let mut remaining = self.nodes.len().saturating_add(1);
         while let Some(id) = current {
             if remaining == 0 {
@@ -199,7 +199,7 @@ impl<H: UiHost> UiTree<H> {
             if entry.layout_dirty_children_suppressed {
                 return true;
             }
-            current = self.parent_in_layer_forest_via_children(id);
+            current = self.live_parent_in_layer_forest(id);
         }
         false
     }
@@ -263,7 +263,7 @@ impl<H: UiHost> UiTree<H> {
             if id == ancestor {
                 return true;
             }
-            current = self.parent_in_layer_forest_via_children(id);
+            current = self.live_parent_in_layer_forest(id);
         }
         false
     }
@@ -347,7 +347,7 @@ impl<H: UiHost> UiTree<H> {
         let delta_i64: i64 = new_count as i64 - old_count as i64;
         debug_assert!(delta_i64 >= i32::MIN as i64 && delta_i64 <= i32::MAX as i64);
         let delta: i32 = delta_i64.clamp(i32::MIN as i64, i32::MAX as i64) as i32;
-        let parent = self.parent_in_layer_forest_via_children(node);
+        let parent = self.live_parent_in_layer_forest(node);
         self.apply_subtree_layout_dirty_delta_to_ancestors(parent, delta);
     }
 
@@ -355,7 +355,7 @@ impl<H: UiHost> UiTree<H> {
         &mut self,
         root: NodeId,
     ) {
-        let root_parent = self.parent_in_layer_forest_via_children(root);
+        let root_parent = self.live_parent_in_layer_forest(root);
         let old_root_count = self
             .nodes
             .get(root)
@@ -451,13 +451,13 @@ impl<H: UiHost> UiTree<H> {
         // `root` even if the previously stored `root` count (used by delta propagation) was
         // already incorrect.
         let mut walked_nodes: u32 = 0;
-        let mut current = self.parent_in_layer_forest_via_children(root);
+        let mut current = self.live_parent_in_layer_forest(root);
         while let Some(id) = current {
             let (next_parent, expected) = {
                 let Some(n) = self.nodes.get(id) else {
                     break;
                 };
-                let next_parent = self.parent_in_layer_forest_via_children(id);
+                let next_parent = self.live_parent_in_layer_forest(id);
                 let mut sum: u32 = if n.invalidation.layout { 1 } else { 0 };
                 if !n.layout_dirty_children_suppressed {
                     for &child in &n.children {
@@ -533,7 +533,7 @@ impl<H: UiHost> UiTree<H> {
         let mut current = start;
         let mut first = true;
         while let Some(id) = current {
-            let parent = self.parent_in_layer_forest_via_children(id);
+            let parent = self.live_parent_in_layer_forest(id);
             let (element, stored, underflow) = {
                 let Some(n) = self.nodes.get_mut(id) else {
                     break;

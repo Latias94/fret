@@ -71,7 +71,7 @@ impl<H: UiHost> UiTree<H> {
             if n.view_cache.enabled {
                 return Some(id);
             }
-            current = self.parent_in_layer_forest_via_children(id);
+            current = self.live_parent_in_layer_forest(id);
         }
         None
     }
@@ -171,7 +171,7 @@ impl<H: UiHost> UiTree<H> {
         while let Some(id) = current {
             let next = match snapshot {
                 Some(snapshot) => snapshot.parent.get(id).copied().flatten(),
-                None => self.parent_in_layer_forest_via_children(id),
+                None => self.live_parent_in_layer_forest(id),
             };
 
             if let Some(n) = self.nodes.get_mut(id)
@@ -211,7 +211,7 @@ impl<H: UiHost> UiTree<H> {
 
         let mut current: Option<NodeId> = Some(root);
         while let Some(id) = current {
-            let next_parent = self.parent_in_layer_forest_via_children(id);
+            let next_parent = self.live_parent_in_layer_forest(id);
             if let Some(n) = self.nodes.get_mut(id)
                 && n.view_cache.enabled
             {

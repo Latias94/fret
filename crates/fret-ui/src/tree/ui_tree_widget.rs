@@ -246,7 +246,7 @@ impl<H: UiHost> UiTree<H> {
         let mut cur = Some(target);
         while let Some(id) = cur {
             chain.push(id);
-            cur = self.parent_in_layer_forest_via_children(id);
+            cur = self.live_parent_in_layer_forest(id);
         }
         if chain.is_empty() {
             return None;

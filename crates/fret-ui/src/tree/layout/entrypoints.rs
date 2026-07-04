@@ -944,7 +944,7 @@ impl<H: UiHost> UiTree<H> {
                 if let Some(test_id) = test_id_by_node.get(&node) {
                     return Some(test_id.as_str());
                 }
-                cur = tree.parent_in_layer_forest_via_children(node);
+                cur = tree.live_parent_in_layer_forest(node);
             }
             None
         };
@@ -1017,7 +1017,7 @@ impl<H: UiHost> UiTree<H> {
                 if let Some(test_id) = test_id_by_node.get(&node) {
                     return Some(test_id.as_str());
                 }
-                cur = tree.parent_in_layer_forest_via_children(node);
+                cur = tree.live_parent_in_layer_forest(node);
             }
             None
         };
@@ -1585,14 +1585,13 @@ impl<H: UiHost> UiTree<H> {
                 return Some((node, bounds));
             }
 
-            let parent = self.parent_in_layer_forest_via_children(node)?;
+            let parent = self.live_parent_in_layer_forest(node)?;
             node = parent;
         }
     }
 
     fn viewport_root_registration_owner(&self, root: NodeId) -> NodeId {
-        self.parent_in_layer_forest_via_children(root)
-            .unwrap_or(root)
+        self.live_parent_in_layer_forest(root).unwrap_or(root)
     }
 
     fn finish_final_layout_frame(&mut self, app: &mut H) {
@@ -1933,7 +1932,7 @@ impl<H: UiHost> UiTree<H> {
             if id == ancestor {
                 return true;
             }
-            current = self.parent_in_layer_forest_via_children(id);
+            current = self.live_parent_in_layer_forest(id);
         }
         false
     }
@@ -1991,13 +1990,13 @@ impl<H: UiHost> UiTree<H> {
         for candidate in candidates {
             let id = candidate.root();
             let mut skip = false;
-            let mut parent = self.parent_in_layer_forest_via_children(id);
+            let mut parent = self.live_parent_in_layer_forest(id);
             while let Some(p) = parent {
                 if candidate_set.contains(&p) {
                     skip = true;
                     break;
                 }
-                parent = self.parent_in_layer_forest_via_children(p);
+                parent = self.live_parent_in_layer_forest(p);
             }
             if skip {
                 continue;
@@ -2119,7 +2118,7 @@ impl<H: UiHost> UiTree<H> {
         if current_bounds.size != Size::default() && current_bounds.origin != Point::default() {
             return None;
         }
-        let parent = self.parent_in_layer_forest_via_children(node)?;
+        let parent = self.live_parent_in_layer_forest(node)?;
         let parent_bounds = self.nodes.get(parent).map(|n| n.bounds)?;
         let local = self.layout_engine_child_local_rect(parent, node)?;
         let resolved = Rect::new(
@@ -2133,7 +2132,7 @@ impl<H: UiHost> UiTree<H> {
     }
 
     fn nearest_scrollable_ancestor_via_child_edges(&self, node: NodeId) -> Option<NodeId> {
-        let mut current = self.parent_in_layer_forest_via_children(node);
+        let mut current = self.live_parent_in_layer_forest(node);
         while let Some(id) = current {
             if self
                 .nodes
@@ -2143,7 +2142,7 @@ impl<H: UiHost> UiTree<H> {
             {
                 return Some(id);
             }
-            current = self.parent_in_layer_forest_via_children(id);
+            current = self.live_parent_in_layer_forest(id);
         }
         None
     }

@@ -545,7 +545,7 @@ impl<H: UiHost> UiTree<H> {
                     window = ?dispatch_cx.input_snapshot.window,
                     "dispatch/chain: node missing from input snapshot"
                 );
-                self.parent_in_layer_forest_via_children(node_id)
+                self.live_parent_in_layer_forest(node_id)
             };
             node_id = match parent {
                 Some(parent) => parent,

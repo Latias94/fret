@@ -348,7 +348,7 @@ impl<H: UiHost> UiTree<H> {
         // Avoid recursion: removing or cleaning up deep trees can overflow the stack.
         //
         // We remove nodes in a post-order traversal so children are removed before their parent.
-        let root_parent = self.parent_in_layer_forest_via_children(root);
+        let root_parent = self.live_parent_in_layer_forest(root);
         let mut stack: Vec<(NodeId, Option<NodeId>, bool)> = Vec::new();
         stack.push((root, root_parent, false));
 

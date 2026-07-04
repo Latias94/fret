@@ -85,7 +85,7 @@ impl<H: UiHost> UiTree<H> {
                 break;
             };
             depth = depth.saturating_add(1);
-            current = self.parent_in_layer_forest_via_children(id);
+            current = self.live_parent_in_layer_forest(id);
         }
         depth
     }
