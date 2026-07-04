@@ -678,6 +678,12 @@ class SurfacePolicyTests(unittest.TestCase):
         )
         self.assertTrue(
             any(
+                spec.path == "apps/fret-examples/src/simple_todo_demo/driver.rs"
+                for spec in POLICY.INTERNAL_HARNESS_SURFACES
+            )
+        )
+        self.assertTrue(
+            any(
                 spec.path == "apps/fret-examples/src/lib.rs"
                 for spec in POLICY.INTERNAL_HARNESS_SURFACES
             )
@@ -692,6 +698,24 @@ class SurfacePolicyTests(unittest.TestCase):
             any(
                 spec.path == "apps/fret-examples/src/lib.rs"
                 for spec in POLICY.ADVANCED_MANUAL_SURFACES
+            )
+        )
+        self.assertTrue(
+            any(
+                spec.path == "apps/fret-examples/src/simple_todo_demo.rs"
+                for spec in POLICY.DEFAULT_AUTHORING_SURFACES
+            )
+        )
+        self.assertFalse(
+            any(
+                spec.path == "apps/fret-examples/src/simple_todo_demo.rs"
+                for spec in POLICY.ADVANCED_MANUAL_SURFACES
+            )
+        )
+        self.assertFalse(
+            any(
+                spec.path == "apps/fret-examples/src/simple_todo_demo/driver.rs"
+                for spec in POLICY.DEFAULT_AUTHORING_SURFACES
             )
         )
         self.assertNotIn("apps/fret-examples/src", POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS)

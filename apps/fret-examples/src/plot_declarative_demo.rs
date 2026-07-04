@@ -10,12 +10,18 @@ struct PlotDeclarativeView {
     model: Model<LinePlotModel>,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 pub fn run() -> anyhow::Result<()> {
     FretApp::new("plot-declarative-demo")
         .window("plot_declarative_demo", (960.0, 640.0))
         .view::<PlotDeclarativeView>()?
         .run()
         .context("run plot_declarative_demo app")
+}
+
+#[cfg(target_arch = "wasm32")]
+pub fn run() -> anyhow::Result<()> {
+    Ok(())
 }
 
 impl View for PlotDeclarativeView {

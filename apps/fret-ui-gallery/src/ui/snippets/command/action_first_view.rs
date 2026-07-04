@@ -8,6 +8,7 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use fret::advanced::prelude::*;
+use fret::advanced::raw::LocalStateModelStoreExt;
 use fret::app::App;
 use fret::component::prelude::*;
 use fret::{AppComponentCx, UiChild};

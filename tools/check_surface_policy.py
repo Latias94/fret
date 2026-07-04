@@ -186,6 +186,11 @@ DEFAULT_AUTHORING_SURFACES: tuple[SurfacePath, ...] = (
         "default_app_clean",
         "default toast cookbook should stay on app-facing effect helpers",
     ),
+    SurfacePath(
+        "apps/fret-examples/src/simple_todo_demo.rs",
+        "default_app_clean",
+        "copyable simple-todo example view should stay on the app facade",
+    ),
 )
 
 POLICY_RECIPE_SURFACES: tuple[SurfacePath, ...] = (
@@ -366,6 +371,16 @@ INTERNAL_HARNESS_SURFACES: tuple[SurfacePath, ...] = (
         ),
         owner="examples-plot-stress",
     ),
+    _fret_examples_internal_harness(
+        "simple_todo_demo/driver.rs",
+        "the simple-todo driver module owns native/web compatibility launch glue for demo shells",
+        (
+            "fret::advanced",
+            "fret_launch",
+            "fret_runtime",
+        ),
+        owner="examples-simple-todo-driver",
+    ),
 )
 
 
@@ -394,17 +409,6 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
             "Replace with a public workspace-shell starter once AppUi wrappers own command, "
             "overlay, virtual-list, diagnostics, and window lifecycle flows"
         ),
-    ),
-    _fret_examples_advanced_surface(
-        "simple_todo_demo.rs",
-        "the view body is app-facing but the file still owns web/native runner glue and launch "
-        "capability setup for the demo shells",
-        (
-            "fret::advanced",
-            "fret_launch",
-            "fret_runtime",
-        ),
-        owner="examples-simple-todo",
     ),
     _fret_examples_advanced_surface(
         "todo_demo.rs",

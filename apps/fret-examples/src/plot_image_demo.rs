@@ -1,5 +1,6 @@
 use anyhow::Context as _;
 use fret::{FretApp, advanced::prelude::*, component::prelude::*};
+use fret_bootstrap::ui_app_driver;
 use fret_core::ImageColorSpace;
 use fret_core::geometry::Px;
 use fret_plot::cartesian::{AxisScale, DataPoint, DataRect};
@@ -9,6 +10,7 @@ use fret_plot::plot::axis::{AxisLabelFormatter, AxisNumberFormat};
 use fret_plot::series::Series;
 use fret_plot::state::{PlotImage, PlotImageLayer, PlotOutput, PlotOverlays, PlotState};
 use fret_plot::style::{LinePlotStyle, SeriesTooltipMode};
+use fret_runtime::PlatformCapabilities;
 use fret_ui_assets::image_asset_cache::{ImageAssetCacheHostExt, ImageAssetKey};
 
 struct PlotImageDemoView {
@@ -66,12 +68,46 @@ impl PlotImageDemoView {
     }
 }
 
+pub fn build_app() -> fret::app::App {
+    let mut app = fret::app::App::new();
+    app.set_global(PlatformCapabilities::default());
+    app
+}
+
+pub fn build_runner_config() -> fret_launch::WinitRunnerConfig {
+    fret_launch::WinitRunnerConfig {
+        main_window_title: "fret-demo plot_image_demo".to_string(),
+        main_window_size: fret_launch::WindowLogicalSize::new(960.0, 640.0),
+        ..Default::default()
+    }
+}
+
+pub fn build_fn_driver() -> impl fret_launch::WinitAppDriver {
+    ui_app_driver::UiAppDriver::new(
+        "plot-image-demo",
+        fret::advanced::view::view_init_window::<PlotImageDemoView>,
+        fret::advanced::view::view_view::<PlotImageDemoView>,
+    )
+    .on_preferences(
+        ui_app_driver::default_on_preferences::<
+            fret::advanced::view::ViewWindowState<PlotImageDemoView>,
+        >,
+    )
+    .into_fn_driver()
+}
+
+#[cfg(not(target_arch = "wasm32"))]
 pub fn run() -> anyhow::Result<()> {
     FretApp::new("plot-image-demo")
         .window("plot_image_demo", (960.0, 640.0))
         .view::<PlotImageDemoView>()?
         .run()
         .context("run plot_image_demo app")
+}
+
+#[cfg(target_arch = "wasm32")]
+pub fn run() -> anyhow::Result<()> {
+    Ok(())
 }
 
 impl View for PlotImageDemoView {

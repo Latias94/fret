@@ -111,6 +111,7 @@ It is a sidecar for session recovery and subagent synthesis, not a replacement f
 - [Phase 3 U13 async inbox facade](progress/2026-07-04-phase3-u13-async-inbox-facade.md)
 - [Phase 3 U13 canvas facade](progress/2026-07-04-phase3-u13-canvas-facade.md)
 - [Phase 3 U13 chart facade](progress/2026-07-04-phase3-u13-chart-facade.md)
+- [Phase 3 U13 simple todo driver split](progress/2026-07-04-phase3-u13-simple-todo-driver-split.md)
 - [Phase 3 U13 cookbook quarantine follow-up audit](subagents/2026-07-04-phase3-u13-cookbook-quarantine-followup-audit.md)
 - [Phase 3 U13 canvas facade audit](subagents/2026-07-04-phase3-u13-canvas-facade-audit.md)
 - [Phase 3 U13 remaining surface audit](subagents/2026-07-04-phase3-u13-remaining-surface-audit.md)
