@@ -132,6 +132,18 @@ impl<'cx, 'a, H: UiHost> AppPointerRegion<'cx, 'a, H> {
             }));
         self
     }
+
+    pub fn on_wheel(
+        &mut self,
+        handler: impl Fn(&mut PointerActionCx<'_>, Wheel) -> bool + 'static,
+    ) -> &mut Self {
+        self.cx
+            .pointer_region_on_wheel(Arc::new(move |host, action_cx, wheel| {
+                let mut cx = PointerActionCx::new(host, action_cx);
+                handler(&mut cx, wheel)
+            }));
+        self
+    }
 }
 
 /// App-facing action context for pointer-region handlers.

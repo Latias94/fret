@@ -10,15 +10,15 @@ related_plan: docs/plans/2026-07-03-001-refactor-ui-framework-phase3-retained-br
 
 - Goal: execute `docs/plans/2026-07-03-001-refactor-ui-framework-phase3-retained-bridge-deletion-plan.md` as a breaking Phase 3 retained-bridge deletion refactor.
 - Branch: `feat/ui-framework-phase2-refactor`.
-- Last verified: Phase 3 U13 renderer lab classification passed surface-policy tests, source
-  policy, consumption/execution/layering gates, Python compile, and whitespace on 2026-07-04.
+- Last verified: Phase 3 U13 gizmo facade migration passed focused `fret`, `fret-cookbook`,
+  source-policy, consumption/execution/layering, formatting, memory, and whitespace gates on
+  2026-07-04.
   Full `fret-ui` nextest still has a local long-running caveat for the two `stack_safety`
   deep-tree tests.
 - Done: local ADR/workstream research, crate/perf snapshots, GPUI/Zed comparison, architecture boundary audit, framework consumer audit, performance audit, implementation-ready plan, U1 convergence contract freeze, U2 source-policy gate, U3 first slice (`workbench-lite` public scaffold), U4 identity/dirty graph observability slices, U5 `ViewId` / boundary frame-product ownership slices, U6 policy vocabulary demotion/cleanup slices, U7 renderer scene/upload observability plus retained scene chunk and guarded quad resident upload lanes, U8 text/glyph/wasm budget work through web runtime evidence, U9 modular consumption profiles and `AppUi` facade split, Phase 2 U9 VertexColor viewport partial upload, Phase 2 U10 workbench-lite public settings diagnostics, Phase 2 U11 public mutation/toast wrappers, Phase 3 U9 manifest closure v2, Phase 3 U10 authoritative chunk launch, Phase 3 U11 partial upload stream policy, Phase 3 U12 public app facade cleanup, workstream closeout audit, duplicate ADR ID `0324` resolution, and execution-surface allowlist alignment.
-- Latest done: Phase 3 U13 renderer lab classification adds a dedicated `renderer_lab`
-  source-policy lane and moves `compositing_alpha_basics.rs`, `image_asset_cache_basics.rs`, and
-  `customv1_basics.rs` out of `advanced_manual` quarantine while keeping their raw seam allowlists
-  and renderer/assets screenshot or smoke-baseline lab purpose explicit.
+- Latest done: Phase 3 U13 gizmo facade migration adds narrow app-facing canvas and pointer
+  helpers (`Canvas`, `CanvasSurface`, painter path/key/theme helpers, and `PointerRegion::on_wheel`)
+  and moves `gizmo_basics.rs` from advanced/manual quarantine to the default app authoring surface.
 - In progress: Phase 3 retained bridge closeout / remaining U13 cookbook and quarantine
   classification,
   with the
@@ -88,6 +88,8 @@ related_plan: docs/plans/2026-07-03-001-refactor-ui-framework-phase3-retained-br
   [simple todo driver split](progress/2026-07-04-phase3-u13-simple-todo-driver-split.md)
   and the
   [renderer lab classification](progress/2026-07-04-phase3-u13-renderer-lab-classification.md)
+  and the
+  [gizmo facade migration](progress/2026-07-04-phase3-u13-gizmo-facade-migration.md)
   plus the
   [cookbook quarantine readonly audit](subagents/2026-07-03-phase3-u13-cookbook-quarantine-readonly-audit.md)
   and the
@@ -100,10 +102,9 @@ related_plan: docs/plans/2026-07-03-001-refactor-ui-framework-phase3-retained-br
   [remaining surface audit](subagents/2026-07-04-phase3-u13-remaining-surface-audit.md)
   leaving remaining U13 work to audit and migrate the still-advanced cookbook/example surfaces.
 - Blocked: none known after the boundary store migration.
-- Next action: continue U13 by reassessing the remaining advanced cookbook/example surfaces.
-  Revisit `gizmo_basics.rs` after scoping wheel/vector-path/canvas helpers; keep deletion/merge
-  candidates such as image-asset/compositing-only demos on the audit list instead of expanding the
-  default authoring surface blindly.
+- Next action: continue U13 by reassessing the remaining advanced cookbook/example surfaces:
+  docking, embedded viewport, external texture import, utility window materials, and remaining
+  example harness classifications.
 
 # Citations
 
@@ -162,6 +163,7 @@ related_plan: docs/plans/2026-07-03-001-refactor-ui-framework-phase3-retained-br
 - [Phase 3 U13 chart facade](progress/2026-07-04-phase3-u13-chart-facade.md)
 - [Phase 3 U13 simple todo driver split](progress/2026-07-04-phase3-u13-simple-todo-driver-split.md)
 - [Phase 3 U13 renderer lab classification](progress/2026-07-04-phase3-u13-renderer-lab-classification.md)
+- [Phase 3 U13 gizmo facade migration](progress/2026-07-04-phase3-u13-gizmo-facade-migration.md)
 - [Phase 3 U13 cookbook quarantine readonly audit](subagents/2026-07-03-phase3-u13-cookbook-quarantine-readonly-audit.md)
 - [Phase 3 U13 advanced facade audits](subagents/2026-07-03-phase3-u13-advanced-facade-audits.md)
 - [Phase 3 U13 IMUI cookbook facade audits](subagents/2026-07-03-phase3-u13-imui-cookbook-facade-audit.md)

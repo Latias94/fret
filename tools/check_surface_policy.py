@@ -107,6 +107,11 @@ DEFAULT_AUTHORING_SURFACES: tuple[SurfacePath, ...] = (
         "default canvas cookbook should stay on app-facing canvas, pointer, and local-state helpers",
     ),
     SurfacePath(
+        "apps/fret-cookbook/examples/gizmo_basics.rs",
+        "default_app_clean",
+        "default gizmo cookbook should stay on app-facing canvas, pointer, and local-state helpers",
+    ),
+    SurfacePath(
         "apps/fret-cookbook/examples/chart_interactions_basics.rs",
         "default_app_clean",
         "default chart cookbook should stay on app-facing chart, command, and local-state helpers",
@@ -553,19 +558,6 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
             "fret::advanced",
             "fret_core",
             "fret_launch",
-            "fret_runtime",
-            "fret_ui",
-            "ElementContext",
-            "UiTree",
-        ),
-    ),
-    _cookbook_advanced_surface(
-        "gizmo_basics.rs",
-        "gizmo rendering still owns retained tree, model, and low-level element seams",
-        (
-            "fret::advanced",
-            "fret_app",
-            "fret_core",
             "fret_runtime",
             "fret_ui",
             "ElementContext",

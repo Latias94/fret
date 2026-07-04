@@ -1057,11 +1057,12 @@ Notes:
 **Use it when:** you build interactive 2D canvas UIs (node graphs, charts, editor canvases) and want shared math/state helpers.
 
 For default app/cookbook authoring, prefer the explicit `fret::canvas::{...}` lane. It exposes
-`PanZoomCanvas`, `AppCanvasPainter`, `PanZoom2D`, and small paint/geometry helpers without teaching
-raw `fret_canvas::ui::*`, `fret_ui::canvas::CanvasPainter`, raw pointer action hosts, or raw
-`Model<T>` handles. Import `fret-canvas` directly when you are writing lower-level canvas
-substrate code, custom ecosystem components, or advanced recipes that intentionally own those raw
-mechanism seams.
+`Canvas`, `CanvasSurface`, `PanZoomCanvas`, `AppCanvasPainter`, `PanZoom2D`, path/key helpers, and
+small paint/geometry helpers without teaching raw `fret_canvas::ui::*`,
+`fret_ui::canvas::CanvasPainter`, raw pointer action hosts, or raw `Model<T>` handles. Pair it with
+`fret::pointer::{...}` for custom editor-style interaction loops that need pointer down/move/up and
+wheel streams. Import `fret-canvas` directly when you are writing lower-level canvas substrate code,
+custom ecosystem components, or advanced recipes that intentionally own those raw mechanism seams.
 
 ### `fret-node`
 

@@ -1174,7 +1174,6 @@ mod authoring_surface_policy_tests {
         assert_uses_advanced_surface(DOCKING_EXAMPLE);
         assert_uses_advanced_surface(EMBEDDED_VIEWPORT_EXAMPLE);
         assert_uses_advanced_surface(EXTERNAL_TEXTURE_IMPORT_EXAMPLE);
-        assert_uses_advanced_surface(GIZMO_EXAMPLE);
         assert_uses_advanced_surface(UTILITY_WINDOW_MATERIALS_EXAMPLE);
 
         assert!(EFFECTS_LAYER_EXAMPLE.contains("AppComponentCx<'_>"));
@@ -1323,16 +1322,6 @@ mod authoring_surface_policy_tests {
             EXTERNAL_TEXTURE_IMPORT_EXAMPLE
                 .contains("UiAppDriver<ExternalTextureImportBasicsState>")
         );
-
-        assert!(GIZMO_EXAMPLE.contains("use fret::{advanced::prelude::*, shadcn};"));
-        assert!(GIZMO_EXAMPLE.contains("use fret::component::prelude::*;"));
-        assert!(GIZMO_EXAMPLE.contains("GizmoInput"));
-        assert!(GIZMO_EXAMPLE.contains("ui_app_with_hooks("));
-        assert!(
-            GIZMO_EXAMPLE
-                .contains(".setup((shadcn::app::install, fret_icons_lucide::app::install))")
-        );
-        assert!(!GIZMO_EXAMPLE.contains(".setup(shadcn::install_app)"));
 
         assert!(
             UTILITY_WINDOW_MATERIALS_EXAMPLE.contains("use fret::{advanced::prelude::*, shadcn};")
@@ -1553,8 +1542,32 @@ mod authoring_surface_policy_tests {
         assert!(!DRAG_EXAMPLE.contains("DefaultAction::FocusOnPointerDown"));
 
         let gizmo = GIZMO_EXAMPLE.split_whitespace().collect::<String>();
-        assert!(gizmo.contains("cx.elements().pointer_region(pointer,|cx|{"));
-        assert!(!gizmo.contains("cx.pointer_region(pointer,|cx|{"));
+        assert!(GIZMO_EXAMPLE.contains("use fret::app::prelude::*;"));
+        assert!(GIZMO_EXAMPLE.contains("use fret::canvas::{"));
+        assert!(GIZMO_EXAMPLE.contains("use fret::pointer::{"));
+        assert!(GIZMO_EXAMPLE.contains("model: LocalState<GizmoBasicsModel>"));
+        assert!(GIZMO_EXAMPLE.contains("app.local_state(GizmoBasicsModel::default())"));
+        assert!(GIZMO_EXAMPLE.contains("canvas::Canvas::new()"));
+        assert!(GIZMO_EXAMPLE.contains(".paint(move |painter| {"));
+        assert!(GIZMO_EXAMPLE.contains("painter.theme_snapshot()"));
+        assert!(GIZMO_EXAMPLE.contains("painter.path("));
+        assert!(GIZMO_EXAMPLE.contains("cx.on_wheel(on_wheel);"));
+        assert!(GIZMO_EXAMPLE.contains(".action(act::Reset)"));
+        assert!(GIZMO_EXAMPLE.contains(".action(act::ToggleSnap)"));
+        assert!(GIZMO_EXAMPLE.contains(".view::<GizmoBasicsView>()?"));
+        assert!(gizmo.contains("cx.pointer_region(region,|cx|{"));
+        assert!(!gizmo.contains("cx.elements().pointer_region("));
+        assert!(!GIZMO_EXAMPLE.contains("advanced::prelude::*"));
+        assert!(!GIZMO_EXAMPLE.contains("use fret::component::prelude::*;"));
+        assert!(!GIZMO_EXAMPLE.contains("fret_ui::"));
+        assert!(!GIZMO_EXAMPLE.contains("fret_runtime::"));
+        assert!(!GIZMO_EXAMPLE.contains("fret_core::"));
+        assert!(!GIZMO_EXAMPLE.contains("fret_app::"));
+        assert!(!GIZMO_EXAMPLE.contains("ui_app_with_hooks("));
+        assert!(!GIZMO_EXAMPLE.contains("Model<"));
+        assert!(!GIZMO_EXAMPLE.contains("PointerRegionProps"));
+        assert!(!GIZMO_EXAMPLE.contains("CanvasProps"));
+        assert!(!GIZMO_EXAMPLE.contains("DefaultAction::FocusOnPointerDown"));
     }
 
     #[test]
@@ -1762,8 +1775,8 @@ mod authoring_surface_policy_tests {
 
         assert_selected_examples_prefer_handle_first_tracked_reads(
             GIZMO_EXAMPLE,
-            &["let model = st.model.paint_in(cx).value_or_default();"],
-            &["cx.watch_model(&st.model)"],
+            &["let model = self.model.paint_value(cx);"],
+            &["cx.watch_model(&st.model)", "st.model.paint_in(cx)"],
         );
 
         assert_selected_examples_prefer_handle_first_tracked_reads(

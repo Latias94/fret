@@ -241,12 +241,16 @@ pub mod async_work {
 /// plumbing while still leaving custom canvas drawing and pan/zoom state explicit.
 #[cfg(feature = "canvas")]
 pub mod canvas {
-    pub use crate::view::{AppCanvasPainter, PanZoomCanvas};
+    pub use crate::view::{AppCanvasPainter, Canvas, CanvasSurface, PanZoomCanvas};
     pub use fret_canvas::scale::constant_pixel_stroke_width;
     pub use fret_canvas::ui::{PanZoomCanvasPaintCx, PanZoomInputPreset};
     pub use fret_canvas::view::{PanZoom2D, visible_canvas_rect};
-    pub use fret_core::scene::{Color, Paint as CanvasPaint};
-    pub use fret_core::{Corners, DrawOrder, Edges, Point, Px, Rect, SceneOp, Size, Transform2D};
+    pub use fret_core::scene::{Color, Paint as CanvasPaint, PaintBindingV1};
+    pub use fret_core::{
+        Corners, DrawOrder, Edges, FillStyle, PathCommand, PathMetrics, PathStyle, Point, Px, Rect,
+        SceneOp, Size, StrokeCapV1, StrokeJoinV1, StrokeStyle, StrokeStyleV2, Transform2D,
+    };
+    pub use fret_ui::canvas::CanvasKey;
 }
 
 /// Explicit chart authoring helpers for app code.
@@ -3616,7 +3620,12 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_USAGE_GUIDE.contains("`inbox_drain_apply(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`AppUiRawActionNotifyExt`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::canvas::{...}` lane"));
-        assert!(CRATE_USAGE_GUIDE.contains("`PanZoomCanvas`, `AppCanvasPainter`, `PanZoom2D`"));
+        assert!(
+            CRATE_USAGE_GUIDE
+                .contains("`Canvas`, `CanvasSurface`, `PanZoomCanvas`, `AppCanvasPainter`")
+        );
+        assert!(CRATE_USAGE_GUIDE.contains("path/key helpers"));
+        assert!(CRATE_USAGE_GUIDE.contains("wheel streams"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret_ui::canvas::CanvasPainter`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::chart::{...}` lane"));
         assert!(
@@ -4703,10 +4712,17 @@ mod authoring_surface_policy_tests {
         assert!(
             root_header.contains("pub use fret_runtime::{DispatchPriority, DispatcherHandle};")
         );
-        assert!(root_header.contains("AppCanvasPainter, PanZoomCanvas"));
+        assert!(root_header.contains("AppCanvasPainter, Canvas, CanvasSurface, PanZoomCanvas"));
         assert!(root_header.contains("PanZoom2D, visible_canvas_rect"));
         assert!(root_header.contains("PanZoomCanvasPaintCx, PanZoomInputPreset"));
-        assert!(root_header.contains("pub use fret_core::scene::{Color, Paint as CanvasPaint};"));
+        assert!(
+            root_header.contains(
+                "pub use fret_core::scene::{Color, Paint as CanvasPaint, PaintBindingV1};"
+            )
+        );
+        assert!(root_header.contains("PathCommand, PathMetrics, PathStyle, Point, Px, Rect,"));
+        assert!(root_header.contains("StrokeCapV1, StrokeJoinV1, StrokeStyle, StrokeStyleV2,"));
+        assert!(root_header.contains("pub use fret_ui::canvas::CanvasKey;"));
         assert!(root_header.contains("pub use crate::view::ChartCanvas;"));
         assert!(root_header.contains("pub use delinea::engine::ChartEngine;"));
         assert!(root_header.contains("pub use delinea::engine::window::DataWindow;"));
@@ -5007,9 +5023,14 @@ mod authoring_surface_policy_tests {
         assert!(!app_prelude_exports_symbol("DispatcherHandle"));
         assert!(!app_prelude_exports_symbol("DispatchPriority"));
         assert!(!app_prelude_exports_symbol("AppCanvasPainter"));
+        assert!(!app_prelude_exports_symbol("Canvas"));
+        assert!(!app_prelude_exports_symbol("CanvasSurface"));
         assert!(!app_prelude_exports_symbol("PanZoomCanvas"));
         assert!(!app_prelude_exports_symbol("PanZoom2D"));
         assert!(!app_prelude_exports_symbol("CanvasPaint"));
+        assert!(!app_prelude_exports_symbol("CanvasKey"));
+        assert!(!app_prelude_exports_symbol("PathCommand"));
+        assert!(!app_prelude_exports_symbol("PathStyle"));
         assert!(!app_prelude_exports_symbol("ChartCanvas"));
         assert!(!app_prelude_exports_symbol("ChartEngine"));
         assert!(!app_prelude_exports_symbol("ChartCanvasOutput"));

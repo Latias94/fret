@@ -1,23 +1,23 @@
-use std::sync::Arc;
-
-use fret::component::prelude::*;
-use fret::{advanced::prelude::*, shadcn};
-use fret_app::{CommandMeta, CommandScope};
-use fret_core::scene::Paint;
-use fret_core::{
-    Color, Corners, CursorIcon, DrawOrder, Edges, MouseButton, Px, Rect, SemanticsRole,
+use fret::app::prelude::*;
+use fret::app::{LocalState, RenderContextAccess as _};
+use fret::canvas::{
+    self, CanvasPaint, Color, Corners, DrawOrder, Edges, PathCommand, PathStyle, Point, Rect,
+    StrokeCapV1, StrokeJoinV1, StrokeStyleV2,
 };
+use fret::pointer::{self, CursorIcon, MouseButton, PointerRegion};
+use fret::semantics::{SemanticsDecoration, SemanticsRole};
+use fret::{shadcn, style::Space};
 use fret_gizmo::{Aabb3, DepthMode, Gizmo, GizmoConfig, GizmoInput, GizmoState, GizmoTarget3d};
 use fret_gizmo::{DepthRange, GizmoTargetId, Transform3d, ViewportRect, project_point};
-use fret_runtime::{CommandId, DefaultAction};
-use fret_ui::Invalidation;
-use fret_ui::action::{OnPointerDown, OnPointerMove, OnPointerUp, OnWheel};
-use fret_ui::canvas::CanvasPainter;
-use fret_ui::element::{
-    CanvasProps, Length, PointerRegionProps, SemanticsDecoration, SemanticsProps,
-};
 
 use glam::{Mat4, Quat, Vec2, Vec3};
+
+mod act {
+    fret::actions!([
+        Reset = "cookbook.gizmo.reset",
+        ToggleSnap = "cookbook.gizmo.toggle_snap"
+    ]);
+}
 
 const ROOT_NAME: &str = "cookbook-gizmo-basics";
 
@@ -30,9 +30,6 @@ const TEST_ID_POS_X: &str = "cookbook.gizmo_basics.pos_x";
 const TEST_ID_POS_Y: &str = "cookbook.gizmo_basics.pos_y";
 const TEST_ID_POS_Z: &str = "cookbook.gizmo_basics.pos_z";
 const TEST_ID_POS_LEN: &str = "cookbook.gizmo_basics.pos_len";
-
-const CMD_RESET: &str = "cookbook.gizmo.reset";
-const CMD_TOGGLE_SNAP: &str = "cookbook.gizmo.toggle_snap";
 
 const CAMERA_FOV_Y_RADIANS: f32 = 45.0_f32.to_radians();
 const CAMERA_NEAR: f32 = 0.01;
@@ -122,34 +119,8 @@ impl Default for GizmoBasicsModel {
     }
 }
 
-struct GizmoBasicsWindowState {
-    model: Model<GizmoBasicsModel>,
-}
-
-fn install_commands(app: &mut KernelApp) {
-    let scope = CommandScope::Widget;
-
-    app.commands_mut().register(
-        CommandId::from(CMD_RESET),
-        CommandMeta::new("Reset gizmo target")
-            .with_description("Reset the target transform and gizmo interaction state.")
-            .with_category("Gizmo")
-            .with_scope(scope),
-    );
-
-    app.commands_mut().register(
-        CommandId::from(CMD_TOGGLE_SNAP),
-        CommandMeta::new("Toggle snapping")
-            .with_description("Toggle translation snapping for the active gizmo.")
-            .with_category("Gizmo")
-            .with_scope(scope),
-    );
-}
-
-fn init_window(app: &mut KernelApp, _window: AppWindowId) -> GizmoBasicsWindowState {
-    GizmoBasicsWindowState {
-        model: app.models_mut().insert(GizmoBasicsModel::default()),
-    }
+struct GizmoBasicsView {
+    model: LocalState<GizmoBasicsModel>,
 }
 
 fn gizmo_targets(active_target: GizmoTargetId, transform: Transform3d) -> [GizmoTarget3d; 1] {
@@ -165,7 +136,7 @@ fn gizmo_targets(active_target: GizmoTargetId, transform: Transform3d) -> [Gizmo
 }
 
 fn paint_cube_wireframe(
-    painter: &mut CanvasPainter<'_>,
+    painter: &mut canvas::AppCanvasPainter<'_, '_>,
     view_projection: Mat4,
     viewport: ViewportRect,
     depth_range: DepthRange,
@@ -196,10 +167,10 @@ fn paint_cube_wireframe(
     ];
 
     let width = Px(1.5);
-    let style = fret_core::PathStyle::StrokeV2(fret_core::StrokeStyleV2 {
+    let style = PathStyle::StrokeV2(StrokeStyleV2 {
         width,
-        join: fret_core::StrokeJoinV1::Round,
-        cap: fret_core::StrokeCapV1::Round,
+        join: StrokeJoinV1::Round,
+        cap: StrokeCapV1::Round,
         ..Default::default()
     });
 
@@ -211,23 +182,20 @@ fn paint_cube_wireframe(
         let Some(pb) = project_point(view_projection, viewport, w[*b], depth_range) else {
             continue;
         };
-        let a = fret_core::Point::new(
+        let a = Point::new(
             Px(pa.screen.x / scale_factor),
             Px(pa.screen.y / scale_factor),
         );
-        let b = fret_core::Point::new(
+        let b = Point::new(
             Px(pb.screen.x / scale_factor),
             Px(pb.screen.y / scale_factor),
         );
-        let cmds = [
-            fret_core::PathCommand::MoveTo(a),
-            fret_core::PathCommand::LineTo(b),
-        ];
+        let cmds = [PathCommand::MoveTo(a), PathCommand::LineTo(b)];
         let key: u64 = painter.child_key(scope, &i).into();
         painter.path(
             key,
             DrawOrder(10),
-            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Point::new(Px(0.0), Px(0.0)),
             &cmds,
             style,
             color,
@@ -237,7 +205,7 @@ fn paint_cube_wireframe(
 }
 
 fn paint_gizmo(
-    painter: &mut CanvasPainter<'_>,
+    painter: &mut canvas::AppCanvasPainter<'_, '_>,
     view_projection: Mat4,
     viewport: ViewportRect,
     scale_factor: f32,
@@ -253,26 +221,26 @@ fn paint_gizmo(
     let draw = gizmo.draw(view_projection, viewport, model.active_target, &targets);
 
     let thickness = Px((model.gizmo_config.line_thickness_px / scale_factor).max(0.75));
-    let stroke = fret_core::PathStyle::StrokeV2(fret_core::StrokeStyleV2 {
+    let stroke = PathStyle::StrokeV2(StrokeStyleV2 {
         width: thickness,
-        join: fret_core::StrokeJoinV1::Round,
-        cap: fret_core::StrokeCapV1::Round,
+        join: StrokeJoinV1::Round,
+        cap: StrokeCapV1::Round,
         ..Default::default()
     });
 
-    let fill = fret_core::PathStyle::Fill(Default::default());
+    let fill = PathStyle::Fill(Default::default());
 
     let scope_lines = painter.key_scope(&"cookbook.gizmo_basics.gizmo.lines");
     let scope_tris = painter.key_scope(&"cookbook.gizmo_basics.gizmo.tris");
 
-    let project = |world: Vec3| -> Option<fret_core::Point> {
+    let project = |world: Vec3| -> Option<Point> {
         let p = project_point(
             view_projection,
             viewport,
             world,
             model.gizmo_config.depth_range,
         )?;
-        Some(fret_core::Point::new(
+        Some(Point::new(
             Px(p.screen.x / scale_factor),
             Px(p.screen.y / scale_factor),
         ))
@@ -288,15 +256,12 @@ fn paint_gizmo(
             DepthMode::Always => (DrawOrder(40), line.color),
         };
 
-        let cmds = [
-            fret_core::PathCommand::MoveTo(a),
-            fret_core::PathCommand::LineTo(b),
-        ];
+        let cmds = [PathCommand::MoveTo(a), PathCommand::LineTo(b)];
         let key: u64 = painter.child_key(scope_lines, &i).into();
         painter.path(
             key,
             order,
-            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Point::new(Px(0.0), Px(0.0)),
             &cmds,
             stroke,
             c,
@@ -316,16 +281,16 @@ fn paint_gizmo(
         };
 
         let cmds = [
-            fret_core::PathCommand::MoveTo(a),
-            fret_core::PathCommand::LineTo(b),
-            fret_core::PathCommand::LineTo(c2),
-            fret_core::PathCommand::Close,
+            PathCommand::MoveTo(a),
+            PathCommand::LineTo(b),
+            PathCommand::LineTo(c2),
+            PathCommand::Close,
         ];
         let key: u64 = painter.child_key(scope_tris, &i).into();
         painter.path(
             key,
             order,
-            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Point::new(Px(0.0), Px(0.0)),
             &cmds,
             fill,
             c,
@@ -334,404 +299,308 @@ fn paint_gizmo(
     }
 }
 
-fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut GizmoBasicsWindowState) -> ViewElements {
-    let model = st.model.paint_in(cx).value_or_default();
-
-    let pos = model.transform.translation;
-    let pos_len = pos.length() as f64;
-
-    let snap_label = if model.snap { "Snap: on" } else { "Snap: off" };
-
-    let header = shadcn::card_header(|cx| {
-        ui::children![
-            cx;
-            shadcn::card_title("Gizmo basics"),
-            shadcn::card_description(
-                "A minimal editor-style gizmo loop: pointer input -> fret-gizmo update -> app-owned transform -> paint.",
-            ),
-        ]
-    });
-
-    let pos_badges = ui::h_flex(|_cx| {
-        let badge = |label: String, test_id: &'static str, value: f64| {
-            shadcn::Badge::new(label)
-                .variant(shadcn::BadgeVariant::Secondary)
-                .a11y(
-                    SemanticsDecoration::default()
-                        .role(SemanticsRole::Meter)
-                        .test_id(test_id)
-                        .numeric_value(value),
-                )
-        };
-
-        [
-            badge(format!("X: {:.2}", pos.x), TEST_ID_POS_X, pos.x as f64),
-            badge(format!("Y: {:.2}", pos.y), TEST_ID_POS_Y, pos.y as f64),
-            badge(format!("Z: {:.2}", pos.z), TEST_ID_POS_Z, pos.z as f64),
-            badge(
-                format!("|pos|: {:.2}", pos.length()),
-                TEST_ID_POS_LEN,
-                pos_len,
-            ),
-        ]
-    })
-    .gap(Space::N2)
-    .items_center();
-
-    let toolbar = ui::h_flex(|cx| {
-        ui::children![
-            cx;
-            shadcn::Button::new("Reset")
-                .variant(shadcn::ButtonVariant::Outline)
-                .action(CMD_RESET)
-                .test_id(TEST_ID_RESET),
-            shadcn::Button::new(snap_label)
-                .variant(shadcn::ButtonVariant::Secondary)
-                .action(CMD_TOGGLE_SNAP)
-                .test_id(TEST_ID_TOGGLE_SNAP),
-            pos_badges,
-        ]
-    })
-    .gap(Space::N2)
-    .items_center();
-
-    let hint = shadcn::Alert::new(ui::children![
-        cx;
-        shadcn::AlertTitle::new("Try it"),
-        shadcn::AlertDescription::new(
-            "Left-drag inside the viewport. Dragging from the center should pick the view-plane translation handle, which is easy to script for regression gates.",
-        ),
-    ])
-    .ui();
-
-    let viewport = {
-        let model_handle = st.model.clone();
-
-        let on_pointer_down: OnPointerDown = Arc::new(move |host, action_cx, down| {
-            if down.button != MouseButton::Left {
-                return false;
-            }
-
-            host.prevent_default(DefaultAction::FocusOnPointerDown);
-            host.capture_pointer();
-            host.set_cursor_icon(CursorIcon::Pointer);
-
-            let bounds = host.bounds();
-            let viewport = viewport_rect_from_bounds(bounds, down.pixels_per_point);
-
-            let mut should_redraw = false;
-            let _ = host.models_mut().update(&model_handle, |m| {
-                let view_projection = camera_view_projection(viewport.size, m.camera);
-                let cursor_px = Vec2::new(
-                    down.position_local.x.0 * down.pixels_per_point,
-                    down.position_local.y.0 * down.pixels_per_point,
-                );
-
-                let mut gizmo = Gizmo {
-                    config: m.gizmo_config,
-                    state: std::mem::take(&mut m.gizmo_state),
-                };
-
-                let targets = gizmo_targets(m.active_target, m.transform);
-                let input = GizmoInput {
-                    cursor_px,
-                    hovered: true,
-                    drag_started: true,
-                    dragging: true,
-                    snap: m.snap,
-                    cancel: false,
-                    precision: 1.0,
-                };
-                if let Some(update) =
-                    gizmo.update(view_projection, viewport, input, m.active_target, &targets)
-                {
-                    if let Some(t) = update
-                        .updated_targets
-                        .iter()
-                        .find(|t| t.id == m.active_target)
-                    {
-                        m.transform = t.transform;
-                    }
-                }
-
-                m.gizmo_state = gizmo.state;
-                m.dragging = true;
-                should_redraw = true;
-            });
-
-            if should_redraw {
-                host.invalidate(Invalidation::Paint);
-                host.request_redraw(action_cx.window);
-            }
-            true
-        });
-
-        let model_handle_move = st.model.clone();
-        let on_pointer_move: OnPointerMove = Arc::new(move |host, action_cx, mv| {
-            let bounds = host.bounds();
-            let viewport = viewport_rect_from_bounds(bounds, mv.pixels_per_point);
-
-            let mut should_redraw = false;
-            let mut cursor = CursorIcon::Default;
-            let _ = host.models_mut().update(&model_handle_move, |m| {
-                let view_projection = camera_view_projection(viewport.size, m.camera);
-                let cursor_px = Vec2::new(
-                    mv.position_local.x.0 * mv.pixels_per_point,
-                    mv.position_local.y.0 * mv.pixels_per_point,
-                );
-
-                let mut gizmo = Gizmo {
-                    config: m.gizmo_config,
-                    state: std::mem::take(&mut m.gizmo_state),
-                };
-                let targets = gizmo_targets(m.active_target, m.transform);
-                let input = GizmoInput {
-                    cursor_px,
-                    hovered: true,
-                    drag_started: false,
-                    dragging: m.dragging,
-                    snap: m.snap,
-                    cancel: false,
-                    precision: 1.0,
-                };
-
-                if let Some(update) =
-                    gizmo.update(view_projection, viewport, input, m.active_target, &targets)
-                {
-                    if let Some(t) = update
-                        .updated_targets
-                        .iter()
-                        .find(|t| t.id == m.active_target)
-                    {
-                        m.transform = t.transform;
-                    }
-                }
-
-                cursor = if gizmo.state.is_over() {
-                    CursorIcon::Pointer
-                } else {
-                    CursorIcon::Default
-                };
-
-                m.gizmo_state = gizmo.state;
-                should_redraw = true;
-            });
-
-            if should_redraw {
-                host.set_cursor_icon(cursor);
-                host.invalidate(Invalidation::Paint);
-                host.request_redraw(action_cx.window);
-            }
-            true
-        });
-
-        let model_handle_up = st.model.clone();
-        let on_pointer_up: OnPointerUp = Arc::new(move |host, action_cx, up| {
-            if up.button != MouseButton::Left {
-                return false;
-            }
-
-            host.release_pointer_capture();
-            host.set_cursor_icon(CursorIcon::Default);
-
-            let bounds = host.bounds();
-            let viewport = viewport_rect_from_bounds(bounds, up.pixels_per_point);
-
-            let mut should_redraw = false;
-            let _ = host.models_mut().update(&model_handle_up, |m| {
-                let view_projection = camera_view_projection(viewport.size, m.camera);
-                let cursor_px = Vec2::new(
-                    up.position_local.x.0 * up.pixels_per_point,
-                    up.position_local.y.0 * up.pixels_per_point,
-                );
-
-                let mut gizmo = Gizmo {
-                    config: m.gizmo_config,
-                    state: std::mem::take(&mut m.gizmo_state),
-                };
-                let targets = gizmo_targets(m.active_target, m.transform);
-                let input = GizmoInput {
-                    cursor_px,
-                    hovered: true,
-                    drag_started: false,
-                    dragging: false,
-                    snap: m.snap,
-                    cancel: false,
-                    precision: 1.0,
-                };
-
-                if let Some(update) =
-                    gizmo.update(view_projection, viewport, input, m.active_target, &targets)
-                {
-                    if let Some(t) = update
-                        .updated_targets
-                        .iter()
-                        .find(|t| t.id == m.active_target)
-                    {
-                        m.transform = t.transform;
-                    }
-                }
-
-                m.gizmo_state = gizmo.state;
-                m.dragging = false;
-                should_redraw = true;
-            });
-
-            if should_redraw {
-                host.invalidate(Invalidation::Paint);
-                host.request_redraw(action_cx.window);
-            }
-            true
-        });
-
-        let model_handle_wheel = st.model.clone();
-        let on_wheel: OnWheel = Arc::new(move |host, action_cx, wheel| {
-            let dy = wheel.delta.y.0;
-            if !dy.is_finite() || dy.abs() < 1e-3 {
-                return false;
-            }
-
-            let _ = host.models_mut().update(&model_handle_wheel, |m| {
-                let k = 1.0 + dy * 0.002;
-                let k = k.clamp(0.1, 10.0);
-                m.camera.distance = (m.camera.distance * k).clamp(1.5, 30.0);
-            });
-
-            host.invalidate(Invalidation::Paint);
-            host.request_redraw(action_cx.window);
-            true
-        });
-
-        let mut pointer = PointerRegionProps::default();
-        pointer.layout.size.width = Length::Fill;
-        pointer.layout.size.height = Length::Fill;
-
-        cx.elements().pointer_region(pointer, |cx| {
-            cx.pointer_region_on_pointer_down(on_pointer_down);
-            cx.pointer_region_on_pointer_move(on_pointer_move);
-            cx.pointer_region_on_pointer_up(on_pointer_up);
-            cx.pointer_region_on_wheel(on_wheel);
-
-            let mut canvas = CanvasProps::default();
-            canvas.layout.size.width = Length::Fill;
-            canvas.layout.size.height = Length::Fill;
-
-            let paint_model = model;
-            vec![
-                cx.canvas(canvas, move |painter| {
-                    let theme = painter.theme().clone();
-                    let bounds = painter.bounds();
-                    let sf = painter.scale_factor();
-                    let viewport = viewport_rect_from_bounds(bounds, sf);
-                    let view_projection = camera_view_projection(viewport.size, paint_model.camera);
-
-                    painter.scene().push(fret_core::SceneOp::Quad {
-                        order: DrawOrder(0),
-                        rect: bounds,
-                        background: Paint::Solid(theme.color_token("card")).into(),
-                        border: Edges::all(Px(1.0)),
-                        border_paint: Paint::Solid(theme.color_token("border")).into(),
-                        corner_radii: Corners::all(Px(0.0)),
-                    });
-
-                    paint_cube_wireframe(
-                        painter,
-                        view_projection,
-                        viewport,
-                        paint_model.gizmo_config.depth_range,
-                        sf,
-                        paint_model.transform,
-                        Color::from_srgb_hex_rgb(0x94A3B8),
-                    );
-
-                    paint_gizmo(painter, view_projection, viewport, sf, &paint_model);
-                })
-                .test_id(TEST_ID_VIEWPORT),
-            ]
-        })
+fn apply_gizmo_input(
+    m: &mut GizmoBasicsModel,
+    viewport: ViewportRect,
+    cursor_px: Vec2,
+    drag_started: bool,
+    dragging: bool,
+) -> bool {
+    let view_projection = camera_view_projection(viewport.size, m.camera);
+    let mut gizmo = Gizmo {
+        config: m.gizmo_config,
+        state: std::mem::take(&mut m.gizmo_state),
+    };
+    let targets = gizmo_targets(m.active_target, m.transform);
+    let input = GizmoInput {
+        cursor_px,
+        hovered: true,
+        drag_started,
+        dragging,
+        snap: m.snap,
+        cancel: false,
+        precision: 1.0,
     };
 
-    let viewport = ui::container(|_cx| vec![viewport])
-        .w_full()
-        .h_full()
-        .min_h(Px(480.0));
+    if let Some(update) = gizmo.update(view_projection, viewport, input, m.active_target, &targets)
+    {
+        if let Some(t) = update
+            .updated_targets
+            .iter()
+            .find(|t| t.id == m.active_target)
+        {
+            m.transform = t.transform;
+        }
+    }
 
-    let card = shadcn::card(|cx| {
-        ui::children![
-            cx;
-            header,
-            shadcn::card_content(|cx| {
-                ui::children![
-                    cx;
-                    ui::v_flex(|cx| ui::children![cx; toolbar, hint, viewport])
-                        .gap(Space::N3)
-                        .w_full()
-                        .h_full()
-                        .min_w_0(),
-                ]
-            }),
-        ]
-    })
-    .ui()
-    .w_full()
-    .h_full()
-    .max_w(Px(1100.0));
-
-    let root = fret_cookbook::scaffold::centered_page_muted(cx, TEST_ID_ROOT, card);
-
-    cx.semantics(
-        SemanticsProps {
-            role: SemanticsRole::Group,
-            test_id: None,
-            ..Default::default()
-        },
-        |_cx| root,
-    )
-    .into()
+    let is_over = gizmo.state.is_over();
+    m.gizmo_state = gizmo.state;
+    is_over
 }
 
-fn on_command(
-    app: &mut KernelApp,
-    _services: &mut dyn fret_core::UiServices,
-    _window: AppWindowId,
-    _ui: &mut fret_ui::UiTree<KernelApp>,
-    st: &mut GizmoBasicsWindowState,
-    command: &CommandId,
-) {
-    let cmd = command.as_str();
+impl View for GizmoBasicsView {
+    fn init(app: &mut App, _window: WindowId) -> Self {
+        Self {
+            model: app.local_state(GizmoBasicsModel::default()),
+        }
+    }
 
-    if cmd == CMD_RESET {
-        let _ = app.models_mut().update(&st.model, |m| {
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
+        let model = self.model.paint_value(cx);
+
+        cx.actions().local(&self.model).update::<act::Reset>(|m| {
             m.transform.translation = Vec3::ZERO;
             m.transform.rotation = Quat::IDENTITY;
             m.transform.scale = Vec3::ONE;
             m.gizmo_state = GizmoState::default();
             m.dragging = false;
         });
-        return;
-    }
+        cx.actions()
+            .local(&self.model)
+            .update::<act::ToggleSnap>(|m| {
+                m.snap = !m.snap;
+            });
 
-    if cmd == CMD_TOGGLE_SNAP {
-        let _ = app.models_mut().update(&st.model, |m| {
-            m.snap = !m.snap;
+        let pos = model.transform.translation;
+        let pos_len = pos.length() as f64;
+
+        let snap_label = if model.snap { "Snap: on" } else { "Snap: off" };
+
+        let header = shadcn::card_header(|cx| {
+            ui::children![
+                cx;
+                shadcn::card_title("Gizmo basics"),
+                shadcn::card_description(
+                    "A minimal editor-style gizmo loop: pointer input -> fret-gizmo update -> app-owned transform -> paint.",
+                ),
+            ]
         });
-    }
-}
 
-fn configure_driver(
-    driver: UiAppDriver<GizmoBasicsWindowState>,
-) -> UiAppDriver<GizmoBasicsWindowState> {
-    driver.on_command(on_command)
+        let pos_badges = ui::h_flex(|_cx| {
+            let badge = |label: String, test_id: &'static str, value: f64| {
+                shadcn::Badge::new(label)
+                    .variant(shadcn::BadgeVariant::Secondary)
+                    .a11y(
+                        SemanticsDecoration::default()
+                            .role(SemanticsRole::Meter)
+                            .test_id(test_id)
+                            .numeric_value(value),
+                    )
+            };
+
+            [
+                badge(format!("X: {:.2}", pos.x), TEST_ID_POS_X, pos.x as f64),
+                badge(format!("Y: {:.2}", pos.y), TEST_ID_POS_Y, pos.y as f64),
+                badge(format!("Z: {:.2}", pos.z), TEST_ID_POS_Z, pos.z as f64),
+                badge(
+                    format!("|pos|: {:.2}", pos.length()),
+                    TEST_ID_POS_LEN,
+                    pos_len,
+                ),
+            ]
+        })
+        .gap(Space::N2)
+        .items_center();
+
+        let toolbar = ui::h_flex(|cx| {
+            ui::children![
+                cx;
+                shadcn::Button::new("Reset")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .action(act::Reset)
+                    .test_id(TEST_ID_RESET),
+                shadcn::Button::new(snap_label)
+                    .variant(shadcn::ButtonVariant::Secondary)
+                    .action(act::ToggleSnap)
+                    .test_id(TEST_ID_TOGGLE_SNAP),
+                pos_badges,
+            ]
+        })
+        .gap(Space::N2)
+        .items_center();
+
+        let hint = shadcn::Alert::new(ui::children![
+            cx;
+            shadcn::AlertTitle::new("Try it"),
+            shadcn::AlertDescription::new(
+                "Left-drag inside the viewport. Dragging from the center should pick the view-plane translation handle, which is easy to script for regression gates.",
+            ),
+        ])
+        .ui();
+
+        let viewport = {
+            let model_down = self.model.clone();
+            let on_pointer_down =
+                move |cx: &mut pointer::PointerActionCx<'_>, down: pointer::PointerDown| {
+                    if down.button != MouseButton::Left {
+                        return false;
+                    }
+
+                    cx.prevent_focus_on_pointer_down();
+                    cx.capture_pointer();
+                    cx.set_cursor_icon(CursorIcon::Pointer);
+
+                    let bounds = cx.bounds();
+                    let viewport = viewport_rect_from_bounds(bounds, down.pixels_per_point);
+                    let cursor_px = Vec2::new(
+                        down.position_local.x.0 * down.pixels_per_point,
+                        down.position_local.y.0 * down.pixels_per_point,
+                    );
+
+                    cx.update_local(&model_down, |m| {
+                        apply_gizmo_input(m, viewport, cursor_px, true, true);
+                        m.dragging = true;
+                    });
+                    cx.invalidate_paint();
+                    true
+                };
+
+            let model_move = self.model.clone();
+            let on_pointer_move =
+                move |cx: &mut pointer::PointerActionCx<'_>, mv: pointer::PointerMove| {
+                    let bounds = cx.bounds();
+                    let viewport = viewport_rect_from_bounds(bounds, mv.pixels_per_point);
+                    let cursor_px = Vec2::new(
+                        mv.position_local.x.0 * mv.pixels_per_point,
+                        mv.position_local.y.0 * mv.pixels_per_point,
+                    );
+
+                    let mut cursor = CursorIcon::Default;
+                    cx.update_local(&model_move, |m| {
+                        let is_over = apply_gizmo_input(m, viewport, cursor_px, false, m.dragging);
+                        cursor = if is_over {
+                            CursorIcon::Pointer
+                        } else {
+                            CursorIcon::Default
+                        };
+                    });
+                    cx.set_cursor_icon(cursor);
+                    cx.invalidate_paint();
+                    true
+                };
+
+            let model_up = self.model.clone();
+            let on_pointer_up = move |cx: &mut pointer::PointerActionCx<'_>,
+                                      up: pointer::PointerUp| {
+                if up.button != MouseButton::Left {
+                    return false;
+                }
+
+                cx.release_pointer_capture();
+                cx.set_cursor_icon(CursorIcon::Default);
+
+                let bounds = cx.bounds();
+                let viewport = viewport_rect_from_bounds(bounds, up.pixels_per_point);
+                let cursor_px = Vec2::new(
+                    up.position_local.x.0 * up.pixels_per_point,
+                    up.position_local.y.0 * up.pixels_per_point,
+                );
+
+                cx.update_local(&model_up, |m| {
+                    apply_gizmo_input(m, viewport, cursor_px, false, false);
+                    m.dragging = false;
+                });
+                cx.invalidate_paint();
+                true
+            };
+
+            let model_wheel = self.model.clone();
+            let on_wheel = move |cx: &mut pointer::PointerActionCx<'_>, wheel: pointer::Wheel| {
+                let dy = wheel.delta.y.0;
+                if !dy.is_finite() || dy.abs() < 1e-3 {
+                    return false;
+                }
+
+                cx.update_local(&model_wheel, |m| {
+                    let k = 1.0 + dy * 0.002;
+                    let k = k.clamp(0.1, 10.0);
+                    m.camera.distance = (m.camera.distance * k).clamp(1.5, 30.0);
+                });
+                cx.invalidate_paint();
+                true
+            };
+
+            let region = PointerRegion::new().size_full();
+            let paint_model = model.clone();
+            cx.pointer_region(region, |cx| {
+                cx.on_pointer_down(on_pointer_down);
+                cx.on_pointer_move(on_pointer_move);
+                cx.on_pointer_up(on_pointer_up);
+                cx.on_wheel(on_wheel);
+
+                [canvas::Canvas::new()
+                    .size_full()
+                    .paint(move |painter| {
+                        let theme = painter.theme_snapshot();
+                        let bounds = painter.bounds();
+                        let sf = painter.scale_factor();
+                        let viewport = viewport_rect_from_bounds(bounds, sf);
+                        let view_projection =
+                            camera_view_projection(viewport.size, paint_model.camera);
+
+                        painter.quad(
+                            DrawOrder(0),
+                            bounds,
+                            CanvasPaint::Solid(theme.color_token("card")),
+                            Edges::all(Px(1.0)),
+                            CanvasPaint::Solid(theme.color_token("border")),
+                            Corners::all(Px(0.0)),
+                        );
+
+                        paint_cube_wireframe(
+                            painter,
+                            view_projection,
+                            viewport,
+                            paint_model.gizmo_config.depth_range,
+                            sf,
+                            paint_model.transform,
+                            Color::from_srgb_hex_rgb(0x94A3B8),
+                        );
+
+                        paint_gizmo(painter, view_projection, viewport, sf, &paint_model);
+                    })
+                    .test_id(TEST_ID_VIEWPORT)]
+            })
+        };
+
+        let viewport = ui::container(|_cx| [viewport])
+            .w_full()
+            .h_full()
+            .min_h(Px(480.0));
+
+        let card = shadcn::card(|cx| {
+            ui::children![
+                cx;
+                header,
+                shadcn::card_content(|cx| {
+                    ui::children![
+                        cx;
+                        ui::v_flex(|cx| ui::children![cx; toolbar, hint, viewport])
+                            .gap(Space::N3)
+                            .w_full()
+                            .h_full()
+                            .min_w_0(),
+                    ]
+                }),
+            ]
+        })
+        .ui()
+        .w_full()
+        .h_full()
+        .max_w(Px(1100.0))
+        .a11y_role(SemanticsRole::Group);
+
+        fret_cookbook::scaffold::centered_page_muted(cx, TEST_ID_ROOT, card).into()
+    }
 }
 
 fn main() -> anyhow::Result<()> {
-    let builder = ui_app_with_hooks(ROOT_NAME, init_window, view, configure_driver)
-        .with_main_window("cookbook-gizmo-basics", (1120.0, 820.0))
-        .with_command_default_keybindings()
-        .setup(install_commands)
-        .setup((shadcn::app::install, fret_icons_lucide::app::install))
+    let builder = FretApp::new(ROOT_NAME)
+        .window("cookbook-gizmo-basics", (1120.0, 820.0))
+        .config_files(false)
         .setup(fret_cookbook::install_cookbook_defaults)
-        .with_ui_assets_budgets(64 * 1024 * 1024, 4096, 16 * 1024 * 1024, 4096);
+        .ui_assets_budgets(64 * 1024 * 1024, 4096, 16 * 1024 * 1024, 4096)
+        .view::<GizmoBasicsView>()?;
 
     #[cfg(feature = "cookbook-diag")]
     let builder = builder.with_default_diagnostics();

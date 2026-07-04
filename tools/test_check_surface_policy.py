@@ -790,6 +790,7 @@ class SurfacePolicyTests(unittest.TestCase):
             "apps/fret-cookbook/examples/commands_keymap_basics.rs",
             "apps/fret-cookbook/examples/drag_basics.rs",
             "apps/fret-cookbook/examples/form_basics.rs",
+            "apps/fret-cookbook/examples/gizmo_basics.rs",
             "apps/fret-cookbook/examples/imui_action_basics.rs",
             "apps/fret-cookbook/examples/imui_editor_controls_basics.rs",
             "apps/fret-cookbook/examples/imui_plot_basics.rs",

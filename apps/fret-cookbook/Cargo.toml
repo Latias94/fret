@@ -88,7 +88,7 @@ cookbook-customv1 = ["cookbook-bootstrap", "dep:fret-render", "dep:fret-ui-kit"]
 cookbook-markdown = ["dep:fret-markdown", "dep:fret-code-view"]
 cookbook-canvas = ["fret/canvas"]
 cookbook-chart = ["fret/chart", "cookbook-bootstrap"]
-cookbook-gizmo = ["dep:fret-gizmo", "dep:glam", "cookbook-bootstrap"]
+cookbook-gizmo = ["dep:fret-gizmo", "dep:glam", "cookbook-bootstrap", "fret/canvas"]
 
 [[example]]
 name = "hello_counter"

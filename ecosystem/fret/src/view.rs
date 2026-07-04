@@ -47,7 +47,7 @@ pub use activation::{AppActivateExt, AppActivateSurface};
 use activation::{dispatch_action_listener, dispatch_payload_action_listener};
 pub use async_work::{AppAsyncWorkExt, AppInboxCx, InboxLocal, inbox_drain_apply, inbox_local};
 #[cfg(feature = "canvas")]
-pub use canvas::{AppCanvasPainter, PanZoomCanvas};
+pub use canvas::{AppCanvasPainter, Canvas, CanvasSurface, PanZoomCanvas};
 #[cfg(feature = "chart")]
 pub use chart::ChartCanvas;
 pub use context::{AppRenderContext, RenderContextAccess, View};
