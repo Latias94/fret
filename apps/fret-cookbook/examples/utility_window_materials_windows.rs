@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use fret::component::prelude::*;
-use fret::{advanced::prelude::*, shadcn};
+use fret::{advanced::prelude::*, advanced::raw::UiTree, shadcn};
 use fret_app::{CommandId, CommandMeta, Effect, WindowRequest};
 use fret_core::{AppWindowId, Color, Px};
 use fret_render::WgpuAdapterSelectionSnapshot;

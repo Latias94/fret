@@ -437,8 +437,9 @@ Target rule:
 
 - the default app surface does not expose public flat `use_local*` helpers; those flows live
   under `cx.state()`.
-- raw `use_state(...)` remains the explicit advanced seam through `AppUiRawStateExt`, not as a
-  direct `AppUi` method; loop-safe raw state hooks use `cx.keyed(...)`.
+- raw `Model<T>` allocation remains the explicit advanced seam through
+  `fret::advanced::raw::AppUiRawModelExt::raw_model<T>()`, not as a direct default `AppUi`
+  method; loop-safe raw model hooks use `cx.keyed(...)`.
 
 ### `ui.actions()`
 

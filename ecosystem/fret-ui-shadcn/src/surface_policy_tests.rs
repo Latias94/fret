@@ -1961,6 +1961,7 @@ fn state_helpers_prefer_typed_badge_outputs_when_no_runtime_landing_seam_is_requ
     let normalized = normalize_ws(STATE_RS);
     let required_markers = [
         "pub fn use_selector_badge<H, Deps, TValue>( cx: &mut ElementContext<'_, H>, variant: BadgeVariant, deps: impl FnOnce(&mut ElementContext<'_, H>) -> Deps, compute: impl FnOnce(&mut ElementContext<'_, H>) -> TValue, ) -> Badge where H: UiHost, Deps: Any + PartialEq, TValue: Any + Clone + ToString,",
+        "pub fn query_status_badge_for<T>(state: &QueryState<T>) -> Badge",
         "pub fn query_status_badge<H: UiHost, T>( _cx: &mut ElementContext<'_, H>, state: &QueryState<T>, ) -> Badge",
         "pub fn query_error_alert<H: UiHost, T>( cx: &mut ElementContext<'_, H>, state: &QueryState<T>, ) -> Option<Alert>",
     ];
@@ -2001,13 +2002,13 @@ fn selector_and_query_helpers_stay_isolated_to_opt_in_state_module() {
     );
     assert!(
         normalized_lib.contains(
-            "#[cfg(feature=\"state-query\")]pubusecrate::state::{query_error_alert,query_status_badge};"
+            "#[cfg(feature=\"state-query\")]pubusecrate::state::{query_error_alert,query_status_badge,query_status_badge_for};"
         ),
         "lib.rs should re-export query helpers only behind the query feature gate"
     );
     assert!(
         normalized_lib.contains(
-            "pubusecrate::spinner::Spinner;#[cfg(feature=\"state-selector\")]pubusecrate::state::use_selector_badge;#[cfg(feature=\"state-query\")]pubusecrate::state::{query_error_alert,query_status_badge};pubusecrate::switch::{Switch,SwitchSize,switch};"
+            "pubusecrate::spinner::Spinner;#[cfg(feature=\"state-selector\")]pubusecrate::state::use_selector_badge;#[cfg(feature=\"state-query\")]pubusecrate::state::{query_error_alert,query_status_badge,query_status_badge_for};pubusecrate::switch::{Switch,SwitchSize,switch};"
         ),
         "facade should keep app-facing query helper discovery behind the query feature gate"
     );

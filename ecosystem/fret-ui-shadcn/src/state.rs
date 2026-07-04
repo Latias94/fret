@@ -29,10 +29,7 @@ where
 }
 
 #[cfg(feature = "state-query")]
-pub fn query_status_badge<H: UiHost, T>(
-    _cx: &mut ElementContext<'_, H>,
-    state: &QueryState<T>,
-) -> Badge {
+pub fn query_status_badge_for<T>(state: &QueryState<T>) -> Badge {
     let (variant, label) = match state.status {
         QueryStatus::Idle => (BadgeVariant::Secondary, "Idle"),
         QueryStatus::Loading => (BadgeVariant::Secondary, "Loading"),
@@ -41,6 +38,14 @@ pub fn query_status_badge<H: UiHost, T>(
     };
 
     Badge::new(label).variant(variant)
+}
+
+#[cfg(feature = "state-query")]
+pub fn query_status_badge<H: UiHost, T>(
+    _cx: &mut ElementContext<'_, H>,
+    state: &QueryState<T>,
+) -> Badge {
+    query_status_badge_for(state)
 }
 
 #[cfg(feature = "state-query")]

@@ -92,7 +92,8 @@ fn advanced_prelude_keeps_manual_assembly_seams_explicit() {
     assert!(advanced_prelude.contains("pub use fret_app::Effect;"));
     assert!(advanced_prelude.contains("pub use fret_core::{AppWindowId, Event, UiServices};"));
     assert!(advanced_prelude.contains("pub use fret_runtime::{ActionId, TypedAction};"));
-    assert!(advanced_prelude.contains("pub use fret_ui::{ElementContext, ThemeSnapshot, UiTree};"));
+    assert!(advanced_prelude.contains("pub use fret_ui::{ElementContext, ThemeSnapshot};"));
+    assert!(!advanced_prelude_exports_symbol("UiTree"));
     assert!(advanced_prelude.contains(
         "pub use fret_ui::element::{HoverRegionProps, Length, SemanticsProps, TextProps};",
     ));
@@ -107,6 +108,8 @@ fn advanced_prelude_does_not_reexport_component_authoring_nouns() {
         "UiHost",
         "AnyElement",
         "Model",
+        "ModelStore",
+        "TrackedModelExt",
         "OverlayController",
         "OverlayRequest",
         "OverlayPresence",
@@ -116,7 +119,7 @@ fn advanced_prelude_does_not_reexport_component_authoring_nouns() {
             "advanced prelude should not re-export component noun `{forbidden}`",
         );
     }
-    assert!(advanced_prelude_slice().contains("TrackedModelExt as _;"));
+    assert!(!advanced_prelude_slice().contains("TrackedModelExt"));
 }
 
 #[test]

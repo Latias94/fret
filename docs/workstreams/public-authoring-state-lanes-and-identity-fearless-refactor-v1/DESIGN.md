@@ -183,7 +183,8 @@ For driver/init/hybrid surfaces that intentionally sit outside the normal `View:
 entrypoint but still own view-local slots, the blessed posture is still `LocalState<T>`:
 
 - prefer `cx.state().local*` when the surface already renders through `AppUi`,
-- otherwise prefer `LocalState::new_in(models, value)` when init code owns `&mut ModelStore`,
+- otherwise prefer `fret::advanced::raw::local_state_in(models, value)` when init code owns
+  `&mut ModelStore`,
 - and reserve `LocalState::from_model(...)` for truly explicit raw-model wrapping.
 
 ### G2 — Make the explicit raw-model lane honest

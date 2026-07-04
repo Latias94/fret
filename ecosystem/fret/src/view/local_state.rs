@@ -20,8 +20,8 @@ pub use bridges::{LocalStateElementContextExt, LocalStateModelStoreExt, LocalSta
 /// - use `cx.state().local*` plus `layout_value(...)` / `paint_value(...)` for the default
 ///   app-authoring path,
 /// - use [`AppUiRawModelExt::raw_model`] when code intentionally wants a raw `Model<T>` handle,
-/// - use the bridge helpers below only when ownership or helper-context boundaries still require
-///   direct `ModelStore`, `ElementContext`, or `Model<T>` access.
+/// - use `fret::advanced::raw` bridge helpers only when ownership or helper-context boundaries
+///   still require direct `ModelStore`, `ElementContext`, or `Model<T>` access.
 pub struct LocalState<T> {
     pub(super) model: Model<T>,
 }
@@ -37,12 +37,12 @@ impl<T> Clone for LocalState<T> {
 impl<T> LocalState<T> {
     /// Insert a new view-owned local slot into an existing `ModelStore`.
     ///
-    /// This is the blessed constructor for driver/init/hybrid surfaces that already own
-    /// `&mut ModelStore` (for example: manual window state, `UiAppDriver` init hooks, or
-    /// render-root bridges that need a `LocalState<T>` handle before the first `AppUi` render).
-    /// On the default `AppUi` lane, prefer `cx.state().local::<T>()` / `local_init(...)`.
+    /// This is the crate-internal constructor behind the public app and advanced raw seams.
+    /// Default app code should use `AppLocalStateExt::local_state(...)` during `View::init` or
+    /// `cx.state().local::<T>()` / `local_init(...)` during render. Manual surfaces that already
+    /// own `&mut ModelStore` should use `fret::advanced::raw::local_state_in(...)`.
     #[track_caller]
-    pub fn new_in(models: &mut ModelStore, value: T) -> Self
+    pub(crate) fn new_in(models: &mut ModelStore, value: T) -> Self
     where
         T: Any,
     {
@@ -189,8 +189,9 @@ impl<T> LocalState<T> {
 /// App-facing constructor for local state created during `View::init`.
 ///
 /// This keeps default examples on the app facade when they need a `LocalState<T>` handle before
-/// the first `AppUi` render. Use `cx.state().local*` inside render; keep `LocalState::new_in(...)`
-/// for advanced/manual surfaces that already own a raw `ModelStore`.
+/// the first `AppUi` render. Use `cx.state().local*` inside render; use
+/// `fret::advanced::raw::local_state_in(...)` for advanced/manual surfaces that already own a raw
+/// `ModelStore`.
 pub trait AppLocalStateExt {
     #[track_caller]
     fn local_state<T>(&mut self, value: T) -> LocalState<T>

@@ -574,9 +574,11 @@ mod authoring_surface_policy_tests {
         assert!(QUERY_EXAMPLE.contains("cx.state().local_init(|| false)"));
         assert!(QUERY_EXAMPLE.contains("use fret::query::{QueryError, QueryKey, QueryPolicy};"));
         assert!(!QUERY_EXAMPLE.contains("use fret_query::{"));
+        assert!(!QUERY_EXAMPLE.contains("use fret_ui::element::AnyElement;"));
         assert!(QUERY_EXAMPLE.contains("let fail_mode_enabled = fail_mode.layout_value(cx);"));
         assert!(QUERY_EXAMPLE.contains("let state = handle.read_layout(cx);"));
-        assert!(QUERY_EXAMPLE.contains("shadcn::query_status_badge(cx.elements(), &state)"));
+        assert!(QUERY_EXAMPLE.contains("shadcn::query_status_badge_for(&state)"));
+        assert!(!QUERY_EXAMPLE.contains("cx.elements()"));
         assert!(QUERY_EXAMPLE.contains(".a11y_label(status_label)"));
         assert!(QUERY_EXAMPLE.contains("cx.effects().take_transient(TRANSIENT_INVALIDATE_KEY)"));
         assert!(QUERY_EXAMPLE.contains("transient::<act::Invalidate>(TRANSIENT_INVALIDATE_KEY)"));
@@ -1309,7 +1311,8 @@ mod authoring_surface_policy_tests {
         );
 
         assert!(
-            EXTERNAL_TEXTURE_IMPORT_EXAMPLE.contains("use fret::{advanced::prelude::*, shadcn};")
+            EXTERNAL_TEXTURE_IMPORT_EXAMPLE
+                .contains("use fret::{advanced::prelude::*, advanced::raw::UiTree, shadcn};")
         );
         assert!(EXTERNAL_TEXTURE_IMPORT_EXAMPLE.contains("use fret::component::prelude::*;"));
         assert!(EXTERNAL_TEXTURE_IMPORT_EXAMPLE.contains("ui_app_with_hooks("));
@@ -1324,7 +1327,8 @@ mod authoring_surface_policy_tests {
         );
 
         assert!(
-            UTILITY_WINDOW_MATERIALS_EXAMPLE.contains("use fret::{advanced::prelude::*, shadcn};")
+            UTILITY_WINDOW_MATERIALS_EXAMPLE
+                .contains("use fret::{advanced::prelude::*, advanced::raw::UiTree, shadcn};")
         );
         assert!(UTILITY_WINDOW_MATERIALS_EXAMPLE.contains("ui_app_with_hooks("));
         assert!(UTILITY_WINDOW_MATERIALS_EXAMPLE.contains("status: Model<Arc<str>>"));

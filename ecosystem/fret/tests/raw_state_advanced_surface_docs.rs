@@ -26,18 +26,60 @@ fn advanced_public_slice() -> &'static str {
     &FRET_LIB_RS[advanced_start..tests_start]
 }
 
+fn advanced_raw_slice() -> &'static str {
+    let advanced = advanced_public_slice();
+    let raw_start = advanced
+        .find("pub mod raw {")
+        .expect("advanced raw module marker should exist");
+    let driver_start = advanced[raw_start..]
+        .find("\n    #[cfg(all(not(target_arch = \"wasm32\"), feature = \"desktop\"))]\n    pub use crate::{UiAppBuilder, UiAppDriver};")
+        .expect("advanced raw module end marker should exist");
+    &advanced[raw_start..raw_start + driver_start]
+}
+
+fn advanced_prelude_slice() -> &'static str {
+    let advanced = advanced_public_slice();
+    let prelude_start = advanced
+        .find("pub mod prelude {")
+        .expect("advanced prelude marker should exist");
+    &advanced[prelude_start..]
+}
+
 #[test]
 fn raw_state_hook_is_exposed_on_the_advanced_surface() {
     let advanced_slice = advanced_public_slice();
+    let advanced_raw = advanced_raw_slice();
+    let advanced_prelude = advanced_prelude_slice();
     assert!(!advanced_slice.contains("AppUiRawStateExt"));
-    assert!(advanced_slice.contains("AppUiRawModelExt"));
-    assert!(advanced_slice.contains("LocalStateRawModelExt"));
-    assert!(advanced_slice.contains("LocalStateModelStoreExt"));
-    assert!(advanced_slice.contains("LocalStateElementContextExt"));
+    for raw_symbol in [
+        "AppUiRawModelExt",
+        "AppUiRawActionNotifyExt",
+        "LocalStateRawModelExt",
+        "LocalStateModelStoreExt",
+        "LocalStateElementContextExt",
+        "TrackedModelExt",
+    ] {
+        assert!(
+            advanced_raw.contains(raw_symbol),
+            "`{raw_symbol}` should live on the explicit advanced raw surface"
+        );
+        assert!(
+            !advanced_prelude.contains(raw_symbol),
+            "`{raw_symbol}` should stay out of the advanced wildcard prelude"
+        );
+    }
+    assert!(advanced_raw.contains("pub use fret_runtime::{Model, ModelStore, ModelUpdateError};"));
+    assert!(advanced_raw.contains("pub use fret_ui::UiTree;"));
+    assert!(advanced_raw.contains("pub fn local_state_in<T>("));
+    assert!(!advanced_prelude.contains("UiTree"));
+    assert!(!advanced_prelude.contains("ModelStore"));
+    assert!(!advanced_prelude.contains("TrackedModelExt"));
     assert!(!app_prelude_slice().contains("AppUiRawModelExt"));
+    assert!(!app_prelude_slice().contains("AppUiRawActionNotifyExt"));
     assert!(!app_prelude_slice().contains("LocalStateRawModelExt"));
     assert!(!app_prelude_slice().contains("LocalStateModelStoreExt"));
     assert!(!app_prelude_slice().contains("LocalStateElementContextExt"));
+    assert!(!app_prelude_slice().contains("TrackedModelExt"));
 }
 
 #[test]

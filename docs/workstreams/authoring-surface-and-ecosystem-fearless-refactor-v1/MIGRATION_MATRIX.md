@@ -110,7 +110,7 @@ These are the concrete "remove this" lanes.
 | `run_view::<V>()` / `run_view_with_hooks::<V>(...)` convenience entry | `view::<V>()?.run()` / `view_with_hooks::<V>(...)?.run()` | default docs/templates/examples are migrated and a gate forbids the convenience APIs from returning | Deleted |
 | flat `AppUi::use_selector*` / `AppUi::use_query*` helper family | `cx.data().selector/query*` | first-party app-facing code is migrated and `AppUi` no longer exposes the flat methods | Deleted |
 | `AppUi::take_transient_on_action_root(...)` | `cx.effects().take_transient(...)` | first-party app-facing code is migrated and `AppUi` no longer exposes the flat helper | Deleted |
-| `AppUi::use_state*` / `AppUi::use_local*` | `cx.state()` for the default path, `AppUiRawStateExt::use_state*` as the explicit advanced raw-model seam | `AppUi` no longer exposes the flat methods directly | Deleted |
+| `AppUi::use_state*` / `AppUi::use_local*` | `cx.state()` for the default path, `fret::advanced::raw::AppUiRawModelExt::raw_model<T>()` as the explicit advanced raw-model seam | `AppUi` no longer exposes the flat methods directly | Deleted |
 | flat default-path calls like `use_local*` in official docs/templates | `ui.state()` | templates + docs migrated and public `AppUi::use_local*` helpers are deleted | Deleted |
 | flat default-path calls like `on_action_notify_*` in official docs/templates | `ui.actions()` | templates + docs migrated and specialized `AppUi` mutation wrappers are deleted | Deleted |
 | broad `fret::prelude::*` bridge and app-prelude mechanism leakage | `fret::app` / `fret::component` / `fret::advanced` split | explicit surface gate exists, passes, and the bridge is deleted | Deleted |

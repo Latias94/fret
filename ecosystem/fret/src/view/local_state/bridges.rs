@@ -8,8 +8,7 @@ use super::{LocalState, WatchedState};
 /// Explicit raw `Model<T>` bridge for advanced/component/hybrid surfaces.
 ///
 /// This trait intentionally stays off `fret::app::prelude::*`. Import it from
-/// `fret::advanced` or `fret::advanced::prelude::*` when a surface still needs to wrap, expose, or
-/// clone a raw model handle.
+/// `fret::advanced::raw` when a surface still needs to wrap, expose, or clone a raw model handle.
 pub trait LocalStateRawModelExt<T> {
     /// Wrap an existing raw `Model<T>` handle as explicit `LocalState<T>` bridge state.
     fn from_model(model: Model<T>) -> Self;
@@ -155,7 +154,7 @@ impl<T> LocalStateModelStoreExt<T> for LocalState<T> {
 ///
 /// Default app code should prefer `state.layout_value(cx)` / `state.paint_value(cx)` through
 /// `AppUi`. This trait is intentionally omitted from `fret::app::prelude::*` and reexported from
-/// `fret::advanced::prelude::*`; import it only when a helper already owns an `ElementContext`.
+/// `fret::advanced::raw`; import it only when a helper already owns an `ElementContext`.
 pub trait LocalStateElementContextExt<T: Any> {
     fn watch_in<'cx, 'm, 'a, H: UiHost>(
         &'m self,

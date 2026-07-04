@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use fret::component::prelude::*;
-use fret::{advanced::prelude::*, shadcn};
+use fret::{advanced::prelude::*, advanced::raw::UiTree, shadcn};
 use fret_core::{AppWindowId, Px, ViewportFit};
 use fret_launch::{EngineFrameUpdate, imported_viewport_target::ImportedViewportRenderTarget};
 use fret_render::{

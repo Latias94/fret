@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use fret::advanced::raw::UiTree;
 use fret::{advanced::prelude::*, component::prelude::*, integration::InstallIntoApp, shadcn};
 use fret_app::{CommandMeta, CommandScope};
 use fret_core::{Axis, Color, DockNode, DockNodeId, DockOp, PanelKey, Px};
@@ -10,7 +11,6 @@ use fret_docking::{
 };
 use fret_runtime::CommandId;
 use fret_ui::ElementContext;
-use fret_ui::UiTree;
 use fret_ui::element::{AnyElement, SemanticsDecoration, SemanticsProps};
 use fret_ui_kit::prelude::{CachedSubtreeExt, CachedSubtreeProps};
 

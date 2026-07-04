@@ -160,8 +160,10 @@ First-contact docs/templates/examples should not teach `LocalState::from_model(.
 `clone_model()`, or raw `Model<T>` choreography on this lane.
 
 When a manual driver/init/hybrid surface needs a `LocalState<T>` handle before the first `AppUi`
-render, prefer `LocalState::new_in(models, value)` rather than allocating a raw `Model<T>` first
-and then wrapping it with `LocalState::from_model(...)`.
+render, prefer the explicit raw-lane helper
+`fret::advanced::raw::local_state_in(models, value)` rather than allocating a raw `Model<T>` first
+and then wrapping it with `LocalState::from_model(...)`. `LocalState::new_in(...)` is an internal
+implementation helper, not a public authoring seam.
 
 ### D3 — Generic hook-style raw-model naming is not the long-term public contract
 

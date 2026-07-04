@@ -2376,6 +2376,8 @@ mod tests {
         assert!(
             api_source.contains("pub trait AppUiComponentLaneRequiresExplicitElementsEscapeHatch")
         );
+        assert!(!api_source.contains("pub fn new_in(models: &mut ModelStore"));
+        assert!(api_source.contains("pub(crate) fn new_in(models: &mut ModelStore"));
         assert!(api_source.contains("pub trait RenderContextAccess<'a, H: UiHost + 'a>"));
         assert!(api_source.contains("pub trait AppRenderDataExt"));
         assert!(api_source.contains("pub trait AppRenderActionsExt"));
@@ -2649,7 +2651,7 @@ mod tests {
         assert!(api_source.contains(
             "This trait is intentionally omitted from `fret::app::prelude::*` and reexported from"
         ));
-        assert!(api_source.contains("`fret::advanced::prelude::*`."));
+        assert!(api_source.contains("`fret::advanced::raw`."));
     }
 
     #[test]

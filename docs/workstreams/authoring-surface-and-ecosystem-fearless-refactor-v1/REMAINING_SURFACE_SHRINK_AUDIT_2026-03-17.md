@@ -62,8 +62,8 @@ pure structural wrapper:
   - explicit tracked-read extension vocabulary
 - `AppUiRawActionNotifyExt`
   - explicit advanced raw notify-registration seam
-- `AppUiRawStateExt`
-  - explicit advanced raw `Model<T>` state-allocation seam
+- `AppUiRawModelExt`
+  - explicit `fret::advanced::raw` `Model<T>` allocation seam
 - `QueryHandleReadLayoutExt`
   - narrow app-lane query convenience seam backing `handle.read_layout(cx)`
 - `AppActivateSurface`

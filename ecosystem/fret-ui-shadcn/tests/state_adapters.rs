@@ -105,7 +105,7 @@ fn query_badge_adapter_maps_status_and_error_alert_without_state_stack_leakage()
 
     render_state_root(&mut ui, &mut app, &mut services, 1, |cx| {
         let idle = QueryState::<u32>::default();
-        let idle_badge = shadcn::query_status_badge(cx, &idle);
+        let idle_badge = shadcn::query_status_badge_for(&idle);
         let idle_debug = format!("{idle_badge:?}");
         assert!(
             idle_debug.contains("Idle") && idle_debug.contains("Secondary"),
@@ -117,7 +117,7 @@ fn query_badge_adapter_maps_status_and_error_alert_without_state_stack_leakage()
             data: Some(5u32.into()),
             ..QueryState::default()
         };
-        let ready_badge = shadcn::query_status_badge(cx, &ready);
+        let ready_badge = shadcn::query_status_badge_for(&ready);
         let ready_debug = format!("{ready_badge:?}");
         assert!(
             ready_debug.contains("Ready") && ready_debug.contains("Default"),
@@ -129,7 +129,7 @@ fn query_badge_adapter_maps_status_and_error_alert_without_state_stack_leakage()
             error: Some(QueryError::permanent("offline")),
             ..QueryState::default()
         };
-        let failed_badge = shadcn::query_status_badge(cx, &failed);
+        let failed_badge = shadcn::query_status_badge_for(&failed);
         let failed_debug = format!("{failed_badge:?}");
         assert!(
             failed_debug.contains("Error") && failed_debug.contains("Destructive"),

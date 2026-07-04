@@ -11,7 +11,7 @@ pub trait AppUiComponentLaneRequiresExplicitElementsEscapeHatch {}
 /// Explicit raw-model state hooks that intentionally stay off the default app authoring surface.
 ///
 /// This trait is intentionally omitted from `fret::app::prelude::*` and reexported from
-/// `fret::advanced::prelude::*`.
+/// `fret::advanced::raw`.
 ///
 /// Import it explicitly when advanced code still wants a stable callsite-keyed raw `Model<T>`
 /// handle rather than the grouped `cx.state().local*` surface. For loop/dynamic callsites, wrap
@@ -37,7 +37,7 @@ impl<'cx, 'a, H: UiHost> AppUiRawModelExt for AppUi<'cx, 'a, H> {
 /// surface.
 ///
 /// This trait is intentionally omitted from `fret::app::prelude::*` and reexported from
-/// `fret::advanced::prelude::*`.
+/// `fret::advanced::raw`.
 ///
 /// Import it explicitly when advanced/manual-assembly code intentionally wants raw typed handler
 /// registration rather than the grouped `cx.actions()` helpers. Model/local mutation shorthands

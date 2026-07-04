@@ -1031,7 +1031,7 @@ pub mod advanced {
         pub use crate::interop::run_native_with_compat_driver;
     }
 
-    /// Explicit raw hooks for advanced/manual assembly.
+    /// Explicit raw retained-tree and hook seams for advanced/manual assembly.
     ///
     /// Import these from `fret::advanced::raw` at the call site that actually needs the raw
     /// runtime seam. They intentionally stay out of `advanced::prelude::*` so advanced examples do
@@ -1044,6 +1044,29 @@ pub mod advanced {
             AppUiRawModelExt, LocalStateElementContextExt, LocalStateModelStoreExt,
             LocalStateRawModelExt,
         };
+        /// Raw `Model<T>` handle and store types for manual model-store integrations.
+        pub use fret_runtime::{Model, ModelStore, ModelUpdateError};
+        /// Raw retained-tree host for manual runtime integrations.
+        pub use fret_ui::UiTree;
+        /// Handle-first tracked-read helpers for raw `Model<T>` values on manual
+        /// `ElementContext` surfaces.
+        pub use fret_ui_kit::declarative::TrackedModelExt;
+
+        /// Insert a `LocalState<T>` into a raw `ModelStore` for manual/hybrid surfaces.
+        ///
+        /// Default app code should use `AppLocalStateExt::local_state(...)` during `View::init` or
+        /// `cx.state().local*` during render. This helper exists for code that intentionally owns
+        /// the raw model store.
+        #[track_caller]
+        pub fn local_state_in<T>(
+            models: &mut fret_runtime::ModelStore,
+            value: T,
+        ) -> crate::view::LocalState<T>
+        where
+            T: std::any::Any,
+        {
+            crate::view::LocalState::new_in(models, value)
+        }
     }
 
     #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
@@ -1294,8 +1317,7 @@ pub mod advanced {
         pub use fret_icons::IconId;
         pub use fret_runtime::{ActionId, TypedAction};
         pub use fret_ui::element::{HoverRegionProps, Length, SemanticsProps, TextProps};
-        pub use fret_ui::{ElementContext, ThemeSnapshot, UiTree};
-        pub use fret_ui_kit::declarative::TrackedModelExt as _;
+        pub use fret_ui::{ElementContext, ThemeSnapshot};
         #[cfg(feature = "icons")]
         pub use fret_ui_kit::declarative::icon;
     }
@@ -4490,6 +4512,13 @@ mod authoring_surface_policy_tests {
             "LocalStateElementContextExt"
         ));
         assert!(advanced_surface.contains("pub mod raw {"));
+        assert!(
+            advanced_surface
+                .contains("pub use fret_runtime::{Model, ModelStore, ModelUpdateError};")
+        );
+        assert!(advanced_surface.contains("pub use fret_ui::UiTree;"));
+        assert!(advanced_surface.contains("pub use fret_ui_kit::declarative::TrackedModelExt;"));
+        assert!(advanced_surface.contains("pub fn local_state_in<T>("));
         assert!(advanced_surface.contains("pub use crate::view::AppUiRawActionNotifyExt;"));
         assert!(
             advanced_surface.contains(
@@ -4505,13 +4534,11 @@ mod authoring_surface_policy_tests {
         assert!(!advanced_common_prelude_exports_symbol("UiCx"));
         assert!(advanced_common_prelude_exports_symbol("ViewElements"));
         assert!(advanced_common_prelude_exports_symbol("ElementContext"));
-        assert!(advanced_common_prelude_exports_symbol("UiTree"));
+        assert!(!advanced_common_prelude_exports_symbol("UiTree"));
         assert!(advanced_prelude.contains("pub use crate::view::QueryHandleReadLayoutExt as _;"));
         assert!(advanced_prelude.contains("pub use crate::view::AppRenderActionsExt as _;"));
         assert!(advanced_prelude.contains("pub use crate::view::AppRenderDataExt as _;"));
-        assert!(
-            advanced_prelude.contains("pub use fret_ui_kit::declarative::TrackedModelExt as _;")
-        );
+        assert!(!advanced_prelude.contains("TrackedModelExt"));
         assert!(advanced_common_prelude_exports_symbol("UiServices"));
         assert!(advanced_common_prelude_exports_symbol("TextProps"));
         assert!(!advanced_prelude.contains("pub use crate::component::prelude::*;"));

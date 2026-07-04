@@ -547,7 +547,7 @@ pub mod facade {
     #[cfg(feature = "state-selector")]
     pub use crate::state::use_selector_badge;
     #[cfg(feature = "state-query")]
-    pub use crate::state::{query_error_alert, query_status_badge};
+    pub use crate::state::{query_error_alert, query_status_badge, query_status_badge_for};
     pub use crate::switch::{Switch, SwitchSize, switch};
     pub use crate::table::{
         Table, TableBody, TableCaption, TableCell, TableFooter, TableHead, TableHeader, TableRow,
@@ -645,7 +645,7 @@ pub mod prelude {
     #[cfg(feature = "state-selector")]
     pub use crate::state::use_selector_badge;
     #[cfg(feature = "state-query")]
-    pub use crate::state::{query_error_alert, query_status_badge};
+    pub use crate::state::{query_error_alert, query_status_badge, query_status_badge_for};
 
     pub use fret_core::{AppWindowId, Px, TextOverflow, TextWrap, UiServices};
     pub use fret_icons::IconId;
