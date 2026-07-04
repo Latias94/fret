@@ -209,6 +209,20 @@ pub mod env {
     };
 }
 
+/// Explicit pointer-region authoring helpers for app code that needs low-level pointer streams.
+///
+/// Keep this lane explicit instead of adding pointer nouns to `fret::app::prelude::*`: ordinary
+/// apps should discover buttons, inputs, toggles, and recipes first; custom interaction surfaces
+/// can opt into `fret::pointer`.
+pub mod pointer {
+    #[doc(hidden)]
+    pub use crate::view::AppPointerRegion;
+    pub use crate::view::{
+        CursorIcon, MouseButton, Point, PointerActionCx, PointerCancel, PointerDown, PointerId,
+        PointerMove, PointerRegion, PointerUp, Wheel,
+    };
+}
+
 /// Explicit higher-level adaptive policy vocabulary for app code that wants shared classification
 /// or device-shell strategy helpers above raw query reads.
 pub mod adaptive {
@@ -3559,6 +3573,13 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_USAGE_GUIDE.contains("`cx.effects().toast_dismiss_all()`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::app::{LocalState, LocalStateTxn}`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::commands::{...}`"));
+        assert!(
+            CRATE_USAGE_GUIDE.contains(
+                "`fret::pointer::{PointerRegion, PointerDown, PointerMove, PointerUp, MouseButton, ...}`"
+            )
+        );
+        assert!(CRATE_USAGE_GUIDE.contains("`UiPointerActionHost`, `PointerRegionProps`,"));
+        assert!(CRATE_USAGE_GUIDE.contains("`prevent_focus_on_pointer_down()`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::style::{...}`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::style::ThemeSnapshot`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::icons::{icon, IconId}`"));
@@ -4605,6 +4626,7 @@ mod authoring_surface_policy_tests {
         assert!(root_header.contains("pub mod children {"));
         assert!(root_header.contains("pub mod commands {"));
         assert!(root_header.contains("pub mod icons {"));
+        assert!(root_header.contains("pub mod pointer {"));
         assert!(root_header.contains("pub mod semantics {"));
         assert!(root_header.contains("pub mod style {"));
         assert!(root_header.contains("pub mod virtual_list {"));
@@ -4622,6 +4644,8 @@ mod authoring_surface_policy_tests {
         assert!(root_header.contains("install_command_default_keybindings_into_keymap,"));
         assert!(root_header.contains("pub use fret_core::{KeyCode, Modifiers};"));
         assert!(root_header.contains("pub use fret_ui::CommandAvailability;"));
+        assert!(root_header.contains("PointerActionCx, PointerCancel, PointerDown, PointerId,"));
+        assert!(root_header.contains("PointerMove, PointerRegion, PointerUp, Wheel,"));
         assert!(root_header.contains("pub use fret_core::SemanticsRole;"));
         assert!(root_header.contains("pub use fret_ui::element::SemanticsDecoration;"));
         assert!(root_header.contains(
@@ -4896,6 +4920,14 @@ mod authoring_surface_policy_tests {
         assert!(!app_prelude_exports_symbol("UiBuilder"));
         assert!(!app_prelude_exports_symbol("UiPatchTarget"));
         assert!(!app_prelude_exports_symbol("HoverRegionProps"));
+        assert!(!app_prelude_exports_symbol("PointerRegion"));
+        assert!(!app_prelude_exports_symbol("PointerActionCx"));
+        assert!(!app_prelude_exports_symbol("PointerDown"));
+        assert!(!app_prelude_exports_symbol("PointerMove"));
+        assert!(!app_prelude_exports_symbol("PointerUp"));
+        assert!(!app_prelude_exports_symbol("PointerId"));
+        assert!(!app_prelude_exports_symbol("MouseButton"));
+        assert!(!app_prelude_exports_symbol("CursorIcon"));
         assert!(!app_prelude_exports_symbol("Length"));
         assert!(!app_prelude_exports_symbol("LayoutStyle"));
         assert!(!app_prelude_exports_symbol("ContainerProps"));

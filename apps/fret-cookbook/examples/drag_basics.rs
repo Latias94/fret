@@ -1,12 +1,8 @@
-use std::sync::Arc;
-
-use fret::component::prelude::*;
-use fret::{FretApp, advanced::prelude::*, shadcn};
-use fret_core::{CursorIcon, MouseButton, Point, PointerId, Px};
-use fret_runtime::DefaultAction;
-use fret_ui::Invalidation;
-use fret_ui::action::UiPointerActionHost;
-use fret_ui::element::{AnyElement, PointerRegionProps};
+use fret::app::prelude::*;
+use fret::app::{LocalState, RenderContextAccess as _};
+use fret::pointer::{self, CursorIcon, MouseButton, Point, PointerId, PointerRegion};
+use fret::semantics::{SemanticsDecoration, SemanticsRole};
+use fret::style::{ColorRef, Radius, Space};
 
 const TEST_ID_ROOT: &str = "cookbook.drag_basics.root";
 const TEST_ID_DRAGGABLE: &str = "cookbook.drag_basics.draggable";
@@ -21,108 +17,91 @@ struct DragState {
 }
 
 struct DragBasicsView {
-    origin: Model<Point>,
-    drag: Model<Option<DragState>>,
-    drag_count: Model<u32>,
+    origin: LocalState<Point>,
+    drag: LocalState<Option<DragState>>,
+    drag_count: LocalState<u32>,
 }
 
 impl View for DragBasicsView {
-    fn init(app: &mut KernelApp, _window: AppWindowId) -> Self {
+    fn init(app: &mut App, _window: WindowId) -> Self {
         Self {
-            origin: app.models_mut().insert(Point::new(Px(0.0), Px(0.0))),
-            drag: app.models_mut().insert(None::<DragState>),
-            drag_count: app.models_mut().insert(0),
+            origin: app.local_state(Point::new(Px(0.0), Px(0.0))),
+            drag: app.local_state(None::<DragState>),
+            drag_count: app.local_state(0),
         }
     }
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let theme = cx.theme_snapshot();
 
-        let origin = self
-            .origin
-            .layout(cx)
-            .value_or(Point::new(Px(0.0), Px(0.0)));
-        let drag_count = self.drag_count.layout(cx).value_or(0);
+        let origin = self.origin.layout_value(cx);
+        let drag_count = self.drag_count.layout_value(cx);
 
         let pos_label = format!("Offset: ({:.0}, {:.0})", origin.x.0, origin.y.0);
 
         let drag_model = self.drag.clone();
         let origin_model = self.origin.clone();
 
-        let on_pointer_down: fret_ui::action::OnPointerDown =
-            Arc::new(move |host: &mut dyn UiPointerActionHost, action_cx, down| {
-                if down.button != MouseButton::Left {
-                    return false;
-                }
+        let on_pointer_down = move |cx: &mut pointer::PointerActionCx<'_>,
+                                    down: pointer::PointerDown| {
+            if down.button != MouseButton::Left {
+                return false;
+            }
 
-                host.prevent_default(DefaultAction::FocusOnPointerDown);
-                host.capture_pointer();
-                host.set_cursor_icon(CursorIcon::Pointer);
+            cx.prevent_focus_on_pointer_down();
+            cx.capture_pointer();
+            cx.set_cursor_icon(CursorIcon::Pointer);
 
-                let st = DragState {
-                    pointer: down.pointer_id,
-                    start_local: down.position_local,
-                    origin_at_start: host
-                        .models_mut()
-                        .read(&origin_model, |p| *p)
-                        .ok()
-                        .unwrap_or_else(|| Point::new(Px(0.0), Px(0.0))),
-                };
+            let st = DragState {
+                pointer: down.pointer_id,
+                start_local: down.position_local,
+                origin_at_start: cx.local_value_or(&origin_model, Point::new(Px(0.0), Px(0.0))),
+            };
 
-                let _ = host.models_mut().update(&drag_model, |v| *v = Some(st));
-                host.invalidate(Invalidation::Paint);
-                host.request_redraw(action_cx.window);
-                true
-            });
+            cx.set_local(&drag_model, Some(st));
+            cx.invalidate_paint();
+            true
+        };
 
         let drag_model_move = self.drag.clone();
         let origin_model_move = self.origin.clone();
-        let on_pointer_move: fret_ui::action::OnPointerMove =
-            Arc::new(move |host: &mut dyn UiPointerActionHost, action_cx, mv| {
-                let drag = host
-                    .models_mut()
-                    .read(&drag_model_move, |v| *v)
-                    .ok()
-                    .flatten();
-                let Some(drag) = drag else {
-                    return false;
-                };
-                if drag.pointer != mv.pointer_id {
-                    return false;
-                }
+        let on_pointer_move = move |cx: &mut pointer::PointerActionCx<'_>,
+                                    mv: pointer::PointerMove| {
+            let drag = cx.local_value_or(&drag_model_move, None);
+            let Some(drag) = drag else {
+                return false;
+            };
+            if drag.pointer != mv.pointer_id {
+                return false;
+            }
 
-                let dx = mv.position_local.x.0 - drag.start_local.x.0;
-                let dy = mv.position_local.y.0 - drag.start_local.y.0;
-                let _ = host.models_mut().update(&origin_model_move, |p| {
-                    let x = (drag.origin_at_start.x.0 + dx).clamp(0.0, 480.0);
-                    let y = (drag.origin_at_start.y.0 + dy).clamp(0.0, 120.0);
-                    *p = Point::new(Px(x), Px(y));
-                });
-
-                host.invalidate(Invalidation::Paint);
-                host.request_redraw(action_cx.window);
-                true
+            let dx = mv.position_local.x.0 - drag.start_local.x.0;
+            let dy = mv.position_local.y.0 - drag.start_local.y.0;
+            cx.update_local(&origin_model_move, |p| {
+                let x = (drag.origin_at_start.x.0 + dx).clamp(0.0, 480.0);
+                let y = (drag.origin_at_start.y.0 + dy).clamp(0.0, 120.0);
+                *p = Point::new(Px(x), Px(y));
             });
+
+            cx.invalidate_layout();
+            true
+        };
 
         let drag_model_up = self.drag.clone();
         let drag_count_model_up = self.drag_count.clone();
-        let on_pointer_up: fret_ui::action::OnPointerUp =
-            Arc::new(move |host: &mut dyn UiPointerActionHost, action_cx, up| {
-                if up.button != MouseButton::Left {
-                    return false;
-                }
+        let on_pointer_up = move |cx: &mut pointer::PointerActionCx<'_>, up: pointer::PointerUp| {
+            if up.button != MouseButton::Left {
+                return false;
+            }
 
-                host.release_pointer_capture();
-                host.set_cursor_icon(CursorIcon::Default);
+            cx.release_pointer_capture();
+            cx.set_cursor_icon(CursorIcon::Default);
 
-                let _ = host.models_mut().update(&drag_model_up, |v| *v = None);
-                let _ = host
-                    .models_mut()
-                    .update(&drag_count_model_up, |n| *n = n.saturating_add(1));
-                host.invalidate(Invalidation::Paint);
-                host.request_redraw(action_cx.window);
-                true
-            });
+            cx.set_local(&drag_model_up, None);
+            cx.update_local(&drag_count_model_up, |n| *n = n.saturating_add(1));
+            cx.invalidate_paint();
+            true
+        };
 
         let header = shadcn::card_header(|cx| {
             ui::children![cx;
@@ -140,21 +119,19 @@ impl View for DragBasicsView {
         let drag_count_badge = shadcn::Badge::new(format!("Drags: {drag_count}"))
             .variant(shadcn::BadgeVariant::Secondary)
             .a11y(
-                fret_ui::element::SemanticsDecoration::default()
+                SemanticsDecoration::default()
                     .role(SemanticsRole::ProgressBar)
                     .test_id(TEST_ID_DRAG_COUNT)
                     .numeric_value(drag_count as f64)
                     .numeric_range(0.0, 1024.0),
             );
 
-        let mut region = PointerRegionProps::default();
-        region.layout.size.width = Length::Fill;
-        region.layout.size.height = Length::Px(Px(240.0));
+        let region = PointerRegion::new().fill_width().height_px(Px(240.0));
 
-        let draggable = cx.elements().pointer_region(region, |cx| {
-            cx.pointer_region_on_pointer_down(on_pointer_down);
-            cx.pointer_region_on_pointer_move(on_pointer_move);
-            cx.pointer_region_on_pointer_up(on_pointer_up);
+        let draggable = cx.pointer_region(region, |cx| {
+            cx.on_pointer_down(on_pointer_down);
+            cx.on_pointer_move(on_pointer_move);
+            cx.on_pointer_up(on_pointer_up);
 
             let box_size = Px(72.0);
             let box_el = ui::v_flex(|cx| [cx.text("Drag")])
@@ -170,8 +147,8 @@ impl View for DragBasicsView {
             let offset_x = Px(origin.x.0.clamp(0.0, 480.0));
             let offset_y = Px(origin.y.0.clamp(0.0, 120.0));
 
-            let top_spacer = ui::container(|_cx| Vec::<AnyElement>::new()).h_px(offset_y);
-            let left_spacer = ui::container(|_cx| Vec::<AnyElement>::new()).w_px(offset_x);
+            let top_spacer = ui::container_build(|_cx, _out| {}).h_px(offset_y);
+            let left_spacer = ui::container_build(|_cx, _out| {}).w_px(offset_x);
 
             let row = ui::h_flex(|cx| ui::children![cx; left_spacer, box_el]);
             let col = ui::v_flex(|cx| ui::children![cx; top_spacer, row]);
@@ -180,10 +157,9 @@ impl View for DragBasicsView {
                 .w_full()
                 .h_full()
                 .bg(ColorRef::Color(theme.color_token("muted")))
-                .rounded(Radius::Lg)
-                .into_element(cx);
+                .rounded(Radius::Lg);
 
-            vec![bounds]
+            [bounds]
         });
 
         let card = shadcn::card(|cx| {

@@ -24,6 +24,7 @@ mod effects;
 mod lane_barriers;
 mod layout_query;
 mod local_state;
+mod pointer;
 mod raw;
 mod runtime;
 mod scheduling;
@@ -55,6 +56,10 @@ pub use effects::AppUiEffects;
 pub use local_state::{
     AppLocalStateExt, LocalActionCapture, LocalState, LocalStateElementContextExt,
     LocalStateModelStoreExt, LocalStateRawModelExt, LocalStateTxn, TrackedStateExt, WatchedState,
+};
+pub use pointer::{
+    AppPointerRegion, CursorIcon, MouseButton, Point, PointerActionCx, PointerCancel, PointerDown,
+    PointerId, PointerMove, PointerRegion, PointerUp, Wheel,
 };
 pub use raw::{
     AppUiComponentLaneRequiresExplicitElementsEscapeHatch, AppUiRawActionNotifyExt,
@@ -103,6 +108,7 @@ mod tests {
     const LOCAL_STATE_RS_SOURCE: &str = include_str!("view/local_state.rs");
     const LOCAL_STATE_ADAPTERS_RS_SOURCE: &str = include_str!("view/local_state/adapters.rs");
     const LOCAL_STATE_BRIDGES_RS_SOURCE: &str = include_str!("view/local_state/bridges.rs");
+    const POINTER_RS_SOURCE: &str = include_str!("view/pointer.rs");
     const RAW_RS_SOURCE: &str = include_str!("view/raw.rs");
     const RUNTIME_RS_SOURCE: &str = include_str!("view/runtime.rs");
     const SCHEDULING_RS_SOURCE: &str = include_str!("view/scheduling.rs");
@@ -115,7 +121,7 @@ mod tests {
             .next()
             .expect("view.rs test module marker should exist");
         format!(
-            "{view_api}\n{ACTIVATION_RS_SOURCE}\n{ACTIONS_RS_SOURCE}\n{BRIDGES_RS_SOURCE}\n{CONTEXT_RS_SOURCE}\n{DATA_RS_SOURCE}\n{DATA_RENDER_RS_SOURCE}\n{EFFECTS_RS_SOURCE}\n{LANE_BARRIERS_RS_SOURCE}\n{LAYOUT_QUERY_RS_SOURCE}\n{LOCAL_STATE_RS_SOURCE}\n{LOCAL_STATE_ADAPTERS_RS_SOURCE}\n{LOCAL_STATE_BRIDGES_RS_SOURCE}\n{RAW_RS_SOURCE}\n{RUNTIME_RS_SOURCE}\n{SCHEDULING_RS_SOURCE}\n{SHELL_RS_SOURCE}\n{STATE_RS_SOURCE}"
+            "{view_api}\n{ACTIVATION_RS_SOURCE}\n{ACTIONS_RS_SOURCE}\n{BRIDGES_RS_SOURCE}\n{CONTEXT_RS_SOURCE}\n{DATA_RS_SOURCE}\n{DATA_RENDER_RS_SOURCE}\n{EFFECTS_RS_SOURCE}\n{LANE_BARRIERS_RS_SOURCE}\n{LAYOUT_QUERY_RS_SOURCE}\n{LOCAL_STATE_RS_SOURCE}\n{LOCAL_STATE_ADAPTERS_RS_SOURCE}\n{LOCAL_STATE_BRIDGES_RS_SOURCE}\n{POINTER_RS_SOURCE}\n{RAW_RS_SOURCE}\n{RUNTIME_RS_SOURCE}\n{SCHEDULING_RS_SOURCE}\n{SHELL_RS_SOURCE}\n{STATE_RS_SOURCE}"
         )
     }
     use fret_core::{

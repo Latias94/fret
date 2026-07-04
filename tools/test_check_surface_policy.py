@@ -69,6 +69,41 @@ class SurfacePolicyTests(unittest.TestCase):
             self.assertEqual("default-app-clean", violations[0].rule)
             self.assertIn("fret_ui", violations[0].message)
 
+    def test_default_tutorial_raw_pointer_region_mechanisms_are_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/tutorial.rs",
+                """
+                use fret::app::prelude::*;
+
+                fn main() {
+                    let _ = "UiPointerActionHost";
+                    let _ = "PointerRegionProps";
+                    let _ = "DefaultAction::FocusOnPointerDown";
+                }
+                """,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/tutorial.rs",
+                        "default_app_clean",
+                        "fixture default tutorial",
+                    )
+                ],
+                advanced_manual_surfaces=[],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            messages = "\n".join(violation.message for violation in violations)
+            self.assertIn("UiPointerActionHost", messages)
+            self.assertIn("PointerRegionProps", messages)
+            self.assertIn("DefaultAction::FocusOnPointerDown", messages)
+
     def test_prose_mentions_do_not_trip_default_code_scan(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -664,6 +699,7 @@ class SurfacePolicyTests(unittest.TestCase):
     def test_migrated_cookbook_examples_are_default_clean(self) -> None:
         migrated = {
             "apps/fret-cookbook/examples/commands_keymap_basics.rs",
+            "apps/fret-cookbook/examples/drag_basics.rs",
             "apps/fret-cookbook/examples/form_basics.rs",
             "apps/fret-cookbook/examples/imui_action_basics.rs",
             "apps/fret-cookbook/examples/imui_editor_controls_basics.rs",

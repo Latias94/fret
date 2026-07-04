@@ -343,6 +343,7 @@ mod authoring_surface_policy_tests {
         assert_uses_app_surface(IMUI_DEBUG_DRAW_EXAMPLE);
         assert_uses_app_surface(IMUI_EDITOR_CONTROLS_EXAMPLE);
         assert_uses_app_surface(IMUI_PLOT_EXAMPLE);
+        assert_uses_app_surface(DRAG_EXAMPLE);
 
         assert!(HELLO_COUNTER_EXAMPLE.contains("cx.state().local_init(|| 0i64)"));
         assert!(HELLO_COUNTER_EXAMPLE.contains(".locals_with((&count_state, &step_state))"));
@@ -1087,7 +1088,6 @@ mod authoring_surface_policy_tests {
 
     #[test]
     fn advanced_examples_use_the_explicit_advanced_surface() {
-        assert_uses_advanced_surface(DRAG_EXAMPLE);
         assert_uses_advanced_surface(CANVAS_PAN_ZOOM_EXAMPLE);
         assert_uses_advanced_surface(CHART_INTERACTIONS_EXAMPLE);
         assert_uses_advanced_surface(CUSTOM_V1_EXAMPLE);
@@ -1096,10 +1096,6 @@ mod authoring_surface_policy_tests {
         assert_uses_advanced_surface(EXTERNAL_TEXTURE_IMPORT_EXAMPLE);
         assert_uses_advanced_surface(GIZMO_EXAMPLE);
         assert_uses_advanced_surface(UTILITY_WINDOW_MATERIALS_EXAMPLE);
-
-        assert!(DRAG_EXAMPLE.contains("use fret::{FretApp, advanced::prelude::*, shadcn};"));
-        assert!(DRAG_EXAMPLE.contains("use fret::component::prelude::*;"));
-        assert!(DRAG_EXAMPLE.contains("UiPointerActionHost"));
 
         assert!(EFFECTS_LAYER_EXAMPLE.contains("AppComponentCx<'_>"));
         assert!(EFFECTS_LAYER_EXAMPLE.contains("use fret::component::prelude::*;"));
@@ -1314,7 +1310,6 @@ mod authoring_surface_policy_tests {
     #[test]
     fn advanced_view_examples_prefer_app_ui_and_ui_aliases() {
         for src in [
-            DRAG_EXAMPLE,
             EFFECTS_LAYER_EXAMPLE,
             DROP_SHADOW_EXAMPLE,
             ICONS_AND_ASSETS_EXAMPLE,
@@ -1485,8 +1480,15 @@ mod authoring_surface_policy_tests {
     #[test]
     fn advanced_interaction_examples_keep_pointer_region_on_explicit_elements_escape_hatch() {
         let drag = DRAG_EXAMPLE.split_whitespace().collect::<String>();
-        assert!(drag.contains("letdraggable=cx.elements().pointer_region(region,|cx|{"));
-        assert!(!drag.contains("letdraggable=cx.pointer_region(region,|cx|{"));
+        assert!(drag.contains("letdraggable=cx.pointer_region(region,|cx|{"));
+        assert!(!drag.contains("cx.elements().pointer_region(region,|cx|{"));
+        assert!(DRAG_EXAMPLE.contains("use fret::pointer::{"));
+        assert!(DRAG_EXAMPLE.contains("PointerRegion::new().fill_width().height_px(Px(240.0))"));
+        assert!(DRAG_EXAMPLE.contains("cx.prevent_focus_on_pointer_down();"));
+        assert!(DRAG_EXAMPLE.contains("cx.update_local(&origin_model_move"));
+        assert!(!DRAG_EXAMPLE.contains("UiPointerActionHost"));
+        assert!(!DRAG_EXAMPLE.contains("PointerRegionProps"));
+        assert!(!DRAG_EXAMPLE.contains("DefaultAction::FocusOnPointerDown"));
 
         let gizmo = GIZMO_EXAMPLE.split_whitespace().collect::<String>();
         assert!(gizmo.contains("cx.elements().pointer_region(pointer,|cx|{"));
@@ -1616,10 +1618,12 @@ mod authoring_surface_policy_tests {
         assert_selected_examples_prefer_handle_first_tracked_reads(
             DRAG_EXAMPLE,
             &[
-                "let origin = self.origin.layout(cx).value_or(Point::new(Px(0.0), Px(0.0)));",
-                "let drag_count = self.drag_count.layout(cx).value_or(0);",
+                "let origin = self.origin.layout_value(cx);",
+                "let drag_count = self.drag_count.layout_value(cx);",
             ],
             &[
+                "self.origin.layout(cx).value_or",
+                "self.drag_count.layout(cx).value_or",
                 "cx.watch_model(&self.origin)",
                 "cx.watch_model(&self.drag_count)",
             ],

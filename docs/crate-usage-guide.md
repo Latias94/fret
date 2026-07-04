@@ -272,6 +272,12 @@ signatures, import `fret::app::{LocalState, LocalStateTxn}` instead of expecting
 When app code needs explicit command identity, metadata, availability, keybinding, keymap, or
 shortcut-display nouns, import them from `fret::commands::{...}` instead of importing `fret_app`,
 `fret_runtime`, `fret_core`, or `fret_ui` from default app/tutorial code.
+When app code needs low-level pointer streams, import the explicit pointer lane from
+`fret::pointer::{PointerRegion, PointerDown, PointerMove, PointerUp, MouseButton, ...}`. Keep
+`UiPointerActionHost`, `PointerRegionProps`, `DefaultAction`, and direct `fret_ui::action::*`
+hooks out of default tutorials; use `PointerActionCx` helpers such as
+`prevent_focus_on_pointer_down()`, `capture_pointer()`, `set_cursor_icon(...)`,
+`update_local(...)`, and `invalidate_layout()` instead.
 When app code needs explicit semantics nouns, import them intentionally from
 `fret::semantics::{SemanticsDecoration, SemanticsRole}` instead of expecting them from
 `fret::app::prelude::*`.

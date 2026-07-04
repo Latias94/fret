@@ -92,6 +92,11 @@ DEFAULT_AUTHORING_SURFACES: tuple[SurfacePath, ...] = (
         "default cookbook controls should stay on app-facing state helpers",
     ),
     SurfacePath(
+        "apps/fret-cookbook/examples/drag_basics.rs",
+        "default_app_clean",
+        "default drag cookbook should stay on app-facing pointer and local-state helpers",
+    ),
+    SurfacePath(
         "apps/fret-cookbook/examples/markdown_and_code_basics.rs",
         "default_app_clean",
         "default cookbook controls should stay on app-facing state helpers",
@@ -530,11 +535,6 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
         ),
     ),
     _cookbook_advanced_surface(
-        "drag_basics.rs",
-        "drag still needs raw pointer-action and model seams until a pointer wrapper exists",
-        ("fret::advanced", "fret_core", "fret_runtime", "fret_ui", "AnyElement"),
-    ),
-    _cookbook_advanced_surface(
         "embedded_viewport_basics.rs",
         "embedded viewport interop still needs manual kernel, model, and element context seams",
         ("fret::advanced", "fret_core", "fret_runtime", "fret_ui", "ElementContext"),
@@ -698,6 +698,18 @@ DEFAULT_FORBIDDEN_PATTERNS: tuple[tuple[str, str], ...] = (
     (
         r"\bModelStore\b",
         "`ModelStore` is a raw runtime seam; default app surfaces should use app-facing state/action/data helpers",
+    ),
+    (
+        r"\bUiPointerActionHost\b",
+        "`UiPointerActionHost` is a raw pointer mechanism; default app surfaces should use `fret::pointer` helpers",
+    ),
+    (
+        r"\bPointerRegionProps\b",
+        "`PointerRegionProps` is a mechanism prop bag; default app surfaces should use `fret::pointer::PointerRegion`",
+    ),
+    (
+        r"\bDefaultAction::FocusOnPointerDown\b",
+        "`DefaultAction::FocusOnPointerDown` is a raw runtime default; default app surfaces should use `PointerActionCx::prevent_focus_on_pointer_down`",
     ),
 )
 

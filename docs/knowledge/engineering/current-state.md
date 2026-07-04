@@ -10,16 +10,16 @@ related_plan: docs/plans/2026-07-03-001-refactor-ui-framework-phase3-retained-br
 
 - Goal: execute `docs/plans/2026-07-03-001-refactor-ui-framework-phase3-retained-bridge-deletion-plan.md` as a breaking Phase 3 retained-bridge deletion refactor.
 - Branch: `feat/ui-framework-phase2-refactor`.
-- Last verified: Phase 3 U13 IMUI plot binding migration passed focused plot/cookbook tests,
-  `fret-cookbook --all-targets`, `fret-plot --features imui --all-targets`,
-  `fret-examples-imui --all-targets`, source-policy/consumption/execution/layering gates,
-  formatting, and whitespace on 2026-07-04. Full `fret-ui` nextest still has a local long-running
-  caveat for the two `stack_safety` deep-tree tests.
+- Last verified: Phase 3 U13 pointer drag facade passed focused `fret` facade tests,
+  `fret-cookbook --all-targets`, full `fret-cookbook` lib nextest,
+  source-policy/consumption/execution/layering gates, formatting, and whitespace on 2026-07-04.
+  Full `fret-ui` nextest still has a local long-running caveat for the two `stack_safety`
+  deep-tree tests.
 - Done: local ADR/workstream research, crate/perf snapshots, GPUI/Zed comparison, architecture boundary audit, framework consumer audit, performance audit, implementation-ready plan, U1 convergence contract freeze, U2 source-policy gate, U3 first slice (`workbench-lite` public scaffold), U4 identity/dirty graph observability slices, U5 `ViewId` / boundary frame-product ownership slices, U6 policy vocabulary demotion/cleanup slices, U7 renderer scene/upload observability plus retained scene chunk and guarded quad resident upload lanes, U8 text/glyph/wasm budget work through web runtime evidence, U9 modular consumption profiles and `AppUi` facade split, Phase 2 U9 VertexColor viewport partial upload, Phase 2 U10 workbench-lite public settings diagnostics, Phase 2 U11 public mutation/toast wrappers, Phase 3 U9 manifest closure v2, Phase 3 U10 authoritative chunk launch, Phase 3 U11 partial upload stream policy, Phase 3 U12 public app facade cleanup, workstream closeout audit, duplicate ADR ID `0324` resolution, and execution-surface allowlist alignment.
-- Latest done: Phase 3 U13 IMUI plot binding migration adds
-  `fret_plot::LinePlotPanelBinding` plus `fret_plot::imui::line_plot_panel_binding(...)`, migrates
-  `imui_plot_basics.rs` off raw `Model<T>` / `ModelStore` / `ColumnProps` / root `imui_raw(...)`,
-  and moves the example to default clean source-policy coverage.
+- Latest done: Phase 3 U13 pointer drag facade adds explicit `fret::pointer` helpers, migrates
+  `drag_basics.rs` off raw pointer action host, raw `Model<T>`, `PointerRegionProps`,
+  `fret_core`, `fret_runtime`, `fret_ui`, and `advanced::prelude`, and moves the example to
+  default clean source-policy coverage.
 - In progress: Phase 3 retained bridge closeout / remaining U13 cookbook and quarantine
   classification,
   with the
@@ -77,14 +77,19 @@ related_plan: docs/plans/2026-07-03-001-refactor-ui-framework-phase3-retained-br
   [IMUI debug draw host cleanup](progress/2026-07-04-phase3-u13-imui-debug-draw-host.md)
   and the
   [IMUI plot binding migration](progress/2026-07-04-phase3-u13-imui-plot-binding.md)
+  and the
+  [pointer drag facade migration](progress/2026-07-04-phase3-u13-pointer-drag-facade.md)
   plus the
   [cookbook quarantine readonly audit](subagents/2026-07-03-phase3-u13-cookbook-quarantine-readonly-audit.md)
   and the
   [IMUI cookbook facade audits](subagents/2026-07-03-phase3-u13-imui-cookbook-facade-audit.md)
+  plus the
+  [cookbook quarantine follow-up audit](subagents/2026-07-04-phase3-u13-cookbook-quarantine-followup-audit.md)
   leaving remaining U13 work to audit and migrate the still-advanced cookbook/example surfaces.
 - Blocked: none known after the boundary store migration.
-- Next action: continue U13 by auditing the remaining advanced/manual cookbook/example records;
-  keep `async_inbox_basics.rs` deferred until an app-facing host/effect action helper exists.
+- Next action: continue U13 with `async_inbox_basics.rs` by designing an app-facing background
+  job / inbox action helper; then reuse the new pointer facade while migrating
+  `canvas_pan_zoom_basics.rs`.
 
 # Citations
 
@@ -137,9 +142,11 @@ related_plan: docs/plans/2026-07-03-001-refactor-ui-framework-phase3-retained-br
 - [Phase 3 U13 IMUI editor local-state migration](progress/2026-07-03-phase3-u13-imui-editor-local-state.md)
 - [Phase 3 U13 IMUI debug draw host cleanup](progress/2026-07-04-phase3-u13-imui-debug-draw-host.md)
 - [Phase 3 U13 IMUI plot binding migration](progress/2026-07-04-phase3-u13-imui-plot-binding.md)
+- [Phase 3 U13 pointer drag facade](progress/2026-07-04-phase3-u13-pointer-drag-facade.md)
 - [Phase 3 U13 cookbook quarantine readonly audit](subagents/2026-07-03-phase3-u13-cookbook-quarantine-readonly-audit.md)
 - [Phase 3 U13 advanced facade audits](subagents/2026-07-03-phase3-u13-advanced-facade-audits.md)
 - [Phase 3 U13 IMUI cookbook facade audits](subagents/2026-07-03-phase3-u13-imui-cookbook-facade-audit.md)
+- [Phase 3 U13 cookbook quarantine follow-up audit](subagents/2026-07-04-phase3-u13-cookbook-quarantine-followup-audit.md)
 - [Phase 1 convergence plan](../../plans/2026-06-30-001-refactor-ui-framework-architecture-plan.md)
 - [Subagent Findings](subagents/2026-06-30-ui-framework-architecture-audit-findings.md)
 - [U9 AppUi shell split audit](subagents/2026-07-02-u9-appui-shell-split-audit.md)

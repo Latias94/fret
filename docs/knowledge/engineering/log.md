@@ -594,3 +594,15 @@ timestamp: 2026-06-30
   `fret-plot --features imui --all-targets`, `fret-examples-imui --all-targets`,
   source-policy tests/gate, IMUI teaching gate, consumption-profile, execution-surface, layering,
   formatting, and whitespace.
+- 2026-07-04: Readonly explorer `019f2a73-1db6-7120-9e17-ff6fa325931b` audited remaining U13
+  cookbook quarantine records and confirmed that each remaining allowlist entry still maps to a
+  real raw seam. It recommended `drag_basics.rs`, `async_inbox_basics.rs`, and
+  `canvas_pan_zoom_basics.rs` as the next migration order, with chart/docking/viewport/gizmo and
+  renderer proof examples remaining advanced for now.
+- 2026-07-04: Phase 3 U13 pointer drag facade adds explicit `fret::pointer` app authoring helpers,
+  migrates `drag_basics.rs` off raw pointer action host, raw `Model<T>`, `PointerRegionProps`,
+  `fret_core`, `fret_runtime`, `fret_ui`, and `advanced::prelude`, moves it to default clean
+  source-policy coverage, and adds default-surface bans for raw pointer mechanisms. Verification
+  passed for focused `fret` facade tests, `fret-cookbook --all-targets`, full `fret-cookbook`
+  lib nextest, source-policy tests/gate, consumption-profile, execution-surface, layering,
+  formatting, and whitespace.
