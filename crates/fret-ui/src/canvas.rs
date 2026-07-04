@@ -94,6 +94,10 @@ impl<T: crate::tree::BoundarySceneFragmentDebug> crate::tree::BoundarySceneFragm
     }
 
     fn boundary_scene_fragment_fingerprint(&self) -> u64 {
+        if self.chunk.is_empty() {
+            return 0;
+        }
+
         fret_core::SceneChunkManifestEntry::new(
             self.chunk.clone(),
             self.local_bounds,

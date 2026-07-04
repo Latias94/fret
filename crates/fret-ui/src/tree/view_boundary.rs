@@ -1656,7 +1656,15 @@ mod boundary_frame_products_tests {
         assert_eq!(state.frame_products.scene_fragment.fingerprint(), 0xF00D);
         let manifest = state.frame_products.scene_fragment.chunk_manifest();
         assert_eq!(manifest.len(), 1);
-        assert_eq!(manifest.chunks()[0].fingerprint(), chunk.fingerprint());
+        assert_eq!(
+            manifest.chunks()[0].fingerprint(),
+            fret_core::SceneChunkManifestEntry::new(
+                chunk,
+                Rect::new(Point::default(), Size::new(Px(10.0), Px(10.0))),
+                Point::default(),
+            )
+            .fingerprint()
+        );
         assert_eq!(state.frame_products.scene_fragment.used_entries(), 2);
         assert_eq!(state.frame_products.scene_fragment.rejected_entries(), 1);
         assert_eq!(
