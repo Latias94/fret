@@ -2,7 +2,6 @@ use std::sync::Arc;
 
 use fret::app::prelude::*;
 use fret::style::{LayoutRefinement, Space};
-use fret_app::Effect;
 
 const TEST_ID_ROOT: &str = "cookbook.theme_switching_basics.root";
 const TEST_ID_TOGGLE: &str = "cookbook.theme_switching_basics.toggle";
@@ -58,9 +57,8 @@ impl View for ThemeSwitchingBasicsView {
         if applied_mismatch {
             apply_scheme(cx.app_mut(), scheme.as_ref());
             self.applied_scheme = Some(scheme.clone());
-            let app = cx.app_mut();
-            app.request_redraw(self.window);
-            app.push_effect(Effect::RequestAnimationFrame(self.window));
+            cx.app_mut().request_redraw(self.window);
+            cx.request_animation_frame();
         }
 
         let scheme_label = match scheme.as_ref() {

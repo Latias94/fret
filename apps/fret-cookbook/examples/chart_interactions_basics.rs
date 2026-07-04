@@ -1,16 +1,28 @@
-use delinea::data::{Column, DataTable};
-use delinea::engine::window::DataWindow;
-use delinea::{
-    Action, AxisKind, AxisPointerSpec, AxisPointerTrigger, AxisPointerType, AxisScale, ChartEngine,
+use fret::app::prelude::*;
+use fret::app::{LocalState, RenderContextAccess as _};
+use fret::chart::delinea::data::{Column, DataTable};
+use fret::chart::{
+    self, ChartCanvasOutput, ChartEngine, ChartInputMap, DataWindow,
+    delinea::{
+        self, Action, AxisKind, AxisPointerSpec, AxisPointerTrigger, AxisPointerType, AxisScale,
+    },
 };
-use fret::component::prelude::*;
-use fret::{advanced::prelude::*, shadcn};
-use fret_app::{CommandMeta, CommandScope};
-use fret_core::{AppWindowId, Px, SemanticsRole};
-use fret_runtime::CommandId;
-use fret_ui::element::{SemanticsDecoration, SemanticsProps, ViewCacheProps};
+use fret::children::UiElementSinkExt as _;
+use fret::commands::{CommandId, CommandMeta, CommandScope};
+use fret::semantics::{SemanticsDecoration, SemanticsRole};
+use fret::style::{ColorRef, Radius, Space};
 
 const ROOT_NAME: &str = "cookbook-chart-interactions-basics";
+
+mod act {
+    fret::actions!([
+        ZoomIn = "cookbook.chart.zoom_in",
+        ZoomOut = "cookbook.chart.zoom_out",
+        ResetView = "cookbook.chart.reset_view",
+        SelectHover = "cookbook.chart.select_hover",
+        ClearSelection = "cookbook.chart.clear_selection",
+    ]);
+}
 
 const TEST_ID_ROOT: &str = "cookbook.chart_interactions_basics.root";
 const TEST_ID_CANVAS: &str = "cookbook.chart_interactions_basics.canvas";
@@ -20,12 +32,6 @@ const TEST_ID_RESET_VIEW: &str = "cookbook.chart_interactions_basics.reset_view"
 const TEST_ID_X_SPAN: &str = "cookbook.chart_interactions_basics.x_span";
 const TEST_ID_HOVER_INDEX: &str = "cookbook.chart_interactions_basics.hover_index";
 const TEST_ID_SELECTED_INDEX: &str = "cookbook.chart_interactions_basics.selected_index";
-
-const CMD_ZOOM_IN: &str = "cookbook.chart.zoom_in";
-const CMD_ZOOM_OUT: &str = "cookbook.chart.zoom_out";
-const CMD_RESET_VIEW: &str = "cookbook.chart.reset_view";
-const CMD_SELECT_HOVER: &str = "cookbook.chart.select_hover";
-const CMD_CLEAR_SELECTION: &str = "cookbook.chart.clear_selection";
 
 #[derive(Debug, Clone, Copy)]
 struct ChartIds {
@@ -110,39 +116,48 @@ fn zoom_window(base: DataWindow, current: DataWindow, factor: f64) -> DataWindow
     out
 }
 
-fn install_commands(app: &mut KernelApp) {
+fn install_commands(app: &mut App) {
     let scope = CommandScope::Widget;
 
+    let zoom_in: CommandId = act::ZoomIn.into();
     app.commands_mut().register(
-        CommandId::from(CMD_ZOOM_IN),
+        zoom_in,
         CommandMeta::new("Zoom in (X)")
             .with_description("Zoom the X axis window in by 2x (app-driven).")
             .with_category("Chart")
             .with_scope(scope),
     );
+
+    let zoom_out: CommandId = act::ZoomOut.into();
     app.commands_mut().register(
-        CommandId::from(CMD_ZOOM_OUT),
+        zoom_out,
         CommandMeta::new("Zoom out (X)")
             .with_description("Zoom the X axis window out by 2x (app-driven).")
             .with_category("Chart")
             .with_scope(scope),
     );
+
+    let reset_view: CommandId = act::ResetView.into();
     app.commands_mut().register(
-        CommandId::from(CMD_RESET_VIEW),
+        reset_view,
         CommandMeta::new("Reset view")
             .with_description("Reset the axis windows to a known baseline.")
             .with_category("Chart")
             .with_scope(scope),
     );
+
+    let select_hover: CommandId = act::SelectHover.into();
     app.commands_mut().register(
-        CommandId::from(CMD_SELECT_HOVER),
+        select_hover,
         CommandMeta::new("Select hovered point")
             .with_description("Copy the current axis pointer hit into an app-owned selection.")
             .with_category("Chart")
             .with_scope(scope),
     );
+
+    let clear_selection: CommandId = act::ClearSelection.into();
     app.commands_mut().register(
-        CommandId::from(CMD_CLEAR_SELECTION),
+        clear_selection,
         CommandMeta::new("Clear selection")
             .with_description("Clear the app-owned selection.")
             .with_category("Chart")
@@ -150,19 +165,19 @@ fn install_commands(app: &mut KernelApp) {
     );
 }
 
-struct ChartInteractionsWindowState {
+struct ChartInteractionsView {
     ids: ChartIds,
     spec: delinea::ChartSpec,
-    engine: Model<ChartEngine>,
-    output: Model<fret_chart::ChartCanvasOutput>,
+    engine: LocalState<ChartEngine>,
+    output: LocalState<ChartCanvasOutput>,
     base_x: DataWindow,
     base_y: DataWindow,
-    x_window: DataWindow,
-    y_window: DataWindow,
-    selected: Option<u32>,
+    x_window: LocalState<DataWindow>,
+    y_window: LocalState<DataWindow>,
+    selected: LocalState<Option<u32>>,
 }
 
-fn init_window(app: &mut KernelApp, _window: AppWindowId) -> ChartInteractionsWindowState {
+fn build_chart(app: &mut App) -> ChartInteractionsView {
     let ids = chart_ids();
 
     let x: Vec<f64> = (0..12).map(|i| i as f64).collect();
@@ -257,263 +272,238 @@ fn init_window(app: &mut KernelApp, _window: AppWindowId) -> ChartInteractionsWi
         y: Some(base_y),
     });
 
-    ChartInteractionsWindowState {
+    ChartInteractionsView {
         ids,
         spec,
-        engine: app.models_mut().insert(engine),
-        output: app
-            .models_mut()
-            .insert(fret_chart::ChartCanvasOutput::default()),
+        engine: app.local_state(engine),
+        output: app.local_state(ChartCanvasOutput::default()),
         base_x,
         base_y,
-        x_window: base_x,
-        y_window: base_y,
-        selected: None,
+        x_window: app.local_state(base_x),
+        y_window: app.local_state(base_y),
+        selected: app.local_state(None),
     }
 }
 
-fn chart_canvas(cx: &mut AppComponentCx<'_>, st: &ChartInteractionsWindowState) -> AnyElement {
-    use fret_chart::{ChartCanvasPanelProps, chart_canvas_panel_in};
+impl ChartInteractionsView {
+    fn bind_actions(&self, cx: &mut AppUi<'_, '_>) {
+        let ids = self.ids;
+        let base_x = self.base_x;
+        cx.actions()
+            .locals_with((&self.x_window, &self.engine))
+            .on::<act::ZoomIn>(move |tx, (x_window, engine)| {
+                let current = tx.value(&x_window);
+                let next = zoom_window(base_x, current, 0.5);
+                let ok = tx.set(&x_window, next);
+                tx.update(&engine, move |engine| {
+                    engine.apply_action(Action::SetDataWindowX {
+                        axis: ids.x_axis,
+                        window: Some(next),
+                    });
+                }) && ok
+            });
 
-    let spec = st.spec.clone();
-    let engine = st.engine.clone();
-    let output = st.output.clone();
+        let ids = self.ids;
+        let base_x = self.base_x;
+        cx.actions()
+            .locals_with((&self.x_window, &self.engine))
+            .on::<act::ZoomOut>(move |tx, (x_window, engine)| {
+                let current = tx.value(&x_window);
+                let next = zoom_window(base_x, current, 2.0);
+                let ok = tx.set(&x_window, next);
+                tx.update(&engine, move |engine| {
+                    engine.apply_action(Action::SetDataWindowX {
+                        axis: ids.x_axis,
+                        window: Some(next),
+                    });
+                }) && ok
+            });
 
-    cx.view_cache(
-        ViewCacheProps::default().contain_layout_when_bounds_known(true),
-        move |cx: &mut AppComponentCx<'_>| {
-            let mut props = ChartCanvasPanelProps::new(spec)
-                .output_model(output)
-                .input_map(fret_chart::input_map::ChartInputMap::default())
-                .accessibility_layer(true)
-                .test_id(TEST_ID_CANVAS);
-            props.engine = Some(engine);
-            vec![chart_canvas_panel_in(cx, props)]
-        },
-    )
+        let ids = self.ids;
+        let base_x = self.base_x;
+        let base_y = self.base_y;
+        cx.actions()
+            .locals_with((&self.x_window, &self.y_window, &self.selected, &self.engine))
+            .on::<act::ResetView>(move |tx, (x_window, y_window, selected, engine)| {
+                let ok = tx.set(&x_window, base_x);
+                let ok = tx.set(&y_window, base_y) && ok;
+                let ok = tx.set(&selected, None) && ok;
+                tx.update(&engine, move |engine| {
+                    engine.apply_action(Action::SetViewWindow2D {
+                        x_axis: ids.x_axis,
+                        y_axis: ids.y_axis,
+                        x: Some(base_x),
+                        y: Some(base_y),
+                    });
+                }) && ok
+            });
+
+        cx.actions()
+            .locals_with((&self.engine, &self.selected))
+            .on::<act::SelectHover>(|tx, (engine, selected)| {
+                let hit = tx
+                    .read_ref(&engine, |engine| {
+                        engine.output().axis_pointer.as_ref().and_then(|o| o.hit)
+                    })
+                    .ok()
+                    .flatten();
+                let Some(hit) = hit else {
+                    return false;
+                };
+                tx.set(&selected, Some(hit.data_index))
+            });
+
+        cx.actions()
+            .local(&self.selected)
+            .set::<act::ClearSelection>(None);
+    }
 }
 
-fn view(
-    cx: &mut ElementContext<'_, KernelApp>,
-    st: &mut ChartInteractionsWindowState,
-) -> ViewElements {
-    let theme = cx.theme().snapshot();
+impl View for ChartInteractionsView {
+    fn init(app: &mut App, _window: WindowId) -> Self {
+        build_chart(app)
+    }
 
-    let (x_span, hover_index) = {
-        let x_span = (st.x_window.max - st.x_window.min).max(0.0);
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
+        let theme = cx.theme_snapshot();
+        self.bind_actions(cx);
 
-        let hover_index = st
-            .engine
-            .paint(cx)
-            .read_ref(|engine| {
-                engine
-                    .output()
-                    .axis_pointer
-                    .as_ref()
-                    .and_then(|o| o.hit.map(|h| h.data_index))
-                    .map(|v| v as f64)
-                    .unwrap_or(-1.0)
-            })
+        let x_window = self.x_window.layout_value(cx);
+        let x_span = (x_window.max - x_window.min).max(0.0);
+        let hover_index = self.engine.paint_read_ref(cx, |engine| {
+            engine
+                .output()
+                .axis_pointer
+                .as_ref()
+                .and_then(|o| o.hit.map(|h| h.data_index))
+                .map(|v| v as f64)
+                .unwrap_or(-1.0)
+        });
+        let selected_index = self
+            .selected
+            .layout_value(cx)
+            .map(|v| v as f64)
             .unwrap_or(-1.0);
 
-        (x_span, hover_index)
-    };
+        let toolbar = ui::h_flex(|cx| {
+            let x_span_badge = shadcn::Badge::new(format!("X span: {x_span:.2}"))
+                .variant(shadcn::BadgeVariant::Secondary)
+                .a11y(
+                    SemanticsDecoration::default()
+                        .role(SemanticsRole::Generic)
+                        .test_id(TEST_ID_X_SPAN)
+                        .numeric_value(x_span)
+                        .numeric_range(0.0, (self.base_x.max - self.base_x.min).max(1.0)),
+                );
 
-    let toolbar = ui::h_flex(|cx| {
-        let x_span_badge = shadcn::Badge::new(format!("X span: {x_span:.2}"))
-            .variant(shadcn::BadgeVariant::Secondary)
-            .a11y(
-                SemanticsDecoration::default()
-                    .role(SemanticsRole::Generic)
-                    .test_id(TEST_ID_X_SPAN)
-                    .numeric_value(x_span)
-                    .numeric_range(0.0, (st.base_x.max - st.base_x.min).max(1.0)),
-            );
+            let hover_badge = shadcn::Badge::new(format!("Hover index: {hover_index:.0}"))
+                .variant(shadcn::BadgeVariant::Secondary)
+                .a11y(
+                    SemanticsDecoration::default()
+                        .role(SemanticsRole::Generic)
+                        .test_id(TEST_ID_HOVER_INDEX)
+                        .numeric_value(hover_index)
+                        .numeric_range(-1.0, (self.base_x.max - self.base_x.min).max(1.0)),
+                );
 
-        let hover_badge = shadcn::Badge::new(format!("Hover index: {hover_index:.0}"))
-            .variant(shadcn::BadgeVariant::Secondary)
-            .a11y(
-                SemanticsDecoration::default()
-                    .role(SemanticsRole::Generic)
-                    .test_id(TEST_ID_HOVER_INDEX)
-                    .numeric_value(hover_index)
-                    .numeric_range(-1.0, (st.base_x.max - st.base_x.min).max(1.0)),
-            );
+            let selected_badge = shadcn::Badge::new(format!("Selected index: {selected_index:.0}"))
+                .variant(shadcn::BadgeVariant::Secondary)
+                .a11y(
+                    SemanticsDecoration::default()
+                        .role(SemanticsRole::Generic)
+                        .test_id(TEST_ID_SELECTED_INDEX)
+                        .numeric_value(selected_index)
+                        .numeric_range(-1.0, (self.base_x.max - self.base_x.min).max(1.0)),
+                );
 
-        let selected_index = st.selected.map(|v| v as f64).unwrap_or(-1.0);
-        let selected_badge = shadcn::Badge::new(format!("Selected index: {selected_index:.0}"))
-            .variant(shadcn::BadgeVariant::Secondary)
-            .a11y(
-                SemanticsDecoration::default()
-                    .role(SemanticsRole::Generic)
-                    .test_id(TEST_ID_SELECTED_INDEX)
-                    .numeric_value(selected_index)
-                    .numeric_range(-1.0, (st.base_x.max - st.base_x.min).max(1.0)),
-            );
+            ui::children![
+                cx;
+                shadcn::Button::new("Zoom in (X)")
+                    .variant(shadcn::ButtonVariant::Secondary)
+                    .action(act::ZoomIn)
+                    .test_id(TEST_ID_ZOOM_IN),
+                shadcn::Button::new("Zoom out (X)")
+                    .variant(shadcn::ButtonVariant::Secondary)
+                    .action(act::ZoomOut)
+                    .test_id(TEST_ID_ZOOM_OUT),
+                shadcn::Button::new("Reset view")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .action(act::ResetView)
+                    .test_id(TEST_ID_RESET_VIEW),
+                shadcn::Button::new("Select hovered")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .action(act::SelectHover),
+                shadcn::Button::new("Clear selection")
+                    .variant(shadcn::ButtonVariant::Ghost)
+                    .action(act::ClearSelection),
+                x_span_badge,
+                hover_badge,
+                selected_badge,
+            ]
+        })
+        .gap(Space::N2)
+        .items_center();
 
-        ui::children![
-            cx;
-            shadcn::Button::new("Zoom in (X)")
-                .variant(shadcn::ButtonVariant::Secondary)
-                .action(CMD_ZOOM_IN)
-                .test_id(TEST_ID_ZOOM_IN),
-            shadcn::Button::new("Zoom out (X)")
-                .variant(shadcn::ButtonVariant::Secondary)
-                .action(CMD_ZOOM_OUT)
-                .test_id(TEST_ID_ZOOM_OUT),
-            shadcn::Button::new("Reset view")
-                .variant(shadcn::ButtonVariant::Outline)
-                .action(CMD_RESET_VIEW)
-                .test_id(TEST_ID_RESET_VIEW),
-            shadcn::Button::new("Select hovered")
-                .variant(shadcn::ButtonVariant::Outline)
-                .action(CMD_SELECT_HOVER),
-            shadcn::Button::new("Clear selection")
-                .variant(shadcn::ButtonVariant::Ghost)
-                .action(CMD_CLEAR_SELECTION),
-            x_span_badge,
-            hover_badge,
-            selected_badge,
-        ]
-    })
-    .gap(Space::N2)
-    .items_center();
+        let canvas = chart::ChartCanvas::new(self.spec.clone())
+            .engine(&self.engine)
+            .output(&self.output)
+            .input_map(ChartInputMap::default())
+            .accessibility_layer(true)
+            .test_id(TEST_ID_CANVAS)
+            .contain_layout_when_bounds_known(true)
+            .into_element(cx);
 
-    let canvas = chart_canvas(cx, st);
+        let canvas_shell = ui::container(|_cx| vec![canvas])
+            .bg(ColorRef::Color(theme.color_token("card")))
+            .border_1()
+            .rounded(Radius::Lg)
+            .p(Space::N2)
+            .w_full()
+            .h_full()
+            .min_h(Px(420.0));
 
-    let canvas_shell = ui::container(|_cx| vec![canvas])
-        .bg(ColorRef::Color(theme.color_token("card")))
-        .border_1()
-        .rounded(Radius::Lg)
-        .p(Space::N2)
+        let card = shadcn::card(|cx| {
+            ui::children![
+                cx;
+                shadcn::card_header(|cx| {
+                    ui::children![
+                        cx;
+                        shadcn::card_title("Chart interactions basics"),
+                        shadcn::card_description(
+                            "Minimal shared delinea engine + declarative chart canvas panel. App-owned zoom + selection; axis pointer hover for exploration.",
+                        ),
+                    ]
+                }),
+                shadcn::card_content(|cx| {
+                    ui::children![
+                        cx;
+                        ui::v_flex(|cx| ui::children![cx; toolbar, canvas_shell])
+                            .gap(Space::N3)
+                            .w_full()
+                            .h_full()
+                            .min_w_0(),
+                    ]
+                }),
+            ]
+        })
+        .ui()
         .w_full()
         .h_full()
-        .min_h(Px(420.0));
+        .max_w(Px(1100.0))
+        .a11y(SemanticsDecoration::default().role(SemanticsRole::Group));
 
-    let card = shadcn::card(|cx| {
-        ui::children![
-            cx;
-            shadcn::card_header(|cx| {
-                ui::children![
-                    cx;
-                    shadcn::card_title("Chart interactions basics"),
-                    shadcn::card_description(
-                        "Minimal shared delinea engine + declarative chart canvas panel. App-owned zoom + selection; axis pointer hover for exploration.",
-                    ),
-                ]
-            }),
-            shadcn::card_content(|cx| {
-                ui::children![
-                    cx;
-                    ui::v_flex(|cx| ui::children![cx; toolbar, canvas_shell])
-                        .gap(Space::N3)
-                        .w_full()
-                        .h_full()
-                        .min_w_0(),
-                ]
-            }),
-        ]
-    })
-    .ui()
-    .w_full()
-    .h_full()
-    .max_w(Px(1100.0));
-
-    let root = fret_cookbook::scaffold::centered_page_muted(cx, TEST_ID_ROOT, card);
-
-    vec![cx.semantics(
-        SemanticsProps {
-            role: SemanticsRole::Group,
-            test_id: None,
-            ..Default::default()
-        },
-        move |_cx| root.into_vec(),
-    )]
-    .into()
-}
-
-fn on_command(
-    _app: &mut KernelApp,
-    _services: &mut dyn fret_core::UiServices,
-    _window: AppWindowId,
-    _ui: &mut fret_ui::UiTree<KernelApp>,
-    st: &mut ChartInteractionsWindowState,
-    command: &CommandId,
-) {
-    let cmd = command.as_str();
-
-    if cmd == CMD_CLEAR_SELECTION {
-        st.selected = None;
-        return;
+        fret_cookbook::scaffold::centered_page_muted(cx, TEST_ID_ROOT, card).into()
     }
-
-    if cmd == CMD_SELECT_HOVER {
-        let hit = st
-            .engine
-            .read_ref(_app, |engine| {
-                engine.output().axis_pointer.as_ref().and_then(|o| o.hit)
-            })
-            .ok()
-            .flatten();
-        if let Some(hit) = hit {
-            st.selected = Some(hit.data_index);
-        }
-        return;
-    }
-
-    let current_x = st.x_window;
-
-    match cmd {
-        CMD_ZOOM_IN => {
-            let window = zoom_window(st.base_x, current_x, 0.5);
-            st.x_window = window;
-            let _ = st.engine.update(_app, |engine, _cx| {
-                engine.apply_action(Action::SetDataWindowX {
-                    axis: st.ids.x_axis,
-                    window: Some(window),
-                });
-            });
-        }
-        CMD_ZOOM_OUT => {
-            let window = zoom_window(st.base_x, current_x, 2.0);
-            st.x_window = window;
-            let _ = st.engine.update(_app, |engine, _cx| {
-                engine.apply_action(Action::SetDataWindowX {
-                    axis: st.ids.x_axis,
-                    window: Some(window),
-                });
-            });
-        }
-        CMD_RESET_VIEW => {
-            st.selected = None;
-            st.x_window = st.base_x;
-            st.y_window = st.base_y;
-            let _ = st.engine.update(_app, |engine, _cx| {
-                engine.apply_action(Action::SetViewWindow2D {
-                    x_axis: st.ids.x_axis,
-                    y_axis: st.ids.y_axis,
-                    x: Some(st.base_x),
-                    y: Some(st.base_y),
-                });
-            });
-        }
-        _ => {}
-    }
-}
-
-fn configure_driver(
-    driver: UiAppDriver<ChartInteractionsWindowState>,
-) -> UiAppDriver<ChartInteractionsWindowState> {
-    driver.on_command(on_command)
 }
 
 fn main() -> anyhow::Result<()> {
-    let builder = ui_app_with_hooks(ROOT_NAME, init_window, view, configure_driver)
-        .with_main_window("cookbook-chart-interactions-basics", (1120.0, 820.0))
-        .with_command_default_keybindings()
+    let builder = FretApp::new(ROOT_NAME)
+        .window("cookbook-chart-interactions-basics", (1120.0, 820.0))
         .setup(install_commands)
         .setup((shadcn::app::install, fret_icons_lucide::app::install))
         .setup(fret_cookbook::install_cookbook_defaults)
+        .view::<ChartInteractionsView>()?
+        .with_command_default_keybindings()
         .with_ui_assets_budgets(64 * 1024 * 1024, 4096, 16 * 1024 * 1024, 4096);
 
     #[cfg(feature = "cookbook-diag")]

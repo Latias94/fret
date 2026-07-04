@@ -10,17 +10,18 @@ related_plan: docs/plans/2026-07-03-001-refactor-ui-framework-phase3-retained-br
 
 - Goal: execute `docs/plans/2026-07-03-001-refactor-ui-framework-phase3-retained-bridge-deletion-plan.md` as a breaking Phase 3 retained-bridge deletion refactor.
 - Branch: `feat/ui-framework-phase2-refactor`.
-- Last verified: Phase 3 U13 canvas facade passed focused `fret` facade tests,
-  `fret-cookbook --all-targets`, canvas-feature cookbook checks, full `fret-cookbook` lib
-  nextest, source-policy/consumption/execution/layering gates, formatting, and whitespace on
-  2026-07-04.
+- Last verified: Phase 3 U13 chart facade passed focused `fret` facade tests,
+  `fret-cookbook --all-targets`, chart-feature cookbook checks, full `fret-cookbook` lib nextest,
+  source-policy/consumption/execution/layering gates, formatting, and whitespace on 2026-07-04.
   Full `fret-ui` nextest still has a local long-running caveat for the two `stack_safety`
   deep-tree tests.
 - Done: local ADR/workstream research, crate/perf snapshots, GPUI/Zed comparison, architecture boundary audit, framework consumer audit, performance audit, implementation-ready plan, U1 convergence contract freeze, U2 source-policy gate, U3 first slice (`workbench-lite` public scaffold), U4 identity/dirty graph observability slices, U5 `ViewId` / boundary frame-product ownership slices, U6 policy vocabulary demotion/cleanup slices, U7 renderer scene/upload observability plus retained scene chunk and guarded quad resident upload lanes, U8 text/glyph/wasm budget work through web runtime evidence, U9 modular consumption profiles and `AppUi` facade split, Phase 2 U9 VertexColor viewport partial upload, Phase 2 U10 workbench-lite public settings diagnostics, Phase 2 U11 public mutation/toast wrappers, Phase 3 U9 manifest closure v2, Phase 3 U10 authoritative chunk launch, Phase 3 U11 partial upload stream policy, Phase 3 U12 public app facade cleanup, workstream closeout audit, duplicate ADR ID `0324` resolution, and execution-surface allowlist alignment.
-- Latest done: Phase 3 U13 canvas facade adds optional `fret/canvas` and explicit
-  `fret::canvas` helpers, migrates `canvas_pan_zoom_basics.rs` off raw `Model<T>`, raw pointer
-  callbacks, `CanvasPainter`, `CanvasCachePolicy`, `fret_canvas::`, `fret_core::`,
-  `fret_runtime::`, and `fret_ui::`, and moves the example to default clean source-policy coverage.
+- Latest done: Phase 3 U13 chart facade adds optional `fret/chart` and explicit `fret::chart`
+  helpers, migrates `chart_interactions_basics.rs` off `ui_app_with_hooks`, `UiAppDriver`, raw
+  `Model<ChartEngine>`, `ChartCanvasPanelProps`, `ViewCacheProps`, `fret_chart::`, `fret_app::`,
+  `fret_runtime::`, `fret_core::`, and `fret_ui::`, fixes a default-surface `fret_app::Effect`
+  leak in `theme_switching_basics.rs`, and moves the chart example to default clean
+  source-policy coverage.
 - In progress: Phase 3 retained bridge closeout / remaining U13 cookbook and quarantine
   classification,
   with the
@@ -84,6 +85,8 @@ related_plan: docs/plans/2026-07-03-001-refactor-ui-framework-phase3-retained-br
   [async inbox facade migration](progress/2026-07-04-phase3-u13-async-inbox-facade.md)
   and the
   [canvas facade migration](progress/2026-07-04-phase3-u13-canvas-facade.md)
+  and the
+  [chart facade migration](progress/2026-07-04-phase3-u13-chart-facade.md)
   plus the
   [cookbook quarantine readonly audit](subagents/2026-07-03-phase3-u13-cookbook-quarantine-readonly-audit.md)
   and the
@@ -92,11 +95,13 @@ related_plan: docs/plans/2026-07-03-001-refactor-ui-framework-phase3-retained-br
   [cookbook quarantine follow-up audit](subagents/2026-07-04-phase3-u13-cookbook-quarantine-followup-audit.md)
   and the
   [canvas facade audit](subagents/2026-07-04-phase3-u13-canvas-facade-audit.md)
+  and the
+  [remaining surface audit](subagents/2026-07-04-phase3-u13-remaining-surface-audit.md)
   leaving remaining U13 work to audit and migrate the still-advanced cookbook/example surfaces.
 - Blocked: none known after the boundary store migration.
-- Next action: continue U13 with remaining advanced cookbook/example surfaces; keep
-  `chart_interactions_basics.rs` advanced until chart output/state binding hides the remaining
-  retained model and chart-canvas seams.
+- Next action: continue U13 by splitting `apps/fret-examples/src/simple_todo_demo.rs` so copyable
+  app-view code can become default-clean while runner glue stays classified as an internal
+  harness. Revisit `gizmo_basics.rs` after scoping wheel/vector-path/canvas helpers.
 
 # Citations
 
@@ -152,11 +157,13 @@ related_plan: docs/plans/2026-07-03-001-refactor-ui-framework-phase3-retained-br
 - [Phase 3 U13 pointer drag facade](progress/2026-07-04-phase3-u13-pointer-drag-facade.md)
 - [Phase 3 U13 async inbox facade](progress/2026-07-04-phase3-u13-async-inbox-facade.md)
 - [Phase 3 U13 canvas facade](progress/2026-07-04-phase3-u13-canvas-facade.md)
+- [Phase 3 U13 chart facade](progress/2026-07-04-phase3-u13-chart-facade.md)
 - [Phase 3 U13 cookbook quarantine readonly audit](subagents/2026-07-03-phase3-u13-cookbook-quarantine-readonly-audit.md)
 - [Phase 3 U13 advanced facade audits](subagents/2026-07-03-phase3-u13-advanced-facade-audits.md)
 - [Phase 3 U13 IMUI cookbook facade audits](subagents/2026-07-03-phase3-u13-imui-cookbook-facade-audit.md)
 - [Phase 3 U13 cookbook quarantine follow-up audit](subagents/2026-07-04-phase3-u13-cookbook-quarantine-followup-audit.md)
 - [Phase 3 U13 canvas facade audit](subagents/2026-07-04-phase3-u13-canvas-facade-audit.md)
+- [Phase 3 U13 remaining surface audit](subagents/2026-07-04-phase3-u13-remaining-surface-audit.md)
 - [Phase 1 convergence plan](../../plans/2026-06-30-001-refactor-ui-framework-architecture-plan.md)
 - [Subagent Findings](subagents/2026-06-30-ui-framework-architecture-audit-findings.md)
 - [U9 AppUi shell split audit](subagents/2026-07-02-u9-appui-shell-split-audit.md)

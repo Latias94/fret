@@ -107,6 +107,11 @@ DEFAULT_AUTHORING_SURFACES: tuple[SurfacePath, ...] = (
         "default canvas cookbook should stay on app-facing canvas, pointer, and local-state helpers",
     ),
     SurfacePath(
+        "apps/fret-cookbook/examples/chart_interactions_basics.rs",
+        "default_app_clean",
+        "default chart cookbook should stay on app-facing chart, command, and local-state helpers",
+    ),
+    SurfacePath(
         "apps/fret-cookbook/examples/markdown_and_code_basics.rs",
         "default_app_clean",
         "default cookbook controls should stay on app-facing state helpers",
@@ -482,20 +487,6 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
         owner="examples-gizmo3d",
     ),
     _cookbook_advanced_surface(
-        "chart_interactions_basics.rs",
-        "chart interaction wiring still owns retained tree, model, and low-level element seams",
-        (
-            "fret::advanced",
-            "fret_app",
-            "fret_core",
-            "fret_runtime",
-            "fret_ui",
-            "AnyElement",
-            "ElementContext",
-            "UiTree",
-        ),
-    ),
-    _cookbook_advanced_surface(
         "compositing_alpha_basics.rs",
         "the alpha compositing example still owns a manual driver/window setup path",
         ("fret::advanced", "fret_app", "fret_core", "fret_launch", "FnDriver"),
@@ -643,6 +634,14 @@ DEFAULT_FORBIDDEN_PATTERNS: tuple[tuple[str, str], ...] = (
     (
         r"\bfret_canvas::",
         "default app/tutorial surfaces must not import `fret_canvas`; use the explicit `fret::canvas` app facade",
+    ),
+    (
+        r"\bfret_chart::",
+        "default app/tutorial surfaces must not import `fret_chart`; use the explicit `fret::chart` app facade",
+    ),
+    (
+        r"\bfret_app::",
+        "default app/tutorial surfaces must not import `fret_app`; use `fret::app` or `fret::commands` facade exports",
     ),
     (
         r"\bfret_runtime::",

@@ -700,6 +700,7 @@ class SurfacePolicyTests(unittest.TestCase):
         migrated = {
             "apps/fret-cookbook/examples/async_inbox_basics.rs",
             "apps/fret-cookbook/examples/canvas_pan_zoom_basics.rs",
+            "apps/fret-cookbook/examples/chart_interactions_basics.rs",
             "apps/fret-cookbook/examples/commands_keymap_basics.rs",
             "apps/fret-cookbook/examples/drag_basics.rs",
             "apps/fret-cookbook/examples/form_basics.rs",

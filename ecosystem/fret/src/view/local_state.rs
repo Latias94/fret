@@ -238,6 +238,14 @@ impl<'a> LocalStateTxn<'a> {
         local.value_in_or_else(self.models, f)
     }
 
+    pub fn read_ref<T: Any, R>(
+        &self,
+        local: &LocalState<T>,
+        f: impl FnOnce(&T) -> R,
+    ) -> Result<R, ModelUpdateError> {
+        local.read_in(self.models, f)
+    }
+
     pub fn set<T: Any>(&mut self, local: &LocalState<T>, value: T) -> bool {
         local.set_in(self.models, value)
     }

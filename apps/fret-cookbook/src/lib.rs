@@ -438,9 +438,11 @@ mod authoring_surface_policy_tests {
         assert!(OVERLAY_EXAMPLE.contains("let bumps = underlay_bumps_state.layout_value(cx);"));
         assert!(!OVERLAY_EXAMPLE.contains("underlay_bumps_state.layout(cx).value_or(0)"));
 
-        assert!(THEME_SWITCHING_EXAMPLE.contains("use fret_app::Effect;"));
         assert!(THEME_SWITCHING_EXAMPLE.contains("local_init(|| Some::<Arc<str>>"));
         assert!(THEME_SWITCHING_EXAMPLE.contains("shadcn::ToggleGroup::single(&scheme_state)"));
+        assert!(THEME_SWITCHING_EXAMPLE.contains("cx.request_animation_frame()"));
+        assert!(!THEME_SWITCHING_EXAMPLE.contains("use fret_app::Effect;"));
+        assert!(!THEME_SWITCHING_EXAMPLE.contains("Effect::RequestAnimationFrame"));
         assert!(!THEME_SWITCHING_EXAMPLE.contains("scheme_state.clone_model()"));
         assert!(EFFECTS_LAYER_EXAMPLE.contains("shadcn::ToggleGroup::single(&self.effect)"));
         assert!(EFFECTS_LAYER_EXAMPLE.contains(".deselectable(false)"));
@@ -533,6 +535,40 @@ mod authoring_surface_policy_tests {
         assert!(!CANVAS_PAN_ZOOM_EXAMPLE.contains("use fret_ui::canvas::CanvasPainter;"));
         assert!(!CANVAS_PAN_ZOOM_EXAMPLE.contains("Model<"));
         assert!(!CANVAS_PAN_ZOOM_EXAMPLE.contains("models::<act::ResetView>"));
+
+        assert!(
+            CHART_INTERACTIONS_EXAMPLE
+                .contains("use fret::app::{LocalState, RenderContextAccess as _};")
+        );
+        assert!(CHART_INTERACTIONS_EXAMPLE.contains("use fret::chart::{"));
+        assert!(CHART_INTERACTIONS_EXAMPLE.contains("engine: LocalState<ChartEngine>"));
+        assert!(CHART_INTERACTIONS_EXAMPLE.contains("output: LocalState<ChartCanvasOutput>"));
+        assert!(CHART_INTERACTIONS_EXAMPLE.contains("chart::ChartCanvas::new(self.spec.clone())"));
+        assert!(CHART_INTERACTIONS_EXAMPLE.contains(".engine(&self.engine)"));
+        assert!(CHART_INTERACTIONS_EXAMPLE.contains(".output(&self.output)"));
+        assert!(CHART_INTERACTIONS_EXAMPLE.contains(".contain_layout_when_bounds_known(true)"));
+        assert!(
+            CHART_INTERACTIONS_EXAMPLE.contains(".locals_with((&self.x_window, &self.engine))")
+        );
+        assert!(
+            CHART_INTERACTIONS_EXAMPLE.contains(".locals_with((&self.engine, &self.selected))")
+        );
+        assert!(CHART_INTERACTIONS_EXAMPLE.contains(".on::<act::SelectHover>"));
+        assert!(CHART_INTERACTIONS_EXAMPLE.contains("self.engine.paint_read_ref(cx"));
+        assert!(!CHART_INTERACTIONS_EXAMPLE.contains("advanced::prelude::*"));
+        assert!(!CHART_INTERACTIONS_EXAMPLE.contains("use fret::component::prelude::*;"));
+        assert!(!CHART_INTERACTIONS_EXAMPLE.contains("fret_chart::"));
+        assert!(!CHART_INTERACTIONS_EXAMPLE.contains("fret_app::"));
+        assert!(!CHART_INTERACTIONS_EXAMPLE.contains("fret_runtime::"));
+        assert!(!CHART_INTERACTIONS_EXAMPLE.contains("fret_ui::"));
+        assert!(!CHART_INTERACTIONS_EXAMPLE.contains("fret_core::"));
+        assert!(!CHART_INTERACTIONS_EXAMPLE.contains("ChartCanvasPanelProps"));
+        assert!(!CHART_INTERACTIONS_EXAMPLE.contains("chart_canvas_panel_in"));
+        assert!(!CHART_INTERACTIONS_EXAMPLE.contains("ViewCacheProps"));
+        assert!(!CHART_INTERACTIONS_EXAMPLE.contains("UiAppDriver"));
+        assert!(!CHART_INTERACTIONS_EXAMPLE.contains("UiTree"));
+        assert!(!CHART_INTERACTIONS_EXAMPLE.contains("ElementContext"));
+        assert!(!CHART_INTERACTIONS_EXAMPLE.contains("Model<ChartEngine>"));
 
         assert!(QUERY_EXAMPLE.contains("cx.data().query("));
         assert!(QUERY_EXAMPLE.contains("cx.state().local_init(|| false)"));
@@ -1126,11 +1162,7 @@ mod authoring_surface_policy_tests {
 
     #[test]
     fn cookbook_direct_leaf_interop_examples_prefer_element_context_theme_snapshot() {
-        for src in [
-            EMBEDDED_VIEWPORT_EXAMPLE,
-            EXTERNAL_TEXTURE_IMPORT_EXAMPLE,
-            CHART_INTERACTIONS_EXAMPLE,
-        ] {
+        for src in [EMBEDDED_VIEWPORT_EXAMPLE, EXTERNAL_TEXTURE_IMPORT_EXAMPLE] {
             assert!(src.contains("let theme = cx.theme().snapshot();"));
             assert!(!src.contains("Theme::global(&*cx.app).snapshot()"));
         }
@@ -1138,7 +1170,6 @@ mod authoring_surface_policy_tests {
 
     #[test]
     fn advanced_examples_use_the_explicit_advanced_surface() {
-        assert_uses_advanced_surface(CHART_INTERACTIONS_EXAMPLE);
         assert_uses_advanced_surface(CUSTOM_V1_EXAMPLE);
         assert_uses_advanced_surface(DOCKING_EXAMPLE);
         assert_uses_advanced_surface(EMBEDDED_VIEWPORT_EXAMPLE);
@@ -1240,19 +1271,6 @@ mod authoring_surface_policy_tests {
         assert!(ASSETS_RELOAD_EPOCH_EXAMPLE.contains("cx.state().local::<u64>()"));
         assert!(ASSETS_RELOAD_EPOCH_EXAMPLE.contains(".local(&bumps_state)"));
         assert!(ASSETS_RELOAD_EPOCH_EXAMPLE.contains(".update::<act::BumpReload>(|value| {"));
-
-        assert!(CHART_INTERACTIONS_EXAMPLE.contains("use fret::{advanced::prelude::*, shadcn};"));
-        assert!(CHART_INTERACTIONS_EXAMPLE.contains("ChartCanvasPanelProps"));
-        assert!(CHART_INTERACTIONS_EXAMPLE.contains("chart_canvas_panel_in(cx, props)"));
-        assert!(CHART_INTERACTIONS_EXAMPLE.contains("Model<ChartEngine>"));
-        assert!(CHART_INTERACTIONS_EXAMPLE.contains(".output_model(output)"));
-        assert!(!CHART_INTERACTIONS_EXAMPLE.contains("RetainedSubtreeProps::new::<KernelApp>"));
-        assert!(!CHART_INTERACTIONS_EXAMPLE.contains("ChartCanvas::new_shared"));
-        assert!(
-            CHART_INTERACTIONS_EXAMPLE
-                .contains(".setup((shadcn::app::install, fret_icons_lucide::app::install))")
-        );
-        assert!(!CHART_INTERACTIONS_EXAMPLE.contains(".setup(shadcn::install_app)"));
 
         assert!(CUSTOM_V1_EXAMPLE.contains("use fret::{FretApp, advanced::prelude::*, shadcn};"));
         assert!(CUSTOM_V1_EXAMPLE.contains("EffectStep::CustomV1"));
@@ -1414,12 +1432,6 @@ mod authoring_surface_policy_tests {
         );
 
         assert_advanced_helpers_prefer_app_component_cx(
-            CHART_INTERACTIONS_EXAMPLE,
-            &["fn chart_canvas(cx: &mut AppComponentCx<'_>,"],
-            &["fn chart_canvas(cx: &mut ElementContext<'_, KernelApp>,"],
-        );
-
-        assert_advanced_helpers_prefer_app_component_cx(
             CUSTOM_V1_EXAMPLE,
             &[
                 "fn panel_shell<B>(",
@@ -1481,27 +1493,37 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
-    fn chart_interactions_example_prefers_declarative_chart_panel() {
+    fn chart_interactions_example_prefers_app_chart_facade() {
         let normalized = CHART_INTERACTIONS_EXAMPLE
             .split_whitespace()
             .collect::<String>();
         for marker in [
+            "struct ChartInteractionsView",
+            "engine: LocalState<ChartEngine>",
+            "output: LocalState<ChartCanvasOutput>",
+            "engine: app.local_state(engine)",
+            "output: app.local_state(ChartCanvasOutput::default())",
+            "chart::ChartCanvas::new(self.spec.clone())",
+            ".engine(&self.engine)",
+            ".output(&self.output)",
+            ".input_map(ChartInputMap::default())",
+            ".accessibility_layer(true)",
+            ".test_id(TEST_ID_CANVAS)",
+            ".contain_layout_when_bounds_known(true)",
+            ".into_element(cx)",
+        ] {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(normalized.contains(&marker), "missing marker: {marker}");
+        }
+        for legacy in [
             "fn chart_canvas(cx: &mut AppComponentCx<'_>, st: &ChartInteractionsWindowState) -> AnyElement",
             "use fret_chart::{ChartCanvasPanelProps, chart_canvas_panel_in};",
             "cx.view_cache(ViewCacheProps::default().contain_layout_when_bounds_known(true),",
             "ChartCanvasPanelProps::new(spec)",
             ".output_model(output)",
             ".input_map(fret_chart::input_map::ChartInputMap::default())",
-            ".accessibility_layer(true)",
-            ".test_id(TEST_ID_CANVAS)",
             "props.engine = Some(engine);",
             "vec![chart_canvas_panel_in(cx, props)]",
-        ] {
-            let marker = marker.split_whitespace().collect::<String>();
-            assert!(normalized.contains(&marker), "missing marker: {marker}");
-        }
-        for legacy in [
-            "use fret_chart::ChartCanvas;",
             "use fret_ui::compat_retained_canvas::RetainedSubtreeProps;",
             "use fret_ui::retained_bridge::",
             "RetainedSubtreeProps::new::<KernelApp>",
@@ -1869,7 +1891,7 @@ mod authoring_surface_policy_tests {
         cookbook_examples_limit_raw_shadcn_escape_hatches();
         cookbook_examples_use_unified_centered_page_helpers();
         utility_window_example_uses_ui_single_for_single_surface_shells();
-        chart_interactions_example_prefers_declarative_chart_panel();
+        chart_interactions_example_prefers_app_chart_facade();
     }
 
     #[test]

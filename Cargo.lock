@@ -1817,10 +1817,12 @@ dependencies = [
 name = "fret"
 version = "0.1.0"
 dependencies = [
+ "delinea",
  "fret-app",
  "fret-assets",
  "fret-bootstrap",
  "fret-canvas",
+ "fret-chart",
  "fret-core",
  "fret-docking",
  "fret-framework",
@@ -2023,12 +2025,10 @@ name = "fret-cookbook"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "delinea",
  "fret",
  "fret-app",
  "fret-assets",
  "fret-bootstrap",
- "fret-chart",
  "fret-code-view",
  "fret-core",
  "fret-docking",

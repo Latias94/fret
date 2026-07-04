@@ -624,3 +624,17 @@ timestamp: 2026-06-30
   canvas-feature compile, `fret-cookbook --all-targets`, full `fret-cookbook` lib nextest,
   focused `fret` facade tests with and without `canvas`, source-policy tests/gate,
   consumption-profile, execution-surface, and layering.
+- 2026-07-04: Readonly explorers `019f2b17-acee-7270-8553-a12fdeb9a2d3` and
+  `019f2b18-07c6-7200-a1a7-ff442d96db08` audited remaining cookbook and non-cookbook U13
+  surfaces. They recommended chart as the next cookbook migration, keeping viewport/external
+  texture/window/docking/custom effect surfaces advanced, and recommended splitting
+  `simple_todo_demo.rs` runner glue as the next non-cookbook cleanup.
+- 2026-07-04: Phase 3 U13 chart facade adds optional `fret/chart`,
+  `fret::chart::ChartCanvas`, and chart domain reexports, migrates `chart_interactions_basics.rs`
+  off `ui_app_with_hooks`, `UiAppDriver`, raw chart models, `ChartCanvasPanelProps`,
+  `ViewCacheProps`, and direct runtime/ui/chart imports, fixes `theme_switching_basics.rs` to use
+  `cx.request_animation_frame()` instead of raw `fret_app::Effect`, and moves the chart example to
+  default clean source-policy coverage with direct-`fret_chart::` and direct-`fret_app::` default
+  bans. Verification passed for focused chart-feature compile, default/chart cookbook all-targets,
+  full `fret-cookbook` lib nextest, focused `fret` facade tests with `chart`, source-policy
+  tests/gate, consumption-profile, execution-surface, layering, formatting, and whitespace.

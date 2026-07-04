@@ -249,6 +249,19 @@ pub mod canvas {
     pub use fret_core::{Corners, DrawOrder, Edges, Point, Px, Rect, SceneOp, Size, Transform2D};
 }
 
+/// Explicit chart authoring helpers for app code.
+///
+/// This lane hides raw `ChartCanvasPanelProps`, raw chart output `Model<T>` handles, and raw
+/// `ViewCacheProps` while keeping the headless `delinea` chart domain explicit.
+#[cfg(feature = "chart")]
+pub mod chart {
+    pub use crate::view::ChartCanvas;
+    pub use delinea;
+    pub use delinea::engine::ChartEngine;
+    pub use delinea::engine::window::DataWindow;
+    pub use fret_chart::{ChartCanvasOutput, ChartInputMap};
+}
+
 /// Explicit higher-level adaptive policy vocabulary for app code that wants shared classification
 /// or device-shell strategy helpers above raw query reads.
 pub mod adaptive {
@@ -3605,6 +3618,12 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_USAGE_GUIDE.contains("`fret::canvas::{...}` lane"));
         assert!(CRATE_USAGE_GUIDE.contains("`PanZoomCanvas`, `AppCanvasPainter`, `PanZoom2D`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret_ui::canvas::CanvasPainter`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`fret::chart::{...}` lane"));
+        assert!(
+            CRATE_USAGE_GUIDE
+                .contains("`ChartCanvas`, `ChartEngine`, `ChartCanvasOutput`, `ChartInputMap`")
+        );
+        assert!(CRATE_USAGE_GUIDE.contains("`fret_chart::ChartCanvasPanelProps`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::app::{LocalState, LocalStateTxn}`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::commands::{...}`"));
         assert!(
@@ -4593,6 +4612,7 @@ mod authoring_surface_policy_tests {
             "assets",
             "async_work",
             "canvas",
+            "chart",
             "children",
             "commands",
             "env",
@@ -4662,6 +4682,7 @@ mod authoring_surface_policy_tests {
         assert!(root_header.contains("pub mod activate {"));
         assert!(root_header.contains("pub mod async_work {"));
         assert!(root_header.contains("pub mod canvas {"));
+        assert!(root_header.contains("pub mod chart {"));
         assert!(root_header.contains("pub mod children {"));
         assert!(root_header.contains("pub mod commands {"));
         assert!(root_header.contains("pub mod icons {"));
@@ -4686,6 +4707,10 @@ mod authoring_surface_policy_tests {
         assert!(root_header.contains("PanZoom2D, visible_canvas_rect"));
         assert!(root_header.contains("PanZoomCanvasPaintCx, PanZoomInputPreset"));
         assert!(root_header.contains("pub use fret_core::scene::{Color, Paint as CanvasPaint};"));
+        assert!(root_header.contains("pub use crate::view::ChartCanvas;"));
+        assert!(root_header.contains("pub use delinea::engine::ChartEngine;"));
+        assert!(root_header.contains("pub use delinea::engine::window::DataWindow;"));
+        assert!(root_header.contains("pub use fret_chart::{ChartCanvasOutput, ChartInputMap};"));
         assert!(root_header.contains("CommandMeta, CommandRegistry, CommandScope"));
         assert!(root_header.contains("DefaultKeybinding, InputContext,"));
         assert!(root_header.contains("KeyChord, KeymapService, Platform, PlatformFilter"));
@@ -4985,6 +5010,9 @@ mod authoring_surface_policy_tests {
         assert!(!app_prelude_exports_symbol("PanZoomCanvas"));
         assert!(!app_prelude_exports_symbol("PanZoom2D"));
         assert!(!app_prelude_exports_symbol("CanvasPaint"));
+        assert!(!app_prelude_exports_symbol("ChartCanvas"));
+        assert!(!app_prelude_exports_symbol("ChartEngine"));
+        assert!(!app_prelude_exports_symbol("ChartCanvasOutput"));
         assert!(!app_prelude_exports_symbol("Length"));
         assert!(!app_prelude_exports_symbol("LayoutStyle"));
         assert!(!app_prelude_exports_symbol("ContainerProps"));

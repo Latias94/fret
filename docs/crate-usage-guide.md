@@ -1106,6 +1106,12 @@ surfaces and kit recipes such as `DataflowProfile` remain in `fret-node`.
 
 **Use them when:** you need plotting/charting UI surfaces, and want to stay portable (no direct `wgpu`/`winit` coupling).
 
+For default app/cookbook authoring, prefer the explicit `fret::chart::{...}` lane. It exposes
+`ChartCanvas`, `ChartEngine`, `ChartCanvasOutput`, `ChartInputMap`, and the `delinea` chart domain
+without teaching raw `fret_chart::ChartCanvasPanelProps`, chart output `Model<T>` plumbing, or raw
+`ViewCacheProps`. Import `fret-chart` directly when you are writing chart ecosystem components,
+custom chart recipes, or advanced tests that intentionally own the lower-level panel props.
+
 ### `fret-gizmo`
 
 **What it is:** editor-grade 3D gizmo logic for engine viewports (rendered by the engine; Fret composites the viewport).

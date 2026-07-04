@@ -120,6 +120,7 @@ command-palette = [
     "fret-bootstrap/ui-app-command-palette-shadcn",
 ]
 canvas = ["dep:fret-canvas"]
+chart = ["dep:delinea", "dep:fret-chart"]
 
 [dependencies]
 thiserror.workspace = true
@@ -128,9 +129,11 @@ thiserror.workspace = true
 fret-framework = { version = "0.1.0", path = "../../crates/fret-framework", package = "fret-framework", optional = true, default-features = false }
 
 # Golden-path wiring and optional ecosystem integrations.
+delinea = { version = "0.1.0", path = "../delinea", optional = true }
 fret-assets = { version = "0.1.0", path = "../../crates/fret-assets" }
 fret-bootstrap = { version = "0.1.0", path = "../fret-bootstrap", optional = true, default-features = false }
 fret-canvas = { version = "0.1.0", path = "../fret-canvas", optional = true, default-features = false, features = ["ui"] }
+fret-chart = { version = "0.1.0", path = "../fret-chart", optional = true }
 fret-docking = { version = "0.1.0", path = "../fret-docking", optional = true }
 fret-icons = { version = "0.1.0", path = "../fret-icons" }
 fret-imui = { version = "0.1.0", path = "../fret-imui", optional = true }
