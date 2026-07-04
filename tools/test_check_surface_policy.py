@@ -810,6 +810,7 @@ class SurfacePolicyTests(unittest.TestCase):
 
         expected = {
             "apps/fret-cookbook/examples/compositing_alpha_basics.rs",
+            "apps/fret-cookbook/examples/customv1_basics.rs",
             "apps/fret-cookbook/examples/image_asset_cache_basics.rs",
         }
 

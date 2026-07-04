@@ -12,8 +12,8 @@ git_branch: feat/ui-framework-phase2-refactor
 Phase 3 U13 now has a dedicated source-policy lane for low-level renderer labs.
 
 - Added `renderer_lab` as a classified raw-surface category in `tools/check_surface_policy.py`.
-- Moved `compositing_alpha_basics.rs` and `image_asset_cache_basics.rs` out of
-  `advanced_manual` quarantine and into `RENDERER_LAB_SURFACES`.
+- Moved `compositing_alpha_basics.rs`, `image_asset_cache_basics.rs`, and
+  `customv1_basics.rs` out of `advanced_manual` quarantine and into `RENDERER_LAB_SURFACES`.
 - Kept raw seam allowlists and owner requirements for renderer labs, but intentionally removed the
   advanced-manual retirement requirement. These examples are deterministic screenshot baselines for
   renderer/assets semantics, not default app-authoring lessons waiting for facade migration.

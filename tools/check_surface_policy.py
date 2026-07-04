@@ -412,6 +412,12 @@ RENDERER_LAB_SURFACES: tuple[SurfacePath, ...] = (
         "and reload behavior rather than an app-authoring lesson",
         ("fret::advanced", "fret_app", "fret_core", "fret_launch", "FnDriver"),
     ),
+    _cookbook_renderer_lab_surface(
+        "customv1_basics.rs",
+        "it is a capability-gated CustomV1 renderer/effect smoke surface rather than an "
+        "app-authoring lesson",
+        ("fret::advanced", "fret_core", "fret_ui", "AnyElement"),
+    ),
 )
 
 
@@ -520,11 +526,6 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
             "UiTree",
         ),
         owner="examples-gizmo3d",
-    ),
-    _cookbook_advanced_surface(
-        "customv1_basics.rs",
-        "custom effect authoring still exposes manual kernel and low-level element seams",
-        ("fret::advanced", "fret_core", "fret_ui", "AnyElement"),
     ),
     _cookbook_advanced_surface(
         "docking_basics.rs",

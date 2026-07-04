@@ -16,9 +16,9 @@ related_plan: docs/plans/2026-07-03-001-refactor-ui-framework-phase3-retained-br
   deep-tree tests.
 - Done: local ADR/workstream research, crate/perf snapshots, GPUI/Zed comparison, architecture boundary audit, framework consumer audit, performance audit, implementation-ready plan, U1 convergence contract freeze, U2 source-policy gate, U3 first slice (`workbench-lite` public scaffold), U4 identity/dirty graph observability slices, U5 `ViewId` / boundary frame-product ownership slices, U6 policy vocabulary demotion/cleanup slices, U7 renderer scene/upload observability plus retained scene chunk and guarded quad resident upload lanes, U8 text/glyph/wasm budget work through web runtime evidence, U9 modular consumption profiles and `AppUi` facade split, Phase 2 U9 VertexColor viewport partial upload, Phase 2 U10 workbench-lite public settings diagnostics, Phase 2 U11 public mutation/toast wrappers, Phase 3 U9 manifest closure v2, Phase 3 U10 authoritative chunk launch, Phase 3 U11 partial upload stream policy, Phase 3 U12 public app facade cleanup, workstream closeout audit, duplicate ADR ID `0324` resolution, and execution-surface allowlist alignment.
 - Latest done: Phase 3 U13 renderer lab classification adds a dedicated `renderer_lab`
-  source-policy lane and moves `compositing_alpha_basics.rs` and `image_asset_cache_basics.rs` out
-  of `advanced_manual` quarantine while keeping their raw seam allowlists and screenshot-baseline
-  lab purpose explicit.
+  source-policy lane and moves `compositing_alpha_basics.rs`, `image_asset_cache_basics.rs`, and
+  `customv1_basics.rs` out of `advanced_manual` quarantine while keeping their raw seam allowlists
+  and renderer/assets screenshot or smoke-baseline lab purpose explicit.
 - In progress: Phase 3 retained bridge closeout / remaining U13 cookbook and quarantine
   classification,
   with the
