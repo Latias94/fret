@@ -602,7 +602,7 @@ fn detached_dirty_view_cache_root_is_pruned_before_layout_followups() {
         .expect("dirty boundary view id");
 
     ui.set_children(root, Vec::new());
-    assert_eq!(ui.node_parent(boundary), None);
+    assert_eq!(ui.debug_node_parent_storage(boundary), None);
 
     let mut services = FakeUiServices;
     ui.layout_all(&mut app, &mut services, bounds, 1.0);

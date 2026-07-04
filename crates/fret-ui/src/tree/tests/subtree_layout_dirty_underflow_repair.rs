@@ -72,7 +72,7 @@ fn subtree_layout_dirty_underflow_uses_child_edges_without_parent_repair() {
         0,
         "layout dirty underflow must not repair retained parent pointers in the normal path"
     );
-    assert_eq!(ui.node_parent(a), None);
+    assert_eq!(ui.debug_node_parent_storage(a), None);
 }
 
 #[test]
@@ -106,7 +106,7 @@ fn semantics_dirty_propagation_uses_child_edges_under_stale_parent_pointers() {
     assert_eq!(ui.nodes[leaf].subtree_semantics_dirty_count, 0);
     assert_eq!(ui.nodes[parent].subtree_semantics_dirty_count, 0);
     assert_eq!(ui.nodes[root].subtree_semantics_dirty_count, 0);
-    assert_eq!(ui.node_parent(leaf), None);
+    assert_eq!(ui.debug_node_parent_storage(leaf), None);
 }
 
 #[test]

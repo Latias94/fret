@@ -1676,12 +1676,12 @@ fn touch_pan_scroll_target_resolution_uses_dispatch_snapshot_parent_when_hit_lea
     );
 
     assert!(
-        ui.node_parent(pressable_node).is_some(),
+        ui.debug_node_parent_storage(pressable_node).is_some(),
         "test setup should start with an attached pressable node"
     );
     ui.test_set_node_parent(pressable_node, None);
     assert_eq!(
-        ui.node_parent(pressable_node),
+        ui.debug_node_parent_storage(pressable_node),
         None,
         "test setup should make the retained parent pointer stale while child edges remain attached"
     );

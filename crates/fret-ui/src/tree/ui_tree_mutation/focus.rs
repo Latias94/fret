@@ -53,7 +53,7 @@ impl<H: UiHost> UiTree<H> {
     }
 
     #[cfg(test)]
-    pub fn node_parent(&self, node: NodeId) -> Option<NodeId> {
+    pub(crate) fn debug_node_parent_storage(&self, node: NodeId) -> Option<NodeId> {
         self.nodes.get(node).and_then(|n| n.parent)
     }
 

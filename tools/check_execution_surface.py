@@ -119,6 +119,12 @@ def main(argv: list[str]) -> int:
             allowlist=(),
         ),
         Rule(
+            name="no-retained-node-parent-query",
+            pattern=re.compile(r"\bnode_parent\("),
+            scope_prefixes=("crates/fret-ui/src/", "ecosystem/", "apps/"),
+            allowlist=(),
+        ),
+        Rule(
             name="no-split-brain-timers",
             pattern=re.compile(
                 r"\b(gloo_timers|futures_timer|wasm_timer|tokio::time::sleep|async_std::task::sleep)\b"

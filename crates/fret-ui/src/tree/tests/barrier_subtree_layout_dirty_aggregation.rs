@@ -20,7 +20,7 @@ fn set_children_barrier_updates_subtree_layout_dirty_counts_for_dirty_children()
     let child = ui.create_node(TestStack);
     ui.set_children_barrier(barrier, vec![child]);
 
-    assert_eq!(ui.node_parent(child), Some(barrier));
+    assert_eq!(ui.debug_node_parent_storage(child), Some(barrier));
     assert_eq!(ui.nodes[barrier].subtree_layout_dirty_count, 2);
     assert_eq!(ui.nodes[root].subtree_layout_dirty_count, 2);
 }
@@ -208,7 +208,7 @@ fn detached_pending_barrier_relayout_is_pruned_before_layout() {
         UiDebugInvalidationDetail::Unknown,
     );
     ui.set_children(root, Vec::new());
-    assert_eq!(ui.node_parent(barrier), None);
+    assert_eq!(ui.debug_node_parent_storage(barrier), None);
 
     let mut services = FakeUiServices;
     ui.layout_all(&mut app, &mut services, bounds, 1.0);

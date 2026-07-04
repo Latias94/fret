@@ -15,8 +15,8 @@ fn set_children_noops_when_unchanged() {
 
     ui.set_children(root, vec![a, b]);
 
-    assert_eq!(ui.node_parent(a), Some(root));
-    assert_eq!(ui.node_parent(b), Some(root));
+    assert_eq!(ui.debug_node_parent_storage(a), Some(root));
+    assert_eq!(ui.debug_node_parent_storage(b), Some(root));
 
     let inv = &ui.nodes[root].invalidation;
     assert!(!inv.hit_test);
@@ -39,8 +39,8 @@ fn set_children_invalidates_parent_when_changed() {
 
     ui.set_children(root, vec![b, a]);
 
-    assert_eq!(ui.node_parent(a), Some(root));
-    assert_eq!(ui.node_parent(b), Some(root));
+    assert_eq!(ui.debug_node_parent_storage(a), Some(root));
+    assert_eq!(ui.debug_node_parent_storage(b), Some(root));
     assert!(ui.nodes[root].invalidation.hit_test);
     assert!(ui.nodes[root].invalidation.layout);
     assert!(ui.nodes[root].invalidation.paint);
@@ -76,7 +76,7 @@ fn set_children_same_children_records_parent_drift_without_global_repair_and_rec
     let would_repair = ui.parent_pointers_would_repair_from_layer_roots();
     ui.debug_record_parent_pointer_would_repair(would_repair);
     assert_eq!(
-        ui.node_parent(child),
+        ui.debug_node_parent_storage(child),
         None,
         "shadow oracle must not mutate retained parent pointers"
     );
@@ -96,7 +96,7 @@ fn set_children_same_children_records_parent_drift_without_global_repair_and_rec
 
     ui.set_children(parent, vec![child]);
 
-    assert_eq!(ui.node_parent(child), Some(parent));
+    assert_eq!(ui.debug_node_parent_storage(child), Some(parent));
     assert!(ui.nodes[parent].invalidation.layout);
     assert!(ui.nodes[root].invalidation.layout);
 
@@ -145,7 +145,7 @@ fn set_children_in_mount_same_children_syncs_parent_edge_without_global_repair_a
 
     ui.set_children_in_mount(parent, vec![child]);
 
-    assert_eq!(ui.node_parent(child), Some(parent));
+    assert_eq!(ui.debug_node_parent_storage(child), Some(parent));
     assert!(ui.nodes[parent].invalidation.layout);
     assert!(ui.nodes[root].invalidation.layout);
     assert_eq!(ui.debug_stats().parent_pointer_repair_passes, 0);
@@ -174,15 +174,15 @@ fn set_children_in_mount_new_dirty_layer_root_skips_redundant_structural_walk() 
     assert!(ui.nodes[parent].invalidation.layout);
     assert!(ui.nodes[parent].invalidation.paint);
     assert!(ui.nodes[parent].invalidation.hit_test);
-    assert_eq!(ui.node_parent(parent), None);
-    assert_eq!(ui.node_parent(child), None);
+    assert_eq!(ui.debug_node_parent_storage(parent), None);
+    assert_eq!(ui.debug_node_parent_storage(child), None);
     assert_eq!(ui.nodes[parent].subtree_layout_dirty_count, 1);
 
     let walks_before = ui.debug_invalidation_walks().len();
 
     ui.set_children_in_mount(parent, vec![child]);
 
-    assert_eq!(ui.node_parent(child), Some(parent));
+    assert_eq!(ui.debug_node_parent_storage(child), Some(parent));
     assert_eq!(ui.nodes[parent].children, vec![child]);
     assert!(ui.nodes[parent].invalidation.layout);
     assert!(ui.nodes[parent].invalidation.paint);
@@ -226,7 +226,7 @@ fn set_children_in_mount_stale_retained_none_parent_does_not_skip_live_ancestor_
         "test setup must keep the authoritative child-edge parent"
     );
     assert_eq!(
-        ui.node_parent(parent),
+        ui.debug_node_parent_storage(parent),
         None,
         "test setup must simulate stale retained parent storage"
     );
@@ -264,7 +264,7 @@ fn add_child_reparents_from_old_parent_without_leaving_stale_child_edges() {
 
     ui.add_child(right, child);
 
-    assert_eq!(ui.node_parent(child), Some(right));
+    assert_eq!(ui.debug_node_parent_storage(child), Some(right));
     assert_eq!(ui.nodes[left].children, Vec::<NodeId>::new());
     assert_eq!(ui.nodes[right].children, vec![child]);
     assert!(ui.nodes[left].invalidation.layout);
@@ -288,7 +288,7 @@ fn add_child_noops_when_child_is_already_attached_once_to_same_parent() {
 
     ui.add_child(root, child);
 
-    assert_eq!(ui.node_parent(child), Some(root));
+    assert_eq!(ui.debug_node_parent_storage(child), Some(root));
     assert_eq!(ui.nodes[root].children, vec![child]);
     assert!(!ui.nodes[root].invalidation.hit_test);
     assert!(!ui.nodes[root].invalidation.layout);
@@ -316,7 +316,7 @@ fn set_children_reparents_from_old_parent_without_leaving_stale_child_edges() {
 
     ui.set_children(right, vec![child]);
 
-    assert_eq!(ui.node_parent(child), Some(right));
+    assert_eq!(ui.debug_node_parent_storage(child), Some(right));
     assert_eq!(ui.nodes[left].children, Vec::<NodeId>::new());
     assert_eq!(ui.nodes[right].children, vec![child]);
     assert!(ui.nodes[left].invalidation.layout);
@@ -345,7 +345,7 @@ fn set_children_in_mount_reparents_from_old_parent_without_leaving_stale_child_e
 
     ui.set_children_in_mount(right, vec![child]);
 
-    assert_eq!(ui.node_parent(child), Some(right));
+    assert_eq!(ui.debug_node_parent_storage(child), Some(right));
     assert_eq!(ui.nodes[left].children, Vec::<NodeId>::new());
     assert_eq!(ui.nodes[right].children, vec![child]);
     assert!(ui.nodes[left].invalidation.layout);
@@ -375,7 +375,7 @@ fn set_children_barrier_reparents_from_old_barrier_without_leaving_stale_child_e
 
     ui.set_children_barrier(right, vec![child]);
 
-    assert_eq!(ui.node_parent(child), Some(right));
+    assert_eq!(ui.debug_node_parent_storage(child), Some(right));
     assert_eq!(ui.nodes[left].children, Vec::<NodeId>::new());
     assert_eq!(ui.nodes[right].children, vec![child]);
     assert!(
@@ -409,7 +409,7 @@ fn set_children_reparents_from_old_barrier_using_barrier_detach_semantics() {
 
     ui.set_children(right, vec![child]);
 
-    assert_eq!(ui.node_parent(child), Some(right));
+    assert_eq!(ui.debug_node_parent_storage(child), Some(right));
     assert_eq!(ui.nodes[left].children, Vec::<NodeId>::new());
     assert_eq!(ui.nodes[right].children, vec![child]);
     assert!(ui.nodes[right].invalidation.layout);
