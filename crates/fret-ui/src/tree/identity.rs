@@ -290,35 +290,13 @@ impl<H: UiHost> UiTree<H> {
             return None;
         }
 
-        if let Some(parent) = self.live_topology.child_parent(node)
-            && self.live_topology.contains_live_node(parent)
+        let parent = self.live_topology.child_parent(node)?;
+        (self.live_topology.contains_live_node(parent)
             && self
                 .nodes
                 .get(parent)
-                .is_some_and(|entry| entry.children.contains(&node))
-        {
-            return Some(parent);
-        }
-
-        let roots = self.all_layer_roots();
-        let mut visited: HashSet<NodeId> = HashSet::new();
-        let mut stack: Vec<NodeId> = roots;
-        while let Some(parent) = stack.pop() {
-            if !visited.insert(parent) {
-                continue;
-            }
-            let Some(entry) = self.nodes.get(parent) else {
-                continue;
-            };
-            for &child in &entry.children {
-                if child == node {
-                    return Some(parent);
-                }
-                stack.push(child);
-            }
-        }
-
-        None
+                .is_some_and(|entry| entry.children.contains(&node)))
+        .then_some(parent)
     }
 
     pub(in crate::tree) fn validated_child_edge_parent_for_reparent(
@@ -334,10 +312,8 @@ impl<H: UiHost> UiTree<H> {
             return Some(parent);
         }
 
-        if self.live_topology.contains_live_node(child)
-            && let Some(parent) = self.parent_in_layer_forest_via_children(child)
-        {
-            return Some(parent);
+        if self.live_topology.contains_live_node(child) {
+            return None;
         }
 
         let retained_parent = self.nodes.get(child).and_then(|node| node.parent)?;
