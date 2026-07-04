@@ -457,6 +457,121 @@ fn cluster_residency_pins_complete_multi_glyph_cluster() {
 }
 
 #[test]
+fn cluster_residency_signature_changes_with_fallback_font_identity() {
+    struct Probe {
+        cluster_font_fingerprint: u64,
+        cluster_fingerprint: u64,
+        glyph_fingerprint: u64,
+        missing_glyphs: u32,
+        used_cjk_fallback: bool,
+    }
+
+    fn probe(device: &wgpu::Device, include_cjk: bool) -> Probe {
+        let mut text = super::TextSystem::new(device);
+        reset_bundled_only_font_runtime(&mut text);
+
+        let fonts: Vec<Vec<u8>> = if include_cjk {
+            bundled_profile_face_blobs(fret_fonts::bootstrap_profile())
+                .chain(cjk_extension_face_blobs())
+                .collect()
+        } else {
+            bundled_profile_face_blobs(fret_fonts::bootstrap_profile()).collect()
+        };
+        let added = text.add_fonts(fonts);
+        assert!(added > 0, "expected bundled fonts to load");
+
+        let family_inter = "Inter";
+        let family_cjk = "Noto Sans CJK SC";
+        let config = bundled_only_web_font_config([family_inter], include_cjk, false);
+        let _ = text.set_font_families(&config);
+
+        let constraints = TextConstraints {
+            max_width: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
+            scale_factor: 1.0,
+        };
+        let style = TextStyle {
+            font: fret_core::FontId::ui(),
+            size: Px(24.0),
+            ..Default::default()
+        };
+
+        let (blob_id, _) = text.prepare("你", &style, constraints);
+        let shape = prepared_shape_for_blob(&text, blob_id);
+        assert_shape_cluster_metadata_consistent(shape);
+        let cluster_font_fingerprint = shape
+            .clusters()
+            .iter()
+            .find(|cluster| !cluster.glyph_range().is_empty())
+            .expect("cluster with glyphs")
+            .font_fingerprint();
+        let missing_glyphs = shape.missing_glyphs();
+        let used_faces = shape
+            .glyphs()
+            .iter()
+            .map(|glyph| glyph.key.font)
+            .collect::<std::collections::HashSet<_>>();
+
+        let expected_cjk_faces = include_cjk
+            .then(|| {
+                face_keys_for_explicit_family(&mut text, "你", family_cjk, Px(24.0), constraints)
+            })
+            .unwrap_or_default();
+        let used_cjk_fallback = used_faces
+            .iter()
+            .any(|face| expected_cjk_faces.contains(face));
+
+        let mut residency = super::TextFrameResidency::new();
+        assert!(text.push_cluster_residency_for_blob(&mut residency, blob_id, |_| true));
+        let signature = residency
+            .signature()
+            .expect("live text residency signature");
+        let [entry] = signature.entries() else {
+            panic!("expected one text residency entry");
+        };
+
+        Probe {
+            cluster_font_fingerprint,
+            cluster_fingerprint: entry.cluster_fingerprint(),
+            glyph_fingerprint: entry.glyph_fingerprint(),
+            missing_glyphs,
+            used_cjk_fallback,
+        }
+    }
+
+    let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+    let missing = probe(&ctx.device, false);
+    let fallback = probe(&ctx.device, true);
+
+    assert!(
+        missing.missing_glyphs > 0,
+        "without CJK fallback the probe character should record tofu"
+    );
+    assert_eq!(
+        fallback.missing_glyphs, 0,
+        "with CJK fallback the probe character should resolve to a real font"
+    );
+    assert!(
+        fallback.used_cjk_fallback,
+        "expected the cluster to use the bundled CJK fallback face"
+    );
+    assert_ne!(
+        missing.cluster_font_fingerprint, fallback.cluster_font_fingerprint,
+        "cluster metadata must preserve fallback font identity"
+    );
+    assert_ne!(
+        missing.cluster_fingerprint, fallback.cluster_fingerprint,
+        "residency cluster signature must change when fallback font identity changes"
+    );
+    assert_ne!(
+        missing.glyph_fingerprint, fallback.glyph_fingerprint,
+        "residency glyph signature must change when fallback glyph identity changes"
+    );
+}
+
+#[test]
 fn paint_span_for_text_range_is_directional_across_span_boundary() {
     let spans = vec![
         ResolvedSpan::new(0, 3, 0, None),

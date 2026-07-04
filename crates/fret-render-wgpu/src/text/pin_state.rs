@@ -177,6 +177,11 @@ impl TextBlobResidencySignature {
     fn len(&self) -> usize {
         self.entries.len()
     }
+
+    #[cfg(test)]
+    pub(crate) fn entries(&self) -> &[TextResidencyEntryKey] {
+        &self.entries
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -187,6 +192,17 @@ pub(super) struct TextResidencyEntryKey {
     clusters: u32,
     glyph_fingerprint: u64,
     glyphs: u32,
+}
+
+#[cfg(test)]
+impl TextResidencyEntryKey {
+    pub(crate) fn cluster_fingerprint(&self) -> u64 {
+        self.cluster_fingerprint
+    }
+
+    pub(crate) fn glyph_fingerprint(&self) -> u64 {
+        self.glyph_fingerprint
+    }
 }
 
 #[derive(Debug)]
