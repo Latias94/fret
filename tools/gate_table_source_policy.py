@@ -44,7 +44,7 @@ def main() -> None:
             Path("apps/fret-examples/src/table_demo.rs"),
             required=[
                 "table_state: LocalState<TableState>,",
-                "let table_state = LocalState::new_in(app.models_mut(), table_state);",
+                "let table_state = app.local_state(table_state);",
                 "let (selected, sorting) = table_state.layout_read_ref_in(cx, |st| {",
                 "fret_ui_kit::declarative::table::table_virtualized(",
                 "&table_state,",
@@ -71,6 +71,7 @@ def main() -> None:
                 "let header_menu_name_open = header_menu_name_open.clone_model();",
                 "let header_menu_role_open = header_menu_role_open.clone_model();",
                 "let header_menu_score_open = header_menu_score_open.clone_model();",
+                "LocalState::new_in(app.models_mut(),",
                 "enable_grouping_state.clone_model();",
                 "grouped_column_mode_state.clone_model();",
                 "table_state: Model<TableState>,",
@@ -83,7 +84,7 @@ def main() -> None:
             required=[
                 "use fret::advanced::prelude::LocalState;",
                 "table_state: LocalState<TableState>,",
-                "let table_state = LocalState::new_in(app.models_mut(), table_state);",
+                "let table_state = app.local_state(table_state);",
                 "let (selected, sorting) = table_state.layout_read_ref_in(cx, |st| {",
                 "shadcn::DataTableToolbar::new(",
                 "shadcn::DataTablePagination::new(&table_state, table_output.clone())",
@@ -94,6 +95,7 @@ def main() -> None:
                 'row_test_id_prefix: Some(Arc::<str>::from("datatable-demo-row-")),',
             ],
             forbidden=[
+                "LocalState::new_in(app.models_mut(),",
                 "table_state: Model<TableState>,",
                 ".models().read(&table_state, |st|",
             ],
