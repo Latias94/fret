@@ -40,12 +40,13 @@ Two readonly explorers audited the remaining IMUI cookbook facade gaps.
 
 # Disposition
 
-The action, editor, and debug-draw recommendations were implemented. The action example now uses
-`LocalState<String>`, `fret::commands`, and `imui_in(...)`; the editor controls example now uses
-editor-control `LocalState<T>` adapter traits and `fret::style::Color`; the debug-draw example no
-longer reaches for `ColumnProps` or root `imui_raw(...)`. The action/editor source-policy
-quarantine records were removed. Plot remains a follow-up slice because it needs a plot-specific
-binding/handle first.
+The action, editor, debug-draw, and plot recommendations were implemented. The action example now
+uses `LocalState<String>`, `fret::commands`, and `imui_in(...)`; the editor controls example now
+uses editor-control `LocalState<T>` adapter traits and `fret::style::Color`; the debug-draw example
+no longer reaches for `ColumnProps` or root `imui_raw(...)`; the plot example now uses
+`fret_plot::LinePlotPanelBinding` plus `fret_plot::imui::line_plot_panel_binding(...)` instead of
+raw plot models and host layout plumbing. The action/editor/plot source-policy quarantine records
+were removed.
 
 # Citations
 
@@ -53,3 +54,4 @@ binding/handle first.
 - [IMUI action local-state migration](../progress/2026-07-03-phase3-u13-imui-action-local-state.md)
 - [IMUI editor local-state migration](../progress/2026-07-03-phase3-u13-imui-editor-local-state.md)
 - [IMUI debug draw host cleanup](../progress/2026-07-04-phase3-u13-imui-debug-draw-host.md)
+- [IMUI plot binding migration](../progress/2026-07-04-phase3-u13-imui-plot-binding.md)

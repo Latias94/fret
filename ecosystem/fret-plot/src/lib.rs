@@ -18,6 +18,10 @@ pub mod style;
 
 mod theme_tokens;
 
+mod binding;
+
+pub use binding::LinePlotPanelBinding;
+
 #[cfg(test)]
 mod surface_policy_tests {
     const LIB_RS: &str = include_str!("lib.rs");

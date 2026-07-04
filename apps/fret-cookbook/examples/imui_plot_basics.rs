@@ -1,14 +1,11 @@
 use fret::app::prelude::*;
 use fret::imui::prelude::*;
-use fret::style::Space;
-use fret_core::{Color, Px};
+use fret::style::{Color, Space};
+use fret_plot::LinePlotPanelBinding;
 use fret_plot::cartesian::{AxisScale, DataPoint};
-use fret_plot::declarative::LinePlotPanelProps;
 use fret_plot::models::{LinePlotModel, LineSeries};
 use fret_plot::series::Series;
-use fret_plot::state::{PlotOutput, PlotState};
 use fret_plot::style::{LinePlotStyle, SeriesTooltipMode};
-use fret_runtime::Model;
 
 const TEST_ID_ROOT: &str = "cookbook.imui_plot_basics.root";
 const TEST_ID_PANEL: &str = "cookbook.imui_plot_basics.panel";
@@ -17,9 +14,7 @@ const TEST_ID_VIEW: &str = "cookbook.imui_plot_basics.view";
 const TEST_ID_CURSOR: &str = "cookbook.imui_plot_basics.cursor";
 
 struct ImUiPlotBasicsView {
-    plot: Model<LinePlotModel>,
-    plot_state: Model<PlotState>,
-    plot_output: Model<PlotOutput>,
+    plot: LinePlotPanelBinding,
 }
 
 impl View for ImUiPlotBasicsView {
@@ -50,14 +45,12 @@ impl View for ImUiPlotBasicsView {
         ]);
 
         Self {
-            plot: app.models_mut().insert(plot),
-            plot_state: app.models_mut().insert(PlotState::default()),
-            plot_output: app.models_mut().insert(PlotOutput::default()),
+            plot: LinePlotPanelBinding::new(app, plot),
         }
     }
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
-        let output = self.plot_output.layout(cx).value_or_default();
+        let output = self.plot.output_layout(cx);
         let view = output.snapshot.view_bounds;
         let view_readout = format!(
             "View: x=[{:.1}, {:.1}] y=[{:.2}, {:.2}] rev={}",
@@ -70,12 +63,12 @@ impl View for ImUiPlotBasicsView {
             .unwrap_or_else(|| String::from("Cursor: outside plot"));
 
         ui::v_flex(|cx| {
-            let plot_panel = cx
-                .column(fret_ui::element::ColumnProps::default(), |cx| {
-                    imui_raw(cx, |ui| {
-                        ui.text("Plot adapter");
+            let plot_panel = ui::v_flex(|cx| {
+                imui_in(cx, |ui| {
+                    ui.text("Plot adapter");
 
-                        let props = LinePlotPanelProps::new(self.plot.clone())
+                    fret_plot::imui::line_plot_panel_binding(ui, &self.plot, |props| {
+                        props
                             .height_px(Px(280.0))
                             .style(LinePlotStyle {
                                 padding: Px(18.0),
@@ -85,13 +78,10 @@ impl View for ImUiPlotBasicsView {
                             })
                             .x_scale(AxisScale::Linear)
                             .y_scale(AxisScale::Linear)
-                            .state(self.plot_state.clone())
-                            .output(self.plot_output.clone());
-
-                        fret_plot::imui::line_plot_panel(ui, props);
-                    })
+                    });
                 })
-                .test_id(TEST_ID_PANEL);
+            })
+            .test_id(TEST_ID_PANEL);
 
             ui::children![
                 cx;

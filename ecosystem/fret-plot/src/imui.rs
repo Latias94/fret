@@ -6,6 +6,7 @@
 use fret_authoring::UiWriter;
 use fret_ui::UiHost;
 
+use crate::LinePlotPanelBinding;
 use crate::declarative::{
     AreaPlotPanelProps, BarsPlotPanelProps, CandlestickPlotPanelProps, ErrorBarsPlotPanelProps,
     HeatmapPlotPanelProps, Histogram2DPlotPanelProps, HistogramPlotPanelProps, LinePlotPanelProps,
@@ -17,6 +18,16 @@ use crate::declarative::{
 pub fn line_plot_panel<H: UiHost + 'static>(ui: &mut impl UiWriter<H>, props: LinePlotPanelProps) {
     let element = ui.with_cx_mut(|cx| crate::declarative::line_plot_panel(cx, props));
     ui.add(element);
+}
+
+/// Adds a line plot panel from an app-facing binding.
+#[track_caller]
+pub fn line_plot_panel_binding<H: UiHost + 'static>(
+    ui: &mut impl UiWriter<H>,
+    binding: &LinePlotPanelBinding,
+    configure: impl FnOnce(LinePlotPanelProps) -> LinePlotPanelProps,
+) {
+    line_plot_panel(ui, configure(binding.panel_props()));
 }
 
 /// Adds an error-bars plot panel to an `imui` output list.

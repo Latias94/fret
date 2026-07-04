@@ -586,3 +586,11 @@ timestamp: 2026-06-30
   and tightens cookbook/source gates so the low-level layout host seam cannot return.
   Verification passed for focused debug-draw example compile, `fret-cookbook --all-targets`,
   cookbook IMUI source tests, IMUI teaching gate, source-policy tests/gate, and formatting.
+- 2026-07-04: Phase 3 U13 IMUI plot binding migration adds `fret_plot::LinePlotPanelBinding`
+  plus `fret_plot::imui::line_plot_panel_binding(...)`, migrates `imui_plot_basics.rs` off raw
+  `Model<T>`, direct `ModelStore` insertion, `fret_core`/`fret_runtime`/`fret_ui` imports,
+  `ColumnProps`, and root `imui_raw(...)`, then moves the example to default clean source-policy
+  coverage. Verification passed for focused plot/cookbook tests, `fret-cookbook --all-targets`,
+  `fret-plot --features imui --all-targets`, `fret-examples-imui --all-targets`,
+  source-policy tests/gate, IMUI teaching gate, consumption-profile, execution-surface, layering,
+  formatting, and whitespace.
