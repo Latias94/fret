@@ -33,6 +33,7 @@ def write(path: Path, text: str) -> None:
 def check_fixture_policy(root: Path, **kwargs):
     kwargs.setdefault("comparison_surfaces", [])
     kwargs.setdefault("internal_harness_surfaces", [])
+    kwargs.setdefault("renderer_lab_surfaces", [])
     return POLICY.check_surface_policy(root, **kwargs)
 
 
@@ -621,6 +622,67 @@ class SurfacePolicyTests(unittest.TestCase):
             )
             self.assertTrue(any("UiTree" in v.message for v in violations))
 
+    def test_renderer_lab_allows_classified_raw_seam_without_retirement(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-cookbook/examples/renderer_lab.rs",
+                """
+                use fret_launch::FnDriver;
+                """,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[],
+                renderer_lab_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-cookbook/examples/renderer_lab.rs",
+                        "renderer_lab",
+                        "fixture renderer lab",
+                        owner="fixture-renderer-lab",
+                        allowed_raw_seams=("fret_launch", "FnDriver"),
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+                public_example_scan_roots=["apps/fret-cookbook/examples/renderer_lab.rs"],
+            )
+
+            self.assertEqual([], violations)
+
+    def test_renderer_lab_rejects_unlisted_raw_seam(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-cookbook/examples/renderer_lab.rs",
+                """
+                use fret_ui::UiTree;
+                """,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[],
+                renderer_lab_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-cookbook/examples/renderer_lab.rs",
+                        "renderer_lab",
+                        "fixture renderer lab",
+                        owner="fixture-renderer-lab",
+                        allowed_raw_seams=("fret_ui",),
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            self.assertGreaterEqual(len(violations), 1)
+            self.assertTrue(all(v.rule == "renderer_lab-unlisted-raw-seam" for v in violations))
+            self.assertTrue(any("UiTree" in v.message for v in violations))
+
     def test_public_example_scan_root_can_target_exact_file(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -741,6 +803,18 @@ class SurfacePolicyTests(unittest.TestCase):
 
         self.assertTrue(migrated.issubset(default_paths))
         self.assertTrue(migrated.isdisjoint(advanced_paths))
+
+    def test_renderer_labs_do_not_count_as_advanced_manual_quarantine(self) -> None:
+        renderer_lab_paths = {spec.path for spec in POLICY.RENDERER_LAB_SURFACES}
+        advanced_paths = {spec.path for spec in POLICY.ADVANCED_MANUAL_SURFACES}
+
+        expected = {
+            "apps/fret-cookbook/examples/compositing_alpha_basics.rs",
+            "apps/fret-cookbook/examples/image_asset_cache_basics.rs",
+        }
+
+        self.assertTrue(expected.issubset(renderer_lab_paths))
+        self.assertTrue(expected.isdisjoint(advanced_paths))
 
     def test_policy_coded_fret_ui_root_export_is_rejected_without_classification(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

@@ -218,7 +218,7 @@ FRET_EXAMPLES_ADVANCED_RETIREMENT = (
 )
 
 CLASSIFIED_RAW_SURFACE_CATEGORIES = frozenset(
-    {"advanced_manual", "comparison_surface", "internal_harness"}
+    {"advanced_manual", "comparison_surface", "internal_harness", "renderer_lab"}
 )
 
 
@@ -235,6 +235,21 @@ def _cookbook_advanced_surface(
         owner=owner,
         allowed_raw_seams=allowed_raw_seams,
         retirement=COOKBOOK_ADVANCED_RETIREMENT,
+    )
+
+
+def _cookbook_renderer_lab_surface(
+    filename: str,
+    reason: str,
+    allowed_raw_seams: tuple[str, ...],
+) -> SurfacePath:
+    owner = f"cookbook-{filename.removesuffix('.rs').removesuffix('_basics').replace('_', '-')}"
+    return SurfacePath(
+        f"apps/fret-cookbook/examples/{filename}",
+        "renderer_lab",
+        f"{filename} remains classified as a renderer lab because {reason}",
+        owner=owner,
+        allowed_raw_seams=allowed_raw_seams,
     )
 
 
@@ -384,6 +399,22 @@ INTERNAL_HARNESS_SURFACES: tuple[SurfacePath, ...] = (
 )
 
 
+RENDERER_LAB_SURFACES: tuple[SurfacePath, ...] = (
+    _cookbook_renderer_lab_surface(
+        "compositing_alpha_basics.rs",
+        "it is a deterministic screenshot baseline for straight-vs-premultiplied alpha renderer "
+        "semantics rather than an app-authoring lesson",
+        ("fret::advanced", "fret_app", "fret_core", "fret_launch", "FnDriver"),
+    ),
+    _cookbook_renderer_lab_surface(
+        "image_asset_cache_basics.rs",
+        "it is a deterministic screenshot baseline for keyed ImageAssetCache upload, eviction, "
+        "and reload behavior rather than an app-authoring lesson",
+        ("fret::advanced", "fret_app", "fret_core", "fret_launch", "FnDriver"),
+    ),
+)
+
+
 ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
     SurfacePath(
         "apps/fret-examples/src/workspace_shell_demo",
@@ -491,11 +522,6 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
         owner="examples-gizmo3d",
     ),
     _cookbook_advanced_surface(
-        "compositing_alpha_basics.rs",
-        "the alpha compositing example still owns a manual driver/window setup path",
-        ("fret::advanced", "fret_app", "fret_core", "fret_launch", "FnDriver"),
-    ),
-    _cookbook_advanced_surface(
         "customv1_basics.rs",
         "custom effect authoring still exposes manual kernel and low-level element seams",
         ("fret::advanced", "fret_core", "fret_ui", "AnyElement"),
@@ -544,11 +570,6 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
             "ElementContext",
             "UiTree",
         ),
-    ),
-    _cookbook_advanced_surface(
-        "image_asset_cache_basics.rs",
-        "image asset cache stress still owns a manual driver/window setup path",
-        ("fret::advanced", "fret_app", "fret_core", "fret_launch", "FnDriver"),
     ),
     _cookbook_advanced_surface(
         "utility_window_materials_windows.rs",
@@ -1154,6 +1175,7 @@ def check_surface_policy(
     advanced_manual_surfaces: Sequence[SurfacePath] = ADVANCED_MANUAL_SURFACES,
     comparison_surfaces: Sequence[SurfacePath] = COMPARISON_SURFACES,
     internal_harness_surfaces: Sequence[SurfacePath] = INTERNAL_HARNESS_SURFACES,
+    renderer_lab_surfaces: Sequence[SurfacePath] = RENDERER_LAB_SURFACES,
     policy_recipe_surfaces: Sequence[SurfacePath] = POLICY_RECIPE_SURFACES,
     mechanism_root_surfaces: Sequence[SurfacePath] = MECHANISM_ROOT_SURFACES,
     public_example_scan_roots: Sequence[str] = PUBLIC_EXAMPLE_SCAN_ROOTS,
@@ -1163,6 +1185,7 @@ def check_surface_policy(
         *advanced_manual_surfaces,
         *comparison_surfaces,
         *internal_harness_surfaces,
+        *renderer_lab_surfaces,
         *policy_recipe_surfaces,
         *mechanism_root_surfaces,
     ]
@@ -1181,6 +1204,9 @@ def check_surface_policy(
     for spec in internal_harness_surfaces:
         violations.extend(_scan_classified_raw_surface(root, spec))
 
+    for spec in renderer_lab_surfaces:
+        violations.extend(_scan_classified_raw_surface(root, spec))
+
     violations.extend(
         _scan_unclassified_public_examples(
             root,
@@ -1190,6 +1216,7 @@ def check_surface_policy(
                 *advanced_manual_surfaces,
                 *comparison_surfaces,
                 *internal_harness_surfaces,
+                *renderer_lab_surfaces,
             ],
         )
     )
