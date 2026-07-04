@@ -232,7 +232,7 @@ impl<H: UiHost> UiTree<H> {
     ) {
         let mut removals: HashMap<NodeId, HashSet<NodeId>> = HashMap::new();
         for &child in children {
-            let Some(old_parent) = self.nodes.get(child).and_then(|node| node.parent) else {
+            let Some(old_parent) = self.validated_child_edge_parent_for_reparent(child) else {
                 continue;
             };
             if old_parent == parent {
@@ -322,6 +322,7 @@ impl<H: UiHost> UiTree<H> {
             .get(parent)
             .is_some_and(|n| n.children.as_slice() == children.as_slice());
         if same_children {
+            self.replace_child_parent_index(parent, &children, &children);
             self.sync_same_children_parent_edges_and_reconnect_layout(parent, &children);
             if self.node_is_reachable_from_layer_forest(parent) {
                 for &child in &children {
@@ -371,6 +372,8 @@ impl<H: UiHost> UiTree<H> {
                 self.detach_view_boundary_state_for_subtree(old);
             }
         }
+
+        self.replace_child_parent_index(parent, &old_children, &children);
 
         for old in old_children {
             if let Some(n) = self.nodes.get_mut(old)

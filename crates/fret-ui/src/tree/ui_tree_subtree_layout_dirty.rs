@@ -318,7 +318,6 @@ impl<H: UiHost> UiTree<H> {
             );
         }
 
-        let parent = self.parent_in_layer_forest_via_children(node);
         let (old_count, new_count) = {
             let Some(n) = self.nodes.get(node) else {
                 return;
@@ -348,6 +347,7 @@ impl<H: UiHost> UiTree<H> {
         let delta_i64: i64 = new_count as i64 - old_count as i64;
         debug_assert!(delta_i64 >= i32::MIN as i64 && delta_i64 <= i32::MAX as i64);
         let delta: i32 = delta_i64.clamp(i32::MIN as i64, i32::MAX as i64) as i32;
+        let parent = self.parent_in_layer_forest_via_children(node);
         self.apply_subtree_layout_dirty_delta_to_ancestors(parent, delta);
     }
 

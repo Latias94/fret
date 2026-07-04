@@ -313,6 +313,7 @@ fn set_children_reparents_from_old_parent_without_leaving_stale_child_edges() {
     ui.test_clear_node_invalidations(left);
     ui.test_clear_node_invalidations(right);
     ui.test_clear_node_invalidations(child);
+    ui.test_set_node_parent(child, None);
 
     ui.set_children(right, vec![child]);
 
@@ -342,6 +343,7 @@ fn set_children_in_mount_reparents_from_old_parent_without_leaving_stale_child_e
     ui.test_clear_node_invalidations(left);
     ui.test_clear_node_invalidations(right);
     ui.test_clear_node_invalidations(child);
+    ui.test_set_node_parent(child, None);
 
     ui.set_children_in_mount(right, vec![child]);
 
@@ -372,6 +374,7 @@ fn set_children_barrier_reparents_from_old_barrier_without_leaving_stale_child_e
     ui.test_clear_node_invalidations(left);
     ui.test_clear_node_invalidations(right);
     ui.test_clear_node_invalidations(child);
+    ui.test_set_node_parent(child, None);
 
     ui.set_children_barrier(right, vec![child]);
 
@@ -406,6 +409,7 @@ fn set_children_reparents_from_old_barrier_using_barrier_detach_semantics() {
     ui.test_clear_node_invalidations(left);
     ui.test_clear_node_invalidations(right);
     ui.test_clear_node_invalidations(child);
+    ui.test_set_node_parent(child, None);
 
     ui.set_children(right, vec![child]);
 

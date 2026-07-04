@@ -389,6 +389,8 @@ impl CommandRoutingSnapshotState {
 pub struct UiTree<H: UiHost> {
     nodes: SlotMap<NodeId, Node<H>>,
     element_node_index: ElementNodeIndex,
+    live_layer_nodes: HashSet<NodeId>,
+    child_parent_index: HashMap<NodeId, NodeId>,
     layers: SlotMap<UiLayerId, UiLayer>,
     layer_order: Vec<UiLayerId>,
     root_to_layer: HashMap<NodeId, UiLayerId>,

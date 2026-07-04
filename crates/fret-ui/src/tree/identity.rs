@@ -99,8 +99,14 @@ impl<H: UiHost> UiTree<H> {
             else {
                 continue;
             };
+            self.live_layer_nodes.insert(node);
             if let Some(element) = element {
                 self.index_node_element_binding(node, element);
+            }
+            for &child in &children {
+                if self.nodes.contains_key(child) {
+                    self.child_parent_index.insert(child, node);
+                }
             }
             stack.extend(children);
         }
@@ -117,6 +123,7 @@ impl<H: UiHost> UiTree<H> {
             if self.root_to_layer.contains_key(&node) {
                 continue;
             }
+            self.live_layer_nodes.remove(&node);
             let Some((element, children)) = self
                 .nodes
                 .get(node)
@@ -133,8 +140,28 @@ impl<H: UiHost> UiTree<H> {
 
     pub(in crate::tree) fn rebuild_live_element_index(&mut self) {
         self.element_node_index.clear();
+        self.live_layer_nodes.clear();
+        self.child_parent_index.clear();
         for root in self.all_layer_roots() {
             self.index_live_subtree(root);
+        }
+    }
+
+    pub(in crate::tree) fn replace_child_parent_index(
+        &mut self,
+        parent: NodeId,
+        old_children: &[NodeId],
+        new_children: &[NodeId],
+    ) {
+        for &child in old_children {
+            if self.child_parent_index.get(&child).copied() == Some(parent) {
+                self.child_parent_index.remove(&child);
+            }
+        }
+        for &child in new_children {
+            if self.nodes.contains_key(child) {
+                self.child_parent_index.insert(child, parent);
+            }
         }
     }
 
@@ -142,11 +169,7 @@ impl<H: UiHost> UiTree<H> {
         if !self.nodes.contains_key(node) {
             return false;
         }
-        if self.root_to_layer.contains_key(&node) {
-            return true;
-        }
-        let roots = self.all_layer_roots();
-        self.is_reachable_from_any_root_via_children(node, roots.as_slice())
+        self.live_layer_nodes.contains(&node)
     }
 
     pub(in crate::tree) fn parent_in_layer_forest_via_children(
@@ -155,6 +178,16 @@ impl<H: UiHost> UiTree<H> {
     ) -> Option<NodeId> {
         if !self.nodes.contains_key(node) || self.root_to_layer.contains_key(&node) {
             return None;
+        }
+
+        if let Some(parent) = self.child_parent_index.get(&node).copied()
+            && self.live_layer_nodes.contains(&parent)
+            && self
+                .nodes
+                .get(parent)
+                .is_some_and(|entry| entry.children.contains(&node))
+        {
+            return Some(parent);
         }
 
         let roots = self.all_layer_roots();
@@ -176,6 +209,32 @@ impl<H: UiHost> UiTree<H> {
         }
 
         None
+    }
+
+    pub(in crate::tree) fn validated_child_edge_parent_for_reparent(
+        &self,
+        child: NodeId,
+    ) -> Option<NodeId> {
+        if let Some(parent) = self.child_parent_index.get(&child).copied()
+            && self
+                .nodes
+                .get(parent)
+                .is_some_and(|entry| entry.children.contains(&child))
+        {
+            return Some(parent);
+        }
+
+        if self.live_layer_nodes.contains(&child)
+            && let Some(parent) = self.parent_in_layer_forest_via_children(child)
+        {
+            return Some(parent);
+        }
+
+        let retained_parent = self.nodes.get(child).and_then(|node| node.parent)?;
+        self.nodes
+            .get(retained_parent)
+            .is_some_and(|entry| entry.children.contains(&child))
+            .then_some(retained_parent)
     }
 
     pub fn node_parent_in_layer_tree(&self, node: NodeId) -> Option<NodeId> {

@@ -348,10 +348,11 @@ impl<H: UiHost> UiTree<H> {
         // Avoid recursion: removing or cleaning up deep trees can overflow the stack.
         //
         // We remove nodes in a post-order traversal so children are removed before their parent.
-        let mut stack: Vec<(NodeId, bool)> = Vec::new();
-        stack.push((root, false));
+        let root_parent = self.parent_in_layer_forest_via_children(root);
+        let mut stack: Vec<(NodeId, Option<NodeId>, bool)> = Vec::new();
+        stack.push((root, root_parent, false));
 
-        while let Some((node, children_pushed)) = stack.pop() {
+        while let Some((node, parent, children_pushed)) = stack.pop() {
             if self.root_to_layer.contains_key(&node) {
                 continue;
             }
@@ -363,14 +364,14 @@ impl<H: UiHost> UiTree<H> {
 
             if !children_pushed {
                 let children = n.children.clone();
-                stack.push((node, true));
+                stack.push((node, parent, true));
+                let child_parent = parent.is_some().then_some(node);
                 for child in children {
-                    stack.push((child, false));
+                    stack.push((child, child_parent, false));
                 }
                 continue;
             }
 
-            let parent = self.parent_in_layer_forest_via_children(node);
             if let Some(parent) = parent
                 && let Some(p) = self.nodes.get_mut(parent)
             {
@@ -393,6 +394,18 @@ impl<H: UiHost> UiTree<H> {
             }
             if let Some(element) = self.nodes.get(node).and_then(|n| n.element) {
                 self.unindex_node_element_binding(node, element);
+            }
+            self.live_layer_nodes.remove(&node);
+            self.child_parent_index.remove(&node);
+            {
+                let child_parent_index = &mut self.child_parent_index;
+                if let Some(n) = self.nodes.get(node) {
+                    for &child in &n.children {
+                        if child_parent_index.get(&child).copied() == Some(node) {
+                            child_parent_index.remove(&child);
+                        }
+                    }
+                }
             }
             if layout_invalidated {
                 record_layout_invalidation_transition(
