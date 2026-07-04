@@ -261,7 +261,9 @@ impl<H: UiHost> UiTree<H> {
     }
 
     pub fn debug_stats(&self) -> UiDebugFrameStats {
-        self.debug_stats
+        let mut stats = self.debug_stats;
+        stats.live_topology_epoch = self.live_topology_epoch().as_u64();
+        stats
     }
 
     pub(crate) fn debug_refresh_dirty_frontier_max(&mut self) {

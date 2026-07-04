@@ -1855,6 +1855,13 @@
       "unit": "count"
     },
     {
+      "key": "live_topology_epoch",
+      "kind": "identifier",
+      "scope": "frame",
+      "suggested_aggregate": "none",
+      "unit": "id"
+    },
+    {
       "key": "invalidation_walk_calls",
       "kind": "counter",
       "scope": "frame",

@@ -223,3 +223,102 @@ fn element_index_isolated_per_ui_tree_window() {
     assert_eq!(stats_a.identity_resolve_index_duplicate_live, 0);
     assert_eq!(stats_b.identity_resolve_index_duplicate_live, 0);
 }
+
+#[test]
+fn same_children_write_keeps_live_topology_epoch_when_edges_are_unchanged() {
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(AppWindowId::default());
+
+    let root = ui.create_node(TestStack);
+    let child = ui.create_node(TestStack);
+
+    ui.set_root(root);
+    ui.set_children(root, vec![child]);
+    let epoch = ui.live_topology_epoch();
+
+    ui.set_children(root, vec![child]);
+
+    assert_eq!(ui.live_topology_epoch(), epoch);
+    assert_eq!(ui.node_parent_in_layer_tree(child), Some(root));
+    assert_eq!(ui.debug_node_parent_storage(child), Some(root));
+}
+
+#[test]
+fn reparent_with_stale_retained_parent_advances_live_topology_epoch() {
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(AppWindowId::default());
+
+    let root = ui.create_node(TestStack);
+    let left = ui.create_node(TestStack);
+    let right = ui.create_node(TestStack);
+    let child = ui.create_node(TestStack);
+
+    ui.set_root(root);
+    ui.set_children(root, vec![left, right]);
+    ui.set_children(left, vec![child]);
+    ui.test_set_node_parent(child, None);
+
+    let before = ui.live_topology_epoch();
+
+    ui.set_children(right, vec![child]);
+
+    assert!(ui.live_topology_epoch() > before);
+    assert_eq!(ui.node_parent_in_layer_tree(child), Some(right));
+    assert_eq!(ui.debug_node_parent_storage(child), Some(right));
+    assert_eq!(ui.nodes[left].children, Vec::<NodeId>::new());
+    assert_eq!(ui.nodes[right].children, vec![child]);
+}
+
+#[test]
+fn removing_deep_subtree_advances_live_topology_epoch_and_clears_live_membership() {
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(AppWindowId::default());
+
+    let root = ui.create_node(TestStack);
+    let parent = ui.create_node(TestStack);
+    let child = ui.create_node(TestStack);
+
+    ui.set_root(root);
+    ui.set_children(root, vec![parent]);
+    ui.set_children(parent, vec![child]);
+
+    let before = ui.live_topology_epoch();
+    let mut services = FakeUiServices;
+
+    let removed = ui.remove_subtree(&mut services, parent);
+
+    assert_eq!(removed, vec![child, parent]);
+    assert!(ui.live_topology_epoch() > before);
+    assert!(!ui.node_is_reachable_from_layer_forest(parent));
+    assert!(!ui.node_is_reachable_from_layer_forest(child));
+    assert_eq!(ui.nodes[root].children, Vec::<NodeId>::new());
+}
+
+#[test]
+fn base_root_update_rebuilds_live_topology_epoch_and_live_element_index() {
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(AppWindowId::default());
+    ui.set_debug_enabled(true);
+
+    let old_element = crate::elements::GlobalElementId(10_010);
+    let new_element = crate::elements::GlobalElementId(10_011);
+    let old_root = ui.create_node_for_element(old_element, TestStack);
+    let new_root = ui.create_node_for_element(new_element, TestStack);
+
+    ui.set_root(old_root);
+    let before = ui.live_topology_epoch();
+
+    ui.set_root(new_root);
+
+    assert!(ui.live_topology_epoch() > before);
+    assert!(!ui.node_is_reachable_from_layer_forest(old_root));
+    assert!(ui.node_is_reachable_from_layer_forest(new_root));
+    assert_eq!(
+        ui.resolve_live_attached_node_for_element_seeded(old_element, None),
+        None
+    );
+    assert_eq!(
+        ui.resolve_live_attached_node_for_element_seeded(new_element, None),
+        Some(new_root)
+    );
+}

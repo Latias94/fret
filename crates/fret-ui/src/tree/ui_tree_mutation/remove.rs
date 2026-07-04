@@ -395,18 +395,13 @@ impl<H: UiHost> UiTree<H> {
             if let Some(element) = self.nodes.get(node).and_then(|n| n.element) {
                 self.unindex_node_element_binding(node, element);
             }
-            self.live_layer_nodes.remove(&node);
-            self.child_parent_index.remove(&node);
-            {
-                let child_parent_index = &mut self.child_parent_index;
-                if let Some(n) = self.nodes.get(node) {
-                    for &child in &n.children {
-                        if child_parent_index.get(&child).copied() == Some(node) {
-                            child_parent_index.remove(&child);
-                        }
-                    }
-                }
-            }
+            let direct_children = self
+                .nodes
+                .get(node)
+                .map(|n| n.children.clone())
+                .unwrap_or_default();
+            self.live_topology
+                .remove_node_and_direct_child_edges(node, &direct_children);
             if layout_invalidated {
                 record_layout_invalidation_transition(
                     &mut self.layout_invalidations_count,

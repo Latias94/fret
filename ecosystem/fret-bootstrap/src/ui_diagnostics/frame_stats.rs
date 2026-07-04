@@ -23,6 +23,8 @@ pub struct UiFrameStatsV1 {
     pub identity_resolve_index_misses: u32,
     #[serde(default)]
     pub identity_resolve_index_duplicate_live: u32,
+    #[serde(default)]
+    pub live_topology_epoch: u64,
     /// UI thread CPU time spent since the previous snapshot (approx frame CPU time).
     ///
     /// This is intended to distinguish "real work" from schedule noise: if wall time spikes but
@@ -1170,6 +1172,7 @@ impl UiFrameStatsV1 {
             identity_resolve_index_stale: stats.identity_resolve_index_stale,
             identity_resolve_index_misses: stats.identity_resolve_index_misses,
             identity_resolve_index_duplicate_live: stats.identity_resolve_index_duplicate_live,
+            live_topology_epoch: stats.live_topology_epoch,
             ui_thread_cpu_time_us: cpu.delta_time_us,
             ui_thread_cpu_total_time_us: cpu.total_time_us,
             ui_thread_cpu_cycle_time_delta_cycles: cpu.delta_cycles,

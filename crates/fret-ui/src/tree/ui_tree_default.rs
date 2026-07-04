@@ -5,8 +5,7 @@ impl<H: UiHost> Default for UiTree<H> {
         Self {
             nodes: SlotMap::with_key(),
             element_node_index: ElementNodeIndex::default(),
-            live_layer_nodes: HashSet::new(),
-            child_parent_index: HashMap::new(),
+            live_topology: LiveTopologyIndex::default(),
             layers: SlotMap::with_key(),
             layer_order: Vec::new(),
             root_to_layer: HashMap::new(),

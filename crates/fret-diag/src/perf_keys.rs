@@ -1344,6 +1344,7 @@ pub(crate) const REGISTERED_FRAME_STATS_KEYS: &[PerfKey] = &[
         "identity_resolve_index_duplicate_live",
         PerfKeyAggregate::Max,
     ),
+    id_key("live_topology_epoch"),
     count_key("invalidation_walk_calls", PerfKeyAggregate::Max),
     count_key("invalidation_walk_calls_focus", PerfKeyAggregate::Max),
     count_key(
@@ -2661,6 +2662,7 @@ mod tests {
             "element_children_vec_pool_grow_events",
             "identity_resolve_index_hits",
             "identity_resolve_index_duplicate_live",
+            "live_topology_epoch",
             "parent_pointer_repairs",
             "parent_pointer_would_repair_nodes",
             "retained_subtree_membership_scan_nodes",

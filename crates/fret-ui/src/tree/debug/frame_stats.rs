@@ -35,6 +35,8 @@ pub struct UiDebugFrameStats {
     pub identity_resolve_index_misses: u32,
     /// Element index lookups where more than one live node carried the same declarative id.
     pub identity_resolve_index_duplicate_live: u32,
+    /// Current live-topology owner epoch.
+    pub live_topology_epoch: u64,
     /// Total time spent in event dispatch during the current frame.
     ///
     /// This includes pointer routing, capture/focus arbitration, and widget event hooks. It does
