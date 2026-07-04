@@ -1,4 +1,5 @@
 use super::*;
+use crate::tree::prepaint::InteractionCacheEntry;
 use std::any::TypeId;
 
 #[test]
@@ -746,8 +747,76 @@ fn view_cache_nearest_root_uses_child_edges_under_stale_parent_pointers() {
     );
 }
 
+fn view_cache_test_product_key() -> PaintCacheKey {
+    PaintCacheKey::new(
+        Rect::new(
+            Point::default(),
+            Size::new(fret_core::Px(10.0), fret_core::Px(10.0)),
+        ),
+        1,
+        1.0,
+        1,
+        crate::tree::paint_style::PaintStyleState::default(),
+        None,
+        Transform2D::IDENTITY,
+    )
+}
+
+fn seed_boundary_frame_products(ui: &mut UiTree<crate::test_host::TestHost>, boundary: NodeId) {
+    let product_key = view_cache_test_product_key();
+    ui.begin_prepaint_outputs_for_node(boundary, product_key);
+    ui.set_prepaint_output(boundary, 7u32);
+    ui.begin_scene_fragment_for_node(boundary, product_key);
+    ui.set_scene_fragment(boundary, 11u32);
+    ui.set_interaction_cache_entry_for_boundary(
+        boundary,
+        InteractionCacheEntry {
+            generation: 1,
+            key: product_key,
+            origin: Point::default(),
+            start: 0,
+            end: 1,
+        },
+    );
+    ui.set_paint_cache_entry_for_node(
+        boundary,
+        PaintCacheEntry {
+            generation: 1,
+            key: product_key,
+            origin: Point::default(),
+            start: 0,
+            end: 1,
+            text_blob_start: 0,
+            text_blob_end: 0,
+        },
+    );
+}
+
+fn assert_boundary_frame_products_present(
+    ui: &UiTree<crate::test_host::TestHost>,
+    boundary: NodeId,
+) {
+    assert_eq!(
+        ui.test_view_boundary_prepaint_output::<u32>(boundary),
+        Some(&7)
+    );
+    assert!(ui.scene_fragment::<u32>(boundary).is_some());
+    assert!(ui.test_view_boundary_interaction_cache_has_entry(boundary));
+    assert!(ui.test_view_boundary_paint_cache_has_entry(boundary));
+}
+
+fn assert_boundary_frame_products_cleared(
+    ui: &UiTree<crate::test_host::TestHost>,
+    boundary: NodeId,
+) {
+    assert_eq!(ui.test_view_boundary_prepaint_output::<u32>(boundary), None);
+    assert!(ui.scene_fragment::<u32>(boundary).is_none());
+    assert!(!ui.test_view_boundary_interaction_cache_has_entry(boundary));
+    assert!(!ui.test_view_boundary_paint_cache_has_entry(boundary));
+}
+
 #[test]
-fn view_boundary_frame_products_track_live_topology_epoch_after_reparent() {
+fn view_boundary_reparent_clears_topology_dependent_frame_products_and_updates_epoch() {
     let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
     ui.set_window(AppWindowId::default());
     ui.set_debug_enabled(true);
@@ -764,6 +833,9 @@ fn view_boundary_frame_products_track_live_topology_epoch_after_reparent() {
     ui.set_node_view_cache_flags(left, true, true, true);
     ui.set_node_view_cache_flags(right, true, true, true);
     ui.set_node_view_cache_flags(boundary, true, true, true);
+
+    seed_boundary_frame_products(&mut ui, boundary);
+    assert_boundary_frame_products_present(&ui, boundary);
 
     let first_epoch = ui.live_topology_epoch();
     assert_eq!(ui.test_view_boundary_parent(boundary), Some(left));
@@ -782,6 +854,7 @@ fn view_boundary_frame_products_track_live_topology_epoch_after_reparent() {
         ui.test_view_boundary_topology_epoch(boundary),
         Some(next_epoch)
     );
+    assert_boundary_frame_products_cleared(&ui, boundary);
 
     let stats = ui.debug_boundary_stats();
     let boundary_stats = stats
@@ -790,6 +863,42 @@ fn view_boundary_frame_products_track_live_topology_epoch_after_reparent() {
         .expect("boundary stats for reparented node");
     assert_eq!(boundary_stats.parent, Some(right));
     assert_eq!(boundary_stats.topology_epoch, next_epoch.as_u64());
+}
+
+#[test]
+fn view_boundary_products_survive_unrelated_topology_epoch_bump() {
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(AppWindowId::default());
+    ui.set_view_cache_enabled(true);
+
+    let root = ui.create_node(TestStack);
+    let left = ui.create_node(TestStack);
+    let boundary = ui.create_node(TestStack);
+    let unrelated_parent = ui.create_node(TestStack);
+    let unrelated_child = ui.create_node(TestStack);
+
+    ui.set_root(root);
+    ui.set_children(root, vec![left, unrelated_parent]);
+    ui.set_children(left, vec![boundary]);
+    ui.set_node_view_cache_flags(left, true, true, true);
+    ui.set_node_view_cache_flags(boundary, true, true, true);
+
+    seed_boundary_frame_products(&mut ui, boundary);
+    assert_boundary_frame_products_present(&ui, boundary);
+    let boundary_epoch = ui
+        .test_view_boundary_topology_epoch(boundary)
+        .expect("boundary topology epoch");
+    let live_epoch_before = ui.live_topology_epoch();
+
+    ui.set_children(unrelated_parent, vec![unrelated_child]);
+
+    assert!(ui.live_topology_epoch() > live_epoch_before);
+    assert_eq!(
+        ui.test_view_boundary_topology_epoch(boundary),
+        Some(boundary_epoch),
+        "unrelated topology changes must not relabel old boundary products as current"
+    );
+    assert_boundary_frame_products_present(&ui, boundary);
 }
 
 #[test]

@@ -442,6 +442,17 @@ pub(super) struct BoundaryFrameProducts {
     pub(super) paint_cache: BoundaryPaintCacheState,
 }
 
+impl BoundaryFrameProducts {
+    fn clear_topology_dependent_products(&mut self) {
+        self.prepaint.clear();
+        self.hit_test_bounds.clear();
+        self.semantics.clear();
+        self.interaction_cache.clear();
+        self.scene_fragment.clear();
+        self.paint_cache.clear();
+    }
+}
+
 impl ViewBoundaryState {
     fn new_runtime(
         id: BoundaryId,
@@ -478,14 +489,23 @@ impl ViewBoundaryState {
         flags: ViewCacheFlags,
         topology_epoch: LiveTopologyEpoch,
     ) {
-        self.live_node = live_node;
-        self.parent = parent;
-        self.kind = if flags.enabled {
+        let next_kind = if flags.enabled {
             ViewBoundaryKind::ViewCacheRoot
         } else {
             ViewBoundaryKind::Node
         };
-        self.layout_dependencies = BoundaryLayoutDependencies::from_view_cache_flags(flags);
+        let next_layout_dependencies = BoundaryLayoutDependencies::from_view_cache_flags(flags);
+        let topology_sensitive_binding_changed = self.live_node != live_node
+            || self.parent != parent
+            || self.kind != next_kind
+            || self.layout_dependencies != next_layout_dependencies;
+        if topology_sensitive_binding_changed {
+            self.frame_products.clear_topology_dependent_products();
+        }
+        self.live_node = live_node;
+        self.parent = parent;
+        self.kind = next_kind;
+        self.layout_dependencies = next_layout_dependencies;
         self.frame_products.topology_epoch = topology_epoch;
     }
 }
@@ -518,6 +538,10 @@ impl BoundaryInteractionCacheState {
 
     pub(super) fn set_entry(&mut self, entry: prepaint::InteractionCacheEntry) {
         self.entry = Some(entry);
+    }
+
+    pub(super) fn clear(&mut self) {
+        self.entry = None;
     }
 
     pub(super) fn has_entry(&self) -> bool {
@@ -673,6 +697,10 @@ pub(super) struct BoundaryPrepaintState {
 }
 
 impl BoundaryPrepaintState {
+    pub(super) fn clear(&mut self) {
+        self.outputs.clear();
+    }
+
     pub(super) fn begin_outputs(&mut self, key: PaintCacheKey) {
         self.outputs.begin_frame(key);
     }
@@ -711,6 +739,13 @@ pub(super) struct BoundarySceneFragmentState {
 }
 
 impl BoundarySceneFragmentState {
+    pub(super) fn clear(&mut self) {
+        self.outputs.clear();
+        self.used_entries = 0;
+        self.rejected_entries = 0;
+        self.last_reject_reason = None;
+    }
+
     pub(super) fn begin_fragment(&mut self, key: PaintCacheKey) {
         if self.outputs.begin_frame(key) {
             self.used_entries = 0;
@@ -818,6 +853,11 @@ pub(in crate::tree) struct BoundaryTypedOutputDebugMetadata {
 }
 
 impl BoundaryTypedOutputs {
+    fn clear(&mut self) {
+        self.key = None;
+        self.values.clear();
+    }
+
     fn begin_frame(&mut self, key: PaintCacheKey) -> bool {
         if self.key != Some(key) {
             self.key = Some(key);
