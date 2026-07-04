@@ -471,18 +471,38 @@ mod authoring_surface_policy_tests {
         assert!(VIRTUAL_LIST_EXAMPLE.contains(".locals_with(&self.items)"));
         assert!(!VIRTUAL_LIST_EXAMPLE.contains("models::<act::RotateItems>"));
 
-        assert!(ASYNC_INBOX_EXAMPLE.contains("use fret_runtime::Model;"));
-        assert!(ASYNC_INBOX_EXAMPLE.contains("models::<act::Cancel>"));
-        assert!(ASYNC_INBOX_EXAMPLE.contains("on_action_notify::<act::Start>"));
-        let async_inbox_normalized = ASYNC_INBOX_EXAMPLE.split_whitespace().collect::<String>();
+        assert!(ASYNC_INBOX_EXAMPLE.contains("use fret::app::LocalState;"));
         assert!(
-            async_inbox_normalized.contains("self.st.status.layout(cx).read_ref(|v|Arc::clone(v))")
+            ASYNC_INBOX_EXAMPLE.contains("use fret::async_work::{self, AppAsyncWorkExt as _};")
         );
-        assert!(ASYNC_INBOX_EXAMPLE.contains("self.st.running.layout(cx).value_or(false)"));
-        assert!(ASYNC_INBOX_EXAMPLE.contains("self.st.progress.layout(cx).value_or(0.0)"));
+        assert!(ASYNC_INBOX_EXAMPLE.contains("let dispatcher = app.dispatcher();"));
+        assert!(ASYNC_INBOX_EXAMPLE.contains("app.local_state(Arc::<str>::from(\"Idle\"))"));
+        assert!(ASYNC_INBOX_EXAMPLE.contains("async_work::inbox_local(&status)"));
+        assert!(ASYNC_INBOX_EXAMPLE.contains("async_work::inbox_drain_apply(move |cx, msg|"));
+        assert!(ASYNC_INBOX_EXAMPLE.contains("app.register_inbox_drainer(drainer);"));
+        assert!(
+            ASYNC_INBOX_EXAMPLE
+                .contains(".locals_with((&self.st.task, &self.st.running, &self.st.status))")
+        );
+        assert!(ASYNC_INBOX_EXAMPLE.contains(".on::<act::Start>({"));
+        assert!(ASYNC_INBOX_EXAMPLE.contains("async_work::DispatchPriority::Normal"));
+        assert!(!ASYNC_INBOX_EXAMPLE.contains("use fret_runtime::Model;"));
+        assert!(!ASYNC_INBOX_EXAMPLE.contains("use fret_runtime::{"));
+        assert!(!ASYNC_INBOX_EXAMPLE.contains("use fret_ui::element::AnyElement;"));
+        assert!(!ASYNC_INBOX_EXAMPLE.contains("models::<act::Cancel>"));
+        assert!(!ASYNC_INBOX_EXAMPLE.contains("on_action_notify::<act::Start>"));
+        let async_inbox_normalized = ASYNC_INBOX_EXAMPLE.split_whitespace().collect::<String>();
+        assert!(async_inbox_normalized.contains("self.st.status.layout_read_ref(cx,Arc::clone)"));
+        assert!(ASYNC_INBOX_EXAMPLE.contains("self.st.running.layout_value(cx)"));
+        assert!(ASYNC_INBOX_EXAMPLE.contains("self.st.progress.layout_value(cx)"));
+        assert!(ASYNC_INBOX_EXAMPLE.contains("shadcn::Progress::new(&self.st.progress)"));
+        assert!(ASYNC_INBOX_EXAMPLE.contains("shadcn::Textarea::new(&self.st.log)"));
         assert!(!async_inbox_normalized.contains("self.st.status.watch(cx).layout()"));
         assert!(!ASYNC_INBOX_EXAMPLE.contains("self.st.running.watch(cx).layout()"));
         assert!(!ASYNC_INBOX_EXAMPLE.contains("self.st.progress.watch(cx).layout()"));
+        assert!(!ASYNC_INBOX_EXAMPLE.contains("self.st.status.layout(cx).read_ref"));
+        assert!(!ASYNC_INBOX_EXAMPLE.contains("self.st.running.layout(cx).value_or(false)"));
+        assert!(!ASYNC_INBOX_EXAMPLE.contains("self.st.progress.layout(cx).value_or(0.0)"));
 
         assert!(QUERY_EXAMPLE.contains("cx.data().query("));
         assert!(QUERY_EXAMPLE.contains("cx.state().local_init(|| false)"));
@@ -1753,10 +1773,7 @@ mod authoring_surface_policy_tests {
             }
         }
 
-        assert_eq!(
-            raw_action_notify_files,
-            vec!["async_inbox_basics.rs".to_string()],
-        );
+        assert_eq!(raw_action_notify_files, Vec::<String>::new());
     }
 
     #[test]

@@ -97,6 +97,11 @@ DEFAULT_AUTHORING_SURFACES: tuple[SurfacePath, ...] = (
         "default drag cookbook should stay on app-facing pointer and local-state helpers",
     ),
     SurfacePath(
+        "apps/fret-cookbook/examples/async_inbox_basics.rs",
+        "default_app_clean",
+        "default async inbox cookbook should stay on app-facing async-work and local-state helpers",
+    ),
+    SurfacePath(
         "apps/fret-cookbook/examples/markdown_and_code_basics.rs",
         "default_app_clean",
         "default cookbook controls should stay on app-facing state helpers",
@@ -490,11 +495,6 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
             "Move to the public cookbook lane after canvas action and painter wrappers hide "
             "raw pointer host/cx and CanvasPainter types from app authors"
         ),
-    ),
-    _cookbook_advanced_surface(
-        "async_inbox_basics.rs",
-        "it still teaches raw async inbox model and element return seams",
-        ("fret::advanced", "fret_runtime", "fret_ui", "AnyElement"),
     ),
     _cookbook_advanced_surface(
         "chart_interactions_basics.rs",

@@ -606,3 +606,10 @@ timestamp: 2026-06-30
   passed for focused `fret` facade tests, `fret-cookbook --all-targets`, full `fret-cookbook`
   lib nextest, source-policy tests/gate, consumption-profile, execution-surface, layering,
   formatting, and whitespace.
+- 2026-07-04: Phase 3 U13 async inbox facade adds explicit `fret::async_work` app authoring helpers,
+  keeps concrete executor choice in `fret-executor`, migrates `async_inbox_basics.rs` off raw action
+  notify, raw runtime models, `ModelStore`, `InboxDrainRegistry`, `AnyElement`, and direct
+  `fret_ui`, and moves the example to default clean source-policy coverage. Verification passed
+  for focused async-feature cookbook checks, `fret-cookbook --all-targets`, full `fret-cookbook`
+  and `fret` lib nextest, source-policy tests/gate, consumption-profile, execution-surface,
+  layering, ADR/workstream catalog, engineering-memory, formatting, and whitespace.

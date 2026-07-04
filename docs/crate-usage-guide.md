@@ -211,6 +211,13 @@ glue as advanced/reference host-side escape hatches; if you intentionally reopen
 on `cx.actions().listen(...)` or import `AppActivateExt` explicitly for activation-only typed
 dispatch.
 
+For background work, keep executor choice explicit: app code can use `fret::async_work::{...}` for
+the runner dispatcher, `register_inbox_drainer(...)`, `inbox_local(...)`, and
+`inbox_drain_apply(...)`, while optional crates such as `fret-executor` provide concrete `Inbox`,
+`InboxDrainer`, `Executors`, and cancellation types. This keeps default examples on `LocalState`
+and typed actions without importing `fret_runtime`, raw `Model<T>`, `ModelStore`, or
+`AppUiRawActionNotifyExt`.
+
 `fret::app::AppActivateSurface` / `AppActivateExt` are intentionally narrow: they cover
 activation-only widgets that expose the standard `OnActivate` slot but still lack a tighter
 component-owned authoring API. Typed payload/context callbacks remain component-owned surfaces even

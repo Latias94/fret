@@ -6,15 +6,13 @@ use std::{
     time::Duration,
 };
 
-use fret::advanced::raw::AppUiRawActionNotifyExt as _;
+use fret::app::LocalState;
 use fret::app::prelude::*;
+use fret::async_work::{self, AppAsyncWorkExt as _};
 use fret::{icons::IconId, style::Space};
 use fret_executor::{
     BackgroundTask, CancellationToken, Executors, Inbox, InboxConfig, InboxDrainer,
 };
-use fret_runtime::Model;
-use fret_runtime::{DispatchPriority, DispatcherHandle, InboxDrainRegistry};
-use fret_ui::element::AnyElement;
 
 mod act {
     fret::actions!([
@@ -57,19 +55,19 @@ fn append_log(log: &mut String, line: &str) {
 
 struct AsyncInboxBasicsState {
     window: WindowId,
-    dispatcher: Option<DispatcherHandle>,
+    dispatcher: Option<async_work::DispatcherHandle>,
     current_job: Arc<AtomicU64>,
 
     // UI state.
-    status: Model<Arc<str>>,
-    running: Model<bool>,
-    progress: Model<f32>,
-    log: Model<String>,
-    active_job: Model<u64>,
+    status: LocalState<Arc<str>>,
+    running: LocalState<bool>,
+    progress: LocalState<f32>,
+    log: LocalState<String>,
+    active_job: LocalState<u64>,
 
     // Execution.
     inbox: Inbox<InboxMsg>,
-    task: Model<Option<BackgroundTask>>,
+    task: LocalState<Option<BackgroundTask>>,
 }
 
 struct AsyncInboxBasicsView {
@@ -78,35 +76,35 @@ struct AsyncInboxBasicsView {
 
 impl View for AsyncInboxBasicsView {
     fn init(app: &mut App, window: WindowId) -> Self {
-        let dispatcher = app.global::<DispatcherHandle>().cloned();
+        let dispatcher = app.dispatcher();
 
         let current_job = Arc::new(AtomicU64::new(0));
 
-        let status = app.models_mut().insert(Arc::<str>::from("Idle"));
-        let running = app.models_mut().insert(false);
-        let progress = app.models_mut().insert(0.0);
-        let log = app.models_mut().insert(String::new());
-        let active_job = app.models_mut().insert(0u64);
-        let task = app.models_mut().insert(None::<BackgroundTask>);
+        let status = app.local_state(Arc::<str>::from("Idle"));
+        let running = app.local_state(false);
+        let progress = app.local_state(0.0);
+        let log = app.local_state(String::new());
+        let active_job = app.local_state(0u64);
+        let task = app.local_state(None::<BackgroundTask>);
 
         let inbox = Inbox::new(InboxConfig {
             capacity: 256,
             ..Default::default()
         });
 
-        // Background work must communicate via data-only messages. The runner drains inboxes at a
-        // driver boundary (ADR 0175), so we register an inbox drainer in `InboxDrainRegistry`.
+        // Background work communicates via data-only messages. The runner drains inboxes at a
+        // driver boundary (ADR 0175), and the app async-work facade owns the registration seam.
         let drainer = InboxDrainer::new(inbox.clone(), {
             let current_job = current_job.clone();
-            let status_id = status.id();
-            let running_id = running.id();
-            let progress_id = progress.id();
-            let log_id = log.id();
+            let status = async_work::inbox_local(&status);
+            let running = async_work::inbox_local(&running);
+            let progress = async_work::inbox_local(&progress);
+            let log = async_work::inbox_local(&log);
 
-            move |host, window, msg| {
-                let Some(window) = window else {
+            async_work::inbox_drain_apply(move |cx, msg| {
+                if cx.window_id().is_none() {
                     return;
-                };
+                }
 
                 let current_job = current_job.load(Ordering::Relaxed);
 
@@ -115,43 +113,23 @@ impl View for AsyncInboxBasicsView {
                         if job != current_job {
                             return;
                         }
-                        let _ = host.models_mut().update_any(progress_id, |any| {
-                            let Some(v) = any.downcast_mut::<f32>() else {
-                                return;
-                            };
-                            *v = value;
-                        });
+                        cx.set_local(&progress, value);
                     }
                     InboxMsg::Completed { job, cancelled } => {
                         if job != current_job {
                             return;
                         }
-                        let _ = host.models_mut().update_any(running_id, |any| {
-                            let Some(v) = any.downcast_mut::<bool>() else {
-                                return;
-                            };
-                            *v = false;
-                        });
-                        let _ = host.models_mut().update_any(progress_id, |any| {
-                            let Some(v) = any.downcast_mut::<f32>() else {
-                                return;
-                            };
-                            *v = 100.0;
-                        });
-                        let _ = host.models_mut().update_any(status_id, |any| {
-                            let Some(v) = any.downcast_mut::<Arc<str>>() else {
-                                return;
-                            };
-                            *v = if cancelled {
+                        cx.set_local(&running, false);
+                        cx.set_local(&progress, 100.0);
+                        cx.set_local(
+                            &status,
+                            if cancelled {
                                 Arc::<str>::from("Cancelled")
                             } else {
                                 Arc::<str>::from("Completed")
-                            };
-                        });
-                        let _ = host.models_mut().update_any(log_id, |any| {
-                            let Some(v) = any.downcast_mut::<String>() else {
-                                return;
-                            };
+                            },
+                        );
+                        cx.update_local(&log, |v| {
                             append_log(
                                 v,
                                 if cancelled {
@@ -166,23 +144,16 @@ impl View for AsyncInboxBasicsView {
                         if job != current_job {
                             return;
                         }
-                        let _ = host.models_mut().update_any(log_id, |any| {
-                            let Some(v) = any.downcast_mut::<String>() else {
-                                return;
-                            };
+                        cx.update_local(&log, |v| {
                             append_log(v, &line);
                         });
                     }
                 }
-
-                host.request_redraw(window);
-            }
+            })
         })
         .with_window_hint(window);
 
-        app.with_global_mut_untracked(InboxDrainRegistry::default, |registry, _app| {
-            registry.register(Arc::new(drainer));
-        });
+        app.register_inbox_drainer(drainer);
 
         Self {
             st: AsyncInboxBasicsState {
@@ -201,15 +172,9 @@ impl View for AsyncInboxBasicsView {
     }
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
-        let status = self
-            .st
-            .status
-            .layout(cx)
-            .read_ref(|v| Arc::clone(v))
-            .ok()
-            .unwrap_or_else(|| Arc::<str>::from("<missing>"));
-        let running = self.st.running.layout(cx).value_or(false);
-        let progress = self.st.progress.layout(cx).value_or(0.0);
+        let status = self.st.status.layout_read_ref(cx, Arc::clone);
+        let running = self.st.running.layout_value(cx);
+        let progress = self.st.progress.layout_value(cx);
         let inbox_stats = self.st.inbox.stats();
 
         let start_button = shadcn::Button::new("Start background job")
@@ -236,42 +201,38 @@ impl View for AsyncInboxBasicsView {
             .test_id(TEST_ID_CLEAR_LOG);
 
         let status_row = ui::h_flex(|cx| {
-            let children: Vec<AnyElement> = vec![
-                shadcn::Label::new("Status:").into_element(cx),
+            ui::children![cx;
+                shadcn::Label::new("Status:"),
                 shadcn::Badge::new(status.as_ref())
                     .variant(if running {
                         shadcn::BadgeVariant::Default
                     } else {
                         shadcn::BadgeVariant::Secondary
                     })
-                    .test_id(TEST_ID_STATUS)
-                    .into_element(cx),
+                    .test_id(TEST_ID_STATUS),
                 shadcn::Badge::new(format!("Dropped oldest: {}", inbox_stats.dropped_oldest))
-                    .variant(shadcn::BadgeVariant::Secondary)
-                    .into_element(cx),
+                    .variant(shadcn::BadgeVariant::Secondary),
                 shadcn::Badge::new(format!("Dropped newest: {}", inbox_stats.dropped_newest))
-                    .variant(shadcn::BadgeVariant::Secondary)
-                    .into_element(cx),
-            ];
-            children
+                    .variant(shadcn::BadgeVariant::Secondary),
+            ]
         })
         .gap(Space::N2)
         .items_center()
         .into_element(cx.elements());
 
-        let progress_el = shadcn::Progress::new(self.st.progress.clone())
+        let progress_el = shadcn::Progress::new(&self.st.progress)
             .a11y_label("Background job progress")
             .range(0.0, 100.0)
             .into_element(cx.elements())
             .test_id(TEST_ID_PROGRESS);
 
         let progress_label = ui::text(format!("{progress:.0}%"));
-        let progress_row = ui::h_flex(|_cx| vec![progress_el, progress_label.into_element(_cx)])
+        let progress_row = ui::h_flex(|cx| ui::children![cx; progress_el, progress_label])
             .gap(Space::N3)
             .items_center()
             .into_element(cx.elements());
 
-        let log = shadcn::Textarea::new(self.st.log.clone())
+        let log = shadcn::Textarea::new(&self.st.log)
             .a11y_label("Inbox log")
             .placeholder("Log…")
             .disabled(true)
@@ -279,149 +240,138 @@ impl View for AsyncInboxBasicsView {
             .test_id(TEST_ID_LOG);
 
         let controls = ui::v_flex(|cx| {
-            vec![
-                start_button.into_element(cx),
-                cancel_button.into_element(cx),
-                clear_log_button.into_element(cx),
+            ui::children![cx;
+                start_button,
+                cancel_button,
+                clear_log_button,
             ]
         })
         .gap(Space::N2)
         .into_element(cx.elements());
 
-        let log = log.into_element(cx.elements());
-        let body = ui::v_flex(|_cx| vec![status_row, progress_row, controls, log]).gap(Space::N3);
+        let body = ui::v_flex(|cx| ui::children![cx; status_row, progress_row, controls, log])
+            .gap(Space::N3);
 
         let card = shadcn::card(|cx| {
-            vec![
+            ui::children![cx;
                 shadcn::card_header(|cx| {
-                    vec![
-                        shadcn::card_title("Async inbox basics").into_element(cx),
+                    ui::children![cx;
+                        shadcn::card_title("Async inbox basics"),
                         shadcn::card_description(
                             "Background work sends data-only messages into an Inbox, drained at a runner boundary (ADR 0175).",
-                        )
-                        .into_element(cx),
+                        ),
                     ]
                 })
                 .into_element(cx),
-                shadcn::card_content(|cx| vec![body.into_element(cx)]).into_element(cx),
+                shadcn::card_content(|cx| ui::children![cx; body]),
             ]
         })
         .ui()
         .w_full()
         .max_w(Px(720.0));
 
-        cx.actions().models::<act::ClearLog>({
-            let log = self.st.log.clone();
-            move |models| models.update(&log, String::clear).is_ok()
-        });
+        cx.actions()
+            .local(&self.st.log)
+            .update::<act::ClearLog>(String::clear);
 
-        cx.actions().models::<act::Cancel>({
-            let task = self.st.task.clone();
-            let running = self.st.running.clone();
-            let status = self.st.status.clone();
-            move |models| {
-                let task_updated = models
-                    .update(&task, |slot| {
-                        if let Some(task) = slot.take() {
-                            task.cancel();
-                        }
-                    })
-                    .is_ok();
-                let running_updated = models.update(&running, |v| *v = false).is_ok();
-                let status_updated = models
-                    .update(&status, |v| *v = Arc::<str>::from("Cancelling?"))
-                    .is_ok();
-
-                task_updated && running_updated && status_updated
-            }
-        });
-
-        // `Start` stays on the advanced helper because it combines model writes with
-        // host-side background scheduling (`spawn_background` + dispatcher wake).
-        cx.on_action_notify::<act::Start>({
-            let dispatcher = self.st.dispatcher.clone();
-            let current_job = self.st.current_job.clone();
-            let active_job = self.st.active_job.clone();
-            let running = self.st.running.clone();
-            let progress_model = self.st.progress.clone();
-            let status = self.st.status.clone();
-            let log = self.st.log.clone();
-            let task = self.st.task.clone();
-            let inbox_sender = self.st.inbox.clone().sender();
-            let window = self.st.window;
-
-            move |host, _acx| {
-                let Some(dispatcher) = dispatcher.clone() else {
-                    let _ = host.models_mut().update(&status, |v| {
-                        *v = Arc::<str>::from("Missing DispatcherHandle global (runner bug?)");
-                    });
-                    return true;
-                };
-
-                let _ = host.models_mut().update(&task, |slot| {
+        cx.actions()
+            .locals_with((&self.st.task, &self.st.running, &self.st.status))
+            .on::<act::Cancel>(|tx, (task, running, status)| {
+                let task_updated = tx.update(&task, |slot| {
                     if let Some(task) = slot.take() {
                         task.cancel();
                     }
                 });
+                let running_updated = tx.set(&running, false);
+                let status_updated = tx.set(&status, Arc::<str>::from("Cancelling?"));
 
-                let job = current_job
-                    .fetch_add(1, Ordering::Relaxed)
-                    .wrapping_add(1)
-                    .max(1);
-                let _ = host.models_mut().update(&active_job, |v| *v = job);
+                task_updated && running_updated && status_updated
+            });
 
-                let _ = host.models_mut().update(&running, |v| *v = true);
-                let _ = host.models_mut().update(&progress_model, |v| *v = 0.0);
-                let _ = host
-                    .models_mut()
-                    .update(&status, |v| *v = Arc::<str>::from("Running"));
-                let _ = host.models_mut().update(&log, |v| {
-                    append_log(v, &format!("start job {job}"));
-                });
+        cx.actions()
+            .locals_with((
+                &self.st.active_job,
+                &self.st.running,
+                &self.st.progress,
+                &self.st.status,
+                &self.st.log,
+                &self.st.task,
+            ))
+            .on::<act::Start>({
+                let dispatcher = self.st.dispatcher.clone();
+                let current_job = self.st.current_job.clone();
+                let inbox_sender = self.st.inbox.clone().sender();
+                let window = self.st.window;
 
-                let executors = Executors::new(dispatcher.clone());
-                let inbox = inbox_sender.clone();
-                let bg_task = executors.spawn_background(
-                    DispatchPriority::Normal,
-                    move |token: CancellationToken| {
-                        let steps = 48u32;
-                        for step in 0..=steps {
-                            if token.is_cancelled() {
-                                let _ = inbox.send(InboxMsg::Completed {
-                                    job,
-                                    cancelled: true,
-                                });
-                                dispatcher.wake(Some(window));
-                                return;
-                            }
+                move |tx, (active_job, running, progress_model, status, log, task)| {
+                    let Some(dispatcher) = dispatcher.clone() else {
+                        tx.set(
+                            &status,
+                            Arc::<str>::from("Missing DispatcherHandle global (runner bug?)"),
+                        );
+                        return true;
+                    };
 
-                            let value = (step as f32 / steps as f32) * 100.0;
-                            let _ = inbox.send(InboxMsg::Progress { job, value });
-                            if step == 0 {
-                                let _ = inbox.send(InboxMsg::Log {
-                                    job,
-                                    line: Arc::<str>::from("background task started"),
-                                });
-                            }
-                            dispatcher.wake(Some(window));
-
-                            std::thread::sleep(Duration::from_millis(15));
+                    tx.update(&task, |slot| {
+                        if let Some(task) = slot.take() {
+                            task.cancel();
                         }
+                    });
 
-                        let _ = inbox.send(InboxMsg::Completed {
-                            job,
-                            cancelled: false,
-                        });
-                        dispatcher.wake(Some(window));
-                    },
-                );
+                    let job = current_job
+                        .fetch_add(1, Ordering::Relaxed)
+                        .wrapping_add(1)
+                        .max(1);
+                    tx.set(&active_job, job);
 
-                let _ = host
-                    .models_mut()
-                    .update(&task, |slot| *slot = Some(bg_task));
-                true
-            }
-        });
+                    tx.set(&running, true);
+                    tx.set(&progress_model, 0.0);
+                    tx.set(&status, Arc::<str>::from("Running"));
+                    tx.update(&log, |v| {
+                        append_log(v, &format!("start job {job}"));
+                    });
+
+                    let executors = Executors::new(dispatcher.clone());
+                    let inbox = inbox_sender.clone();
+                    let bg_task = executors.spawn_background(
+                        async_work::DispatchPriority::Normal,
+                        move |token: CancellationToken| {
+                            let steps = 48u32;
+                            for step in 0..=steps {
+                                if token.is_cancelled() {
+                                    let _ = inbox.send(InboxMsg::Completed {
+                                        job,
+                                        cancelled: true,
+                                    });
+                                    dispatcher.wake(Some(window));
+                                    return;
+                                }
+
+                                let value = (step as f32 / steps as f32) * 100.0;
+                                let _ = inbox.send(InboxMsg::Progress { job, value });
+                                if step == 0 {
+                                    let _ = inbox.send(InboxMsg::Log {
+                                        job,
+                                        line: Arc::<str>::from("background task started"),
+                                    });
+                                }
+                                dispatcher.wake(Some(window));
+
+                                std::thread::sleep(Duration::from_millis(15));
+                            }
+
+                            let _ = inbox.send(InboxMsg::Completed {
+                                job,
+                                cancelled: false,
+                            });
+                            dispatcher.wake(Some(window));
+                        },
+                    );
+
+                    tx.set(&task, Some(bg_task));
+                    true
+                }
+            });
 
         fret_cookbook::scaffold::centered_page_background(cx, TEST_ID_ROOT, card).into()
     }

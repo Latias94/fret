@@ -17,6 +17,7 @@ use fret_ui::action::OnActivate;
 
 mod actions;
 mod activation;
+mod async_work;
 mod bridges;
 mod context;
 mod data;
@@ -40,6 +41,7 @@ use activation::action_listener;
 pub use activation::{AppActivateExt, AppActivateSurface};
 #[cfg(test)]
 use activation::{dispatch_action_listener, dispatch_payload_action_listener};
+pub use async_work::{AppAsyncWorkExt, AppInboxCx, InboxLocal, inbox_drain_apply, inbox_local};
 pub use context::{AppRenderContext, RenderContextAccess, View};
 #[cfg(feature = "state-mutation")]
 #[allow(unused_imports)]
@@ -80,7 +82,8 @@ mod tests {
         AppUiRenderRootState, LocalActionCapture, LocalState, LocalStateElementContextExt as _,
         LocalStateModelStoreExt as _, LocalStateRawModelExt as _, LocalStateTxn, OnActivate, View,
         ViewWindowState, action_listener, dispatch_action_listener,
-        dispatch_payload_action_listener, render_root_with_app_ui, view_init_window, view_view,
+        dispatch_payload_action_listener, inbox_drain_apply, inbox_local, render_root_with_app_ui,
+        view_init_window, view_view,
     };
     use std::any::Any;
     #[cfg(feature = "state-mutation")]
@@ -97,6 +100,7 @@ mod tests {
     use std::task::{Context, Poll, Waker};
     const ACTIVATION_RS_SOURCE: &str = include_str!("view/activation.rs");
     const ACTIONS_RS_SOURCE: &str = include_str!("view/actions.rs");
+    const ASYNC_WORK_RS_SOURCE: &str = include_str!("view/async_work.rs");
     const BRIDGES_RS_SOURCE: &str = include_str!("view/bridges.rs");
     const VIEW_RS_SOURCE: &str = include_str!("view.rs");
     const CONTEXT_RS_SOURCE: &str = include_str!("view/context.rs");
@@ -121,7 +125,7 @@ mod tests {
             .next()
             .expect("view.rs test module marker should exist");
         format!(
-            "{view_api}\n{ACTIVATION_RS_SOURCE}\n{ACTIONS_RS_SOURCE}\n{BRIDGES_RS_SOURCE}\n{CONTEXT_RS_SOURCE}\n{DATA_RS_SOURCE}\n{DATA_RENDER_RS_SOURCE}\n{EFFECTS_RS_SOURCE}\n{LANE_BARRIERS_RS_SOURCE}\n{LAYOUT_QUERY_RS_SOURCE}\n{LOCAL_STATE_RS_SOURCE}\n{LOCAL_STATE_ADAPTERS_RS_SOURCE}\n{LOCAL_STATE_BRIDGES_RS_SOURCE}\n{POINTER_RS_SOURCE}\n{RAW_RS_SOURCE}\n{RUNTIME_RS_SOURCE}\n{SCHEDULING_RS_SOURCE}\n{SHELL_RS_SOURCE}\n{STATE_RS_SOURCE}"
+            "{view_api}\n{ACTIVATION_RS_SOURCE}\n{ACTIONS_RS_SOURCE}\n{ASYNC_WORK_RS_SOURCE}\n{BRIDGES_RS_SOURCE}\n{CONTEXT_RS_SOURCE}\n{DATA_RS_SOURCE}\n{DATA_RENDER_RS_SOURCE}\n{EFFECTS_RS_SOURCE}\n{LANE_BARRIERS_RS_SOURCE}\n{LAYOUT_QUERY_RS_SOURCE}\n{LOCAL_STATE_RS_SOURCE}\n{LOCAL_STATE_ADAPTERS_RS_SOURCE}\n{LOCAL_STATE_BRIDGES_RS_SOURCE}\n{POINTER_RS_SOURCE}\n{RAW_RS_SOURCE}\n{RUNTIME_RS_SOURCE}\n{SCHEDULING_RS_SOURCE}\n{SHELL_RS_SOURCE}\n{STATE_RS_SOURCE}"
         )
     }
     use fret_core::{
@@ -371,6 +375,20 @@ mod tests {
             payload: Box<dyn Any + Send + Sync>,
         ) {
             self.payloads.push((cx, action.clone(), payload));
+        }
+    }
+
+    impl fret_runtime::InboxDrainHost for FakeHost {
+        fn request_redraw(&mut self, window: AppWindowId) {
+            self.redraws.push(window);
+        }
+
+        fn push_effect(&mut self, effect: Effect) {
+            self.effects.push(effect);
+        }
+
+        fn models_mut(&mut self) -> &mut ModelStore {
+            &mut self.models
         }
     }
 
@@ -805,6 +823,24 @@ mod tests {
         let local = app.local_state(String::from("hello"));
 
         assert_eq!(local.value_in(app.models()), Some(String::from("hello")));
+    }
+
+    #[test]
+    fn inbox_drain_apply_updates_local_state_and_requests_one_redraw() {
+        let mut host = FakeHost::default();
+        let window = AppWindowId::default();
+        let local = LocalState::new_in(&mut host.models, 1u32);
+        let inbox_local = inbox_local(&local);
+        let apply = inbox_drain_apply(move |cx, delta: u32| {
+            assert_eq!(cx.window_id(), Some(window));
+            assert!(cx.update_local(&inbox_local, |value| *value += delta));
+            assert!(cx.update_local(&inbox_local, |value| *value += 1));
+        });
+
+        apply(&mut host, Some(window), 4);
+
+        assert_eq!(local.value_in(&host.models), Some(6));
+        assert_eq!(host.redraws, vec![window]);
     }
 
     #[test]

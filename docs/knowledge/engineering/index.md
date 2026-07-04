@@ -108,6 +108,7 @@ It is a sidecar for session recovery and subagent synthesis, not a replacement f
 - [Phase 3 U13 IMUI debug draw host cleanup](progress/2026-07-04-phase3-u13-imui-debug-draw-host.md)
 - [Phase 3 U13 IMUI plot binding migration](progress/2026-07-04-phase3-u13-imui-plot-binding.md)
 - [Phase 3 U13 pointer drag facade](progress/2026-07-04-phase3-u13-pointer-drag-facade.md)
+- [Phase 3 U13 async inbox facade](progress/2026-07-04-phase3-u13-async-inbox-facade.md)
 - [Phase 3 U13 cookbook quarantine follow-up audit](subagents/2026-07-04-phase3-u13-cookbook-quarantine-followup-audit.md)
 - [Phase 3 U13 IMUI cookbook facade audits](subagents/2026-07-03-phase3-u13-imui-cookbook-facade-audit.md)
 - [Phase 2 U4 boundary store audit](subagents/2026-07-02-phase2-u4-boundary-store-audit.md)

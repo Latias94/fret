@@ -698,6 +698,7 @@ class SurfacePolicyTests(unittest.TestCase):
 
     def test_migrated_cookbook_examples_are_default_clean(self) -> None:
         migrated = {
+            "apps/fret-cookbook/examples/async_inbox_basics.rs",
             "apps/fret-cookbook/examples/commands_keymap_basics.rs",
             "apps/fret-cookbook/examples/drag_basics.rs",
             "apps/fret-cookbook/examples/form_basics.rs",

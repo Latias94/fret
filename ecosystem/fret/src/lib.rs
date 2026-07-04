@@ -223,6 +223,18 @@ pub mod pointer {
     };
 }
 
+/// Explicit async/background-work helpers for app code.
+///
+/// Keep concrete executor choices out of the default `fret` facade. This lane exposes the runner
+/// dispatcher, inbox drainer registration, and LocalState-safe drain callbacks while crates such
+/// as `fret-executor` remain optional app/ecosystem choices.
+pub mod async_work {
+    pub use crate::view::{
+        AppAsyncWorkExt, AppInboxCx, InboxLocal, inbox_drain_apply, inbox_local,
+    };
+    pub use fret_runtime::{DispatchPriority, DispatcherHandle};
+}
+
 /// Explicit higher-level adaptive policy vocabulary for app code that wants shared classification
 /// or device-shell strategy helpers above raw query reads.
 pub mod adaptive {
@@ -3571,6 +3583,11 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_USAGE_GUIDE.contains("`cx.actions().transient::<A>(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`cx.effects().toast_message(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`cx.effects().toast_dismiss_all()`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`fret::async_work::{...}` for"));
+        assert!(CRATE_USAGE_GUIDE.contains("`register_inbox_drainer(...)`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`inbox_local(...)`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`inbox_drain_apply(...)`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`AppUiRawActionNotifyExt`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::app::{LocalState, LocalStateTxn}`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::commands::{...}`"));
         assert!(
@@ -4557,6 +4574,7 @@ mod authoring_surface_policy_tests {
             "activate",
             "actions",
             "assets",
+            "async_work",
             "children",
             "commands",
             "env",
@@ -4564,6 +4582,7 @@ mod authoring_surface_policy_tests {
             "icons",
             "integration",
             "overlay",
+            "pointer",
             "semantics",
             "style",
             "virtual_list",
@@ -4623,6 +4642,7 @@ mod authoring_surface_policy_tests {
         let root_header = root_surface_header_source();
 
         assert!(root_header.contains("pub mod activate {"));
+        assert!(root_header.contains("pub mod async_work {"));
         assert!(root_header.contains("pub mod children {"));
         assert!(root_header.contains("pub mod commands {"));
         assert!(root_header.contains("pub mod icons {"));
@@ -4638,6 +4658,11 @@ mod authoring_surface_policy_tests {
         assert!(root_header.contains("pub use fret_ui_kit::ui::UiElementSinkExt;"));
         assert!(root_header.contains("pub use fret_icons::IconId;"));
         assert!(root_header.contains("pub use fret_ui_kit::declarative::icon;"));
+        assert!(root_header.contains("AppAsyncWorkExt, AppInboxCx, InboxLocal"));
+        assert!(root_header.contains("inbox_drain_apply, inbox_local"));
+        assert!(
+            root_header.contains("pub use fret_runtime::{DispatchPriority, DispatcherHandle};")
+        );
         assert!(root_header.contains("CommandMeta, CommandRegistry, CommandScope"));
         assert!(root_header.contains("DefaultKeybinding, InputContext,"));
         assert!(root_header.contains("KeyChord, KeymapService, Platform, PlatformFilter"));
@@ -4928,6 +4953,11 @@ mod authoring_surface_policy_tests {
         assert!(!app_prelude_exports_symbol("PointerId"));
         assert!(!app_prelude_exports_symbol("MouseButton"));
         assert!(!app_prelude_exports_symbol("CursorIcon"));
+        assert!(!app_prelude_exports_symbol("AppAsyncWorkExt"));
+        assert!(!app_prelude_exports_symbol("AppInboxCx"));
+        assert!(!app_prelude_exports_symbol("InboxLocal"));
+        assert!(!app_prelude_exports_symbol("DispatcherHandle"));
+        assert!(!app_prelude_exports_symbol("DispatchPriority"));
         assert!(!app_prelude_exports_symbol("Length"));
         assert!(!app_prelude_exports_symbol("LayoutStyle"));
         assert!(!app_prelude_exports_symbol("ContainerProps"));
