@@ -613,3 +613,14 @@ timestamp: 2026-06-30
   for focused async-feature cookbook checks, `fret-cookbook --all-targets`, full `fret-cookbook`
   and `fret` lib nextest, source-policy tests/gate, consumption-profile, execution-surface,
   layering, ADR/workstream catalog, engineering-memory, formatting, and whitespace.
+- 2026-07-04: Readonly explorer `019f2aca-f2fb-7d22-8bbd-e072954b6562` audited the canvas
+  quarantine target and recommended a narrow `fret::canvas` facade plus `PointerActionCx::bounds()`,
+  while keeping low-level `fret_canvas::ui::*`, raw pointer callbacks, raw `CanvasProps`, and
+  `CanvasCachePolicy` as advanced/ecosystem seams.
+- 2026-07-04: Phase 3 U13 canvas facade adds optional `fret/canvas`, `fret::canvas::PanZoomCanvas`,
+  and `AppCanvasPainter`, migrates `canvas_pan_zoom_basics.rs` off raw runtime/ui/canvas seams,
+  fixes reset to clear active node drag state, and moves the example to default clean source-policy
+  coverage with a direct-`fret_canvas::` default-surface ban. Verification passed for focused
+  canvas-feature compile, `fret-cookbook --all-targets`, full `fret-cookbook` lib nextest,
+  focused `fret` facade tests with and without `canvas`, source-policy tests/gate,
+  consumption-profile, execution-surface, and layering.

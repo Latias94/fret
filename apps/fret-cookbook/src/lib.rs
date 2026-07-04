@@ -504,6 +504,36 @@ mod authoring_surface_policy_tests {
         assert!(!ASYNC_INBOX_EXAMPLE.contains("self.st.running.layout(cx).value_or(false)"));
         assert!(!ASYNC_INBOX_EXAMPLE.contains("self.st.progress.layout(cx).value_or(0.0)"));
 
+        assert!(
+            CANVAS_PAN_ZOOM_EXAMPLE
+                .contains("use fret::app::{LocalState, RenderContextAccess as _};")
+        );
+        assert!(CANVAS_PAN_ZOOM_EXAMPLE.contains("use fret::canvas::{"));
+        assert!(CANVAS_PAN_ZOOM_EXAMPLE.contains("use fret::pointer::{"));
+        assert!(CANVAS_PAN_ZOOM_EXAMPLE.contains("view: LocalState<PanZoom2D>"));
+        assert!(CANVAS_PAN_ZOOM_EXAMPLE.contains("canvas::PanZoomCanvas::new(&self.view)"));
+        assert!(CANVAS_PAN_ZOOM_EXAMPLE.contains(".on_pointer_down(on_pointer_down)"));
+        assert!(CANVAS_PAN_ZOOM_EXAMPLE.contains("canvas::AppCanvasPainter"));
+        assert!(CANVAS_PAN_ZOOM_EXAMPLE.contains("CanvasPaint::Solid("));
+        assert!(CANVAS_PAN_ZOOM_EXAMPLE.contains(".local(&self.view)"));
+        assert!(CANVAS_PAN_ZOOM_EXAMPLE.contains(".set::<act::ResetView>(PanZoom2D::default())"));
+        assert!(
+            CANVAS_PAN_ZOOM_EXAMPLE.contains(
+                ".locals_with((&self.node_origin, &self.node_drag, &self.node_drag_count))"
+            )
+        );
+        assert!(!CANVAS_PAN_ZOOM_EXAMPLE.contains("advanced::prelude::*"));
+        assert!(!CANVAS_PAN_ZOOM_EXAMPLE.contains("use fret::component::prelude::*;"));
+        assert!(!CANVAS_PAN_ZOOM_EXAMPLE.contains("fret_canvas::"));
+        assert!(!CANVAS_PAN_ZOOM_EXAMPLE.contains("fret_runtime::"));
+        assert!(!CANVAS_PAN_ZOOM_EXAMPLE.contains("fret_ui::"));
+        assert!(!CANVAS_PAN_ZOOM_EXAMPLE.contains("fret_core::"));
+        assert!(!CANVAS_PAN_ZOOM_EXAMPLE.contains("PanZoomCanvasSurfacePanelProps"));
+        assert!(!CANVAS_PAN_ZOOM_EXAMPLE.contains("CanvasCachePolicy"));
+        assert!(!CANVAS_PAN_ZOOM_EXAMPLE.contains("use fret_ui::canvas::CanvasPainter;"));
+        assert!(!CANVAS_PAN_ZOOM_EXAMPLE.contains("Model<"));
+        assert!(!CANVAS_PAN_ZOOM_EXAMPLE.contains("models::<act::ResetView>"));
+
         assert!(QUERY_EXAMPLE.contains("cx.data().query("));
         assert!(QUERY_EXAMPLE.contains("cx.state().local_init(|| false)"));
         assert!(QUERY_EXAMPLE.contains("use fret::query::{QueryError, QueryKey, QueryPolicy};"));
@@ -1108,7 +1138,6 @@ mod authoring_surface_policy_tests {
 
     #[test]
     fn advanced_examples_use_the_explicit_advanced_surface() {
-        assert_uses_advanced_surface(CANVAS_PAN_ZOOM_EXAMPLE);
         assert_uses_advanced_surface(CHART_INTERACTIONS_EXAMPLE);
         assert_uses_advanced_surface(CUSTOM_V1_EXAMPLE);
         assert_uses_advanced_surface(DOCKING_EXAMPLE);
@@ -1211,14 +1240,6 @@ mod authoring_surface_policy_tests {
         assert!(ASSETS_RELOAD_EPOCH_EXAMPLE.contains("cx.state().local::<u64>()"));
         assert!(ASSETS_RELOAD_EPOCH_EXAMPLE.contains(".local(&bumps_state)"));
         assert!(ASSETS_RELOAD_EPOCH_EXAMPLE.contains(".update::<act::BumpReload>(|value| {"));
-
-        assert!(
-            CANVAS_PAN_ZOOM_EXAMPLE.contains("use fret::{FretApp, advanced::prelude::*, shadcn};")
-        );
-        assert!(CANVAS_PAN_ZOOM_EXAMPLE.contains("use fret::component::prelude::*;"));
-        assert!(CANVAS_PAN_ZOOM_EXAMPLE.contains("PanZoomCanvasSurfacePanelProps"));
-        assert!(CANVAS_PAN_ZOOM_EXAMPLE.contains("CanvasPainter"));
-        assert!(CANVAS_PAN_ZOOM_EXAMPLE.contains("cx.actions().models::<act::ResetView>"));
 
         assert!(CHART_INTERACTIONS_EXAMPLE.contains("use fret::{advanced::prelude::*, shadcn};"));
         assert!(CHART_INTERACTIONS_EXAMPLE.contains("ChartCanvasPanelProps"));
@@ -1334,7 +1355,6 @@ mod authoring_surface_policy_tests {
             DROP_SHADOW_EXAMPLE,
             ICONS_AND_ASSETS_EXAMPLE,
             ASSETS_RELOAD_EPOCH_EXAMPLE,
-            CANVAS_PAN_ZOOM_EXAMPLE,
             CUSTOM_V1_EXAMPLE,
         ] {
             assert_advanced_view_runtime_example_uses_app_ui_aliases(src);
@@ -1652,11 +1672,14 @@ mod authoring_surface_policy_tests {
         assert_selected_examples_prefer_handle_first_tracked_reads(
             CANVAS_PAN_ZOOM_EXAMPLE,
             &[
-                "let view_value = self.view.paint(cx).value_or_default();",
-                "let node_origin = self.node_origin.paint(cx).value_or_default();",
-                "let node_drag_count = self.node_drag_count.paint(cx).value_or_default();",
+                "let view_value = self.view.paint_value(cx);",
+                "let node_origin = self.node_origin.paint_value(cx);",
+                "let node_drag_count = self.node_drag_count.paint_value(cx);",
             ],
             &[
+                "self.view.paint(cx).value_or_default()",
+                "self.node_origin.paint(cx).value_or_default()",
+                "self.node_drag_count.paint(cx).value_or_default()",
                 "cx.watch_model(&self.view)",
                 "cx.watch_model(&self.node_origin)",
                 "cx.watch_model(&self.node_drag_count)",

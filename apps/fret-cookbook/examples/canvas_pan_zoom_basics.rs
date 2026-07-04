@@ -1,19 +1,9 @@
-use std::sync::Arc;
-
-use fret::component::prelude::*;
-use fret::{FretApp, advanced::prelude::*, shadcn};
-use fret_canvas::ui::{
-    PanZoomCanvasSurfacePanelProps, PanZoomInputPreset, pan_zoom_canvas_surface_panel,
-};
-use fret_canvas::view::{PanZoom2D, visible_canvas_rect};
-use fret_core::scene::Paint;
-use fret_core::{
-    Corners, CursorIcon, DrawOrder, Edges, MouseButton, Point, PointerId, Px, Rect, SceneOp, Size,
-};
-use fret_runtime::DefaultAction;
-use fret_ui::action::{OnPointerDown, OnPointerMove, OnPointerUp};
-use fret_ui::canvas::CanvasPainter;
-use fret_ui::element::SemanticsDecoration;
+use fret::app::prelude::*;
+use fret::app::{LocalState, RenderContextAccess as _};
+use fret::canvas::{self, CanvasPaint, PanZoom2D, PanZoomCanvasPaintCx, Point, Rect, Size};
+use fret::pointer::{CursorIcon, MouseButton, PointerDown, PointerId, PointerMove, PointerUp};
+use fret::semantics::{SemanticsDecoration, SemanticsRole};
+use fret::{shadcn, style::Space};
 
 mod act {
     fret::actions!([
@@ -48,47 +38,41 @@ struct NodeDragState {
 }
 
 struct CanvasPanZoomBasicsView {
-    view: Model<PanZoom2D>,
-    node_origin: Model<Point>,
-    node_drag: Model<Option<NodeDragState>>,
-    node_drag_count: Model<u64>,
+    view: LocalState<PanZoom2D>,
+    node_origin: LocalState<Point>,
+    node_drag: LocalState<Option<NodeDragState>>,
+    node_drag_count: LocalState<u64>,
 }
 
 impl View for CanvasPanZoomBasicsView {
-    fn init(app: &mut KernelApp, _window: AppWindowId) -> Self {
+    fn init(app: &mut App, _window: WindowId) -> Self {
         Self {
-            view: app.models_mut().insert(PanZoom2D::default()),
-            node_origin: app.models_mut().insert(Point::new(Px(120.0), Px(120.0))),
-            node_drag: app.models_mut().insert(None),
-            node_drag_count: app.models_mut().insert(0),
+            view: app.local_state(PanZoom2D::default()),
+            node_origin: app.local_state(Point::new(Px(120.0), Px(120.0))),
+            node_drag: app.local_state(None),
+            node_drag_count: app.local_state(0),
         }
     }
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let theme = cx.theme_snapshot();
 
-        let view_value = self.view.paint(cx).value_or_default();
-        let node_origin = self.node_origin.paint(cx).value_or_default();
-        let node_drag_count = self.node_drag_count.paint(cx).value_or_default();
+        let view_value = self.view.paint_value(cx);
+        let node_origin = self.node_origin.paint_value(cx);
+        let node_drag_count = self.node_drag_count.paint_value(cx);
 
-        cx.actions().models::<act::ResetView>({
-            let view = self.view.clone();
-            move |models| {
-                models
-                    .update(&view, |value| *value = PanZoom2D::default())
-                    .is_ok()
-            }
-        });
+        cx.actions()
+            .local(&self.view)
+            .set::<act::ResetView>(PanZoom2D::default());
 
-        cx.actions().models::<act::ResetNode>({
-            let node_origin = self.node_origin.clone();
-            let node_drag_count = self.node_drag_count.clone();
-            move |models| {
-                let _ = models.update(&node_origin, |p| *p = Point::new(Px(120.0), Px(120.0)));
-                let _ = models.update(&node_drag_count, |n| *n = 0);
-                true
-            }
-        });
+        cx.actions()
+            .locals_with((&self.node_origin, &self.node_drag, &self.node_drag_count))
+            .on::<act::ResetNode>(|tx, (node_origin, node_drag, node_drag_count)| {
+                let origin_updated = tx.set(&node_origin, Point::new(Px(120.0), Px(120.0)));
+                let drag_updated = tx.set(&node_drag, None);
+                let count_updated = tx.set(&node_drag_count, 0);
+                origin_updated && drag_updated && count_updated
+            });
 
         let zoom_badge = shadcn::Badge::new(format!("Zoom: {:.2}", view_value.zoom))
             .variant(shadcn::BadgeVariant::Secondary)
@@ -155,7 +139,7 @@ impl View for CanvasPanZoomBasicsView {
         ])
         .ui();
 
-        let canvas: AnyElement = {
+        let canvas = {
             let view_model = self.view.clone();
             let node_origin_model = self.node_origin.clone();
             let drag_model = self.node_drag.clone();
@@ -164,246 +148,191 @@ impl View for CanvasPanZoomBasicsView {
             let view_model_down = view_model.clone();
             let node_origin_model_down = node_origin_model.clone();
             let drag_model_down = drag_model.clone();
-            let on_pointer_down: OnPointerDown = Arc::new(
-                move |host: &mut dyn fret_ui::action::UiPointerActionHost,
-                      action_cx: fret_ui::action::ActionCx,
-                      down: fret_ui::action::PointerDownCx| {
-                    if down.button != MouseButton::Left {
-                        return false;
-                    }
+            let on_pointer_down = move |cx: &mut fret::pointer::PointerActionCx<'_>,
+                                        down: PointerDown| {
+                if down.button != MouseButton::Left {
+                    return false;
+                }
 
-                    let bounds = host.bounds();
-                    let view = host
-                        .models_mut()
-                        .read(&view_model_down, |v| *v)
-                        .ok()
-                        .unwrap_or_default();
-                    let origin = host
-                        .models_mut()
-                        .read(&node_origin_model_down, |p| *p)
-                        .ok()
-                        .unwrap_or(Point::new(Px(0.0), Px(0.0)));
+                let bounds = cx.bounds();
+                let view = cx.local_value_or(&view_model_down, PanZoom2D::default());
+                let origin =
+                    cx.local_value_or(&node_origin_model_down, Point::new(Px(0.0), Px(0.0)));
 
-                    let canvas_pos = view.screen_to_canvas(bounds, down.position);
-                    let r = node_rect(origin);
-                    let inside = canvas_pos.x.0 >= r.origin.x.0
-                        && canvas_pos.y.0 >= r.origin.y.0
-                        && canvas_pos.x.0 <= r.origin.x.0 + r.size.width.0
-                        && canvas_pos.y.0 <= r.origin.y.0 + r.size.height.0;
-                    if !inside {
-                        return false;
-                    }
+                let canvas_pos = view.screen_to_canvas(bounds, down.position);
+                let r = node_rect(origin);
+                let inside = canvas_pos.x.0 >= r.origin.x.0
+                    && canvas_pos.y.0 >= r.origin.y.0
+                    && canvas_pos.x.0 <= r.origin.x.0 + r.size.width.0
+                    && canvas_pos.y.0 <= r.origin.y.0 + r.size.height.0;
+                if !inside {
+                    return false;
+                }
 
-                    host.prevent_default(DefaultAction::FocusOnPointerDown);
-                    host.capture_pointer();
-                    host.set_cursor_icon(CursorIcon::Pointer);
-
-                    let _ = host.models_mut().update(&drag_model_down, |st| {
-                        *st = Some(NodeDragState {
-                            pointer_id: down.pointer_id,
-                            start_canvas: canvas_pos,
-                            origin_at_start: origin,
-                        });
-                    });
-                    host.request_redraw(action_cx.window);
-                    true
-                },
-            );
+                cx.prevent_focus_on_pointer_down();
+                cx.capture_pointer();
+                cx.set_cursor_icon(CursorIcon::Pointer);
+                cx.set_local(
+                    &drag_model_down,
+                    Some(NodeDragState {
+                        pointer_id: down.pointer_id,
+                        start_canvas: canvas_pos,
+                        origin_at_start: origin,
+                    }),
+                );
+                true
+            };
 
             let view_model_move = view_model.clone();
             let node_origin_model_move = node_origin_model.clone();
             let drag_model_move = drag_model.clone();
-            let on_pointer_move: OnPointerMove = Arc::new(
-                move |host: &mut dyn fret_ui::action::UiPointerActionHost,
-                      action_cx: fret_ui::action::ActionCx,
-                      mv: fret_ui::action::PointerMoveCx| {
-                    let bounds = host.bounds();
-                    let view = host
-                        .models_mut()
-                        .read(&view_model_move, |v| *v)
-                        .ok()
-                        .unwrap_or_default();
+            let on_pointer_move = move |cx: &mut fret::pointer::PointerActionCx<'_>,
+                                        mv: PointerMove| {
+                let bounds = cx.bounds();
+                let view = cx.local_value_or(&view_model_move, PanZoom2D::default());
 
-                    let drag = host
-                        .models_mut()
-                        .read(&drag_model_move, |st| *st)
-                        .ok()
-                        .flatten();
-                    if let Some(drag) = drag {
-                        if drag.pointer_id != mv.pointer_id {
-                            return false;
-                        }
-
-                        let canvas_pos = view.screen_to_canvas(bounds, mv.position);
-                        let dx = canvas_pos.x.0 - drag.start_canvas.x.0;
-                        let dy = canvas_pos.y.0 - drag.start_canvas.y.0;
-
-                        let next = Point::new(
-                            Px(drag.origin_at_start.x.0 + dx),
-                            Px(drag.origin_at_start.y.0 + dy),
-                        );
-                        let _ = host
-                            .models_mut()
-                            .update(&node_origin_model_move, |p| *p = next);
-
-                        host.request_redraw(action_cx.window);
-                        host.set_cursor_icon(CursorIcon::Pointer);
-                        return true;
+                if let Some(drag) = cx.local_value_or(&drag_model_move, None) {
+                    if drag.pointer_id != mv.pointer_id {
+                        return false;
                     }
 
-                    // Hover cursor hint (do not consume the event).
-                    let origin = host
-                        .models_mut()
-                        .read(&node_origin_model_move, |p| *p)
-                        .ok()
-                        .unwrap_or(Point::new(Px(0.0), Px(0.0)));
                     let canvas_pos = view.screen_to_canvas(bounds, mv.position);
-                    let r = node_rect(origin);
-                    let inside = canvas_pos.x.0 >= r.origin.x.0
-                        && canvas_pos.y.0 >= r.origin.y.0
-                        && canvas_pos.x.0 <= r.origin.x.0 + r.size.width.0
-                        && canvas_pos.y.0 <= r.origin.y.0 + r.size.height.0;
-                    if inside {
-                        host.set_cursor_icon(CursorIcon::Pointer);
-                    }
-                    false
-                },
-            );
+                    let dx = canvas_pos.x.0 - drag.start_canvas.x.0;
+                    let dy = canvas_pos.y.0 - drag.start_canvas.y.0;
+
+                    let next = Point::new(
+                        Px(drag.origin_at_start.x.0 + dx),
+                        Px(drag.origin_at_start.y.0 + dy),
+                    );
+                    cx.set_local(&node_origin_model_move, next);
+                    cx.set_cursor_icon(CursorIcon::Pointer);
+                    return true;
+                }
+
+                // Hover cursor hint (do not consume the event).
+                let origin =
+                    cx.local_value_or(&node_origin_model_move, Point::new(Px(0.0), Px(0.0)));
+                let canvas_pos = view.screen_to_canvas(bounds, mv.position);
+                let r = node_rect(origin);
+                let inside = canvas_pos.x.0 >= r.origin.x.0
+                    && canvas_pos.y.0 >= r.origin.y.0
+                    && canvas_pos.x.0 <= r.origin.x.0 + r.size.width.0
+                    && canvas_pos.y.0 <= r.origin.y.0 + r.size.height.0;
+                if inside {
+                    cx.set_cursor_icon(CursorIcon::Pointer);
+                }
+                false
+            };
 
             let drag_model_up = drag_model.clone();
             let drag_count_model_up = drag_count_model.clone();
-            let on_pointer_up: OnPointerUp = Arc::new(
-                move |host: &mut dyn fret_ui::action::UiPointerActionHost,
-                      action_cx: fret_ui::action::ActionCx,
-                      up: fret_ui::action::PointerUpCx| {
-                    if up.button != MouseButton::Left {
-                        return false;
-                    }
+            let on_pointer_up = move |cx: &mut fret::pointer::PointerActionCx<'_>,
+                                      up: PointerUp| {
+                if up.button != MouseButton::Left {
+                    return false;
+                }
 
-                    let drag = host
-                        .models_mut()
-                        .read(&drag_model_up, |st| *st)
-                        .ok()
-                        .flatten();
-                    let Some(drag) = drag else {
-                        return false;
-                    };
-                    if drag.pointer_id != up.pointer_id {
-                        return false;
-                    }
+                let Some(drag) = cx.local_value_or(&drag_model_up, None) else {
+                    return false;
+                };
+                if drag.pointer_id != up.pointer_id {
+                    return false;
+                }
 
-                    host.release_pointer_capture();
-                    let _ = host.models_mut().update(&drag_model_up, |st| *st = None);
-                    let _ = host.models_mut().update(&drag_count_model_up, |n| {
-                        *n = n.saturating_add(1);
-                    });
-                    host.request_redraw(action_cx.window);
-                    true
-                },
-            );
-
-            let mut props = PanZoomCanvasSurfacePanelProps::default();
-            props.preset = PanZoomInputPreset::DesktopCanvasCad;
-            props.view = Some(self.view.clone());
-            props.default_view = PanZoom2D::default();
-            props.pan_button = MouseButton::Middle;
-            props.on_pointer_down = Some(on_pointer_down);
-            props.on_pointer_move = Some(on_pointer_move);
-            props.on_pointer_up = Some(on_pointer_up);
-            props.canvas.cache_policy = fret_ui::element::CanvasCachePolicy::smooth_default();
+                cx.release_pointer_capture();
+                cx.set_local(&drag_model_up, None);
+                cx.update_local(&drag_count_model_up, |n| {
+                    *n = n.saturating_add(1);
+                });
+                true
+            };
 
             let bg = theme.color_token("card");
             let grid = theme.color_token("border");
             let node_fill = theme.color_token("primary");
             let node_border = theme.color_token("primary-foreground");
 
-            let paint =
-                move |p: &mut CanvasPainter<'_>,
-                      paint_cx: fret_canvas::ui::PanZoomCanvasPaintCx| {
-                    let bounds = p.bounds();
-                    let Some(transform) = paint_cx.view.render_transform(bounds) else {
-                        return;
-                    };
-
-                    p.scene().push(SceneOp::Quad {
-                        order: DrawOrder(0),
-                        rect: bounds,
-                        background: Paint::Solid(bg).into(),
-                        border: Edges::all(Px(0.0)),
-                        border_paint: Paint::Solid(fret_core::scene::Color::TRANSPARENT).into(),
-                        corner_radii: Corners::all(Px(0.0)),
-                    });
-
-                    let vis = visible_canvas_rect(bounds, paint_cx.view);
-                    let step = 80.0f32;
-                    let min_x = (vis.origin.x.0 / step).floor() as i32 - 2;
-                    let max_x = ((vis.origin.x.0 + vis.size.width.0) / step).ceil() as i32 + 2;
-                    let min_y = (vis.origin.y.0 / step).floor() as i32 - 2;
-                    let max_y = ((vis.origin.y.0 + vis.size.height.0) / step).ceil() as i32 + 2;
-                    let line_w = fret_canvas::scale::constant_pixel_stroke_width(
-                        Px(1.0),
-                        paint_cx.view.zoom,
-                    );
-
-                    p.with_clip_rect(bounds, |p| {
-                        p.with_transform(transform, |p| {
-                            for x in min_x..=max_x {
-                                let ox = x as f32 * step;
-                                let rect = Rect::new(
-                                    Point::new(Px(ox), Px(min_y as f32 * step)),
-                                    Size::new(line_w, Px((max_y - min_y) as f32 * step)),
-                                );
-                                p.scene().push(SceneOp::Quad {
-                                    order: DrawOrder(1),
-                                    rect,
-                                    background: Paint::Solid(grid).into(),
-                                    border: Edges::all(Px(0.0)),
-                                    border_paint: Paint::Solid(
-                                        fret_core::scene::Color::TRANSPARENT,
-                                    )
-                                    .into(),
-                                    corner_radii: Corners::all(Px(0.0)),
-                                });
-                            }
-                            for y in min_y..=max_y {
-                                let oy = y as f32 * step;
-                                let rect = Rect::new(
-                                    Point::new(Px(min_x as f32 * step), Px(oy)),
-                                    Size::new(Px((max_x - min_x) as f32 * step), line_w),
-                                );
-                                p.scene().push(SceneOp::Quad {
-                                    order: DrawOrder(1),
-                                    rect,
-                                    background: Paint::Solid(grid).into(),
-                                    border: Edges::all(Px(0.0)),
-                                    border_paint: Paint::Solid(
-                                        fret_core::scene::Color::TRANSPARENT,
-                                    )
-                                    .into(),
-                                    corner_radii: Corners::all(Px(0.0)),
-                                });
-                            }
-
-                            let node = node_rect(node_origin);
-                            let border_w = fret_canvas::scale::constant_pixel_stroke_width(
-                                Px(2.0),
-                                paint_cx.view.zoom,
-                            );
-                            p.scene().push(SceneOp::Quad {
-                                order: DrawOrder(10),
-                                rect: node,
-                                background: Paint::Solid(node_fill).into(),
-                                border: Edges::all(border_w),
-                                border_paint: Paint::Solid(node_border).into(),
-                                corner_radii: Corners::all(Px(10.0)),
-                            });
-                        });
-                    });
+            let paint = move |p: &mut canvas::AppCanvasPainter<'_, '_>,
+                              paint_cx: PanZoomCanvasPaintCx| {
+                let bounds = p.bounds();
+                let Some(transform) = paint_cx.view.render_transform(bounds) else {
+                    return;
                 };
 
-            pan_zoom_canvas_surface_panel(cx, props, paint)
+                p.quad(
+                    canvas::DrawOrder(0),
+                    bounds,
+                    CanvasPaint::Solid(bg),
+                    canvas::Edges::all(Px(0.0)),
+                    CanvasPaint::TRANSPARENT,
+                    canvas::Corners::all(Px(0.0)),
+                );
+
+                let vis = canvas::visible_canvas_rect(bounds, paint_cx.view);
+                let step = 80.0f32;
+                let min_x = (vis.origin.x.0 / step).floor() as i32 - 2;
+                let max_x = ((vis.origin.x.0 + vis.size.width.0) / step).ceil() as i32 + 2;
+                let min_y = (vis.origin.y.0 / step).floor() as i32 - 2;
+                let max_y = ((vis.origin.y.0 + vis.size.height.0) / step).ceil() as i32 + 2;
+                let line_w = canvas::constant_pixel_stroke_width(Px(1.0), paint_cx.view.zoom);
+
+                p.with_clip_rect(bounds, |p| {
+                    p.with_transform(transform, |p| {
+                        for x in min_x..=max_x {
+                            let ox = x as f32 * step;
+                            let rect = Rect::new(
+                                Point::new(Px(ox), Px(min_y as f32 * step)),
+                                Size::new(line_w, Px((max_y - min_y) as f32 * step)),
+                            );
+                            p.quad(
+                                canvas::DrawOrder(1),
+                                rect,
+                                CanvasPaint::Solid(grid),
+                                canvas::Edges::all(Px(0.0)),
+                                CanvasPaint::TRANSPARENT,
+                                canvas::Corners::all(Px(0.0)),
+                            );
+                        }
+                        for y in min_y..=max_y {
+                            let oy = y as f32 * step;
+                            let rect = Rect::new(
+                                Point::new(Px(min_x as f32 * step), Px(oy)),
+                                Size::new(Px((max_x - min_x) as f32 * step), line_w),
+                            );
+                            p.quad(
+                                canvas::DrawOrder(1),
+                                rect,
+                                CanvasPaint::Solid(grid),
+                                canvas::Edges::all(Px(0.0)),
+                                CanvasPaint::TRANSPARENT,
+                                canvas::Corners::all(Px(0.0)),
+                            );
+                        }
+
+                        let node = node_rect(node_origin);
+                        let border_w =
+                            canvas::constant_pixel_stroke_width(Px(2.0), paint_cx.view.zoom);
+                        p.quad(
+                            canvas::DrawOrder(10),
+                            node,
+                            CanvasPaint::Solid(node_fill),
+                            canvas::Edges::all(border_w),
+                            CanvasPaint::Solid(node_border),
+                            canvas::Corners::all(Px(10.0)),
+                        );
+                    });
+                });
+            };
+
+            canvas::PanZoomCanvas::new(&self.view)
+                .default_view(PanZoom2D::default())
+                .desktop_canvas_cad()
+                .pan_button(MouseButton::Middle)
+                .on_pointer_down(on_pointer_down)
+                .on_pointer_move(on_pointer_move)
+                .on_pointer_up(on_pointer_up)
+                .into_element(cx, paint)
                 .test_id(TEST_ID_CANVAS)
-                .into()
         };
 
         let card = shadcn::card(|cx| {

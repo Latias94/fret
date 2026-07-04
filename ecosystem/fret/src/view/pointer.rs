@@ -1,8 +1,8 @@
 use std::any::Any;
 use std::sync::Arc;
 
-use fret_core::Px;
 pub use fret_core::{CursorIcon, MouseButton, Point, PointerId};
+use fret_core::{Px, Rect};
 use fret_runtime::DefaultAction;
 use fret_ui::action::{ActionCx, UiPointerActionHost};
 pub use fret_ui::action::{
@@ -91,7 +91,7 @@ impl<'cx, 'a, H: UiHost> AppPointerRegion<'cx, 'a, H> {
     ) -> &mut Self {
         self.cx
             .pointer_region_on_pointer_down(Arc::new(move |host, action_cx, down| {
-                let mut cx = PointerActionCx { host, action_cx };
+                let mut cx = PointerActionCx::new(host, action_cx);
                 handler(&mut cx, down)
             }));
         self
@@ -103,7 +103,7 @@ impl<'cx, 'a, H: UiHost> AppPointerRegion<'cx, 'a, H> {
     ) -> &mut Self {
         self.cx
             .pointer_region_on_pointer_move(Arc::new(move |host, action_cx, mv| {
-                let mut cx = PointerActionCx { host, action_cx };
+                let mut cx = PointerActionCx::new(host, action_cx);
                 handler(&mut cx, mv)
             }));
         self
@@ -115,7 +115,7 @@ impl<'cx, 'a, H: UiHost> AppPointerRegion<'cx, 'a, H> {
     ) -> &mut Self {
         self.cx
             .pointer_region_on_pointer_up(Arc::new(move |host, action_cx, up| {
-                let mut cx = PointerActionCx { host, action_cx };
+                let mut cx = PointerActionCx::new(host, action_cx);
                 handler(&mut cx, up)
             }));
         self
@@ -127,7 +127,7 @@ impl<'cx, 'a, H: UiHost> AppPointerRegion<'cx, 'a, H> {
     ) -> &mut Self {
         self.cx
             .pointer_region_on_pointer_cancel(Arc::new(move |host, action_cx, cancel| {
-                let mut cx = PointerActionCx { host, action_cx };
+                let mut cx = PointerActionCx::new(host, action_cx);
                 handler(&mut cx, cancel)
             }));
         self
@@ -145,6 +145,14 @@ pub struct PointerActionCx<'a> {
 }
 
 impl<'a> PointerActionCx<'a> {
+    pub(super) fn new(host: &'a mut dyn UiPointerActionHost, action_cx: ActionCx) -> Self {
+        Self { host, action_cx }
+    }
+
+    pub fn bounds(&self) -> Rect {
+        self.host.bounds()
+    }
+
     pub fn capture_pointer(&mut self) {
         self.host.capture_pointer();
     }

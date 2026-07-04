@@ -102,6 +102,11 @@ DEFAULT_AUTHORING_SURFACES: tuple[SurfacePath, ...] = (
         "default async inbox cookbook should stay on app-facing async-work and local-state helpers",
     ),
     SurfacePath(
+        "apps/fret-cookbook/examples/canvas_pan_zoom_basics.rs",
+        "default_app_clean",
+        "default canvas cookbook should stay on app-facing canvas, pointer, and local-state helpers",
+    ),
+    SurfacePath(
         "apps/fret-cookbook/examples/markdown_and_code_basics.rs",
         "default_app_clean",
         "default cookbook controls should stay on app-facing state helpers",
@@ -476,26 +481,6 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
         ),
         owner="examples-gizmo3d",
     ),
-    SurfacePath(
-        "apps/fret-cookbook/examples/canvas_pan_zoom_basics.rs",
-        "advanced_manual",
-        (
-            "canvas cookbook keeps a narrow advanced lane for custom pointer-action and "
-            "painter escape hatches not yet hidden by public canvas wrappers"
-        ),
-        owner="cookbook-canvas",
-        allowed_raw_seams=(
-            "fret::advanced",
-            "fret_core",
-            "fret_runtime",
-            "fret_ui",
-            "AnyElement",
-        ),
-        retirement=(
-            "Move to the public cookbook lane after canvas action and painter wrappers hide "
-            "raw pointer host/cx and CanvasPainter types from app authors"
-        ),
-    ),
     _cookbook_advanced_surface(
         "chart_interactions_basics.rs",
         "chart interaction wiring still owns retained tree, model, and low-level element seams",
@@ -654,6 +639,10 @@ DEFAULT_FORBIDDEN_PATTERNS: tuple[tuple[str, str], ...] = (
     (
         r"\buse\s+fret_core::",
         "default app/tutorial surfaces must not import `fret_core`; use the curated `fret` facade exports",
+    ),
+    (
+        r"\bfret_canvas::",
+        "default app/tutorial surfaces must not import `fret_canvas`; use the explicit `fret::canvas` app facade",
     ),
     (
         r"\bfret_runtime::",

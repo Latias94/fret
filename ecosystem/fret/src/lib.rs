@@ -235,6 +235,20 @@ pub mod async_work {
     pub use fret_runtime::{DispatchPriority, DispatcherHandle};
 }
 
+/// Explicit canvas authoring helpers for app code.
+///
+/// This lane hides raw `CanvasPainter`, raw pointer action host callbacks, and raw `Model<T>`
+/// plumbing while still leaving custom canvas drawing and pan/zoom state explicit.
+#[cfg(feature = "canvas")]
+pub mod canvas {
+    pub use crate::view::{AppCanvasPainter, PanZoomCanvas};
+    pub use fret_canvas::scale::constant_pixel_stroke_width;
+    pub use fret_canvas::ui::{PanZoomCanvasPaintCx, PanZoomInputPreset};
+    pub use fret_canvas::view::{PanZoom2D, visible_canvas_rect};
+    pub use fret_core::scene::{Color, Paint as CanvasPaint};
+    pub use fret_core::{Corners, DrawOrder, Edges, Point, Px, Rect, SceneOp, Size, Transform2D};
+}
+
 /// Explicit higher-level adaptive policy vocabulary for app code that wants shared classification
 /// or device-shell strategy helpers above raw query reads.
 pub mod adaptive {
@@ -3588,6 +3602,9 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_USAGE_GUIDE.contains("`inbox_local(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`inbox_drain_apply(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`AppUiRawActionNotifyExt`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`fret::canvas::{...}` lane"));
+        assert!(CRATE_USAGE_GUIDE.contains("`PanZoomCanvas`, `AppCanvasPainter`, `PanZoom2D`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`fret_ui::canvas::CanvasPainter`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::app::{LocalState, LocalStateTxn}`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::commands::{...}`"));
         assert!(
@@ -4575,6 +4592,7 @@ mod authoring_surface_policy_tests {
             "actions",
             "assets",
             "async_work",
+            "canvas",
             "children",
             "commands",
             "env",
@@ -4643,6 +4661,7 @@ mod authoring_surface_policy_tests {
 
         assert!(root_header.contains("pub mod activate {"));
         assert!(root_header.contains("pub mod async_work {"));
+        assert!(root_header.contains("pub mod canvas {"));
         assert!(root_header.contains("pub mod children {"));
         assert!(root_header.contains("pub mod commands {"));
         assert!(root_header.contains("pub mod icons {"));
@@ -4663,6 +4682,10 @@ mod authoring_surface_policy_tests {
         assert!(
             root_header.contains("pub use fret_runtime::{DispatchPriority, DispatcherHandle};")
         );
+        assert!(root_header.contains("AppCanvasPainter, PanZoomCanvas"));
+        assert!(root_header.contains("PanZoom2D, visible_canvas_rect"));
+        assert!(root_header.contains("PanZoomCanvasPaintCx, PanZoomInputPreset"));
+        assert!(root_header.contains("pub use fret_core::scene::{Color, Paint as CanvasPaint};"));
         assert!(root_header.contains("CommandMeta, CommandRegistry, CommandScope"));
         assert!(root_header.contains("DefaultKeybinding, InputContext,"));
         assert!(root_header.contains("KeyChord, KeymapService, Platform, PlatformFilter"));
@@ -4958,6 +4981,10 @@ mod authoring_surface_policy_tests {
         assert!(!app_prelude_exports_symbol("InboxLocal"));
         assert!(!app_prelude_exports_symbol("DispatcherHandle"));
         assert!(!app_prelude_exports_symbol("DispatchPriority"));
+        assert!(!app_prelude_exports_symbol("AppCanvasPainter"));
+        assert!(!app_prelude_exports_symbol("PanZoomCanvas"));
+        assert!(!app_prelude_exports_symbol("PanZoom2D"));
+        assert!(!app_prelude_exports_symbol("CanvasPaint"));
         assert!(!app_prelude_exports_symbol("Length"));
         assert!(!app_prelude_exports_symbol("LayoutStyle"));
         assert!(!app_prelude_exports_symbol("ContainerProps"));
