@@ -312,8 +312,9 @@ impl ViewBoundaryStore {
         key: ViewBoundaryKey,
         parent: Option<BoundaryId>,
         flags: ViewCacheFlags,
+        topology_epoch: LiveTopologyEpoch,
     ) -> Option<&mut ViewBoundaryState> {
-        let id = self.ensure_boundary_for_key(key, parent, flags);
+        let id = self.ensure_boundary_for_key(key, parent, flags, topology_epoch);
         if let Some(old_id) = self.boundary_id_for_live_node(node)
             && old_id != id
         {
@@ -327,7 +328,7 @@ impl ViewBoundaryStore {
         }
         self.by_live_node.insert(node, id);
         let state = self.entries.get_mut(id)?;
-        state.refresh_runtime(Some(node), parent, flags);
+        state.refresh_runtime(Some(node), parent, flags, topology_epoch);
         self.entries.get_mut(id)
     }
 
@@ -391,6 +392,7 @@ impl ViewBoundaryStore {
         key: ViewBoundaryKey,
         parent: Option<BoundaryId>,
         flags: ViewCacheFlags,
+        topology_epoch: LiveTopologyEpoch,
     ) -> BoundaryId {
         if let Some(id) = self.boundary_id_for_key(key) {
             return id;
@@ -398,7 +400,7 @@ impl ViewBoundaryStore {
 
         let view = self.allocate_view_id();
         let id = self.entries.insert_with_key(|id| {
-            ViewBoundaryState::new_runtime(id, key, view, None, parent, flags)
+            ViewBoundaryState::new_runtime(id, key, view, None, parent, flags, topology_epoch)
         });
         self.by_key.insert(key, id);
         self.by_view.insert(view, id);
@@ -430,6 +432,7 @@ impl ViewBoundaryStore {
 
 #[derive(Default)]
 pub(super) struct BoundaryFrameProducts {
+    pub(super) topology_epoch: LiveTopologyEpoch,
     pub(super) dirty: BoundaryDirtyState,
     pub(super) prepaint: BoundaryPrepaintState,
     pub(super) hit_test_bounds: bounds_tree::BoundaryHitTestBoundsState,
@@ -447,6 +450,7 @@ impl ViewBoundaryState {
         live_node: Option<NodeId>,
         parent: Option<BoundaryId>,
         flags: ViewCacheFlags,
+        topology_epoch: LiveTopologyEpoch,
     ) -> Self {
         Self {
             id,
@@ -460,7 +464,10 @@ impl ViewBoundaryState {
                 ViewBoundaryKind::Node
             },
             layout_dependencies: BoundaryLayoutDependencies::from_view_cache_flags(flags),
-            frame_products: BoundaryFrameProducts::default(),
+            frame_products: BoundaryFrameProducts {
+                topology_epoch,
+                ..Default::default()
+            },
         }
     }
 
@@ -469,6 +476,7 @@ impl ViewBoundaryState {
         live_node: Option<NodeId>,
         parent: Option<BoundaryId>,
         flags: ViewCacheFlags,
+        topology_epoch: LiveTopologyEpoch,
     ) {
         self.live_node = live_node;
         self.parent = parent;
@@ -478,6 +486,7 @@ impl ViewBoundaryState {
             ViewBoundaryKind::Node
         };
         self.layout_dependencies = BoundaryLayoutDependencies::from_view_cache_flags(flags);
+        self.frame_products.topology_epoch = topology_epoch;
     }
 }
 
@@ -943,7 +952,10 @@ impl<H: UiHost> UiTree<H> {
             None
         };
 
-        let state = self.view_boundaries.ensure_live(node, key, parent, flags)?;
+        let topology_epoch = self.live_topology_epoch();
+        let state = self
+            .view_boundaries
+            .ensure_live(node, key, parent, flags, topology_epoch)?;
         if let Some(entry) = self
             .retained_paint_cache_entries
             .remove(node)
@@ -1215,6 +1227,7 @@ impl<H: UiHost> UiTree<H> {
                     .parent
                     .and_then(|id| self.view_boundaries.live_node_for_boundary(id)),
                 element: self.nodes.get(node).and_then(|n| n.element),
+                topology_epoch: state.frame_products.topology_epoch.as_u64(),
                 kind: match state.kind {
                     ViewBoundaryKind::Node => "node",
                     ViewBoundaryKind::ViewCacheRoot => "view_cache_root",
@@ -1292,6 +1305,16 @@ impl<H: UiHost> UiTree<H> {
             .get_live(node)
             .and_then(|state| state.parent)
             .and_then(|id| self.view_boundaries.live_node_for_boundary(id))
+    }
+
+    #[cfg(test)]
+    pub(crate) fn test_view_boundary_topology_epoch(
+        &self,
+        node: NodeId,
+    ) -> Option<LiveTopologyEpoch> {
+        self.view_boundaries
+            .get_live(node)
+            .map(|state| state.frame_products.topology_epoch)
     }
 
     #[cfg(test)]
@@ -1426,7 +1449,7 @@ mod view_boundary_store_tests {
         };
 
         let first_boundary = store
-            .ensure_live(first, key, None, flags)
+            .ensure_live(first, key, None, flags, LiveTopologyEpoch::default())
             .expect("first live boundary")
             .id;
         let view = store.view_for_live_node(first).expect("first live view");
@@ -1439,7 +1462,7 @@ mod view_boundary_store_tests {
         assert_eq!(store.boundary_id_for_view(view), Some(first_boundary));
 
         let second_boundary = store
-            .ensure_live(second, key, None, flags)
+            .ensure_live(second, key, None, flags, LiveTopologyEpoch::default())
             .expect("rebound live boundary")
             .id;
         assert_eq!(second_boundary, first_boundary);
@@ -1464,13 +1487,13 @@ mod view_boundary_store_tests {
         };
 
         let first_boundary = store
-            .ensure_live(node, first_key, None, flags)
+            .ensure_live(node, first_key, None, flags, LiveTopologyEpoch::default())
             .expect("first boundary")
             .id;
         let first_view = store.view_for_live_node(node).expect("first view");
 
         let second_boundary = store
-            .ensure_live(node, second_key, None, flags)
+            .ensure_live(node, second_key, None, flags, LiveTopologyEpoch::default())
             .expect("second boundary")
             .id;
         let second_view = store.view_for_live_node(node).expect("second view");
@@ -1517,6 +1540,7 @@ mod boundary_frame_products_tests {
                 layout_definite: true,
                 ..Default::default()
             },
+            LiveTopologyEpoch::default(),
         );
         let key = paint_cache_key();
 

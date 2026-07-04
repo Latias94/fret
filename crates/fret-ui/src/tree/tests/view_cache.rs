@@ -747,6 +747,52 @@ fn view_cache_nearest_root_uses_child_edges_under_stale_parent_pointers() {
 }
 
 #[test]
+fn view_boundary_frame_products_track_live_topology_epoch_after_reparent() {
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(AppWindowId::default());
+    ui.set_debug_enabled(true);
+    ui.set_view_cache_enabled(true);
+
+    let root = ui.create_node(TestStack);
+    let left = ui.create_node(TestStack);
+    let right = ui.create_node(TestStack);
+    let boundary = ui.create_node(TestStack);
+
+    ui.set_root(root);
+    ui.set_children(root, vec![left, right]);
+    ui.set_children(left, vec![boundary]);
+    ui.set_node_view_cache_flags(left, true, true, true);
+    ui.set_node_view_cache_flags(right, true, true, true);
+    ui.set_node_view_cache_flags(boundary, true, true, true);
+
+    let first_epoch = ui.live_topology_epoch();
+    assert_eq!(ui.test_view_boundary_parent(boundary), Some(left));
+    assert_eq!(
+        ui.test_view_boundary_topology_epoch(boundary),
+        Some(first_epoch)
+    );
+
+    ui.test_set_node_parent(boundary, None);
+    ui.set_children(right, vec![boundary]);
+
+    let next_epoch = ui.live_topology_epoch();
+    assert!(next_epoch > first_epoch);
+    assert_eq!(ui.test_view_boundary_parent(boundary), Some(right));
+    assert_eq!(
+        ui.test_view_boundary_topology_epoch(boundary),
+        Some(next_epoch)
+    );
+
+    let stats = ui.debug_boundary_stats();
+    let boundary_stats = stats
+        .iter()
+        .find(|stats| stats.id == boundary)
+        .expect("boundary stats for reparented node");
+    assert_eq!(boundary_stats.parent, Some(right));
+    assert_eq!(boundary_stats.topology_epoch, next_epoch.as_u64());
+}
+
+#[test]
 fn contained_view_cache_dirty_coverage_uses_child_edges_under_stale_parent_pointers() {
     let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
     ui.set_window(AppWindowId::default());

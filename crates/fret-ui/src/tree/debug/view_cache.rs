@@ -15,6 +15,7 @@ pub struct UiDebugBoundaryStats {
     pub id: NodeId,
     pub parent: Option<NodeId>,
     pub element: Option<GlobalElementId>,
+    pub topology_epoch: u64,
     pub kind: &'static str,
     pub source: &'static str,
     pub prepaint_owner: &'static str,
