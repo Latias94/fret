@@ -404,15 +404,6 @@
       "unit": "us"
     },
     {
-      "key": "layout_collapse_layout_observations_time_us",
-      "kind": "timing",
-      "scope": "frame",
-      "suggested_aggregate": "p95",
-      "trace_category": "layout",
-      "trace_event": "layout.view_cache.collapse_observations",
-      "unit": "us"
-    },
-    {
       "key": "layout_observation_record_time_us",
       "kind": "timing",
       "scope": "frame",
@@ -765,15 +756,6 @@
       "suggested_aggregate": "p95",
       "trace_category": "paint",
       "trace_event": "paint.publish_text_input_snapshot",
-      "unit": "us"
-    },
-    {
-      "key": "paint_collapse_observations_time_us",
-      "kind": "timing",
-      "scope": "frame",
-      "suggested_aggregate": "p95",
-      "trace_category": "paint",
-      "trace_event": "paint.collapse_observations",
       "unit": "us"
     },
     {

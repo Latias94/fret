@@ -427,12 +427,6 @@ pub(crate) const LAYOUT_CONTAINED_VIEW_CACHE_ROOTS_TIME_US: PerfKey = trace_timi
     "layout",
     PerfKeyAggregate::P95,
 );
-pub(crate) const LAYOUT_COLLAPSE_LAYOUT_OBSERVATIONS_TIME_US: PerfKey = trace_timing_key(
-    "layout_collapse_layout_observations_time_us",
-    "layout.view_cache.collapse_observations",
-    "layout",
-    PerfKeyAggregate::P95,
-);
 pub(crate) const LAYOUT_PREPAINT_AFTER_LAYOUT_TIME_US: PerfKey = timing_key(
     "layout_prepaint_after_layout_time_us",
     PerfKeyAggregate::P95,
@@ -563,12 +557,6 @@ pub(crate) const PAINT_COLLECT_ROOTS_TIME_US: PerfKey = trace_timing_key(
 pub(crate) const PAINT_PUBLISH_TEXT_INPUT_SNAPSHOT_TIME_US: PerfKey = trace_timing_key(
     "paint_publish_text_input_snapshot_time_us",
     "paint.publish_text_input_snapshot",
-    "paint",
-    PerfKeyAggregate::P95,
-);
-pub(crate) const PAINT_COLLAPSE_OBSERVATIONS_TIME_US: PerfKey = trace_timing_key(
-    "paint_collapse_observations_time_us",
-    "paint.collapse_observations",
     "paint",
     PerfKeyAggregate::P95,
 );
@@ -1128,7 +1116,6 @@ pub(crate) const REGISTERED_FRAME_STATS_KEYS: &[PerfKey] = &[
     LAYOUT_PENDING_BARRIER_RELAYOUTS_TIME_US,
     LAYOUT_REPAIR_VIEW_CACHE_BOUNDS_TIME_US,
     LAYOUT_CONTAINED_VIEW_CACHE_ROOTS_TIME_US,
-    LAYOUT_COLLAPSE_LAYOUT_OBSERVATIONS_TIME_US,
     LAYOUT_OBSERVATION_RECORD_TIME_US,
     LAYOUT_OBSERVATION_RECORD_MODELS_ITEMS,
     LAYOUT_OBSERVATION_RECORD_GLOBALS_ITEMS,
@@ -1174,7 +1161,6 @@ pub(crate) const REGISTERED_FRAME_STATS_KEYS: &[PerfKey] = &[
     PAINT_SCROLL_HANDLE_INVALIDATION_TIME_US,
     PAINT_COLLECT_ROOTS_TIME_US,
     PAINT_PUBLISH_TEXT_INPUT_SNAPSHOT_TIME_US,
-    PAINT_COLLAPSE_OBSERVATIONS_TIME_US,
     PAINT_NODES_PERFORMED,
     PAINT_CACHE_MISSES,
     PAINT_CACHE_REPLAY_TIME_US,
@@ -2429,6 +2415,11 @@ const fn pointer_move_count_key(
 mod tests {
     use super::*;
 
+    const RETIRED_COMPAT_FRAME_STATS_KEYS: &[&str] = &[
+        "layout_collapse_layout_observations_time_us",
+        "paint_collapse_observations_time_us",
+    ];
+
     fn assert_unique(keys: &[PerfKey]) {
         let mut keys: Vec<&str> = keys.iter().map(|key| key.key).collect();
         let original_len = keys.len();
@@ -2760,11 +2751,35 @@ mod tests {
     fn full_registered_perf_key_registry_covers_consumed_debug_stats_fields() {
         let registered = key_set(REGISTERED_FRAME_STATS_KEYS);
         let consumed = consumed_debug_stats_keys_from_bundle_stats_compute_source();
-        let missing: Vec<&str> = consumed.difference(&registered).copied().collect();
+        let retired_compat = RETIRED_COMPAT_FRAME_STATS_KEYS
+            .iter()
+            .copied()
+            .collect::<std::collections::BTreeSet<_>>();
+        let missing: Vec<&str> = consumed
+            .difference(&registered)
+            .filter(|key| !retired_compat.contains(**key))
+            .copied()
+            .collect();
         assert!(
             missing.is_empty(),
             "debug.stats fields consumed by diag stats are missing from perf key registry: {missing:?}"
         );
+    }
+
+    #[test]
+    fn retired_observation_collapse_keys_are_compat_inputs_only() {
+        let registered = key_set(REGISTERED_FRAME_STATS_KEYS);
+        let consumed = consumed_debug_stats_keys_from_bundle_stats_compute_source();
+        for key in RETIRED_COMPAT_FRAME_STATS_KEYS {
+            assert!(
+                !registered.contains(key),
+                "retired observation-collapse key must not be published in current registry: {key}"
+            );
+            assert!(
+                consumed.contains(key),
+                "retired observation-collapse key must remain readable from old bundles: {key}"
+            );
+        }
     }
 
     #[test]

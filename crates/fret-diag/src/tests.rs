@@ -3839,6 +3839,77 @@ fn bundle_stats_reports_renderer_prepare_text_subphases() {
 }
 
 #[test]
+fn bundle_stats_reads_retired_observation_collapse_inputs_without_reporting_current_keys() {
+    let retired_layout_key = "layout_collapse_layout_observations_time_us";
+    let retired_paint_key = "paint_collapse_observations_time_us";
+    let bundle = json!({
+        "schema_version": 1,
+        "windows": [
+            {
+                "window": 1,
+                "snapshots": [
+                    {
+                        "tick_id": 1,
+                        "frame_id": 1,
+                        "changed_models": [],
+                        "changed_globals": [],
+                        "debug": { "stats": {
+                            "total_time_us": 40,
+                            "layout_time_us": 20,
+                            "paint_time_us": 15,
+                            "layout_collapse_layout_observations_time_us": 11,
+                            "paint_collapse_observations_time_us": 13
+                        } }
+                    }
+                ]
+            }
+        ]
+    });
+
+    let report = bundle_stats_from_json_with_options(
+        &bundle,
+        1,
+        BundleStatsSort::Time,
+        BundleStatsOptions::default(),
+    )
+    .unwrap();
+
+    assert_eq!(
+        report.top[0].layout_collapse_layout_observations_time_us,
+        11
+    );
+    assert_eq!(report.top[0].paint_collapse_observations_time_us, 13);
+    assert_eq!(report.p95_layout_collapse_layout_observations_time_us, 11);
+    assert_eq!(report.p95_paint_collapse_observations_time_us, 13);
+
+    let json = report.to_json();
+    for key in [retired_layout_key, retired_paint_key] {
+        assert!(
+            !json
+                .pointer("/registered_perf_keys")
+                .and_then(|value| value.as_array())
+                .expect("registered perf keys")
+                .iter()
+                .any(|entry| entry.get("key").and_then(|value| value.as_str()) == Some(key)),
+            "retired key must not be listed in current registered_perf_keys: {key}"
+        );
+        for pointer in [
+            format!("/sum/{key}"),
+            format!("/max/{key}"),
+            format!("/avg/{key}"),
+            format!("/p50/{key}"),
+            format!("/p95/{key}"),
+            format!("/top/0/{key}"),
+        ] {
+            assert!(
+                json.pointer(&pointer).is_none(),
+                "retired key must not be emitted in current report JSON at {pointer}"
+            );
+        }
+    }
+}
+
+#[test]
 fn bundle_stats_extracts_top_invalidation_walks_with_semantics() {
     let bundle = json!({
         "schema_version": 1,

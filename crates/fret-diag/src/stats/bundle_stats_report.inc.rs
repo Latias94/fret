@@ -3692,15 +3692,13 @@ impl BundleStatsReport {
             }
         }
         println!(
-            "layout breakdown p50/p95 (us): roots={}/{} request_build_roots={}/{} view_cache={}/{} collapse_obs={}/{} prepaint_after_layout={}/{}",
+            "layout breakdown p50/p95 (us): roots={}/{} request_build_roots={}/{} view_cache={}/{} prepaint_after_layout={}/{}",
             self.p50_layout_roots_time_us,
             self.p95_layout_roots_time_us,
             self.p50_layout_request_build_roots_time_us,
             self.p95_layout_request_build_roots_time_us,
             self.p50_layout_view_cache_time_us,
             self.p95_layout_view_cache_time_us,
-            self.p50_layout_collapse_layout_observations_time_us,
-            self.p95_layout_collapse_layout_observations_time_us,
             self.p50_layout_prepaint_after_layout_time_us,
             self.p95_layout_prepaint_after_layout_time_us
         );
@@ -3747,7 +3745,7 @@ impl BundleStatsReport {
             );
         }
         println!(
-            "paint breakdown p50/p95 (us): input_ctx={}/{} scroll_inv={}/{} collect_roots={}/{} text_snapshot={}/{} collapse={}/{}",
+            "paint breakdown p50/p95 (us): input_ctx={}/{} scroll_inv={}/{} collect_roots={}/{} text_snapshot={}/{}",
             self.p50_paint_input_context_time_us,
             self.p95_paint_input_context_time_us,
             self.p50_paint_scroll_handle_invalidation_time_us,
@@ -3755,9 +3753,7 @@ impl BundleStatsReport {
             self.p50_paint_collect_roots_time_us,
             self.p95_paint_collect_roots_time_us,
             self.p50_paint_publish_text_input_snapshot_time_us,
-            self.p95_paint_publish_text_input_snapshot_time_us,
-            self.p50_paint_collapse_observations_time_us,
-            self.p95_paint_collapse_observations_time_us
+            self.p95_paint_publish_text_input_snapshot_time_us
         );
         if self.sum_layout_observation_record_time_us > 0
             || self.sum_layout_observation_record_models_items > 0
@@ -4088,16 +4084,14 @@ impl BundleStatsReport {
             if row.layout_roots_time_us > 0
                 || row.layout_request_build_roots_time_us > 0
                 || row.layout_view_cache_time_us > 0
-                || row.layout_collapse_layout_observations_time_us > 0
                 || row.layout_prepaint_after_layout_time_us > 0
                 || row.layout_expand_view_cache_invalidations_time_us > 0
             {
                 println!(
-                    "    layout_breakdown.us(roots/request_build_roots/view_cache/collapse_obs/prepaint_after_layout)={}/{}/{}/{}/{} view_cache_inv_us={}",
+                    "    layout_breakdown.us(roots/request_build_roots/view_cache/prepaint_after_layout)={}/{}/{}/{} view_cache_inv_us={}",
                     row.layout_roots_time_us,
                     row.layout_request_build_roots_time_us,
                     row.layout_view_cache_time_us,
-                    row.layout_collapse_layout_observations_time_us,
                     row.layout_prepaint_after_layout_time_us,
                     row.layout_expand_view_cache_invalidations_time_us,
                 );
@@ -4163,15 +4157,13 @@ impl BundleStatsReport {
                 || row.paint_scroll_handle_invalidation_time_us > 0
                 || row.paint_collect_roots_time_us > 0
                 || row.paint_publish_text_input_snapshot_time_us > 0
-                || row.paint_collapse_observations_time_us > 0
             {
                 println!(
-                    "    paint_breakdown.us(input_ctx/scroll_inv/collect_roots/text_snapshot/collapse)={}/{}/{}/{}/{}",
+                    "    paint_breakdown.us(input_ctx/scroll_inv/collect_roots/text_snapshot)={}/{}/{}/{}",
                     row.paint_input_context_time_us,
                     row.paint_scroll_handle_invalidation_time_us,
                     row.paint_collect_roots_time_us,
-                    row.paint_publish_text_input_snapshot_time_us,
-                    row.paint_collapse_observations_time_us
+                    row.paint_publish_text_input_snapshot_time_us
                 );
             }
             if row.dispatch_post_dispatch_snapshot_time_us > 0
@@ -5419,10 +5411,6 @@ impl BundleStatsReport {
             Value::from(self.sum_layout_roots_flush_viewport_time_us),
         );
         sum.insert(
-            "layout_collapse_layout_observations_time_us".to_string(),
-            Value::from(self.sum_layout_collapse_layout_observations_time_us),
-        );
-        sum.insert(
             "layout_time_us".to_string(),
             Value::from(self.sum_layout_time_us),
         );
@@ -5685,10 +5673,6 @@ impl BundleStatsReport {
         max.insert(
             "layout_roots_flush_viewport_time_us".to_string(),
             Value::from(self.max_layout_roots_flush_viewport_time_us),
-        );
-        max.insert(
-            "layout_collapse_layout_observations_time_us".to_string(),
-            Value::from(self.max_layout_collapse_layout_observations_time_us),
         );
         max.insert(
             "layout_time_us".to_string(),
@@ -6037,13 +6021,6 @@ impl BundleStatsReport {
             )),
         );
         avg.insert(
-            "layout_collapse_layout_observations_time_us".to_string(),
-            Value::from(avg_us(
-                self.sum_layout_collapse_layout_observations_time_us,
-                self.snapshots_considered,
-            )),
-        );
-        avg.insert(
             "layout_time_us".to_string(),
             Value::from(avg_us(self.sum_layout_time_us, self.snapshots_considered)),
         );
@@ -6340,10 +6317,6 @@ impl BundleStatsReport {
             Value::from(self.p50_layout_view_cache_time_us),
         );
         p50.insert(
-            "layout_collapse_layout_observations_time_us".to_string(),
-            Value::from(self.p50_layout_collapse_layout_observations_time_us),
-        );
-        p50.insert(
             "layout_prepaint_after_layout_time_us".to_string(),
             Value::from(self.p50_layout_prepaint_after_layout_time_us),
         );
@@ -6390,10 +6363,6 @@ impl BundleStatsReport {
         p50.insert(
             "paint_publish_text_input_snapshot_time_us".to_string(),
             Value::from(self.p50_paint_publish_text_input_snapshot_time_us),
-        );
-        p50.insert(
-            "paint_collapse_observations_time_us".to_string(),
-            Value::from(self.p50_paint_collapse_observations_time_us),
         );
         p50.insert(
             "layout_engine_solve_time_us".to_string(),
@@ -6716,10 +6685,6 @@ impl BundleStatsReport {
             Value::from(self.p95_layout_view_cache_time_us),
         );
         p95.insert(
-            "layout_collapse_layout_observations_time_us".to_string(),
-            Value::from(self.p95_layout_collapse_layout_observations_time_us),
-        );
-        p95.insert(
             "layout_prepaint_after_layout_time_us".to_string(),
             Value::from(self.p95_layout_prepaint_after_layout_time_us),
         );
@@ -6766,10 +6731,6 @@ impl BundleStatsReport {
         p95.insert(
             "paint_publish_text_input_snapshot_time_us".to_string(),
             Value::from(self.p95_paint_publish_text_input_snapshot_time_us),
-        );
-        p95.insert(
-            "paint_collapse_observations_time_us".to_string(),
-            Value::from(self.p95_paint_collapse_observations_time_us),
         );
         p95.insert(
             "layout_engine_solve_time_us".to_string(),
@@ -7842,10 +7803,6 @@ impl BundleStatsReport {
                     Value::from(row.layout_contained_view_cache_roots_time_us),
                 );
                 obj.insert(
-                    "layout_collapse_layout_observations_time_us".to_string(),
-                    Value::from(row.layout_collapse_layout_observations_time_us),
-                );
-                obj.insert(
                     "layout_observation_record_time_us".to_string(),
                     Value::from(row.layout_observation_record_time_us),
                 );
@@ -8035,10 +7992,6 @@ impl BundleStatsReport {
                 obj.insert(
                     "paint_publish_text_input_snapshot_time_us".to_string(),
                     Value::from(row.paint_publish_text_input_snapshot_time_us),
-                );
-                obj.insert(
-                    "paint_collapse_observations_time_us".to_string(),
-                    Value::from(row.paint_collapse_observations_time_us),
                 );
                 obj.insert(
                     "paint_cache_replay_time_us".to_string(),
