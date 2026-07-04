@@ -165,6 +165,8 @@ impl<H: UiHost> UiTree<H> {
             return;
         }
 
+        let snapshot =
+            snapshot.filter(|snapshot| snapshot.topology_epoch == self.live_topology_epoch());
         let mut current = Some(start);
         while let Some(id) = current {
             let next = match snapshot {

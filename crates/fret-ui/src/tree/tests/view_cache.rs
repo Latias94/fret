@@ -747,6 +747,56 @@ fn view_cache_nearest_root_uses_child_edges_under_stale_parent_pointers() {
     );
 }
 
+#[test]
+fn view_cache_snapshot_invalidation_ignores_stale_snapshot_topology_epoch() {
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(AppWindowId::default());
+    ui.set_view_cache_enabled(true);
+
+    let root = ui.create_node(TestStack);
+    let actual_outer = ui.create_node(TestStack);
+    let actual_inner = ui.create_node(TestStack);
+    let stale_outer = ui.create_node(TestStack);
+    let leaf = ui.create_node(TestStack);
+
+    ui.set_root(root);
+    ui.set_children(root, vec![actual_outer, stale_outer]);
+    ui.set_children(actual_outer, vec![actual_inner]);
+    ui.set_children(stale_outer, vec![leaf]);
+
+    for id in [actual_outer, actual_inner, stale_outer] {
+        ui.set_node_view_cache_flags(id, true, true, true);
+        ui.nodes[id].view_cache_needs_rerender = false;
+    }
+
+    let stale_snapshot = ui.build_dispatch_snapshot(FrameId(1));
+    ui.set_children(actual_inner, vec![leaf]);
+    assert!(ui.live_topology_epoch() > stale_snapshot.topology_epoch);
+    for id in [actual_outer, actual_inner, stale_outer] {
+        ui.nodes[id].view_cache_needs_rerender = false;
+    }
+
+    ui.mark_view_cache_roots_needs_rerender_from_snapshot(
+        leaf,
+        Some(&stale_snapshot),
+        UiDebugInvalidationSource::Notify,
+        UiDebugInvalidationDetail::NotifyCall,
+    );
+
+    assert!(
+        ui.nodes[actual_inner].view_cache_needs_rerender,
+        "stale dispatch snapshots must fall back to current child-edge topology"
+    );
+    assert!(
+        ui.nodes[actual_outer].view_cache_needs_rerender,
+        "current ancestor cache roots must receive rerender pressure"
+    );
+    assert!(
+        !ui.nodes[stale_outer].view_cache_needs_rerender,
+        "stale snapshot parent chains must not dirty detached cache roots"
+    );
+}
+
 fn view_cache_test_product_key() -> PaintCacheKey {
     PaintCacheKey::new(
         Rect::new(
