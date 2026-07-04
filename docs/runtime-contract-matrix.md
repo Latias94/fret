@@ -95,8 +95,9 @@ The convergence target is GPUI-aligned but Fret-owned:
   `FlatCompat` debug/parity oracle runs. Unsupported classes report structured unsupported reasons;
   they do not silently count as chunk-native launch evidence.
   Evidence anchors: `crates/fret-render-wgpu/src/renderer/mod.rs`
-  (`RenderSceneSourceSelection`, `select_render_scene_source`, `ChunkLaunchSupportMatrix`) and
-  `crates/fret-render-wgpu/src/renderer/render_scene/frame_assembler.rs` (`FrameAssembler`).
+  (`RenderSceneSourceSelection`, `select_render_scene_source`) and
+  `crates/fret-render-wgpu/src/renderer/render_scene/frame_assembler.rs`
+  (`FrameAssembler::evaluate_support`, `FrameAssemblyUnsupportedReason`).
   Native and web launch select `RenderSceneSourcePolicy::chunk_manifest_when_supported()` in
   `crates/fret-launch/src/runner/desktop/runner/window_redraw_render_scene.rs` and
   `crates/fret-launch/src/runner/web/render_loop.rs`, so supported manifests render from the

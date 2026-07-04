@@ -120,6 +120,10 @@ impl CachedSceneChunkEncoding {
         }
     }
 
+    pub(super) fn encoding(&self) -> &SceneEncoding {
+        &self.encoding
+    }
+
     fn estimated_bytes(&self) -> u64 {
         estimate_slice_bytes(&self.encoding.instances)
             .saturating_add(estimate_slice_bytes(&self.encoding.path_paints))
@@ -137,7 +141,9 @@ impl CachedSceneChunkEncoding {
             .saturating_add(estimate_slice_bytes(&self.encoding.effect_markers))
     }
 
-    fn append_only_reassembly_blocker(&self) -> Option<SceneChunkPayloadReassemblyBlocker> {
+    pub(super) fn append_only_reassembly_blocker(
+        &self,
+    ) -> Option<SceneChunkPayloadReassemblyBlocker> {
         if self.encoding.material_quad_ops > 0
             || self.encoding.material_sampled_quad_ops > 0
             || self.encoding.material_distinct > 0
@@ -175,7 +181,7 @@ impl CachedSceneChunkEncoding {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum SceneChunkPayloadReassemblyBlocker {
+pub(super) enum SceneChunkPayloadReassemblyBlocker {
     ShapeMismatch,
     StreamFingerprintMismatch,
     NonQuadDraws,
@@ -283,36 +289,14 @@ impl SceneChunkEncodingKey {
 }
 
 impl SceneChunkEncodingState {
-    pub(super) fn assemble_supported_frame_encoding(
+    pub(super) fn payload_for_entry(
         &self,
-        manifest: &fret_core::SceneChunkManifest,
         context: SceneChunkEncodingContext,
-        stream_class: ChunkLaunchStreamClass,
-    ) -> Option<SceneEncoding> {
-        let mut encoding = SceneEncoding::default();
-        for entry in manifest.entries() {
-            let closure = entry.chunk().closure();
-            match stream_class {
-                ChunkLaunchStreamClass::ResourceFreeQuad => {
-                    if !closure.is_resource_free_quad_only() {
-                        return None;
-                    }
-                }
-                ChunkLaunchStreamClass::ResourceFreeVertexColor => {
-                    if !closure.is_resource_free_vertex_color_only() {
-                        return None;
-                    }
-                }
-                ChunkLaunchStreamClass::Mixed => return None,
-            }
-            let key = SceneChunkEncodingKey::new(context, entry, 0);
-            let payload = self.payloads.get(&key)?;
-            if payload.append_only_reassembly_blocker().is_some() {
-                return None;
-            }
-            append_resource_free_payload_encoding(&mut encoding, &payload.encoding, stream_class)?;
-        }
-        Some(encoding)
+        entry: &fret_core::SceneChunkManifestEntry,
+        chunk_text_resource_key: u64,
+    ) -> Option<&CachedSceneChunkEncoding> {
+        let key = SceneChunkEncodingKey::new(context, entry, chunk_text_resource_key);
+        self.payloads.get(&key)
     }
 
     pub(super) fn begin_frame_with_payloads(
@@ -511,7 +495,7 @@ impl SceneChunkEncodingState {
     }
 }
 
-fn append_resource_free_payload_encoding(
+pub(super) fn append_resource_free_payload_encoding(
     dst: &mut SceneEncoding,
     src: &SceneEncoding,
     stream_class: ChunkLaunchStreamClass,
@@ -861,7 +845,8 @@ mod tests {
 
     #[test]
     fn resource_free_quad_payloads_assemble_frame_encoding_with_relocated_indices() {
-        let mut state = SceneChunkEncodingState::default();
+        let mut assembler =
+            crate::renderer::render_scene::frame_assembler::FrameAssembler::default();
         let frame = manifest(&[
             SceneChunkManifestEntry::new(
                 SceneChunk::from_ops(Arc::from([quad_scene_op()])),
@@ -880,11 +865,11 @@ mod tests {
                 Point::new(fret_core::Px(20.0), fret_core::Px(0.0)),
             ),
         ]);
-        state.begin_frame_with_payloads(Some(&frame), context(1), &[0, 0], |_| {
+        assembler.begin_frame_with_payloads(Some(&frame), context(1), &[0, 0], |_| {
             CachedSceneChunkEncoding::new(quad_payload_encoding())
         });
 
-        let encoding = state
+        let encoding = assembler
             .assemble_supported_frame_encoding(
                 &frame,
                 context(1),
@@ -910,7 +895,8 @@ mod tests {
 
     #[test]
     fn resource_free_vertex_color_payloads_assemble_frame_encoding_with_relocated_indices() {
-        let mut state = SceneChunkEncodingState::default();
+        let mut assembler =
+            crate::renderer::render_scene::frame_assembler::FrameAssembler::default();
         let frame = manifest(&[
             SceneChunkManifestEntry::new(
                 SceneChunk::from_ops(Arc::from([vertex_color_quad_scene_op()])),
@@ -929,7 +915,7 @@ mod tests {
                 Point::new(fret_core::Px(20.0), fret_core::Px(0.0)),
             ),
         ]);
-        state.begin_frame_with_payloads(Some(&frame), context(1), &[0, 0], |_| {
+        assembler.begin_frame_with_payloads(Some(&frame), context(1), &[0, 0], |_| {
             CachedSceneChunkEncoding::new(viewport_vertex_payload_encoding(
                 OrderedDraw::VertexColor(VertexColorDraw {
                     scissor: ScissorRect::full(320, 200),
@@ -940,7 +926,7 @@ mod tests {
             ))
         });
 
-        let encoding = state
+        let encoding = assembler
             .assemble_supported_frame_encoding(
                 &frame,
                 context(1),

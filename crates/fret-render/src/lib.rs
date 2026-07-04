@@ -55,10 +55,10 @@
 
 #[cfg(feature = "backend-wgpu")]
 pub use fret_render_wgpu::{
-    ChunkLaunchStreamClass, ChunkLaunchSupport, ChunkLaunchSupportMatrix,
-    ChunkLaunchUnsupportedReason, ClearColor, ImageColorSpace, ImageDescriptor, RenderError,
-    RenderSceneChunkAuthorityPolicy, RenderSceneDebugFlatOraclePolicy, RenderSceneParams,
-    RenderSceneSource, RenderSceneSourcePolicy, RenderSceneSourceSelection, RenderTargetAlphaMode,
+    ChunkLaunchStreamClass, ChunkLaunchSupport, ChunkLaunchUnsupportedReason, ClearColor,
+    ImageColorSpace, ImageDescriptor, RenderError, RenderSceneChunkAuthorityPolicy,
+    RenderSceneDebugFlatOraclePolicy, RenderSceneParams, RenderSceneSource,
+    RenderSceneSourcePolicy, RenderSceneSourceSelection, RenderTargetAlphaMode,
     RenderTargetColorEncoding, RenderTargetColorPrimaries, RenderTargetColorRange,
     RenderTargetColorSpace, RenderTargetDescriptor, RenderTargetIngestStrategy,
     RenderTargetMatrixCoefficients, RenderTargetMetadata, RenderTargetOrientation,

@@ -1519,6 +1519,80 @@ fn source_selection_blocks_side_table_manifest_with_structured_reason() {
 }
 
 #[test]
+fn source_selection_debug_flat_oracle_does_not_define_chunk_support() {
+    let mut quad_scene = Scene::default();
+    quad_scene.push(SceneOp::Quad {
+        order: DrawOrder(0),
+        rect: Rect::new(Point::default(), Size::new(Px(10.0), Px(10.0))),
+        background: Color {
+            r: 1.0,
+            g: 1.0,
+            b: 1.0,
+            a: 1.0,
+        }
+        .into(),
+        border: fret_core::Edges::all(Px(0.0)),
+        border_paint: Color::TRANSPARENT.into(),
+        corner_radii: Corners::all(Px(0.0)),
+    });
+
+    let points = [
+        Point::new(Px(0.0), Px(0.0)),
+        Point::new(Px(10.0), Px(0.0)),
+        Point::new(Px(10.0), Px(10.0)),
+        Point::new(Px(0.0), Px(10.0)),
+    ];
+    let colors = [Color {
+        r: 1.0,
+        g: 1.0,
+        b: 1.0,
+        a: 1.0,
+    }; 4];
+    let mut vertex_scene = Scene::default();
+    vertex_scene.push(SceneOp::VertexColorQuad {
+        order: DrawOrder(1),
+        points,
+        colors,
+    });
+
+    let mut debug_scene = Scene::default();
+    for op in quad_scene.ops().iter().chain(vertex_scene.ops().iter()) {
+        debug_scene.push(*op);
+    }
+
+    let mut manifest = fret_core::SceneChunkManifest::default();
+    manifest.push(fret_core::SceneChunkManifestEntry::new(
+        fret_core::SceneChunk::from_scene(&quad_scene),
+        Rect::new(Point::default(), Size::new(Px(10.0), Px(10.0))),
+        Point::default(),
+    ));
+    manifest.push(fret_core::SceneChunkManifestEntry::new(
+        fret_core::SceneChunk::from_scene(&vertex_scene),
+        Rect::new(Point::default(), Size::new(Px(10.0), Px(10.0))),
+        Point::default(),
+    ));
+
+    let selection = super::select_render_scene_source(
+        &debug_scene,
+        &manifest,
+        super::RenderSceneSourcePolicy::chunk_manifest_when_supported().with_debug_flat_oracle(),
+    );
+
+    assert!(matches!(
+        selection.source(),
+        super::RenderSceneSource::FlatCompat { .. }
+    ));
+    assert!(selection.debug_flat_oracle_requested());
+    assert_eq!(
+        selection.chunk_support(),
+        super::ChunkLaunchSupport::Unsupported {
+            stream_class: Some(super::ChunkLaunchStreamClass::Mixed),
+            reason: super::ChunkLaunchUnsupportedReason::MixedStreams,
+        }
+    );
+}
+
+#[test]
 fn resource_free_quad_scene_chunk_manifest_uses_chunk_native_scene_encoding_key() {
     let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
     let mut renderer = super::Renderer::new(&ctx.adapter, &ctx.device);
