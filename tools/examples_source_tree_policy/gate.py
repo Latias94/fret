@@ -367,37 +367,37 @@ HELLO_COUNTER_APP_LANE_FORBIDDEN = [
     ".max_w(Px(480.0)).into_element(cx)",
 ]
 
-INIT_PHASE_LOCAL_STATE_NEW_IN_SOURCES = [
+INIT_PHASE_APP_LOCAL_STATE_SOURCES = [
     (
         EXAMPLES_SRC / "form_demo.rs",
         [
-            "LocalState::new_in(app.models_mut(), String::new())",
-            "LocalState::new_in(app.models_mut(), None::<Arc<str>>)",
-            "LocalState::new_in(app.models_mut(), form_state)",
+            "app.local_state(String::new())",
+            "app.local_state(None::<Arc<str>>)",
+            "app.local_state(form_state)",
         ],
     ),
     (
         EXAMPLES_SRC / "async_playground_demo.rs",
         [
-            "LocalState::new_in(app.models_mut(), initial.map(Arc::from))",
-            "LocalState::new_in(app.models_mut(), \"2\".to_string())",
-            "LocalState::new_in(app.models_mut(), false)",
+            "app.local_state(initial.map(Arc::from))",
+            "app.local_state(\"2\".to_string())",
+            "app.local_state(false)",
         ],
     ),
     (
         EXAMPLES_SRC / "table_demo.rs",
         [
-            "LocalState::new_in(app.models_mut(), false)",
-            "LocalState::new_in(app.models_mut(), true)",
+            "app.local_state(false)",
+            "app.local_state(true)",
             "Some(Arc::<str>::from(\"reorder\"))",
         ],
     ),
     (
         EXAMPLES_SRC / "genui_demo.rs",
         [
-            "LocalState::new_in(app.models_mut(), true)",
-            "LocalState::new_in(app.models_mut(), SPEC_JSON.to_string())",
-            "LocalState::new_in(app.models_mut(), String::new())",
+            "app.local_state(true)",
+            "app.local_state(SPEC_JSON.to_string())",
+            "app.local_state(String::new())",
         ],
     ),
 ]
@@ -408,9 +408,9 @@ APP_UI_RENDER_ROOT_BRIDGE_SOURCES = [
         [
             "app_ui_root: AppUiRenderRootState,",
             "form_state: LocalState<FormState>,",
-            "LocalState::new_in(app.models_mut(), String::new())",
-            "LocalState::new_in(app.models_mut(), None::<Arc<str>>)",
-            "LocalState::new_in(app.models_mut(), form_state)",
+            "app.local_state(String::new())",
+            "app.local_state(None::<Arc<str>>)",
+            "app.local_state(form_state)",
             "let root = render_root_with_app_ui(",
             "let (submit_count, valid, dirty) = form_state.layout(cx).read_ref(",
             "let status_text = status.layout_value(cx);",
@@ -1235,12 +1235,15 @@ def check_local_state_bridge_sources(failures: list[Failure]) -> None:
             failures=failures,
         )
 
-    for path, required in INIT_PHASE_LOCAL_STATE_NEW_IN_SOURCES:
+    for path, required in INIT_PHASE_APP_LOCAL_STATE_SOURCES:
         check_required_forbidden_markers(
             path,
             read_source(path),
             required=required,
-            forbidden=["LocalState::from_model(app.models_mut().insert("],
+            forbidden=[
+                "LocalState::new_in(app.models_mut(),",
+                "LocalState::from_model(app.models_mut().insert(",
+            ],
             failures=failures,
         )
 
@@ -1250,7 +1253,7 @@ def check_local_state_bridge_sources(failures: list[Failure]) -> None:
             path,
             source,
             required=["UiTree<App>", *required],
-            forbidden=["KernelApp", *forbidden],
+            forbidden=["KernelApp", "LocalState::new_in(app.models_mut(),", *forbidden],
             failures=failures,
         )
 

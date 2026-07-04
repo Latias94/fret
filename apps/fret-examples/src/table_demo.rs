@@ -1,6 +1,7 @@
 use anyhow::Context as _;
 use fret::advanced::prelude::LocalState;
 use fret::advanced::raw::{LocalStateElementContextExt as _, LocalStateModelStoreExt as _};
+use fret::app::AppLocalStateExt as _;
 use fret_app::{App, CommandId, Effect, WindowRequest};
 use fret_core::{AppWindowId, Corners, Edges, Event, Px};
 use fret_launch::{
@@ -114,7 +115,7 @@ impl TableDemoDriver {
             left: vec!["id".into()],
             right: vec!["score".into()],
         };
-        let table_state = LocalState::new_in(app.models_mut(), table_state);
+        let table_state = app.local_state(table_state);
 
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
@@ -124,16 +125,13 @@ impl TableDemoDriver {
             table_state,
             rows,
             scroll: VirtualListScrollHandle::new(),
-            view_options_open: LocalState::new_in(app.models_mut(), false),
-            enable_grouping: LocalState::new_in(app.models_mut(), true),
-            grouped_column_mode: LocalState::new_in(
-                app.models_mut(),
-                Some(Arc::<str>::from("reorder")),
-            ),
-            header_menu_id_open: LocalState::new_in(app.models_mut(), false),
-            header_menu_name_open: LocalState::new_in(app.models_mut(), false),
-            header_menu_role_open: LocalState::new_in(app.models_mut(), false),
-            header_menu_score_open: LocalState::new_in(app.models_mut(), false),
+            view_options_open: app.local_state(false),
+            enable_grouping: app.local_state(true),
+            grouped_column_mode: app.local_state(Some(Arc::<str>::from("reorder"))),
+            header_menu_id_open: app.local_state(false),
+            header_menu_name_open: app.local_state(false),
+            header_menu_role_open: app.local_state(false),
+            header_menu_score_open: app.local_state(false),
             started_at,
             frame: 0,
             profile_frames_left,

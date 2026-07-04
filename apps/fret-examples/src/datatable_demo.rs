@@ -1,6 +1,7 @@
 use anyhow::Context as _;
 use fret::advanced::prelude::LocalState;
 use fret::advanced::raw::LocalStateElementContextExt as _;
+use fret::app::AppLocalStateExt as _;
 use fret_app::{App, CommandId, Effect, Model, WindowRequest};
 use fret_core::{AppWindowId, Corners, Edges, Event, Px};
 use fret_launch::{
@@ -80,7 +81,7 @@ impl DataTableDemoDriver {
 
         let mut table_state = TableState::default();
         table_state.pagination.page_size = 50;
-        let table_state = LocalState::new_in(app.models_mut(), table_state);
+        let table_state = app.local_state(table_state);
         let table_output = app
             .models_mut()
             .insert(shadcn::DataTableViewOutput::default());

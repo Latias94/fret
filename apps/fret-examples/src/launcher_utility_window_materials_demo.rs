@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use fret::advanced::prelude::*;
 use fret::advanced::raw::{LocalStateElementContextExt as _, LocalStateModelStoreExt as _};
+use fret::app::AppLocalStateExt as _;
 use fret_app::{CommandId, Effect, WindowRequest};
 use fret_core::Px;
 use fret_runtime::{
@@ -96,7 +97,7 @@ struct LauncherUtilityWindowMaterialsState {
 fn init_window(app: &mut KernelApp, window: AppWindowId) -> LauncherUtilityWindowMaterialsState {
     LauncherUtilityWindowMaterialsState {
         window,
-        status: LocalState::new_in(app.models_mut(), Arc::from("Idle")),
+        status: app.local_state(Arc::from("Idle")),
     }
 }
 

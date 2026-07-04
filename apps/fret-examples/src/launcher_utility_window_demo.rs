@@ -3,6 +3,7 @@ use std::time::Duration;
 
 use fret::advanced::prelude::*;
 use fret::advanced::raw::LocalStateModelStoreExt as _;
+use fret::app::AppLocalStateExt as _;
 use fret_app::{CommandId, Effect, WindowRequest};
 use fret_core::{MouseButton, Px, SemanticsRole};
 use fret_runtime::DefaultAction;
@@ -109,9 +110,9 @@ struct LauncherUtilityWindowViewSettings {
 fn init_window(app: &mut KernelApp, window: AppWindowId) -> LauncherUtilityWindowState {
     LauncherUtilityWindowState {
         window,
-        always_on_top: LocalState::new_in(app.models_mut(), false),
+        always_on_top: app.local_state(false),
         blink_timer: None,
-        status: LocalState::new_in(app.models_mut(), Arc::from("Idle")),
+        status: app.local_state(Arc::from("Idle")),
     }
 }
 

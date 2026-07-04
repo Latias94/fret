@@ -13,7 +13,9 @@ use std::sync::Arc;
 use fret::advanced::raw::{
     LocalStateElementContextExt as _, LocalStateModelStoreExt as _, LocalStateRawModelExt as _,
 };
-use fret::{FretApp, advanced::prelude::*, component::prelude::*, shadcn};
+use fret::{
+    FretApp, advanced::prelude::*, app::AppLocalStateExt as _, component::prelude::*, shadcn,
+};
 use fret_genui_core::catalog::{CatalogActionV1, CatalogV1};
 use fret_genui_core::executor::{GenUiActionExecutorV1, GenUiActionOutcome};
 use fret_genui_core::form_validation::{
@@ -532,13 +534,13 @@ impl GenUiView {
             validation_state: app.models_mut().insert(ValidationStateV1::default()),
             action_queue: app.models_mut().insert(GenUiActionQueue::default()),
             queue_summary: None,
-            auto_apply_standard_actions: LocalState::new_in(app.models_mut(), true),
-            auto_fix_on_apply: LocalState::new_in(app.models_mut(), true),
+            auto_apply_standard_actions: app.local_state(true),
+            auto_fix_on_apply: app.local_state(true),
             auto_fix_summary: None,
-            editor_text: LocalState::new_in(app.models_mut(), SPEC_JSON.to_string()),
+            editor_text: app.local_state(SPEC_JSON.to_string()),
             editor_error: None,
-            stream_text: LocalState::new_in(app.models_mut(), String::new()),
-            stream_patch_only: LocalState::new_in(app.models_mut(), false),
+            stream_text: app.local_state(String::new()),
+            stream_patch_only: app.local_state(false),
             stream_summary: None,
             stream_error: None,
         }

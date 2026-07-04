@@ -11,7 +11,7 @@ use fret::query::{
     CancellationToken, FutureSpawner, FutureSpawnerHandle, QueryCancelMode, QueryError, QueryKey,
     QueryPolicy, QuerySnapshotEntry, QueryState, QueryStatus,
 };
-use fret::{FretApp, actions::CommandId, advanced::prelude::*, shadcn};
+use fret::{FretApp, actions::CommandId, advanced::prelude::*, app::AppLocalStateExt as _, shadcn};
 use fret_core::{Px, SemanticsRole};
 use fret_ui::element::{AnyElement, PressableA11y, PressableProps};
 use fret_ui::{ElementContext, UiHost};
@@ -178,8 +178,8 @@ struct SelectLocals {
 impl SelectLocals {
     fn new(app: &mut KernelApp, initial: Option<&'static str>) -> Self {
         Self {
-            value: LocalState::new_in(app.models_mut(), initial.map(Arc::from)),
-            open: LocalState::new_in(app.models_mut(), false),
+            value: app.local_state(initial.map(Arc::from)),
+            open: app.local_state(false),
         }
     }
 }
@@ -195,11 +195,11 @@ struct QueryConfigLocals {
 impl QueryConfigLocals {
     fn new(app: &mut KernelApp) -> Self {
         Self {
-            stale_time_s: LocalState::new_in(app.models_mut(), "2".to_string()),
-            cache_time_s: LocalState::new_in(app.models_mut(), "30".to_string()),
-            keep_prev: LocalState::new_in(app.models_mut(), true),
+            stale_time_s: app.local_state("2".to_string()),
+            cache_time_s: app.local_state("30".to_string()),
+            keep_prev: app.local_state(true),
             cancel_mode: SelectLocals::new(app, Some("cancel")),
-            fail_mode: LocalState::new_in(app.models_mut(), false),
+            fail_mode: app.local_state(false),
         }
     }
 }

@@ -3,6 +3,7 @@ use fret::advanced;
 use fret::advanced::prelude::{LocalState, TrackedStateExt as _};
 use fret::advanced::raw::{LocalStateModelStoreExt as _, LocalStateRawModelExt as _};
 use fret::advanced::view::{AppUiRenderRootState, render_root_with_app_ui};
+use fret::app::AppLocalStateExt as _;
 use fret_app::{App, CommandId, Effect, WindowRequest};
 use fret_core::{AppWindowId, Corners, Edges, Event, Px};
 use fret_launch::{
@@ -48,20 +49,19 @@ pub struct FormDemoDriver;
 impl FormDemoDriver {
     fn build_ui(app: &mut App, window: AppWindowId) -> DemoWindowState {
         let today = OffsetDateTime::now_utc().date();
-        let name = LocalState::new_in(app.models_mut(), String::new());
-        let email = LocalState::new_in(app.models_mut(), String::new());
-        let role = LocalState::new_in(app.models_mut(), None::<Arc<str>>);
-        let role_open = LocalState::new_in(app.models_mut(), false);
-        let start_date_open = LocalState::new_in(app.models_mut(), false);
-        let start_date_month =
-            LocalState::new_in(app.models_mut(), CalendarMonth::from_date(today));
-        let start_date = LocalState::new_in(app.models_mut(), None::<Date>);
+        let name = app.local_state(String::new());
+        let email = app.local_state(String::new());
+        let role = app.local_state(None::<Arc<str>>);
+        let role_open = app.local_state(false);
+        let start_date_open = app.local_state(false);
+        let start_date_month = app.local_state(CalendarMonth::from_date(today));
+        let start_date = app.local_state(None::<Date>);
 
         let mut form_state = FormState::default();
         form_state.validate_mode = FormValidateMode::OnSubmit;
-        let form_state = LocalState::new_in(app.models_mut(), form_state);
+        let form_state = app.local_state(form_state);
 
-        let status = LocalState::new_in(app.models_mut(), Arc::from("Idle"));
+        let status = app.local_state(Arc::from("Idle"));
 
         let mut registry = FormRegistry::new();
         registry.register_field("name", &name, String::new(), |v| {
