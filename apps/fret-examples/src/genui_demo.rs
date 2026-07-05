@@ -10,12 +10,16 @@
 
 use std::sync::Arc;
 
+use fret::AppComponentCx;
+use fret::advanced::KernelApp;
+use fret::advanced::driver::ViewElements;
 use fret::advanced::raw::{
     LocalStateElementContextExt as _, LocalStateModelStoreExt as _, LocalStateRawModelExt as _,
 };
-use fret::{
-    FretApp, advanced::prelude::*, app::AppLocalStateExt as _, component::prelude::*, shadcn,
-};
+use fret::app::LocalState;
+use fret::app::prelude::*;
+use fret::style::{ColorRef, Space, ThemeSnapshot};
+use fret_core::AppWindowId;
 use fret_genui_core::catalog::{CatalogActionV1, CatalogV1};
 use fret_genui_core::executor::{GenUiActionExecutorV1, GenUiActionOutcome};
 use fret_genui_core::form_validation::{
@@ -29,7 +33,12 @@ use fret_genui_core::spec_fixer::{SpecFixups, auto_fix_spec};
 use fret_genui_core::validate::ValidationMode;
 use fret_genui_shadcn::catalog::shadcn_catalog_v1;
 use fret_genui_shadcn::resolver::ShadcnResolver;
+use fret_runtime::Model;
+use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
+use fret_ui_kit::IntoUiElement;
+use fret_ui_kit::declarative::ElementContextThemeExt as _;
+use fret_ui_kit::declarative::TrackedModelExt as _;
 use fret_ui_kit::declarative::text as decl_text;
 use serde_json::Value;
 mod act {

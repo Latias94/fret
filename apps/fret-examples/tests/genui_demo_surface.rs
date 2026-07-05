@@ -48,3 +48,32 @@ fn genui_demo_keeps_tool_text_on_roles() {
         );
     }
 }
+
+#[test]
+fn genui_demo_uses_explicit_public_surfaces() {
+    let source = include_str!("../src/genui_demo.rs");
+    let compact_source = compact(source);
+
+    for needle in [
+        "usefret::advanced::KernelApp;",
+        "usefret::advanced::driver::ViewElements;",
+        "usefret::app::LocalState;",
+        "usefret::app::prelude::*;",
+        "usefret::style::{ColorRef,Space,ThemeSnapshot};",
+        "usefret::AppComponentCx;",
+        "usefret_runtime::Model;",
+        "usefret_ui_kit::IntoUiElement;",
+    ] {
+        assert!(
+            compact_source.contains(needle),
+            "GenUI demo should name its required app/advanced/style surfaces explicitly; missing `{needle}`"
+        );
+    }
+
+    for forbidden in ["advanced::prelude::*", "component::prelude::*"] {
+        assert!(
+            !source.contains(forbidden),
+            "GenUI demo should not reintroduce broad prelude imports: `{forbidden}`",
+        );
+    }
+}
