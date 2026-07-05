@@ -233,10 +233,10 @@ only import it for truly activation-only custom/third-party widgets that have no
 their own app-facing action surface.
 
 `fret::app::prelude::*` is a closed Golden Path budget, not a staging area. Named exports are
-limited to first-contact app authoring nouns: `FretApp`, `App`, `AppRenderContext`, `AppRenderCx`,
-`AppUi`, `Ui`, `UiChild`, `WindowId`, `View`, `Px`, `ui`, and optional `shadcn`. Anonymous extension
-traits are also part of the budget: grouped app action/data helpers, `LocalState` construction and
-observation,
+limited to first-contact app authoring nouns: `FretApp`, `App`, `AppRenderContext`,
+`AppRenderCx`, `AppUi`, `Ui`, `UiChild`, `WindowId`, `View`, `Px`, `ui`, `text`, and optional
+`shadcn`. Anonymous extension traits are also part of the budget: grouped app action/data helpers,
+`LocalState` construction and observation,
 state query/mutation read helpers when their features are enabled, `.ui()` / `.into_element*()`,
 style refinement, and a11y/test-id/semantics refinements. New styling nouns, command IDs, assets,
 environment/adaptive helpers, router/docking/editor ecosystems, activation bridges, raw model

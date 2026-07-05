@@ -783,12 +783,90 @@ pub mod app {
     /// `ElementContext` ownership.
     pub use fret_ui::ElementContextAccess;
 
+    /// App-facing text helpers for the default render lane.
+    ///
+    /// These are thin wrappers over `fret-ui-kit` text recipes. They keep first-contact app code
+    /// on `AppUi` / `AppRenderContext` instead of teaching raw `ElementContext` or `AnyElement`
+    /// boundaries for ordinary labels, readouts, and paragraphs.
+    pub mod text {
+        use std::sync::Arc;
+
+        /// Compact control/status readout text.
+        pub fn control_readout<'a, Cx, T>(cx: &mut Cx, text: T) -> fret_ui::element::AnyElement
+        where
+            Cx: crate::app::AppRenderContext<'a>,
+            T: Into<Arc<str>>,
+        {
+            fret_ui_kit::declarative::text::text_control_readout(cx.elements(), text)
+        }
+
+        /// Prose paragraph text.
+        pub fn paragraph<'a, Cx, T>(cx: &mut Cx, text: T) -> fret_ui::element::AnyElement
+        where
+            Cx: crate::app::AppRenderContext<'a>,
+            T: Into<Arc<str>>,
+        {
+            fret_ui_kit::declarative::text::text_paragraph(cx.elements(), text)
+        }
+
+        /// Compact prose paragraph text.
+        pub fn compact_paragraph<'a, Cx, T>(cx: &mut Cx, text: T) -> fret_ui::element::AnyElement
+        where
+            Cx: crate::app::AppRenderContext<'a>,
+            T: Into<Arc<str>>,
+        {
+            fret_ui_kit::declarative::text::text_compact_paragraph(cx.elements(), text)
+        }
+
+        /// List-row label text.
+        pub fn list_row_label<'a, Cx, T>(cx: &mut Cx, text: T) -> fret_ui::element::AnyElement
+        where
+            Cx: crate::app::AppRenderContext<'a>,
+            T: Into<Arc<str>>,
+        {
+            fret_ui_kit::declarative::text::text_list_row_label(cx.elements(), text)
+        }
+
+        /// List-row label text with an inherited foreground.
+        pub fn list_row_label_with_foreground<'a, Cx, T>(
+            cx: &mut Cx,
+            text: T,
+            foreground: fret_core::Color,
+        ) -> fret_ui::element::AnyElement
+        where
+            Cx: crate::app::AppRenderContext<'a>,
+            T: Into<Arc<str>>,
+        {
+            fret_ui_kit::declarative::text::text_list_row_label(cx.elements(), text)
+                .inherit_foreground(foreground)
+        }
+
+        /// Section/chrome label text.
+        pub fn section_chrome_label<'a, Cx, T>(cx: &mut Cx, text: T) -> fret_ui::element::AnyElement
+        where
+            Cx: crate::app::AppRenderContext<'a>,
+            T: Into<Arc<str>>,
+        {
+            fret_ui_kit::declarative::text::text_section_chrome_label(cx.elements(), text)
+        }
+
+        /// Inline code label text.
+        pub fn code_label<'a, Cx, T>(cx: &mut Cx, text: T) -> fret_ui::element::AnyElement
+        where
+            Cx: crate::app::AppRenderContext<'a>,
+            T: Into<Arc<str>>,
+        {
+            fret_ui_kit::declarative::text::text_code_label(cx.elements(), text)
+        }
+    }
+
     /// Common imports for app code on the default authoring surface.
     pub mod prelude {
         pub use crate::FretApp;
         pub use crate::app::App;
         pub use crate::app::AppRenderContext;
         pub use crate::app::AppRenderCx;
+        pub use crate::app::text;
         #[cfg(feature = "shadcn")]
         pub use crate::shadcn;
         pub use crate::view::AppLocalStateExt as _;
@@ -4260,8 +4338,10 @@ mod authoring_surface_policy_tests {
         assert!(app_prelude.contains("pub use crate::{"));
         assert!(app_prelude.contains("pub use crate::app::App;"));
         assert!(app_prelude.contains("pub use crate::app::AppRenderCx;"));
+        assert!(app_prelude.contains("pub use crate::app::text;"));
         assert!(app_prelude_exports_symbol("App"));
         assert!(app_prelude_exports_symbol("AppRenderCx"));
+        assert!(app_prelude_exports_symbol("text"));
         assert!(!app_prelude_exports_symbol("AppComponentCx"));
         assert!(!app_prelude_exports_symbol("UiCx"));
         assert!(app_prelude.contains("AppUi"));
@@ -4383,6 +4463,7 @@ mod authoring_surface_policy_tests {
             "pub use crate::app::App;",
             "pub use crate::app::AppRenderContext;",
             "pub use crate::app::AppRenderCx;",
+            "pub use crate::app::text;",
             "pub use crate::shadcn;",
             "pub use crate::view::AppLocalStateExt as _;",
             "pub use crate::view::AppRenderActionsExt as _;",
@@ -4424,6 +4505,7 @@ mod authoring_surface_policy_tests {
             "View",
             "WindowId",
             "shadcn",
+            "text",
             "ui",
         ]
         .into_iter()
@@ -4455,6 +4537,33 @@ mod authoring_surface_policy_tests {
             CRATE_USAGE_GUIDE
                 .contains("must stay on explicit modules unless the Golden Path budget is")
         );
+    }
+
+    #[test]
+    fn app_text_facade_keeps_first_contact_text_off_raw_element_context() {
+        assert!(LIB_RS.contains("pub mod text {"));
+        assert!(LIB_RS.contains("pub fn control_readout<'a, Cx, T>("));
+        assert!(LIB_RS.contains("pub fn paragraph<'a, Cx, T>("));
+        assert!(LIB_RS.contains("pub fn compact_paragraph<'a, Cx, T>("));
+        assert!(LIB_RS.contains("pub fn list_row_label<'a, Cx, T>("));
+        assert!(LIB_RS.contains("pub fn list_row_label_with_foreground<'a, Cx, T>("));
+        assert!(LIB_RS.contains("pub fn section_chrome_label<'a, Cx, T>("));
+        assert!(LIB_RS.contains("pub fn code_label<'a, Cx, T>("));
+        assert!(LIB_RS.contains(") -> fret_ui::element::AnyElement"));
+        assert!(LIB_RS.contains("Cx: crate::app::AppRenderContext<'a>"));
+        assert!(
+            LIB_RS.contains(
+                "fret_ui_kit::declarative::text::text_control_readout(cx.elements(), text)"
+            )
+        );
+        assert!(
+            LIB_RS.contains(
+                "fret_ui_kit::declarative::text::text_list_row_label(cx.elements(), text)"
+            )
+        );
+        assert!(app_prelude_exports_symbol("text"));
+        assert!(!app_prelude_exports_symbol("AnyElement"));
+        assert!(!app_prelude_exports_symbol("ElementContext"));
     }
 
     #[test]

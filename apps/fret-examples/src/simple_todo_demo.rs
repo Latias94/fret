@@ -6,7 +6,6 @@ use fret::app::prelude::*;
 use fret::semantics::SemanticsDecoration;
 use fret::semantics::SemanticsRole;
 use fret::style::{ColorRef, Radius, Space, ThemeSnapshot};
-use fret_ui_kit::declarative::text as decl_text;
 
 mod driver;
 
@@ -39,7 +38,7 @@ where
     Cx: AppRenderContext<'a>,
     T: Into<Arc<str>>,
 {
-    decl_text::text_control_readout(cx.elements(), text)
+    text::control_readout(cx, text)
 }
 
 fn simple_todo_compact_paragraph_text<'a, Cx, T>(cx: &mut Cx, text: T) -> impl UiChild + use<Cx, T>
@@ -47,7 +46,7 @@ where
     Cx: AppRenderContext<'a>,
     T: Into<Arc<str>>,
 {
-    decl_text::text_compact_paragraph(cx.elements(), text)
+    text::compact_paragraph(cx, text)
 }
 
 fn simple_todo_row_label_text<'a, Cx, T>(
@@ -60,7 +59,7 @@ where
     T: Into<Arc<str>>,
 {
     let foreground = cx.with_theme(|theme| foreground.resolve(theme));
-    decl_text::text_list_row_label(cx.elements(), text).inherit_foreground(foreground)
+    text::list_row_label_with_foreground(cx, text, foreground)
 }
 
 #[derive(Clone)]

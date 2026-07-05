@@ -11,9 +11,7 @@ use fret::{
     style::{ChromeRefinement, ColorRef, Radius, Space, ThemeSnapshot},
 };
 use fret_core::Corners;
-use fret_ui::element::AnyElement;
 use fret_ui_kit::IntoUiElementInExt as _;
-use fret_ui_kit::declarative::text as decl_text;
 
 mod act {
     fret::actions!([
@@ -36,12 +34,18 @@ const TEST_ID_STEP_1: &str = "hello-counter.step.1";
 const TEST_ID_STEP_5: &str = "hello-counter.step.5";
 const TEST_ID_STEP_10: &str = "hello-counter.step.10";
 
-fn hello_counter_status_text(cx: &mut AppUi<'_, '_>, text: impl Into<Arc<str>>) -> AnyElement {
-    decl_text::text_control_readout(cx.elements(), text)
+fn hello_counter_status_text<T: Into<Arc<str>>>(
+    cx: &mut AppUi<'_, '_>,
+    label: T,
+) -> impl UiChild + use<T> {
+    text::control_readout(cx, label)
 }
 
-fn hello_counter_paragraph_text(cx: &mut AppUi<'_, '_>, text: impl Into<Arc<str>>) -> AnyElement {
-    decl_text::text_paragraph(cx.elements(), text)
+fn hello_counter_paragraph_text<T: Into<Arc<str>>>(
+    cx: &mut AppUi<'_, '_>,
+    body: T,
+) -> impl UiChild + use<T> {
+    text::paragraph(cx, body)
 }
 
 fn install_demo_theme(app: &mut App) {
@@ -271,7 +275,7 @@ impl View for HelloCounterView {
                     .gap(Space::N2)
                     .items_center()
                     .into_element_in(cx),
-                ui::v_flex(|_cx| [step_row, step_help])
+                ui::v_flex(|cx| ui::children![cx; step_row, step_help])
                     .gap(Space::N2)
                     .w_full()
                     .items_center()

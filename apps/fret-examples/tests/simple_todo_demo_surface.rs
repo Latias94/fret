@@ -8,14 +8,13 @@ fn simple_todo_demo_keeps_visible_text_on_roles() {
     let compact_source = compact(source);
 
     for needle in [
-        "usefret_ui_kit::declarative::textasdecl_text;",
         "fnsimple_todo_readout_text",
         "fnsimple_todo_compact_paragraph_text",
         "fnsimple_todo_row_label_text",
         "Cx:AppRenderContext<'a>",
-        "decl_text::text_control_readout(cx.elements(),text)",
-        "decl_text::text_compact_paragraph(cx.elements(),text)",
-        "decl_text::text_list_row_label(cx.elements(),text).inherit_foreground(foreground)",
+        "text::control_readout(cx,text)",
+        "text::compact_paragraph(cx,text)",
+        "text::list_row_label_with_foreground(cx,text,foreground)",
         "letsummary=simple_todo_readout_text(cx,status_text);",
         "letempty_text=simple_todo_compact_paragraph_text(",
         "\"Notasksyet.Addoneabove.\",",
@@ -34,10 +33,12 @@ fn simple_todo_demo_keeps_visible_text_on_roles() {
         "ui::text(format!(\"{active_count}left\"))",
         "ui::text(row.text.clone())",
         "ui::text(",
+        "cx.elements()",
+        "usefret_ui_kit::declarative::textasdecl_text;",
     ] {
         assert!(
             !compact_source.contains(needle),
-            "simple todo should not render app text with local ui::text policy; unexpected `{needle}`"
+            "simple todo should not render app text through local/raw text policy; unexpected `{needle}`"
         );
     }
 }
