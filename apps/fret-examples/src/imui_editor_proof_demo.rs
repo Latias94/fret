@@ -3,11 +3,21 @@ use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use fret::advanced::interop::embedded_viewport as embedded;
-use fret::advanced::view::{AppRenderDataExt as _, ViewWindowState};
-use fret::imui::{kit::ImUiMultiSelectState, prelude::*};
-use fret::{Defaults, FretApp, advanced::prelude::*, component::prelude::*, shadcn};
-use fret_core::{Color, KeyCode, Modifiers, PanelKind, Point, PointerId, Px, Rect, Size};
+use fret::advanced::KernelApp;
+use fret::advanced::driver::{UiAppDriver, ViewElements};
+use fret::advanced::interop::embedded_viewport::{
+    self as embedded, EmbeddedViewportUiAppDriverExt as _,
+};
+use fret::advanced::view::ViewWindowState;
+use fret::app::{ElementContextAccess, View};
+use fret::imui::{
+    UiWriter as _, UiWriterImUiFacadeExt as _, UiWriterUiKitExt as _, imui, imui_build,
+    kit::{self, ImUiMultiSelectState},
+};
+use fret::{AppUi, Defaults, FretApp, Ui, shadcn};
+use fret_core::{
+    AppWindowId, Color, KeyCode, Modifiers, PanelKind, Point, PointerId, Px, Rect, Size,
+};
 use fret_docking::{DockSpaceElementOptions, runtime as dock_runtime};
 use fret_render::{RenderTargetColorSpace, Renderer, WgpuContext};
 use fret_runtime::{
@@ -18,6 +28,7 @@ use fret_ui::action::{UiActionHostExt as _, UiFocusActionHost};
 use fret_ui::scroll::ScrollHandle;
 use fret_ui_editor::imui as editor_imui;
 use fret_ui_editor::theme::EditorThemePresetV1;
+use fret_ui_kit::IntoUiElement as _;
 use fret_ui_kit::recipes::imui_drag_preview::{
     DragPreviewGhostOptions, drag_preview_ghost_with_options,
     publish_cross_window_drag_preview_ghost_with_options, render_cross_window_drag_preview_ghosts,
@@ -94,8 +105,8 @@ fn selected_proof_layout() -> ImUiEditorProofLayout {
 }
 
 fn configure_imui_editor_proof_driver(
-    driver: fret::UiAppDriver<ViewWindowState<ImUiEditorProofView>>,
-) -> fret::UiAppDriver<ViewWindowState<ImUiEditorProofView>> {
+    driver: UiAppDriver<ViewWindowState<ImUiEditorProofView>>,
+) -> UiAppDriver<ViewWindowState<ImUiEditorProofView>> {
     driver
         .drive_embedded_viewport()
         .dock_op(workbench_shell::on_dock_op)
@@ -207,7 +218,7 @@ impl View for ImUiEditorProofView {
 
 fn render_view<'a, Cx>(cx: &mut Cx) -> ViewElements
 where
-    Cx: fret::app::ElementContextAccess<'a, KernelApp>,
+    Cx: ElementContextAccess<'a, KernelApp>,
 {
     let cx = cx.elements();
     let window = cx.window;

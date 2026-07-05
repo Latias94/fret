@@ -119,12 +119,12 @@
 //! ## Immediate-mode lane (optional)
 //!
 //! `fret::imui` is the explicit imgui-style lane. Keep `fret::app::prelude::*` as the default
-//! declarative-first story, and opt into `use fret::imui::prelude::*;` when a view wants
-//! immediate-mode control flow.
+//! declarative-first story, and opt into exact `fret::imui` imports when a view wants
+//! immediate-mode control flow. `use fret::imui::prelude::*;` remains available for prototypes.
 //!
 //! ```ignore
 //! use fret::app::prelude::*;
-//! use fret::imui::prelude::*;
+//! use fret::imui::{UiWriter as _, imui_in};
 //!
 //! struct InspectorView;
 //!
@@ -305,6 +305,7 @@ pub mod overlay {
 pub mod imui {
     pub use fret_imui::{
         ImUi, Response, imui, imui_build, imui_build_in, imui_in, imui_raw, imui_raw_in,
+        prelude::UiWriter,
     };
     pub use fret_ui_kit::imui::{ImUiFacade, ResponseExt, UiWriterImUiFacadeExt, UiWriterUiKitExt};
 
@@ -3843,6 +3844,7 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_README.contains("features = [\"imui\"]"));
         assert!(CRATE_README.contains("## Immediate-mode lane (optional)"));
         assert!(CRATE_README.contains("`fret::imui` is the explicit imgui-style lane."));
+        assert!(CRATE_README.contains("use fret::imui::{UiWriter as _, imui_in};"));
         assert!(CRATE_README.contains("`use fret::imui::prelude::*;`"));
         assert!(CRATE_README.contains("if ui.button(\"Save\").clicked() {"));
         assert!(CRATE_README.contains("`fret::imui::kit`"));
@@ -3856,11 +3858,13 @@ mod authoring_surface_policy_tests {
         let public_surface = crate_public_surface_source();
         assert!(rustdoc.contains("## Immediate-mode lane (optional)"));
         assert!(rustdoc.contains("`fret::imui` is the explicit imgui-style lane."));
+        assert!(rustdoc.contains("use fret::imui::{UiWriter as _, imui_in};"));
         assert!(rustdoc.contains("`use fret::imui::prelude::*;`"));
         assert!(rustdoc.contains("if ui.button(\"Save\").clicked() {"));
         assert!(rustdoc.contains("Reach for `fret::imui::kit` for policy-heavy widgets,"));
         assert!(rustdoc.contains("`fret::imui::{prelude::*, kit, editor, docking}`"));
         assert!(public_surface.contains("pub mod imui {"));
+        assert!(public_surface.contains("prelude::UiWriter"));
         assert!(!app_prelude_exports_symbol("ImUi"));
         assert!(!app_prelude_exports_symbol("ImUiFacade"));
         assert!(!app_prelude_exports_symbol("UiWriterImUiFacadeExt"));

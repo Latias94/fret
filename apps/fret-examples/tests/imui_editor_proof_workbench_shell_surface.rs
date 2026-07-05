@@ -92,3 +92,58 @@ fn imui_editor_proof_workbench_shell_uses_explicit_public_surfaces() {
         );
     }
 }
+
+#[test]
+fn imui_editor_proof_demo_uses_explicit_public_surfaces() {
+    let demo_source = include_str!("../src/imui_editor_proof_demo.rs");
+    let compact: String = demo_source.split_whitespace().collect();
+
+    for needle in [
+        "usefret::{AppUi,Defaults,FretApp,Ui,shadcn};",
+        "usefret::advanced::KernelApp;",
+        "usefret::advanced::driver::{UiAppDriver,ViewElements};",
+        "EmbeddedViewportUiAppDriverExtas_",
+        "usefret::advanced::view::ViewWindowState;",
+        "usefret::app::{ElementContextAccess,View};",
+        "UiWriteras_",
+        "UiWriterImUiFacadeExtas_",
+        "UiWriterUiKitExtas_",
+        "kit::{self,ImUiMultiSelectState}",
+        "usefret_ui_kit::IntoUiElementas_;",
+    ] {
+        assert!(
+            compact.contains(needle),
+            "imui_editor_proof_demo should name required app/advanced/imui/component surfaces explicitly; missing `{needle}`",
+        );
+    }
+
+    for symbol in [
+        "AppWindowId",
+        "Color",
+        "KeyCode",
+        "Modifiers",
+        "PanelKind",
+        "Point",
+        "PointerId",
+        "Px",
+        "Rect",
+        "Size",
+    ] {
+        assert!(
+            compact.contains(&format!("{symbol},")),
+            "imui_editor_proof_demo should import `{symbol}` explicitly from fret_core",
+        );
+    }
+
+    for forbidden in [
+        "advanced::prelude::*",
+        "component::prelude::*",
+        "imui::prelude::*",
+        "fret::UiAppDriver",
+    ] {
+        assert!(
+            !demo_source.contains(forbidden),
+            "imui_editor_proof_demo should not reintroduce broad or root-level advanced imports: `{forbidden}`",
+        );
+    }
+}

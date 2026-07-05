@@ -5,6 +5,7 @@ use std::sync::Arc;
 use fret::WindowId;
 use fret::component::prelude::{Model, Px, UiHost};
 use fret::imui::{
+    UiWriter,
     docking::{self, DockSpaceElementOptions, DockingRuntime},
     editor::{
         self,
@@ -13,7 +14,6 @@ use fret::imui::{
         theme::EditorThemePresetV1,
     },
     kit::ListBoxOptions,
-    prelude::UiWriter,
 };
 
 #[allow(dead_code)]

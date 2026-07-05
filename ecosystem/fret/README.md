@@ -170,12 +170,12 @@ fn main() -> fret::Result<()> {
 ## Immediate-mode lane (optional)
 
 `fret::imui` is the explicit imgui-style lane. Keep `fret::app::prelude::*` as the default
-declarative-first story, and opt into `use fret::imui::prelude::*;` when a view wants
-immediate-mode control flow.
+declarative-first story, and opt into exact `fret::imui` imports when a view wants
+immediate-mode control flow. `use fret::imui::prelude::*;` remains available for prototypes.
 
 ```rust,ignore
 use fret::app::prelude::*;
-use fret::imui::prelude::*;
+use fret::imui::{UiWriter as _, imui_in};
 
 struct InspectorView;
 
