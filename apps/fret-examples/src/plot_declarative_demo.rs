@@ -1,5 +1,6 @@
 use anyhow::Context as _;
-use fret::{FretApp, advanced::prelude::*, component::prelude::*};
+use fret::advanced::raw::Model;
+use fret::app::prelude::*;
 use fret_plot::cartesian::{AxisScale, DataPoint};
 use fret_plot::declarative::{LinePlotPanelProps, line_plot_panel_in};
 use fret_plot::models::{LinePlotModel, LineSeries};
@@ -25,7 +26,7 @@ pub fn run() -> anyhow::Result<()> {
 }
 
 impl View for PlotDeclarativeView {
-    fn init(app: &mut KernelApp, _window: AppWindowId) -> Self {
+    fn init(app: &mut App, _window: WindowId) -> Self {
         let n = 2048usize;
         let mut signal_a = Vec::with_capacity(n);
         let mut signal_b = Vec::with_capacity(n);

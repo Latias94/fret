@@ -3,6 +3,41 @@ fn compact(source: &str) -> String {
 }
 
 #[test]
+fn chart_declarative_demo_uses_app_view_imports() {
+    let source = compact(include_str!("../src/chart_declarative_demo.rs"));
+
+    for needle in [
+        "usefret::advanced::raw::Model;",
+        "usefret::app::prelude::*;",
+        "structChartDeclarativeView{engine:Model<ChartEngine>,spec:ChartSpec,}",
+        "fninit(app:&mutApp,_window:WindowId)->Self",
+        "ChartCanvasPanelProps::new(self.spec.clone())",
+        "props.engine=Some(self.engine.clone());",
+        "chart_canvas_panel_in(cx,props).into()",
+    ] {
+        assert!(
+            source.contains(needle),
+            "chart_declarative_demo should stay on the app View skeleton with an explicit raw Model handle; missing `{needle}`"
+        );
+    }
+
+    for legacy in [
+        "advanced::prelude::*",
+        "component::prelude::*",
+        "KernelApp",
+        "AppWindowId",
+        "usefret_chart::retained::ChartCanvas;",
+        "ChartCanvas::new(",
+        "create_node_retained(",
+    ] {
+        assert!(
+            !source.contains(legacy),
+            "chart_declarative_demo should not teach retained chart or broad advanced imports; unexpected `{legacy}`"
+        );
+    }
+}
+
+#[test]
 fn basic_chart_demos_use_declarative_canvas_panel() {
     for (name, source) in [
         ("chart_demo", include_str!("../src/chart_demo.rs")),

@@ -7,8 +7,11 @@ fn plot_declarative_demo_uses_default_declarative_line_plot_panel() {
     let source = compact(include_str!("../src/plot_declarative_demo.rs"));
 
     for needle in [
+        "usefret::advanced::raw::Model;",
+        "usefret::app::prelude::*;",
         "usefret_plot::declarative::{LinePlotPanelProps,line_plot_panel_in};",
         "model:Model<LinePlotModel>",
+        "fninit(app:&mutApp,_window:WindowId)->Self",
         "LinePlotModel::from_series(",
         "LineSeries::new(",
         "Series::from_points_sorted(",
@@ -29,6 +32,10 @@ fn plot_declarative_demo_uses_default_declarative_line_plot_panel() {
         "PlotCanvas",
         "create_node_retained(",
         "LineChart::into_canvas(",
+        "advanced::prelude::*",
+        "component::prelude::*",
+        "KernelApp",
+        "AppWindowId",
     ] {
         assert!(
             !source.contains(legacy),

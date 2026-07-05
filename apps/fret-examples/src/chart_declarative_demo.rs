@@ -1,5 +1,3 @@
-use fret::{FretApp, advanced::prelude::*, component::prelude::*};
-
 use delinea::data::{Column, DataTable};
 use delinea::ids::{AxisId, FieldId, StackId};
 use delinea::{
@@ -7,6 +5,8 @@ use delinea::{
     AxisRange, AxisScale, ChartEngine, ChartSpec, DatasetSpec, FieldSpec, GridSpec, SeriesEncode,
     SeriesKind, SeriesSpec, TimeAxisScale,
 };
+use fret::advanced::raw::Model;
+use fret::app::prelude::*;
 use fret_chart::{ChartCanvasPanelProps, chart_canvas_panel_in};
 
 struct ChartDeclarativeView {
@@ -23,7 +23,7 @@ pub fn run() -> anyhow::Result<()> {
 }
 
 impl View for ChartDeclarativeView {
-    fn init(app: &mut KernelApp, _window: AppWindowId) -> Self {
+    fn init(app: &mut App, _window: WindowId) -> Self {
         let dataset_id = delinea::ids::DatasetId::new(1);
         let grid_id = delinea::ids::GridId::new(1);
         let x_axis = AxisId::new(1);
