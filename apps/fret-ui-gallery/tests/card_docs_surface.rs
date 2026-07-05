@@ -123,10 +123,10 @@ fn card_docs_path_snippets_stay_copyable_and_docs_aligned() {
     );
 
     for needle in [
-        "use fret_ui_assets::ImageSource;",
-        "use fret_ui_assets::ui::ImageSourceElementContextExt as _;",
+        "use fret::component::ui_assets::{self, ImageSource};",
         "ImageSource::rgba8(",
         "fn demo_cover_image(cx: &mut AppComponentCx<'_>) -> Option<ImageId>",
+        "ui_assets::image_source_state(cx, &source).image",
         "A practical talk on component APIs, accessibility, and shipping faster.",
     ] {
         assert!(

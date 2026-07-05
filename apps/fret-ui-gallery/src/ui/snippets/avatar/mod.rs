@@ -7,13 +7,16 @@
 //! Keep `ui-gallery-avatar-*` `test_id`s stable: diag scripts depend on them.
 
 use crate::demo_assets;
+use fret::component::ui_assets;
 use fret_core::ImageId;
 use fret_ui::{ElementContext, UiHost};
-use fret_ui_assets::ui::ImageSourceElementContextExt as _;
 
 pub(crate) fn demo_image<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Option<ImageId> {
-    cx.use_image_source_state_from_asset_request(&demo_assets::ui_gallery_profile_square_request())
-        .image
+    ui_assets::image_source_state_from_asset_request(
+        cx,
+        &demo_assets::ui_gallery_profile_square_request(),
+    )
+    .image
 }
 
 pub mod badge_icon;
@@ -39,7 +42,7 @@ mod tests {
             .split("#[cfg(test)]")
             .next()
             .expect("avatar snippet module keeps helper section before tests");
-        assert!(helper_source.contains("use_image_source_state_from_asset_request"));
+        assert!(helper_source.contains("ui_assets::image_source_state_from_asset_request"));
         assert!(helper_source.contains("ui_gallery_profile_square_request"));
         assert!(!helper_source.contains("ImageSource::rgba8("));
     }

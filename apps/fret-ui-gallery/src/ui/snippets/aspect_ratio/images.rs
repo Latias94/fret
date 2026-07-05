@@ -3,10 +3,9 @@ pub const SOURCE: &str = include_str!("images.rs");
 
 use crate::demo_assets;
 use fret::assets::AssetRequest;
+use fret::component::ui_assets::{self, ImageLoadingStatus};
 use fret_core::ImageId;
 use fret_ui::{ElementContext, UiHost};
-use fret_ui_assets::image_asset_state::ImageLoadingStatus;
-use fret_ui_assets::ui::ImageSourceElementContextExt as _;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct PreviewImageState {
@@ -18,7 +17,7 @@ fn preview_image_state<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     request: &AssetRequest,
 ) -> PreviewImageState {
-    let state = cx.use_image_source_state_from_asset_request(request);
+    let state = ui_assets::image_source_state_from_asset_request(cx, request);
     PreviewImageState {
         image: state.image,
         loading: state.image.is_none()

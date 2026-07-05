@@ -337,6 +337,8 @@ or `fret::app::ui_assets::svg_source_state_from_asset_request(cx, ...)`
 consume the resolver's bundle/reference bridge instead of introducing direct raw file-path widget
 loading in app code. For in-memory RGBA8 sources, use
 `fret::app::ui_assets::rgba8_image_state(cx, ...)` instead of importing `fret_ui_assets::ui`.
+For reusable generic component snippets that receive `ElementContext<H>`, use
+`fret::component::ui_assets::*` instead of the raw `fret_ui_assets::ui` extension traits.
 Keep `resolve_image_source_from_host_locator(...)` /
 `resolve_svg_source_from_host_locator(...)` as the lower-level UI-ready source seams, and use
 `fret::assets::resolve_reference(...)` / `resolve_locator_reference(...)` when a non-UI

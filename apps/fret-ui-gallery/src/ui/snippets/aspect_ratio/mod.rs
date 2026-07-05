@@ -27,7 +27,7 @@ mod tests {
 
     #[test]
     fn aspect_ratio_gallery_previews_resolve_bundle_assets() {
-        assert!(IMAGES_SOURCE.contains("use_image_source_state_from_asset_request"));
+        assert!(IMAGES_SOURCE.contains("ui_assets::image_source_state_from_asset_request"));
         assert!(IMAGES_SOURCE.contains("ui_gallery_aspect_ratio_landscape_request"));
         assert!(IMAGES_SOURCE.contains("ui_gallery_aspect_ratio_portrait_request"));
         assert!(IMAGES_SOURCE.contains("ui_gallery_profile_square_request"));

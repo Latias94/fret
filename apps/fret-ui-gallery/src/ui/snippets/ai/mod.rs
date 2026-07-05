@@ -1,11 +1,12 @@
 use fret::AppComponentCx;
+use fret::component::ui_assets;
 use fret_core::ImageId;
-use fret_ui_assets::ui::ImageSourceElementContextExt as _;
 
 use crate::demo_assets;
 
 pub(crate) fn shared_preview_image_id(cx: &mut AppComponentCx<'_>) -> Option<ImageId> {
-    cx.use_image_source_state_from_asset_request(
+    ui_assets::image_source_state_from_asset_request(
+        cx,
         &demo_assets::ui_gallery_shared_media_preview_request(),
     )
     .image
@@ -13,7 +14,8 @@ pub(crate) fn shared_preview_image_id(cx: &mut AppComponentCx<'_>) -> Option<Ima
 
 #[cfg(any(test, feature = "gallery-dev"))]
 pub(crate) fn attachment_landscape_image_id(cx: &mut AppComponentCx<'_>) -> Option<ImageId> {
-    cx.use_image_source_state_from_asset_request(
+    ui_assets::image_source_state_from_asset_request(
+        cx,
         &demo_assets::ui_gallery_ai_attachment_landscape_request(),
     )
     .image
@@ -21,7 +23,8 @@ pub(crate) fn attachment_landscape_image_id(cx: &mut AppComponentCx<'_>) -> Opti
 
 #[cfg(any(test, feature = "gallery-dev"))]
 pub(crate) fn attachment_portrait_image_id(cx: &mut AppComponentCx<'_>) -> Option<ImageId> {
-    cx.use_image_source_state_from_asset_request(
+    ui_assets::image_source_state_from_asset_request(
+        cx,
         &demo_assets::ui_gallery_ai_attachment_portrait_request(),
     )
     .image
@@ -203,7 +206,7 @@ mod tests {
             .split("#[cfg(all(test, feature = \"gallery-dev\"))]")
             .next()
             .expect("ai snippet module keeps helper section before tests");
-        assert!(helper_source.contains("use_image_source_state_from_asset_request"));
+        assert!(helper_source.contains("ui_assets::image_source_state_from_asset_request"));
         assert!(helper_source.contains("ui_gallery_shared_media_preview_request"));
         assert!(helper_source.contains("ui_gallery_ai_attachment_landscape_request"));
         assert!(helper_source.contains("ui_gallery_ai_attachment_portrait_request"));

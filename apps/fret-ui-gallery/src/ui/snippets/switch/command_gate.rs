@@ -6,7 +6,9 @@ use fret_core::Px;
 use fret_ui_kit::primitives::control_registry::ControlId;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-use crate::spec::{CMD_SWITCH_COMMAND_GATE_ACTION, CMD_SWITCH_COMMAND_GATE_TOGGLE_ENABLED};
+const CMD_SWITCH_COMMAND_GATE_ACTION: &str = "ui_gallery.switch.command_gate.action";
+const CMD_SWITCH_COMMAND_GATE_TOGGLE_ENABLED: &str =
+    "ui_gallery.switch.command_gate.toggle_enabled";
 
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let checked = cx.local_model(|| false);

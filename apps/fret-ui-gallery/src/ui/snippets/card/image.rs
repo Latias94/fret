@@ -1,11 +1,10 @@
 pub const SOURCE: &str = include_str!("image.rs");
 
 // region: example
+use fret::component::ui_assets::{self, ImageSource};
 use fret::{AppComponentCx, UiChild};
 use fret_core::{Color as CoreColor, ImageColorSpace, ImageId};
 use fret_ui::Theme;
-use fret_ui_assets::ImageSource;
-use fret_ui_assets::ui::ImageSourceElementContextExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::{Arc, OnceLock};
@@ -22,7 +21,7 @@ fn demo_cover_image(cx: &mut AppComponentCx<'_>) -> Option<ImageId> {
         ],
         ImageColorSpace::Srgb,
     );
-    cx.use_image_source_state(&source).image
+    ui_assets::image_source_state(cx, &source).image
 }
 
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
