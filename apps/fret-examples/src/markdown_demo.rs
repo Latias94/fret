@@ -15,7 +15,7 @@ use fret::app::prelude::*;
 use fret::app::{AppComponentCx, LocalState, RenderContextAccess as _, ui_assets};
 use fret::query::{QueryError, QueryKey, QueryPolicy, QueryStatus};
 use fret::style::{ColorRef, LayoutRefinement, Space};
-use fret_core::{ImageColorSpace, Point, Px, SvgFit};
+use fret_core::{Point, Px, SvgFit};
 use fret_markdown as markdown;
 use fret_ui::element::{
     AnyElement, ImageProps, LayoutQueryRegionProps, LayoutStyle, Length, PressableProps,
@@ -544,7 +544,7 @@ $$
                                     *width,
                                     *height,
                                     rgba.as_ref(),
-                                    ImageColorSpace::Srgb,
+                                    ui_assets::ImageColorSpace::Srgb,
                                 );
 
                                 if let Some(image) = image {
@@ -566,7 +566,7 @@ $$
                         96,
                         96,
                         checker_rgba.as_ref(),
-                        ImageColorSpace::Srgb,
+                        ui_assets::ImageColorSpace::Srgb,
                     );
 
                     if let Some(image) = image {

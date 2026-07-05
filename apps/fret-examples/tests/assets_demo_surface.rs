@@ -11,7 +11,7 @@ fn assets_demo_uses_app_ui_assets_facade_for_render_helpers() {
         "usefret::app::prelude::*;",
         "Cx:fret::app::AppRenderContext<'a>,",
         ".view::<AssetsDemoView>()?",
-        "ui_assets::rgba8_image_state(cx,96,96,checker_rgba.as_slice(),ImageColorSpace::Srgb)",
+        "ui_assets::rgba8_image_state(cx,96,96,checker_rgba.as_slice(),ui_assets::ImageColorSpace::Srgb,)",
         "letimage_stats=ui_assets::image_stats(cx);",
         "letsvg_stats=ui_assets::svg_stats(cx);",
     ] {

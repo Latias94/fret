@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use fret::advanced::driver::UiAppBuilderAdvancedExt as _;
-use fret::advanced::kernel::core::{ImageColorSpace, ImageId, SvgFit, SvgId, UiServices};
+use fret::advanced::kernel::core::{ImageId, SvgFit, SvgId, UiServices};
 use fret::advanced::kernel::ui::{
     SvgSource,
     element::{ImageProps, SvgIconProps},
@@ -69,8 +69,13 @@ where
     let theme = cx.theme_snapshot();
 
     let checker_rgba = checkerboard_rgba8(96, 96, 12);
-    let (image_key, image, image_status) =
-        ui_assets::rgba8_image_state(cx, 96, 96, checker_rgba.as_slice(), ImageColorSpace::Srgb);
+    let (image_key, image, image_status) = ui_assets::rgba8_image_state(
+        cx,
+        96,
+        96,
+        checker_rgba.as_slice(),
+        ui_assets::ImageColorSpace::Srgb,
+    );
     let image_stats = ui_assets::image_stats(cx);
     let svg_stats = ui_assets::svg_stats(cx);
 

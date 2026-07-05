@@ -28,8 +28,8 @@ fn markdown_demo_chrome_text_uses_shared_roles() {
         "letforeground=theme.color_token(\"muted-foreground\");",
         "vec![markdown_demo_image_placeholder_text(cx,text.clone(),foreground,)]",
         "markdown_demo_image_placeholder_text(cx,text,foreground)",
-        "ui_assets::rgba8_image_state(cx,*width,*height,rgba.as_ref(),ImageColorSpace::Srgb,)",
-        "ui_assets::rgba8_image_state(cx,96,96,checker_rgba.as_ref(),ImageColorSpace::Srgb,)",
+        "ui_assets::rgba8_image_state(cx,*width,*height,rgba.as_ref(),ui_assets::ImageColorSpace::Srgb,)",
+        "ui_assets::rgba8_image_state(cx,96,96,checker_rgba.as_ref(),ui_assets::ImageColorSpace::Srgb,)",
     ] {
         assert!(
             source.contains(needle),
