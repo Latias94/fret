@@ -12,8 +12,11 @@
 
 use std::sync::Arc;
 
+use fret::UiAppBuilder;
+use fret::advanced::driver::UiAppBuilderAdvancedExt as _;
 use fret::advanced::raw::{LocalStateElementContextExt as _, LocalStateRawModelExt as _};
-use fret::{FretApp, advanced::prelude::*, component::prelude::*, shadcn};
+use fret::app::prelude::*;
+use fret::app::{AppComponentCx, LocalState};
 use fret_core::scene::{
     CustomEffectImageInputV1, EffectChain, EffectMode, EffectParamsV1, EffectQuality, EffectStep,
     ImageSamplingHint, UvRect,
@@ -28,8 +31,11 @@ use fret_ui::element::{
 };
 use fret_ui::{ElementContext, UiHost};
 use fret_ui_kit::custom_effects::CustomEffectProgramV2;
+use fret_ui_kit::declarative::ElementContextThemeExt as _;
+use fret_ui_kit::declarative::UiElementTestIdExt as _;
+use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::text as decl_text;
-use fret_ui_kit::{IntoUiElement, Space, ui};
+use fret_ui_kit::{IntoUiElement, Space, UiSupportsLayout as _, ui};
 
 mod act {
     fret::actions!([Reset = "custom_effect_v2_demo.reset.v1"]);
@@ -98,7 +104,7 @@ struct CustomEffectV2State {
 
 struct CustomEffectV2View;
 
-fn install_demo_theme(app: &mut KernelApp) {
+fn install_demo_theme(app: &mut App) {
     shadcn::themes::apply_shadcn_new_york(
         app,
         shadcn::themes::ShadcnBaseColor::Slate,
@@ -121,18 +127,18 @@ pub fn run() -> anyhow::Result<()> {
 /// - keep `EffectId` renderer-scoped and runtime-assigned,
 /// - register lazily and cache the returned `EffectId`,
 /// - upload/register any input textures on GPU-ready.
-fn install_into<S: 'static>(builder: fret::UiAppBuilder<S>) -> fret::UiAppBuilder<S> {
+fn install_into<S: 'static>(builder: UiAppBuilder<S>) -> UiAppBuilder<S> {
     builder
         .setup(install_app_globals)
         .install_custom_effects(register_custom_effect)
         .on_gpu_ready(upload_input_image)
 }
 
-fn install_app_globals(app: &mut KernelApp) {
+fn install_app_globals(app: &mut App) {
     app.set_global(DemoEffectPack::new());
 }
 
-fn register_custom_effect(app: &mut KernelApp, effects: &mut dyn fret_core::CustomEffectService) {
+fn register_custom_effect(app: &mut App, effects: &mut dyn fret_core::CustomEffectService) {
     app.with_global_mut(DemoEffectPack::new, |pack, _app| {
         pack.program
             .ensure_registered(effects)
@@ -140,7 +146,7 @@ fn register_custom_effect(app: &mut KernelApp, effects: &mut dyn fret_core::Cust
     });
 }
 
-fn upload_input_image(app: &mut KernelApp, context: &WgpuContext, renderer: &mut Renderer) {
+fn upload_input_image(app: &mut App, context: &WgpuContext, renderer: &mut Renderer) {
     let size = (64u32, 64u32);
     let filterable_texture = context.device.create_texture(&wgpu::TextureDescriptor {
         label: Some("custom_effect_v2_demo input texture"),
@@ -239,7 +245,7 @@ impl CustomEffectV2State {
 }
 
 impl View for CustomEffectV2View {
-    fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self {
+    fn init(_app: &mut App, _window: WindowId) -> Self {
         Self
     }
 
@@ -307,7 +313,7 @@ fn sampling_hint(value: &str) -> ImageSamplingHint {
     }
 }
 
-fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut CustomEffectV2State) -> ViewElements {
+fn view(cx: &mut ElementContext<'_, App>, st: &mut CustomEffectV2State) -> Ui {
     let (effect, filterable_input_image, non_filterable_input_image) = {
         let pack = cx.app.global::<DemoEffectPack>();
         (
@@ -389,7 +395,7 @@ fn stage(
     rim_strength: f32,
     blur_radius_px: f32,
     debug_input: bool,
-) -> impl IntoUiElement<KernelApp> + use<> {
+) -> impl IntoUiElement<App> + use<> {
     let lenses = lens_row(
         cx,
         enabled,
@@ -529,7 +535,7 @@ fn lens_row(
     rim_strength: f32,
     blur_radius_px: f32,
     debug_input: bool,
-) -> impl IntoUiElement<KernelApp> + use<> {
+) -> impl IntoUiElement<App> + use<> {
     let radius = Px(24.0);
     ui::h_flex(move |cx| {
         let effect_lens = if enabled {
@@ -562,9 +568,9 @@ fn lens_shell<B>(
     label: Arc<str>,
     radius: Px,
     body: B,
-) -> impl IntoUiElement<KernelApp> + use<B>
+) -> impl IntoUiElement<App> + use<B>
 where
-    B: IntoUiElement<KernelApp>,
+    B: IntoUiElement<App>,
 {
     let mut outer_layout = LayoutStyle::default();
     outer_layout.size.width = Length::Px(Px(380.0));
@@ -615,7 +621,7 @@ fn plain_lens<L>(
     cx: &mut AppComponentCx<'_>,
     label: L,
     radius: Px,
-) -> impl IntoUiElement<KernelApp> + use<L>
+) -> impl IntoUiElement<App> + use<L>
 where
     L: Into<Arc<str>>,
 {
@@ -646,7 +652,7 @@ fn custom_effect_lens<L>(
     rim_strength: f32,
     blur_radius_px: f32,
     debug_input: bool,
-) -> impl IntoUiElement<KernelApp> + use<L>
+) -> impl IntoUiElement<App> + use<L>
 where
     L: Into<Arc<str>>,
 {
@@ -716,7 +722,7 @@ fn inspector(
     input_strength: f32,
     rim_strength: f32,
     blur_radius_px: f32,
-) -> impl IntoUiElement<KernelApp> + use<> {
+) -> impl IntoUiElement<App> + use<> {
     let theme = cx.theme_snapshot();
 
     let enabled_model = st.enabled.clone_model();

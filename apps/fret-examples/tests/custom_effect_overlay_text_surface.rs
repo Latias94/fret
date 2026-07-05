@@ -281,6 +281,50 @@ fn custom_effect_v1_demo_uses_app_view_imports_with_explicit_effect_hook() {
 }
 
 #[test]
+fn custom_effect_v2_demo_uses_app_view_imports_with_explicit_effect_hooks() {
+    let source = include_str!("../src/custom_effect_v2_demo.rs");
+    let compact = compact(source);
+
+    for needle in [
+        "usefret::UiAppBuilder;",
+        "usefret::advanced::driver::UiAppBuilderAdvancedExtas_;",
+        "usefret::advanced::raw::{LocalStateElementContextExtas_,LocalStateRawModelExtas_};",
+        "usefret::app::prelude::*;",
+        "usefret::app::{AppComponentCx,LocalState};",
+        "usefret_ui_kit::declarative::action_hooks::ActionHooksExtas_;",
+        "usefret_ui_kit::{IntoUiElement,Space,UiSupportsLayoutas_,ui};",
+        ".view::<CustomEffectV2View>()?",
+        "fninstall_into<S:'static>(builder:UiAppBuilder<S>)->UiAppBuilder<S>",
+        ".install_custom_effects(register_custom_effect)",
+        ".on_gpu_ready(upload_input_image)",
+        "fninstall_app_globals(app:&mutApp)",
+        "fnregister_custom_effect(app:&mutApp,effects:&mutdynfret_core::CustomEffectService)",
+        "fnupload_input_image(app:&mutApp,context:&WgpuContext,renderer:&mutRenderer)",
+        "fninit(_app:&mutApp,_window:WindowId)->Self",
+        "fnview(cx:&mutElementContext<'_,App>,st:&mutCustomEffectV2State)->Ui",
+        "implIntoUiElement<App>",
+    ] {
+        assert!(
+            compact.contains(needle),
+            "custom_effect_v2_demo should keep app view imports and explicit effect hooks; missing `{needle}`",
+        );
+    }
+
+    for forbidden in [
+        "advanced::prelude::*",
+        "component::prelude::*",
+        "KernelApp",
+        "AppWindowId",
+        "ViewElements",
+    ] {
+        assert!(
+            !source.contains(forbidden),
+            "custom_effect_v2_demo should not reintroduce broad or kernel-facing imports: `{forbidden}`",
+        );
+    }
+}
+
+#[test]
 fn custom_effect_v3_and_effect_reference_chrome_use_shared_roles() {
     assert_custom_effect_v3_overlay_text_roles(include_str!("../src/custom_effect_v3_demo.rs"));
     assert_postprocess_theme_overlay_text_roles(include_str!("../src/postprocess_theme_demo.rs"));
