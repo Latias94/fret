@@ -4,50 +4,79 @@ fn compact(source: &str) -> String {
 
 #[test]
 fn low_risk_function_driver_demos_use_explicit_advanced_imports() {
-    for (name, source, expected_driver_import) in [
+    for (name, source, expected_driver_import, expected_window_import) in [
         (
             "echarts_demo",
             include_str!("../src/echarts_demo.rs"),
-            "ui_app_with_hooks",
+            "usefret::advanced::driver::{ViewElements,ui_app_with_hooks};",
+            "usefret_core::AppWindowId;",
         ),
         (
             "extras_marquee_perf_demo",
             include_str!("../src/extras_marquee_perf_demo.rs"),
-            "ui_app_with_hooks",
+            "usefret::advanced::driver::{ViewElements,ui_app_with_hooks};",
+            "usefret_core::{AppWindowId,Px};",
         ),
         (
             "launcher_utility_window_demo",
             include_str!("../src/launcher_utility_window_demo.rs"),
-            "ui_app_with_hooks",
+            "usefret::advanced::driver::{UiAppDriver,ViewElements,ui_app_with_hooks};",
+            "usefret_core::{AppWindowId,",
         ),
         (
             "launcher_utility_window_materials_demo",
             include_str!("../src/launcher_utility_window_materials_demo.rs"),
-            "ui_app_with_hooks",
+            "usefret::advanced::driver::{UiAppDriver,ViewElements,ui_app_with_hooks};",
+            "usefret_core::{AppWindowId,Px};",
         ),
     ] {
         let compact = compact(source);
         assert!(
-            compact.contains("usefret::advanced::prelude::{"),
-            "{name} should keep function-driver imports explicit while it still uses the advanced `ui_app` surface",
+            compact.contains("usefret::advanced::KernelApp;"),
+            "{name} should import the kernel app explicitly from the advanced surface",
         );
-        for symbol in [
-            "AppWindowId",
-            "KernelApp",
-            "ViewElements",
-            expected_driver_import,
+        assert!(
+            compact.contains(expected_driver_import),
+            "{name} should import function-driver helpers explicitly from the advanced driver surface; missing `{expected_driver_import}`",
+        );
+        assert!(
+            compact.contains(expected_window_import),
+            "{name} should import `AppWindowId` explicitly from `fret_core`; missing `{expected_window_import}`",
+        );
+        for forbidden in [
+            "use fret::advanced::prelude",
+            "advanced::prelude::*",
+            "component::prelude::*",
         ] {
-            assert!(
-                compact.contains(symbol),
-                "{name} should import `{symbol}` explicitly from the advanced prelude",
-            );
-        }
-        for forbidden in ["advanced::prelude::*", "component::prelude::*"] {
             assert!(
                 !source.contains(forbidden),
                 "{name} should not reintroduce broad prelude imports: `{forbidden}`",
             );
         }
+    }
+
+    for (name, source, expected_app_import) in [
+        (
+            "launcher_utility_window_demo",
+            include_str!("../src/launcher_utility_window_demo.rs"),
+            "usefret::app::{AppLocalStateExtas_,AppRenderDataExtas_,LocalState};",
+        ),
+        (
+            "launcher_utility_window_materials_demo",
+            include_str!("../src/launcher_utility_window_materials_demo.rs"),
+            "usefret::app::{AppLocalStateExtas_,LocalState};",
+        ),
+    ] {
+        let compact = compact(source);
+        assert!(
+            compact.contains(expected_app_import),
+            "{name} should import `LocalState` from the app surface; missing `{expected_app_import}`",
+        );
+        assert!(
+            !source.contains("advanced::prelude::LocalState")
+                && !source.contains("advanced::prelude::{"),
+            "{name} should not import app local state from the advanced prelude",
+        );
     }
 }
 

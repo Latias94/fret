@@ -1,7 +1,8 @@
 use std::sync::Arc;
 
-use fret::advanced::prelude::{AppWindowId, KernelApp, ViewElements, ui_app_with_hooks};
-use fret_core::Px;
+use fret::advanced::KernelApp;
+use fret::advanced::driver::{ViewElements, ui_app_with_hooks};
+use fret_core::{AppWindowId, Px};
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
 use fret_ui_kit::declarative::text as decl_text;

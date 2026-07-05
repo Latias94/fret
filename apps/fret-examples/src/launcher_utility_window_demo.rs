@@ -1,14 +1,12 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use fret::advanced::prelude::{
-    AppWindowId, KernelApp, LocalState, UiAppDriver, ViewElements, ui_app_with_hooks,
-};
+use fret::advanced::KernelApp;
+use fret::advanced::driver::{UiAppDriver, ViewElements, ui_app_with_hooks};
 use fret::advanced::raw::{LocalStateElementContextExt as _, LocalStateModelStoreExt as _};
-use fret::app::AppLocalStateExt as _;
-use fret::app::AppRenderDataExt as _;
+use fret::app::{AppLocalStateExt as _, AppRenderDataExt as _, LocalState};
 use fret_app::{CommandId, Effect, WindowRequest};
-use fret_core::{MouseButton, Px, SemanticsRole};
+use fret_core::{AppWindowId, MouseButton, Px, SemanticsRole};
 use fret_runtime::DefaultAction;
 use fret_runtime::{
     RunnerWindowStyleDiagnosticsStore, TimerToken, WindowDecorationsRequest, WindowResizeDirection,

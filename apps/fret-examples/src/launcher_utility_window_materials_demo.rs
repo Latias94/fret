@@ -1,12 +1,11 @@
 use std::sync::Arc;
 
-use fret::advanced::prelude::{
-    AppWindowId, KernelApp, LocalState, UiAppDriver, ViewElements, ui_app_with_hooks,
-};
+use fret::advanced::KernelApp;
+use fret::advanced::driver::{UiAppDriver, ViewElements, ui_app_with_hooks};
 use fret::advanced::raw::{LocalStateElementContextExt as _, LocalStateModelStoreExt as _};
-use fret::app::AppLocalStateExt as _;
+use fret::app::{AppLocalStateExt as _, LocalState};
 use fret_app::{CommandId, Effect, WindowRequest};
-use fret_core::Px;
+use fret_core::{AppWindowId, Px};
 use fret_runtime::{
     RunnerWindowStyleDiagnosticsStore, WindowBackgroundMaterialRequest, WindowDecorationsRequest,
     WindowStyleRequest,

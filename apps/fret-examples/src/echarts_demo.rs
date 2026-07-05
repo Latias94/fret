@@ -1,4 +1,6 @@
-use fret::advanced::prelude::{AppWindowId, KernelApp, ViewElements, ui_app_with_hooks};
+use fret::advanced::KernelApp;
+use fret::advanced::driver::{ViewElements, ui_app_with_hooks};
+use fret_core::AppWindowId;
 use fret_runtime::Model;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, Invalidation};
