@@ -14,6 +14,14 @@ pub(super) fn assert_editor_owner_split(
         editor_inspector_source.split_whitespace().collect();
     let compact_editor_gradient_source: String =
         editor_gradient_source.split_whitespace().collect();
+    let compact_editor_advanced_surface_source: String =
+        editor_advanced_surface_source.split_whitespace().collect();
+    let compact_editor_material_surface_source: String =
+        editor_material_surface_source.split_whitespace().collect();
+    let compact_editor_object_surface_source: String =
+        editor_object_surface_source.split_whitespace().collect();
+    let compact_editor_text_assist_source: String =
+        editor_text_assist_source.split_whitespace().collect();
 
     for (owner, compact_source, source) in [
         (
@@ -26,6 +34,21 @@ pub(super) fn assert_editor_owner_split(
             compact_editor_gradient_source.as_str(),
             editor_gradient_source,
         ),
+        (
+            "editor advanced surface",
+            compact_editor_advanced_surface_source.as_str(),
+            editor_advanced_surface_source,
+        ),
+        (
+            "editor material surface",
+            compact_editor_material_surface_source.as_str(),
+            editor_material_surface_source,
+        ),
+        (
+            "editor object surface",
+            compact_editor_object_surface_source.as_str(),
+            editor_object_surface_source,
+        ),
     ] {
         assert!(
             compact_source.contains("usefret_ui_kit::IntoUiElementas_;"),
@@ -36,6 +59,15 @@ pub(super) fn assert_editor_owner_split(
             "the demo-local {owner} owner should not rely on the broad component prelude",
         );
     }
+
+    assert!(
+        compact_editor_text_assist_source.contains("usefret_ui_kit::IntoUiElement;"),
+        "the demo-local editor text-assist owner should import `IntoUiElement` explicitly",
+    );
+    assert!(
+        !editor_text_assist_source.contains("use fret::component::prelude::*;"),
+        "the demo-local editor text-assist owner should not rely on the broad component prelude",
+    );
 
     for needle in [
         "pub(super) struct EditorInspectorModels",

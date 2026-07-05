@@ -2,7 +2,6 @@ use std::sync::Arc;
 
 use fret::AppComponentCx;
 use fret::advanced::KernelApp;
-use fret::component::prelude::*;
 use fret_runtime::Model;
 use fret_ui::ElementContext;
 use fret_ui::action::{ActionCx, UiActionHost};
@@ -16,6 +15,7 @@ use fret_ui_editor::controls::{
     EnumSelect, EnumSelectOptions, FieldStatus, FieldStatusBadge, NumericValidateFn,
     NumericValueConstraints, Slider, SliderOptions,
 };
+use fret_ui_kit::IntoUiElement as _;
 
 use super::super::asset_ref;
 use super::super::editor_state::{

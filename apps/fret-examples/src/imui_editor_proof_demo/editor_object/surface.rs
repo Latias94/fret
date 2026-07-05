@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use fret::advanced::KernelApp;
-use fret::component::prelude::*;
 use fret_core::Px;
 use fret_runtime::Model;
 use fret_ui::ElementContext;
@@ -13,6 +12,7 @@ use fret_ui_editor::controls::{
     EditorTextSelectionBehavior, TextField, TextFieldBlurBehavior, TextFieldMode, TextFieldOptions,
     TextFieldOutcome,
 };
+use fret_ui_kit::IntoUiElement as _;
 
 use super::super::editor_state::{
     editor_demo_buffered_name_model, editor_demo_inline_rename_model,

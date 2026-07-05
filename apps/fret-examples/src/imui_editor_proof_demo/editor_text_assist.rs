@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use fret::advanced::KernelApp;
-use fret::component::prelude::*;
 use fret_runtime::Model;
 use fret_ui::ElementContext;
 use fret_ui::action::{ActionCx, UiActionHost};
@@ -9,6 +8,7 @@ use fret_ui_editor::controls::{
     EditorTextSelectionBehavior, TextAssistField, TextAssistFieldOptions, TextAssistFieldSurface,
     TextFieldOptions, TextFieldOutcome,
 };
+use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::headless::text_assist::{TextAssistItem, TextAssistMatch};
 
 use super::editor_state::named_demo_state;

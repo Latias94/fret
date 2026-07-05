@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use fret::advanced::KernelApp;
-use fret::component::prelude::*;
 use fret_runtime::Model;
 use fret_ui::ElementContext;
 use fret_ui::action::{ActionCx, UiActionHost};
@@ -15,6 +14,7 @@ use fret_ui_editor::controls::{
     NumericParseFn, NumericValidateFn, TransformEdit, TransformEditAxisOutcome,
     TransformEditOptions, Vec3Edit, VecEditAxisOutcome, VecEditOptions,
 };
+use fret_ui_kit::IntoUiElement as _;
 
 use super::super::editor_state::{
     editor_demo_exposure_model, editor_demo_iterations_model, editor_demo_position_models,
