@@ -8,14 +8,15 @@ fn plot_declarative_demo_uses_default_declarative_line_plot_panel() {
 
     for needle in [
         "usefret::app::prelude::*;",
-        "usefret_runtime::Model;",
-        "usefret_plot::declarative::{LinePlotPanelProps,line_plot_panel_in};",
-        "model:Model<LinePlotModel>",
+        "usefret_plot::LinePlotPanelBinding;",
+        "usefret_plot::declarative::line_plot_panel_in;",
+        "plot:LinePlotPanelBinding",
         "fninit(app:&mutApp,_window:WindowId)->Self",
         "LinePlotModel::from_series(",
         "LineSeries::new(",
         "Series::from_points_sorted(",
-        "LinePlotPanelProps::new(self.model.clone())",
+        "LinePlotPanelBinding::new(app,model)",
+        "self.plot.panel_props()",
         ".x_scale(AxisScale::Linear)",
         "line_plot_panel_in(cx,props).into()",
     ] {
@@ -37,6 +38,9 @@ fn plot_declarative_demo_uses_default_declarative_line_plot_panel() {
         "component::prelude::*",
         "KernelApp",
         "AppWindowId",
+        "usefret_runtime::Model;",
+        "model:Model<LinePlotModel>",
+        "LinePlotPanelProps::new(self.model.clone())",
     ] {
         assert!(
             !source.contains(legacy),

@@ -1,14 +1,14 @@
 use anyhow::Context as _;
 use fret::app::prelude::*;
+use fret_plot::LinePlotPanelBinding;
 use fret_plot::cartesian::{AxisScale, DataPoint};
-use fret_plot::declarative::{LinePlotPanelProps, line_plot_panel_in};
+use fret_plot::declarative::line_plot_panel_in;
 use fret_plot::models::{LinePlotModel, LineSeries};
 use fret_plot::series::Series;
 use fret_plot::style::LinePlotStyle;
-use fret_runtime::Model;
 
 struct PlotDeclarativeView {
-    model: Model<LinePlotModel>,
+    plot: LinePlotPanelBinding,
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -57,7 +57,7 @@ impl View for PlotDeclarativeView {
         ]);
 
         Self {
-            model: app.models_mut().insert(model),
+            plot: LinePlotPanelBinding::new(app, model),
         }
     }
 
@@ -67,7 +67,9 @@ impl View for PlotDeclarativeView {
             stroke_width: Px(2.0),
             ..Default::default()
         };
-        let props = LinePlotPanelProps::new(self.model.clone())
+        let props = self
+            .plot
+            .panel_props()
             .style(style)
             .x_scale(AxisScale::Linear)
             .y_scale(AxisScale::Linear);

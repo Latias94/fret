@@ -25,6 +25,9 @@ Keep raw/shared-model mechanisms for now:
 - Plot/chart demos such as `plot_demo`, `stems_demo`, `histogram_demo`, `chart_multi_axis_demo`.
   They allocate model graphs that are consumed by plot/chart component APIs rather than ordinary
   view-local app state.
+  - Follow-up: `plot_declarative_demo.rs` now uses `LinePlotPanelBinding` as the app-facing tracer
+    bullet. Keep explicit raw `LinePlotPanelProps` in advanced/linked/overlay plot demos until
+    each plot family has an equivalent binding contract.
 - Custom effect demos such as `custom_effect_v2_*`. They expose effect parameter models and reset
   groups; these need a dedicated parameter/control-surface design before deletion.
 - `apps/fret-ui-gallery/src/driver/*`. These are gallery runtime drivers and not first-contact app
