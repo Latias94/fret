@@ -29,6 +29,7 @@ use fret_ui_kit::headless::table::{ColumnDef, RowKey, TableState};
 use fret_ui_kit::tree::{TreeItem, TreeItemId, TreeState};
 use fret_ui_kit::{ColorRef, LayoutRefinement, OverlayController, Space, UiExt, ui};
 use fret_ui_shadcn::facade as shadcn;
+use std::any::Any;
 use std::collections::HashSet;
 use std::sync::Arc;
 
@@ -92,6 +93,52 @@ impl ComponentsGalleryWindowState {
                 .unwrap_or(false)
             || app.models().get_copied(&self.sheet_open).unwrap_or(false)
             || app.models().get_copied(&self.cmdk_open).unwrap_or(false)
+    }
+}
+
+fn components_gallery_update_model<T: Any>(
+    app: &mut App,
+    model: &Model<T>,
+    f: impl FnOnce(&mut T),
+) {
+    let _ = app.models_mut().update(model, f);
+}
+
+fn components_gallery_set_model<T: Any>(app: &mut App, model: &Model<T>, value: T) {
+    components_gallery_update_model(app, model, |slot| *slot = value);
+}
+
+fn components_gallery_set_last_action(
+    app: &mut App,
+    state: &ComponentsGalleryWindowState,
+    action: impl Into<Arc<str>>,
+) {
+    components_gallery_set_model(app, &state.last_action, action.into());
+}
+
+fn components_gallery_open_command_palette(app: &mut App, state: &ComponentsGalleryWindowState) {
+    components_gallery_set_model(app, &state.cmdk_open, true);
+    components_gallery_update_model(app, &state.cmdk_query, |query| query.clear());
+}
+
+fn components_gallery_close_transient_surfaces(
+    app: &mut App,
+    state: &ComponentsGalleryWindowState,
+) {
+    for model in [
+        &state.select_open,
+        &state.theme_preset_open,
+        &state.dropdown_open,
+        &state.context_menu_open,
+        &state.popover_open,
+        &state.dialog_open,
+        &state.alert_dialog_open,
+        &state.sheet_open,
+        &state.cmdk_open,
+        &state.ui_font_override_open,
+        &state.emoji_font_override_open,
+    ] {
+        components_gallery_set_model(app, model, false);
     }
 }
 
@@ -1483,13 +1530,13 @@ impl ComponentsGalleryDriver {
             KeyCode::ArrowUp => {
                 let next = selected_index.saturating_sub(1);
                 let id = entries[next].id;
-                let _ = app.models_mut().update(&state, |s| s.selected = Some(id));
+                components_gallery_update_model(app, &state, |s| s.selected = Some(id));
                 true
             }
             KeyCode::ArrowDown => {
                 let next = (selected_index + 1).min(entries.len().saturating_sub(1));
                 let id = entries[next].id;
-                let _ = app.models_mut().update(&state, |s| s.selected = Some(id));
+                components_gallery_update_model(app, &state, |s| s.selected = Some(id));
                 true
             }
             KeyCode::ArrowLeft => {
@@ -1497,15 +1544,13 @@ impl ComponentsGalleryDriver {
                     return true;
                 };
                 if tree_state_value.expanded.contains(&cur.id) {
-                    let _ = app.models_mut().update(&state, |s| {
+                    components_gallery_update_model(app, &state, |s| {
                         s.expanded.remove(&cur.id);
                     });
                     return true;
                 }
                 if let Some(parent) = cur.parent {
-                    let _ = app
-                        .models_mut()
-                        .update(&state, |s| s.selected = Some(parent));
+                    components_gallery_update_model(app, &state, |s| s.selected = Some(parent));
                     return true;
                 }
                 true
@@ -1515,7 +1560,7 @@ impl ComponentsGalleryDriver {
                     return true;
                 };
                 if cur.has_children && !tree_state_value.expanded.contains(&cur.id) {
-                    let _ = app.models_mut().update(&state, |s| {
+                    components_gallery_update_model(app, &state, |s| {
                         s.expanded.insert(cur.id);
                     });
                     return true;
@@ -1524,9 +1569,9 @@ impl ComponentsGalleryDriver {
                     if let Some(next) = entries.get(selected_index + 1)
                         && next.depth > cur.depth
                     {
-                        let _ = app
-                            .models_mut()
-                            .update(&state, |s| s.selected = Some(next.id));
+                        components_gallery_update_model(app, &state, |s| {
+                            s.selected = Some(next.id);
+                        });
                     }
                     return true;
                 }
@@ -1534,12 +1579,12 @@ impl ComponentsGalleryDriver {
             }
             KeyCode::Home => {
                 let id = entries[0].id;
-                let _ = app.models_mut().update(&state, |s| s.selected = Some(id));
+                components_gallery_update_model(app, &state, |s| s.selected = Some(id));
                 true
             }
             KeyCode::End => {
                 let id = entries[entries.len().saturating_sub(1)].id;
-                let _ = app.models_mut().update(&state, |s| s.selected = Some(id));
+                components_gallery_update_model(app, &state, |s| s.selected = Some(id));
                 true
             }
             _ => false,
@@ -1577,30 +1622,7 @@ fn hot_reload_window(
     state.root = None;
     state.pending_font_dialog = None;
     state.awaiting_font_dialog = false;
-
-    let _ = app.models_mut().update(&state.select_open, |v| *v = false);
-    let _ = app
-        .models_mut()
-        .update(&state.theme_preset_open, |v| *v = false);
-    let _ = app
-        .models_mut()
-        .update(&state.dropdown_open, |v| *v = false);
-    let _ = app
-        .models_mut()
-        .update(&state.context_menu_open, |v| *v = false);
-    let _ = app.models_mut().update(&state.popover_open, |v| *v = false);
-    let _ = app.models_mut().update(&state.dialog_open, |v| *v = false);
-    let _ = app
-        .models_mut()
-        .update(&state.alert_dialog_open, |v| *v = false);
-    let _ = app.models_mut().update(&state.sheet_open, |v| *v = false);
-    let _ = app.models_mut().update(&state.cmdk_open, |v| *v = false);
-    let _ = app
-        .models_mut()
-        .update(&state.ui_font_override_open, |v| *v = false);
-    let _ = app
-        .models_mut()
-        .update(&state.emoji_font_override_open, |v| *v = false);
+    components_gallery_close_transient_surfaces(app, state);
 }
 
 fn handle_model_changes(
@@ -1665,8 +1687,7 @@ fn handle_command(
     if command.as_str() == fret_app::core_commands::COMMAND_PALETTE
         || command.as_str() == fret_app::core_commands::COMMAND_PALETTE_LEGACY
     {
-        let _ = app.models_mut().update(&state.cmdk_open, |v| *v = true);
-        let _ = app.models_mut().update(&state.cmdk_query, |v| v.clear());
+        components_gallery_open_command_palette(app, state);
         app.request_redraw(window);
         return;
     }
@@ -1681,83 +1702,59 @@ fn handle_command(
     }
 
     if command.as_str() == "gallery.progress.inc" {
-        let _ = app
-            .models_mut()
-            .update(&state.progress, |v| *v = (*v + 10.0).min(100.0));
+        components_gallery_update_model(app, &state.progress, |v| *v = (*v + 10.0).min(100.0));
     }
 
     if command.as_str() == "gallery.progress.dec" {
-        let _ = app
-            .models_mut()
-            .update(&state.progress, |v| *v = (*v - 10.0).max(0.0));
+        components_gallery_update_model(app, &state.progress, |v| *v = (*v - 10.0).max(0.0));
     }
 
     if command.as_str() == "gallery.progress.reset" {
-        let _ = app.models_mut().update(&state.progress, |v| *v = 35.0);
+        components_gallery_set_model(app, &state.progress, 35.0);
     }
 
     match command.as_str() {
         "gallery.dropdown.select.apple" => {
-            let _ = app.models_mut().update(&state.last_action, |v| {
-                *v = Arc::<str>::from("dropdown.select.apple");
-            });
+            components_gallery_set_last_action(app, state, "dropdown.select.apple");
             return;
         }
         "gallery.dropdown.select.banana" => {
-            let _ = app.models_mut().update(&state.last_action, |v| {
-                *v = Arc::<str>::from("dropdown.select.banana");
-            });
+            components_gallery_set_last_action(app, state, "dropdown.select.banana");
             return;
         }
         "gallery.cmdk.select.open" => {
-            let _ = app.models_mut().update(&state.last_action, |v| {
-                *v = Arc::<str>::from("cmdk.select.open");
-            });
+            components_gallery_set_last_action(app, state, "cmdk.select.open");
             return;
         }
         "gallery.cmdk.select.save" => {
-            let _ = app.models_mut().update(&state.last_action, |v| {
-                *v = Arc::<str>::from("cmdk.select.save");
-            });
+            components_gallery_set_last_action(app, state, "cmdk.select.save");
             return;
         }
         "gallery.cmdk.select.close" => {
-            let _ = app.models_mut().update(&state.last_action, |v| {
-                *v = Arc::<str>::from("cmdk.select.close");
-            });
+            components_gallery_set_last_action(app, state, "cmdk.select.close");
             return;
         }
         "gallery.cmdk.select.settings" => {
-            let _ = app.models_mut().update(&state.last_action, |v| {
-                *v = Arc::<str>::from("cmdk.select.settings");
-            });
+            components_gallery_set_last_action(app, state, "cmdk.select.settings");
             return;
         }
         "gallery.cmdk.select.disabled" => {
-            let _ = app.models_mut().update(&state.last_action, |v| {
-                *v = Arc::<str>::from("cmdk.select.disabled");
-            });
+            components_gallery_set_last_action(app, state, "cmdk.select.disabled");
             return;
         }
         _ => {}
     }
 
     if command.as_str() == "gallery.context_menu.action" {
-        let _ = app.models_mut().update(&state.last_action, |v| {
-            *v = Arc::<str>::from("context_menu.action");
-        });
+        components_gallery_set_last_action(app, state, "context_menu.action");
     }
 
     if command.as_str() == "gallery.text_smoke.emoji_font.reset" {
-        let _ = app
-            .models_mut()
-            .update(&state.emoji_font_override, |v| *v = None);
+        components_gallery_set_model(app, &state.emoji_font_override, None);
     }
 
     if command.as_str() == "gallery.text_smoke.ui_font.reset" {
-        let _ = app
-            .models_mut()
-            .update(&state.ui_font_override, |v| *v = None);
+        components_gallery_set_model(app, &state.ui_font_override, None);
     }
 
     if command.as_str() == "gallery.text_smoke.fonts.load" {
@@ -1766,9 +1763,11 @@ fn handle_command(
             .cloned()
             .unwrap_or_default();
         if !caps.fs.file_dialogs {
-            let _ = app.models_mut().update(&state.last_action, |v| {
-                *v = Arc::<str>::from("fonts.load: file dialogs not available");
-            });
+            components_gallery_set_last_action(
+                app,
+                state,
+                "fonts.load: file dialogs not available",
+            );
             return;
         }
 
@@ -1790,9 +1789,11 @@ fn handle_command(
             },
         });
 
-        let _ = app.models_mut().update(&state.last_action, |v| {
-            *v = Arc::<str>::from("fonts.import_local: opening file dialog...");
-        });
+        components_gallery_set_last_action(
+            app,
+            state,
+            "fonts.import_local: opening file dialog...",
+        );
         return;
     }
 }
@@ -1831,9 +1832,11 @@ fn handle_event(
                 token: selection.token,
             });
 
-            let _ = app.models_mut().update(&state.last_action, |v| {
-                *v = Arc::<str>::from("fonts.import_local: reading selected files...");
-            });
+            components_gallery_set_last_action(
+                app,
+                state,
+                "fonts.import_local: reading selected files...",
+            );
             return;
         }
         Event::FileDialogData(data) => {
@@ -1862,16 +1865,14 @@ fn handle_event(
                 )
                 .into_boxed_str(),
             );
-            let _ = app.models_mut().update(&state.last_action, |v| *v = msg);
+            components_gallery_set_last_action(app, state, msg);
             return;
         }
         Event::FileDialogCanceled => {
             if state.awaiting_font_dialog || state.pending_font_dialog.is_some() {
                 state.awaiting_font_dialog = false;
                 state.pending_font_dialog = None;
-                let _ = app.models_mut().update(&state.last_action, |v| {
-                    *v = Arc::<str>::from("fonts.import_local: canceled");
-                });
+                components_gallery_set_last_action(app, state, "fonts.import_local: canceled");
                 return;
             }
         }

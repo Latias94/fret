@@ -110,3 +110,31 @@ fn components_gallery_overlay_text_uses_text_roles() {
         );
     }
 }
+
+#[test]
+fn components_gallery_driver_writes_stay_behind_owner_helpers() {
+    let source = include_str!("../src/components_gallery.rs");
+    let compact_source = compact(source);
+
+    for needle in [
+        "fncomponents_gallery_update_model<T:Any>(",
+        "fncomponents_gallery_set_model<T:Any>(",
+        "fncomponents_gallery_set_last_action(",
+        "fncomponents_gallery_open_command_palette(",
+        "fncomponents_gallery_close_transient_surfaces(",
+        "components_gallery_close_transient_surfaces(app,state);",
+        "components_gallery_open_command_palette(app,state);",
+        "components_gallery_set_last_action(app,state,\"context_menu.action\");",
+    ] {
+        assert!(
+            compact_source.contains(needle),
+            "components gallery should keep driver/event model writes behind explicit owner helpers; missing `{needle}`"
+        );
+    }
+
+    assert_eq!(
+        source.matches("models_mut().update(").count(),
+        1,
+        "components gallery should not scatter raw ModelStore updates outside the owner helper"
+    );
+}
