@@ -6,12 +6,10 @@ use delinea::{
     SeriesKind, SeriesSpec, TimeAxisScale,
 };
 use fret::app::prelude::*;
-use fret_chart::{ChartCanvasPanelProps, chart_canvas_panel_in};
-use fret_runtime::Model;
+use fret_chart::{ChartCanvasPanelBinding, chart_canvas_panel_in};
 
 struct ChartDeclarativeView {
-    engine: Model<ChartEngine>,
-    spec: ChartSpec,
+    chart: ChartCanvasPanelBinding,
 }
 
 pub fn run() -> anyhow::Result<()> {
@@ -195,15 +193,15 @@ impl View for ChartDeclarativeView {
         table.push_column(Column::F64(y_c));
         engine.datasets_mut().insert(dataset_id, table);
 
-        let engine = app.models_mut().insert(engine);
-        Self { engine, spec }
+        Self {
+            chart: ChartCanvasPanelBinding::new(app, spec, engine),
+        }
     }
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
-        let _ = self.engine.paint(cx).read_ref(|_| ());
+        self.chart.observe_engine_paint(cx);
 
-        let mut props = ChartCanvasPanelProps::new(self.spec.clone());
-        props.engine = Some(self.engine.clone());
+        let props = self.chart.panel_props();
         chart_canvas_panel_in(cx, props).into()
     }
 }

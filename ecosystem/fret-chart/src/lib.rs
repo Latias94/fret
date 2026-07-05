@@ -4,6 +4,7 @@
 //! - translating `delinea` marks into Fret draw ops (`SceneOp`)
 //! - mapping UI input into `delinea` actions/patches
 
+mod binding;
 pub mod declarative;
 #[cfg(feature = "echarts")]
 pub mod echarts;
@@ -19,6 +20,7 @@ mod slider_logic;
 mod tooltip_layout;
 mod visual_map_logic;
 
+pub use binding::ChartCanvasPanelBinding;
 pub use declarative::*;
 pub use input_map::*;
 pub use linking::*;

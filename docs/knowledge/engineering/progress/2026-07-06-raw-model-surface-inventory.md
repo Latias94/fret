@@ -30,6 +30,10 @@ Keep raw/shared-model mechanisms for now:
     `LinePlotPanelBinding::output_untracked(...)`, so the manual harness no longer exposes the
     line plot's raw state/output models. Keep explicit raw `LinePlotPanelProps` in
     advanced/linked/overlay plot demos until each plot family has an equivalent binding contract.
+  - Follow-up: `chart_declarative_demo.rs` now uses `ChartCanvasPanelBinding`, so the default
+    FretApp chart example no longer imports `fret_runtime::Model` or wires
+    `ChartCanvasPanelProps::engine` directly. Keep explicit raw chart panel props in stress,
+    linked, multi-grid, and output-model demos until those advanced contracts are named.
 - Custom effect demos such as `custom_effect_v2_*`. They expose effect parameter models and reset
   groups; these need a dedicated parameter/control-surface design before deletion.
   - Follow-up: `custom_effect_v2_web_demo.rs`, `custom_effect_v2_identity_web_demo.rs`,

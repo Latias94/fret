@@ -8,21 +8,26 @@ fn chart_declarative_demo_uses_app_view_imports() {
 
     for needle in [
         "usefret::app::prelude::*;",
-        "usefret_runtime::Model;",
-        "structChartDeclarativeView{engine:Model<ChartEngine>,spec:ChartSpec,}",
+        "usefret_chart::{ChartCanvasPanelBinding,chart_canvas_panel_in};",
+        "structChartDeclarativeView{chart:ChartCanvasPanelBinding,}",
         "fninit(app:&mutApp,_window:WindowId)->Self",
-        "ChartCanvasPanelProps::new(self.spec.clone())",
-        "props.engine=Some(self.engine.clone());",
+        "ChartCanvasPanelBinding::new(app,spec,engine)",
+        "self.chart.observe_engine_paint(cx);",
+        "self.chart.panel_props()",
         "chart_canvas_panel_in(cx,props).into()",
     ] {
         assert!(
             source.contains(needle),
-            "chart_declarative_demo should stay on the app View skeleton with an explicit runtime Model handle; missing `{needle}`"
+            "chart_declarative_demo should stay on the app View skeleton while using the app-facing chart binding; missing `{needle}`"
         );
     }
 
     for legacy in [
         "usefret::advanced::raw::Model;",
+        "usefret_runtime::Model;",
+        "engine:Model<ChartEngine>",
+        "ChartCanvasPanelProps::new(self.spec.clone())",
+        "props.engine=Some(self.engine.clone());",
         "advanced::prelude::*",
         "component::prelude::*",
         "KernelApp",
