@@ -1,9 +1,9 @@
 use anyhow::Context as _;
 use fret::advanced;
-use fret::advanced::prelude::{LocalState, TrackedStateExt as _};
 use fret::advanced::raw::{LocalStateModelStoreExt as _, LocalStateRawModelExt as _};
 use fret::advanced::view::{AppUiRenderRootState, render_root_with_app_ui};
 use fret::app::AppLocalStateExt as _;
+use fret::app::{LocalState, TrackedStateExt as _};
 use fret_app::{App, CommandId, Effect, WindowRequest};
 use fret_core::{AppWindowId, Corners, Edges, Event, Px};
 use fret_launch::{

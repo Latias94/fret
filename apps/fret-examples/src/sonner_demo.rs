@@ -3,9 +3,9 @@ use std::time::Duration;
 
 #[cfg(not(target_arch = "wasm32"))]
 use anyhow::Context as _;
-use fret::advanced::prelude::LocalState;
 use fret::advanced::raw::LocalStateModelStoreExt as _;
 use fret::advanced::view::{AppUiRenderRootState, render_root_with_app_ui};
+use fret::app::LocalState;
 use fret_app::{App, CommandId, Effect, WindowRequest};
 use fret_core::{AppWindowId, Edges, Event, Px, Rect, UiServices};
 use fret_launch::{

@@ -106,3 +106,66 @@ fn baseline_memory_demos_use_app_view_surface() {
         }
     }
 }
+
+#[test]
+fn app_state_demos_use_app_local_state_imports() {
+    for (name, source, expected_import) in [
+        (
+            "datatable_demo",
+            include_str!("../src/datatable_demo.rs"),
+            "usefret::app::LocalState;",
+        ),
+        (
+            "date_picker_demo",
+            include_str!("../src/date_picker_demo.rs"),
+            "usefret::app::{LocalState,TrackedStateExtas_};",
+        ),
+        (
+            "emoji_conformance_demo",
+            include_str!("../src/emoji_conformance_demo.rs"),
+            "usefret::app::LocalState;",
+        ),
+        (
+            "form_demo",
+            include_str!("../src/form_demo.rs"),
+            "usefret::app::{LocalState,TrackedStateExtas_};",
+        ),
+        (
+            "ime_smoke_demo",
+            include_str!("../src/ime_smoke_demo.rs"),
+            "usefret::app::LocalState;",
+        ),
+        (
+            "sonner_demo",
+            include_str!("../src/sonner_demo.rs"),
+            "usefret::app::LocalState;",
+        ),
+        (
+            "table_demo",
+            include_str!("../src/table_demo.rs"),
+            "usefret::app::LocalState;",
+        ),
+        (
+            "components_gallery",
+            include_str!("../src/components_gallery.rs"),
+            "usefret::app::TrackedStateExtas_;",
+        ),
+    ] {
+        let compact = compact(source);
+        assert!(
+            compact.contains(expected_import),
+            "{name} should import app state helpers from the app surface; missing `{expected_import}`",
+        );
+
+        for forbidden in [
+            "usefret::advanced::prelude::LocalState;",
+            "usefret::advanced::prelude::TrackedStateExtas_;",
+            "usefret::advanced::prelude::{LocalState,TrackedStateExtas_};",
+        ] {
+            assert!(
+                !compact.contains(forbidden),
+                "{name} should not import app state helpers from the advanced prelude: `{forbidden}`",
+            );
+        }
+    }
+}

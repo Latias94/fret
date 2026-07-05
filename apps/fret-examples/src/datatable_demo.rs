@@ -1,7 +1,7 @@
 use anyhow::Context as _;
-use fret::advanced::prelude::LocalState;
 use fret::advanced::raw::LocalStateElementContextExt as _;
 use fret::app::AppLocalStateExt as _;
+use fret::app::LocalState;
 use fret_app::{App, CommandId, Effect, Model, WindowRequest};
 use fret_core::{AppWindowId, Corners, Edges, Event, Px};
 use fret_launch::{

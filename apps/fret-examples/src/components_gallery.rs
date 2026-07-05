@@ -1,7 +1,7 @@
 #[cfg(not(target_arch = "wasm32"))]
 use anyhow::Context as _;
-use fret::advanced::prelude::TrackedStateExt as _;
 use fret::advanced::view::{AppUiRenderRootState, render_root_with_app_ui};
+use fret::app::TrackedStateExt as _;
 use fret_app::{App, CommandId, CommandMeta, Effect, Model, WhenExpr, WindowRequest};
 use fret_bootstrap::ui_diagnostics::UiDiagnosticsService;
 use fret_core::{
