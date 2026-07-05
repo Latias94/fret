@@ -12,9 +12,11 @@
 
 use std::sync::Arc;
 
-use fret::advanced::raw::LocalStateRawModelExt as _;
-use fret::app::AppRenderContext;
-use fret::{FretApp, advanced::prelude::*, component::prelude::*};
+use fret::UiAppBuilder;
+use fret::advanced::driver::UiAppBuilderAdvancedExt as _;
+use fret::advanced::raw::{LocalStateElementContextExt as _, LocalStateRawModelExt as _};
+use fret::app::prelude::*;
+use fret::app::{AppComponentCx, AppRenderContext, LocalState};
 use fret_core::scene::{
     CustomEffectImageInputV1, CustomEffectPyramidRequestV1, CustomEffectSourcesV3, EffectChain,
     EffectMode, EffectParamsV1, EffectQuality, EffectStep, ImageSamplingHint, UvRect,
@@ -24,14 +26,16 @@ use fret_render::{
     ImageColorSpace, ImageDescriptor, Renderer, RendererCapabilities, WgpuContext,
     write_rgba8_texture_region,
 };
-use fret_ui::Invalidation;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, EffectLayerProps, LayoutStyle, Length, MainAlign,
     Overflow, PositionStyle, RowProps, SpacingLength,
 };
+use fret_ui::{ElementContext, Invalidation};
 use fret_ui_kit::custom_effects::CustomEffectProgramV3;
+use fret_ui_kit::declarative::UiElementTestIdExt as _;
+use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::text as decl_text;
-use fret_ui_kit::ui;
+use fret_ui_kit::{IntoUiElement, Space, UiSupportsLayout as _, ui};
 use fret_ui_shadcn::facade as shadcn;
 
 use crate::custom_effect_v3_wgsl::CUSTOM_EFFECT_V3_LENS_WGSL;
@@ -131,7 +135,7 @@ struct CustomEffectV3ViewSettings {
     use_non_filterable_user1: bool,
 }
 
-fn install_demo_theme(app: &mut KernelApp) {
+fn install_demo_theme(app: &mut App) {
     shadcn::themes::apply_shadcn_new_york(
         app,
         shadcn::themes::ShadcnBaseColor::Slate,
@@ -154,21 +158,18 @@ pub fn run() -> anyhow::Result<()> {
 /// - keep `EffectId` renderer-scoped and runtime-assigned,
 /// - register lazily and cache the returned `EffectId`,
 /// - keep the authoring demo small and diagnostics-friendly.
-fn install_into<S: 'static>(builder: fret::UiAppBuilder<S>) -> fret::UiAppBuilder<S> {
+fn install_into<S: 'static>(builder: UiAppBuilder<S>) -> UiAppBuilder<S> {
     builder
         .setup(install_app_globals)
         .install_custom_effects(register_custom_effect_v3)
         .on_gpu_ready(upload_user0_images)
 }
 
-fn install_app_globals(app: &mut KernelApp) {
+fn install_app_globals(app: &mut App) {
     app.set_global(DemoGlobals::new());
 }
 
-fn register_custom_effect_v3(
-    app: &mut KernelApp,
-    effects: &mut dyn fret_core::CustomEffectService,
-) {
+fn register_custom_effect_v3(app: &mut App, effects: &mut dyn fret_core::CustomEffectService) {
     app.with_global_mut(DemoGlobals::new, |g, _app| {
         if let Err(err) = g.lens_program.ensure_registered(effects) {
             tracing::warn!(?err, "custom effect v3 lens registration failed");
@@ -185,7 +186,7 @@ fn register_custom_effect_v3(
     });
 }
 
-fn upload_user0_images(app: &mut KernelApp, context: &WgpuContext, renderer: &mut Renderer) {
+fn upload_user0_images(app: &mut App, context: &WgpuContext, renderer: &mut Renderer) {
     let filterable_size = (1u32, 1u32);
     let filterable_texture = context.device.create_texture(&wgpu::TextureDescriptor {
         label: Some("custom_effect_v3_demo user0 filterable"),
@@ -320,7 +321,7 @@ impl State {
 }
 
 impl View for CustomEffectV3View {
-    fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self {
+    fn init(_app: &mut App, _window: WindowId) -> Self {
         Self
     }
 
@@ -345,7 +346,7 @@ impl View for CustomEffectV3View {
     }
 }
 
-fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut State) -> ViewElements {
+fn view(cx: &mut ElementContext<'_, App>, st: &mut State) -> Ui {
     // Animations make refraction far easier to see than static gradients.
     // Hold a continuous-frames lease so the backdrop moves without user input.
     let _frames = cx.begin_continuous_frames();
@@ -464,7 +465,7 @@ fn stage(
     user01_probe_effect: Option<EffectId>,
     user0_image: Option<ImageId>,
     user1_image: Option<ImageId>,
-) -> impl IntoUiElement<KernelApp> + use<> {
+) -> impl IntoUiElement<App> + use<> {
     let backdrop = animated_backdrop(cx).into_element(cx);
     let lenses = lens_row(
         cx,
@@ -514,7 +515,7 @@ fn stage(
         move |cx| {
             vec![
                 ui::v_flex(|_cx| [title, subtitle, controls])
-                    .gap(fret_ui_kit::Space::N1)
+                    .gap(Space::N1)
                     .into_element(cx),
             ]
         },
@@ -540,7 +541,7 @@ fn stage(
             let lenses = lenses.into_element(cx);
             vec![
                 ui::v_flex(move |_cx| [header, lenses])
-                    .gap(fret_ui_kit::Space::N4)
+                    .gap(Space::N4)
                     .items_start()
                     .into_element(cx),
             ]
@@ -568,7 +569,7 @@ fn stage_controls(
     show_user1_probe: bool,
     use_non_filterable_user0: bool,
     use_non_filterable_user1: bool,
-) -> impl IntoUiElement<KernelApp> + use<> {
+) -> impl IntoUiElement<App> + use<> {
     let enabled_model = st.enabled.clone_model();
     let show_user0_probe_model = st.show_user0_probe.clone_model();
     let show_user1_probe_model = st.show_user1_probe.clone_model();
@@ -656,12 +657,12 @@ fn stage_controls(
 
         out
     })
-    .gap(fret_ui_kit::Space::N2)
+    .gap(Space::N2)
     .items_center()
     .into_element(cx)
 }
 
-fn animated_backdrop(cx: &mut AppComponentCx<'_>) -> impl IntoUiElement<KernelApp> + use<> {
+fn animated_backdrop(cx: &mut AppComponentCx<'_>) -> impl IntoUiElement<App> + use<> {
     let viewport = cx.environment_viewport_bounds(Invalidation::Paint);
     let w = viewport.size.width.0.max(1.0);
     let h = viewport.size.height.0.max(1.0);
@@ -802,7 +803,7 @@ fn lens_row(
     user01_probe_effect: Option<EffectId>,
     user0_image: Option<ImageId>,
     user1_image: Option<ImageId>,
-) -> impl IntoUiElement<KernelApp> + use<> {
+) -> impl IntoUiElement<App> + use<> {
     let radius = Px(24.0);
     let lens_w = Px(360.0);
     let lens_h = Px(260.0);
@@ -915,7 +916,7 @@ fn lens_shell(
     lens_w: Px,
     lens_h: Px,
     with_effect: Option<EffectChain>,
-) -> impl IntoUiElement<KernelApp> + use<> {
+) -> impl IntoUiElement<App> + use<> {
     let mut lens_layout = LayoutStyle::default();
     lens_layout.size.width = Length::Px(lens_w);
     lens_layout.size.height = Length::Px(lens_h);
@@ -1004,7 +1005,7 @@ fn plain_lens(
     radius: Px,
     lens_w: Px,
     lens_h: Px,
-) -> impl IntoUiElement<KernelApp> + use<> {
+) -> impl IntoUiElement<App> + use<> {
     lens_shell(cx, title, radius, lens_w, lens_h, None)
 }
 
@@ -1015,7 +1016,7 @@ fn custom_effect_lens(
     radius: Px,
     lens_w: Px,
     lens_h: Px,
-) -> impl IntoUiElement<KernelApp> + use<> {
+) -> impl IntoUiElement<App> + use<> {
     let sf = cx.environment_scale_factor(Invalidation::Paint).max(1.0e-6);
     let params = EffectParamsV1 {
         vec4s: [
@@ -1066,7 +1067,7 @@ fn custom_effect_user0_probe_lens(
     radius: Px,
     lens_w: Px,
     lens_h: Px,
-) -> impl IntoUiElement<KernelApp> + use<> {
+) -> impl IntoUiElement<App> + use<> {
     let chain = EffectChain::from_steps(&[EffectStep::CustomV3 {
         id: effect,
         params: EffectParamsV1::ZERO,
@@ -1095,7 +1096,7 @@ fn custom_effect_user1_probe_lens(
     radius: Px,
     lens_w: Px,
     lens_h: Px,
-) -> impl IntoUiElement<KernelApp> + use<> {
+) -> impl IntoUiElement<App> + use<> {
     let chain = EffectChain::from_steps(&[EffectStep::CustomV3 {
         id: effect,
         params: EffectParamsV1::ZERO,
@@ -1125,7 +1126,7 @@ fn custom_effect_user01_probe_lens(
     radius: Px,
     lens_w: Px,
     lens_h: Px,
-) -> impl IntoUiElement<KernelApp> + use<> {
+) -> impl IntoUiElement<App> + use<> {
     let chain = EffectChain::from_steps(&[EffectStep::CustomV3 {
         id: effect,
         params: EffectParamsV1::ZERO,

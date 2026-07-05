@@ -137,7 +137,7 @@ fn assert_custom_effect_v3_overlay_text_roles(source: &str) {
     let source = compact(source);
 
     for needle in [
-        "usefret::app::AppRenderContext;",
+        "usefret::app::{AppComponentCx,AppRenderContext,LocalState};",
         "usefret_ui_kit::declarative::textasdecl_text;",
         "fnoverlay_label_text<'a,Cx>(",
         "Cx:AppRenderContext<'a>,",
@@ -320,6 +320,52 @@ fn custom_effect_v2_demo_uses_app_view_imports_with_explicit_effect_hooks() {
         assert!(
             !source.contains(forbidden),
             "custom_effect_v2_demo should not reintroduce broad or kernel-facing imports: `{forbidden}`",
+        );
+    }
+}
+
+#[test]
+fn custom_effect_v3_demo_uses_app_view_imports_with_explicit_effect_hooks() {
+    let source = include_str!("../src/custom_effect_v3_demo.rs");
+    let compact = compact(source);
+
+    for needle in [
+        "usefret::UiAppBuilder;",
+        "usefret::advanced::driver::UiAppBuilderAdvancedExtas_;",
+        "usefret::advanced::raw::{LocalStateElementContextExtas_,LocalStateRawModelExtas_};",
+        "usefret::app::prelude::*;",
+        "usefret::app::{AppComponentCx,AppRenderContext,LocalState};",
+        "usefret_ui_kit::declarative::action_hooks::ActionHooksExtas_;",
+        "usefret_ui_kit::{IntoUiElement,Space,UiSupportsLayoutas_,ui};",
+        "usefret_ui_shadcn::facadeasshadcn;",
+        ".view::<CustomEffectV3View>()?",
+        "fninstall_into<S:'static>(builder:UiAppBuilder<S>)->UiAppBuilder<S>",
+        ".install_custom_effects(register_custom_effect_v3)",
+        ".on_gpu_ready(upload_user0_images)",
+        "fninstall_app_globals(app:&mutApp)",
+        "fnregister_custom_effect_v3(app:&mutApp,effects:&mutdynfret_core::CustomEffectService)",
+        "fnupload_user0_images(app:&mutApp,context:&WgpuContext,renderer:&mutRenderer)",
+        "fninit(_app:&mutApp,_window:WindowId)->Self",
+        "fnview(cx:&mutElementContext<'_,App>,st:&mutState)->Ui",
+        "implIntoUiElement<App>",
+    ] {
+        assert!(
+            compact.contains(needle),
+            "custom_effect_v3_demo should keep app view imports and explicit effect hooks; missing `{needle}`",
+        );
+    }
+
+    for forbidden in [
+        "use fret::{FretApp",
+        "advanced::prelude::*",
+        "component::prelude::*",
+        "KernelApp",
+        "AppWindowId",
+        "ViewElements",
+    ] {
+        assert!(
+            !source.contains(forbidden),
+            "custom_effect_v3_demo should not reintroduce broad or kernel-facing imports: `{forbidden}`",
         );
     }
 }
