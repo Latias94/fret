@@ -500,6 +500,7 @@ mod authoring_surface_policy_tests {
         assert!(!ASYNC_INBOX_EXAMPLE.contains("use fret_runtime::Model;"));
         assert!(!ASYNC_INBOX_EXAMPLE.contains("use fret_runtime::{"));
         assert!(!ASYNC_INBOX_EXAMPLE.contains("use fret_ui::element::AnyElement;"));
+        assert!(!ASYNC_INBOX_EXAMPLE.contains("cx.elements()"));
         assert!(!ASYNC_INBOX_EXAMPLE.contains("models::<act::Cancel>"));
         assert!(!ASYNC_INBOX_EXAMPLE.contains("on_action_notify::<act::Start>"));
         let async_inbox_normalized = ASYNC_INBOX_EXAMPLE.split_whitespace().collect::<String>();

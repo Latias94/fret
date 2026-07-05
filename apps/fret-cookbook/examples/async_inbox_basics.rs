@@ -218,19 +218,19 @@ impl View for AsyncInboxBasicsView {
         })
         .gap(Space::N2)
         .items_center()
-        .into_element(cx.elements());
+        .into_element_in(cx);
 
         let progress_el = shadcn::Progress::new(&self.st.progress)
             .a11y_label("Background job progress")
             .range(0.0, 100.0)
-            .into_element(cx.elements())
+            .into_element_in(cx)
             .test_id(TEST_ID_PROGRESS);
 
         let progress_label = ui::text(format!("{progress:.0}%"));
         let progress_row = ui::h_flex(|cx| ui::children![cx; progress_el, progress_label])
             .gap(Space::N3)
             .items_center()
-            .into_element(cx.elements());
+            .into_element_in(cx);
 
         let log = shadcn::Textarea::new(&self.st.log)
             .a11y_label("Inbox log")
@@ -247,7 +247,7 @@ impl View for AsyncInboxBasicsView {
             ]
         })
         .gap(Space::N2)
-        .into_element(cx.elements());
+        .into_element_in(cx);
 
         let body = ui::v_flex(|cx| ui::children![cx; status_row, progress_row, controls, log])
             .gap(Space::N3);
