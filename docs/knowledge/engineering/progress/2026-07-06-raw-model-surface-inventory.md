@@ -45,11 +45,14 @@ Keep raw/shared-model mechanisms for now:
 - `genui_demo.rs`. Audited and cleaned after the initial inventory: it remains an advanced GenUI
   runtime/reference surface with shared runtime models, while raw model reads/writes are routed
   through local owner helpers.
+- `api_workbench_lite_demo.rs`. Audited and cleaned after the initial inventory: it remains a
+  first-contact LocalState/query/mutation app example, while the necessary mutation/query
+  `ModelStore` access is routed through a local `ApiWorkbenchModelOwner` and source-gated.
 
 Likely next cleanup slices:
 
-- `api_workbench_lite_demo.rs`: tests show it is app-facing and should stay on `LocalState` /
-  `LocalStateTxn`; keep it as the regression template for first-contact app authoring.
+- Custom-effect parameter binding contracts, or another app-facing owner boundary where raw
+  model-store reads/writes still appear outside a dedicated owner helper.
 # Verification
 
 - `git status --short --branch` on latest `main`

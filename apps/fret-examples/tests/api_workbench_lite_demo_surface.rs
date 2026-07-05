@@ -67,6 +67,11 @@ fn api_workbench_lite_demo_uses_app_local_state_and_explicit_shadcn_imports() {
         "usefret::app::{LocalState,LocalStateTxn};",
         "usefret_ui_shadcn::facadeasshadcn;",
         "structWorkbenchLocals{method:LocalState<Option<Arc<str>>>,",
+        "typeApiWorkbenchModelStore=fret_runtime::ModelStore;",
+        "ApiWorkbenchModelOwner::new(models).submit_request(",
+        "ApiWorkbenchModelOwner::new(models).retry_last_request(",
+        "ApiWorkbenchModelOwner::new(host.models_mut()).can_retry_last_request(",
+        "ApiWorkbenchModelOwner::new(models).load_history(",
         "FretApp::new(\"api-workbench-lite\")",
     ] {
         assert!(
@@ -92,4 +97,51 @@ fn api_workbench_lite_demo_uses_app_local_state_and_explicit_shadcn_imports() {
             "api workbench lite demo should not reintroduce broad or kernel-facing imports: `{forbidden}`"
         );
     }
+
+    let owner_start = source
+        .find("type ApiWorkbenchModelStore = fret_runtime::ModelStore;")
+        .expect("api workbench lite demo should name one local model-owner boundary");
+    let owner_end = source
+        .find("impl WorkbenchLocals")
+        .expect("api workbench lite demo should define locals after the model owner");
+    let owner_source = &source[owner_start..owner_end];
+    let outside_owner = format!("{}{}", &source[..owner_start], &source[owner_end..]);
+
+    for forbidden in [
+        "fnsubmit_request(models:&mutfret_runtime::ModelStore",
+        "fnretry_last_request(models:&mutfret_runtime::ModelStore",
+        "fnload_history(models:&mutfret_runtime::ModelStore",
+    ] {
+        assert!(
+            !compact.contains(forbidden),
+            "api workbench lite demo should keep raw ModelStore signatures behind the owner alias: `{forbidden}`"
+        );
+    }
+
+    for raw_boundary in [
+        "fret_runtime::ModelStore",
+        "ApiWorkbenchModelStore",
+        "LocalStateTxn::with_model_store",
+        "history_save_mutation.submit(self.models",
+        "response_mutation.submit(self.models",
+        "history_save_mutation.retry_last(self.models",
+        "response_mutation.retry_last(self.models",
+        ".read(response_mutation.model()",
+        ".read(history_query.model()",
+    ] {
+        assert!(
+            owner_source.contains(raw_boundary),
+            "api workbench lite owner should explicitly contain raw bridge `{raw_boundary}`"
+        );
+        assert!(
+            !outside_owner.contains(raw_boundary),
+            "api workbench lite raw bridge `{raw_boundary}` should not appear outside the local owner"
+        );
+    }
+
+    assert_eq!(
+        source.matches("host.models_mut()").count(),
+        1,
+        "api workbench lite demo should keep command-availability ModelStore access behind the owner boundary"
+    );
 }
