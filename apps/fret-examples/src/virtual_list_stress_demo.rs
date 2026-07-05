@@ -1,6 +1,6 @@
 use anyhow::Context as _;
 use fret::advanced::view::AppRenderDataExt as _;
-use fret_app::{App, CommandId, Effect, WindowRequest};
+use fret_app::{App, CommandId, Effect, Model, WindowRequest};
 use fret_core::{AppWindowId, Event, Px};
 use fret_launch::{
     FnDriver, WindowCreateSpec, WinitCommandContext, WinitEventContext, WinitHotReloadContext,
@@ -16,6 +16,7 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, Invalidation, UiTree, VirtualListScrollHandle};
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::declarative::text as decl_text;
+use std::any::Any;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
@@ -33,6 +34,22 @@ fn virtual_list_stress_row_label_text<H: fret_ui::UiHost>(
     text: impl Into<Arc<str>>,
 ) -> AnyElement {
     decl_text::text_list_row_label(cx, text)
+}
+
+fn virtual_list_stress_update_model<T: Any>(
+    app: &mut App,
+    model: &Model<T>,
+    f: impl FnOnce(&mut T),
+) {
+    let _ = app.models_mut().update(model, f);
+}
+
+fn virtual_list_stress_toggle_model(app: &mut App, model: &Model<bool>) {
+    virtual_list_stress_update_model(app, model, |value| *value = !*value);
+}
+
+fn virtual_list_stress_bump_revision(app: &mut App, model: &Model<u64>) {
+    virtual_list_stress_update_model(app, model, |value| *value = value.wrapping_add(1));
 }
 
 fn try_println(args: std::fmt::Arguments<'_>) {
@@ -271,16 +288,12 @@ fn handle_event(
                 return;
             }
             fret_core::KeyCode::Space => {
-                let _ = app
-                    .models_mut()
-                    .update(&state.tall_rows_enabled, |v| *v = !*v);
+                virtual_list_stress_toggle_model(app, &state.tall_rows_enabled);
                 app.request_redraw(window);
             }
             fret_core::KeyCode::KeyR => {
-                let _ = app.models_mut().update(&state.reversed, |v| *v = !*v);
-                let _ = app
-                    .models_mut()
-                    .update(&state.items_revision, |v| *v = v.wrapping_add(1));
+                virtual_list_stress_toggle_model(app, &state.reversed);
+                virtual_list_stress_bump_revision(app, &state.items_revision);
                 app.request_redraw(window);
             }
             fret_core::KeyCode::Home => {
