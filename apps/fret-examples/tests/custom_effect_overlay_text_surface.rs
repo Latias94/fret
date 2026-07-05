@@ -476,6 +476,83 @@ fn custom_effect_v2_web_overlay_readouts_use_shared_roles() {
 }
 
 #[test]
+fn custom_effect_v2_web_model_writes_stay_behind_owner_helper() {
+    let source = include_str!("../src/custom_effect_v2_web_demo.rs");
+    let compact_source = compact(source);
+
+    for needle in [
+        "typeCustomEffectV2WebModelStore=fret_runtime::ModelStore;",
+        "structCustomEffectV2WebModelOwner<'a>{",
+        "fnset_model<T:std::any::Any>(&mutself,model:&Model<T>,value:T)->bool",
+        "fnreset_controls(&mutself,controls:&DemoControls)->bool",
+        "fn toggle_surface(&mut self, show: &Model<bool>) -> bool",
+        "CustomEffectV2WebModelOwner::new(host.models_mut()).reset_controls(&reset_controls);",
+        "CustomEffectV2WebModelOwner::new(app.models_mut()).toggle_surface(&state.show);",
+        "CustomEffectV2WebModelOwner::new(app.models_mut()).reset_controls(&state.controls);",
+    ] {
+        assert!(
+            source.contains(needle) || compact_source.contains(needle),
+            "custom_effect_v2_web_demo should keep raw model writes behind the local owner helper; missing `{needle}`"
+        );
+    }
+
+    let owner_start = source
+        .find("type CustomEffectV2WebModelStore = fret_runtime::ModelStore;")
+        .expect("custom_effect_v2_web_demo should name one local model-owner boundary");
+    let owner_end = source
+        .find("pub struct CustomEffectV2WebWindowState")
+        .expect("custom_effect_v2_web_demo should define window state after the model owner");
+    let owner_source = compact(&source[owner_start..owner_end]);
+    let outside_owner = compact(&format!(
+        "{}{}",
+        &source[..owner_start],
+        &source[owner_end..]
+    ));
+
+    assert!(
+        owner_source.contains("self.models.update("),
+        "custom_effect_v2_web_demo owner should contain the raw model write operations"
+    );
+    for needle in [
+        "self.set_model(&controls.enabled,true)",
+        "self.set_model(&controls.mode,Some(Arc::from(\"backdrop\")))",
+        "self.set_model(&controls.quality,Some(Arc::from(\"high\")))",
+        "self.set_model(&controls.sampling,Some(Arc::from(\"linear\")))",
+        "self.set_model(&controls.uv_span,vec![1.0])",
+        "self.set_model(&controls.strength_px,vec![14.0])",
+        "self.set_model(&controls.max_sample_offset_px,vec![18.0])",
+        "self.set_model(&controls.tint_strength,vec![0.8])",
+        "self.set_model(&controls.blur_radius_px,vec![12.0])",
+        "self.set_model(&controls.blur_downsample,vec![1.0])",
+        "self.set_model(&controls.lens_corner_radius_px,vec![24.0])",
+        "self.set_model(&controls.tile_corner_radius_px,vec![18.0])",
+        "self.set_model(&controls.debug_input,false)",
+    ] {
+        assert!(
+            owner_source.contains(needle),
+            "custom_effect_v2_web_demo reset should route `{needle}` through the owner set helper"
+        );
+    }
+    assert!(
+        !outside_owner.contains("self.models.update("),
+        "custom_effect_v2_web_demo raw model writes should not appear outside the local owner"
+    );
+    assert!(
+        !outside_owner.contains(".update("),
+        "custom_effect_v2_web_demo should not contain aliased raw update calls outside the local owner"
+    );
+    assert_eq!(
+        source.matches("models_mut().update(").count(),
+        0,
+        "custom_effect_v2_web_demo should not scatter direct ModelStore updates outside owner construction"
+    );
+    assert!(
+        !compact_source.contains("fnreset_in(&self,models:&mutfret_runtime::ModelStore)"),
+        "custom_effect_v2_web_demo should not reintroduce raw reset helpers on DemoControls"
+    );
+}
+
+#[test]
 fn custom_effect_v2_web_templates_use_shared_text_roles() {
     assert_custom_effect_v2_template_overlay_text_roles(
         include_str!("../src/custom_effect_v2_identity_web_demo.rs"),
