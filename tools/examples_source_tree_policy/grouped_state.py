@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any, Callable
 
 
@@ -642,12 +643,16 @@ SELECTED_GROUPED_STATE_POLICIES = [
             'let theme = cx.theme().snapshot();',
             'fn view_settings(',
             '-> CustomEffectV2LutWebViewSettings {',
-            'fn reset_in(&self, models: &mut fret_runtime::ModelStore) {',
+            'type CustomEffectV2LutWebModelStore = fret_runtime::ModelStore;',
+            "struct CustomEffectV2LutWebModelOwner<'a> {",
+            'fn set_model<T: std::any::Any>(&mut self, model: &Model<T>, value: T) -> bool {',
+            'fn reset_controls(&mut self, controls: &DemoControls) -> bool {',
             'cx.data().selector_model_paint(',
             '&controls.enabled,',
             '&controls.tile_corner_radius_px,',
-            'reset_controls.reset_in(host.models_mut());',
-            'state.controls.reset_in(app.models_mut());',
+            'CustomEffectV2LutWebModelOwner::new(host.models_mut()).reset_controls(&reset_controls);',
+            'CustomEffectV2LutWebModelOwner::new(app.models_mut()).toggle_surface(&state.show);',
+            'CustomEffectV2LutWebModelOwner::new(app.models_mut()).reset_controls(&state.controls);',
             'let view_settings = Self::view_settings(cx, &controls);',
         ],
         [
@@ -660,6 +665,10 @@ SELECTED_GROUPED_STATE_POLICIES = [
             'model.paint_in(cx).read_ref(|v| v.as_ref().map(|s| s.to_string()))',
             'CustomEffectV2LutWebDriver::reset_controls(app, &state.controls);',
             'let _ = models.update(&reset_controls.enabled, |v| *v = true);',
+            'fn reset_in(&self, models: &mut fret_runtime::ModelStore) {',
+            'reset_controls.reset_in(host.models_mut());',
+            'state.controls.reset_in(app.models_mut());',
+            'models_mut().update(',
             'let enabled = controls.enabled.paint_in(cx).value_or(true);',
             'let debug_input = controls.debug_input.paint_in(cx).value_or(false);',
             'Theme::global(&*cx.app).snapshot()',
@@ -919,6 +928,10 @@ SELECTED_GROUPED_STATE_POLICIES = [
 CheckMarkers = Callable[..., None]
 ReadSource = Callable[[Path], str]
 
+
+def append_policy_failure(failures: list[Any], path: Path, message: str) -> None:
+    failures.append(SimpleNamespace(path=path, line_no=None, message=message, line=None))
+
 CUSTOM_EFFECT_V2_WEB_OWNER_START = 'type CustomEffectV2WebModelStore = fret_runtime::ModelStore;'
 CUSTOM_EFFECT_V2_WEB_OWNER_END = 'pub struct CustomEffectV2WebWindowState'
 CUSTOM_EFFECT_V2_WEB_RESET_REQUIRED = [
@@ -949,6 +962,25 @@ CUSTOM_EFFECT_V2_IDENTITY_WEB_RESET_REQUIRED = [
     'self.set_model(&controls.mix01, vec![0.65])',
     'self.set_model(&controls.debug_input, false)',
 ]
+CUSTOM_EFFECT_V2_LUT_WEB_OWNER_START = (
+    'type CustomEffectV2LutWebModelStore = fret_runtime::ModelStore;'
+)
+CUSTOM_EFFECT_V2_LUT_WEB_OWNER_END = 'pub struct CustomEffectV2LutWebWindowState'
+CUSTOM_EFFECT_V2_LUT_WEB_RESET_REQUIRED = [
+    'self.set_model(&controls.enabled, true)',
+    'self.set_model(&controls.mode, Some(Arc::from("backdrop")))',
+    'self.set_model(&controls.quality, Some(Arc::from("high")))',
+    'self.set_model(&controls.sampling, Some(Arc::from("linear")))',
+    'self.set_model(&controls.uv_span, vec![1.0])',
+    'self.set_model(&controls.strength_px, vec![0.85])',
+    'self.set_model(&controls.max_sample_offset_px, vec![0.0])',
+    'self.set_model(&controls.tint_strength, vec![0.5])',
+    'self.set_model(&controls.blur_radius_px, vec![0.0])',
+    'self.set_model(&controls.blur_downsample, vec![1.0])',
+    'self.set_model(&controls.lens_corner_radius_px, vec![24.0])',
+    'self.set_model(&controls.tile_corner_radius_px, vec![18.0])',
+    'self.set_model(&controls.debug_input, false)',
+]
 CUSTOM_EFFECT_V2_OWNER_SLICES = {
     'custom_effect_v2_web_demo.rs': (
         CUSTOM_EFFECT_V2_WEB_OWNER_START,
@@ -960,12 +992,21 @@ CUSTOM_EFFECT_V2_OWNER_SLICES = {
         CUSTOM_EFFECT_V2_IDENTITY_WEB_OWNER_END,
         CUSTOM_EFFECT_V2_IDENTITY_WEB_RESET_REQUIRED,
     ),
+    'custom_effect_v2_lut_web_demo.rs': (
+        CUSTOM_EFFECT_V2_LUT_WEB_OWNER_START,
+        CUSTOM_EFFECT_V2_LUT_WEB_OWNER_END,
+        CUSTOM_EFFECT_V2_LUT_WEB_RESET_REQUIRED,
+    ),
 }
 CUSTOM_EFFECT_V2_OWNER_OUTSIDE_FORBIDDEN = [
     'ModelStore::update(',
     'ModelStore::update::<',
     'ModelStore::update_any(',
     'ModelStore::update_any::<',
+    'ModelStore>::update(',
+    'ModelStore>::update::<',
+    'ModelStore>::update_any(',
+    'ModelStore>::update_any::<',
     'self.models.update(',
     'self.models.update::<',
     'self.models.update_any(',
@@ -1015,20 +1056,41 @@ def check_selected_grouped_state_source_policies(
             owner_start_marker, owner_end_marker, reset_required = owner_slice
             owner_start = source.find(owner_start_marker)
             owner_end = source.find(owner_end_marker)
-            if owner_start >= 0 and owner_end > owner_start:
-                owner_source = source[owner_start:owner_end]
-                outside_owner_source = source[:owner_start] + source[owner_end:]
-                check_required_forbidden_markers(
+            if owner_start < 0:
+                append_policy_failure(
+                    failures,
                     path,
-                    owner_source,
-                    required=reset_required,
-                    forbidden=[],
-                    failures=failures,
+                    f"missing owner-slice start marker: {owner_start_marker}",
                 )
-                check_required_forbidden_markers(
+                continue
+            if owner_end < 0:
+                append_policy_failure(
+                    failures,
                     path,
-                    outside_owner_source,
-                    required=[],
-                    forbidden=CUSTOM_EFFECT_V2_OWNER_OUTSIDE_FORBIDDEN,
-                    failures=failures,
+                    f"missing owner-slice end marker: {owner_end_marker}",
                 )
+                continue
+            if owner_end <= owner_start:
+                append_policy_failure(
+                    failures,
+                    path,
+                    "owner-slice end marker appears before owner start marker",
+                )
+                continue
+
+            owner_source = source[owner_start:owner_end]
+            outside_owner_source = source[:owner_start] + source[owner_end:]
+            check_required_forbidden_markers(
+                path,
+                owner_source,
+                required=reset_required,
+                forbidden=[],
+                failures=failures,
+            )
+            check_required_forbidden_markers(
+                path,
+                outside_owner_source,
+                required=[],
+                forbidden=CUSTOM_EFFECT_V2_OWNER_OUTSIDE_FORBIDDEN,
+                failures=failures,
+            )

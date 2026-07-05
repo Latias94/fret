@@ -146,21 +146,50 @@ struct DemoControls {
     debug_input: Model<bool>,
 }
 
-impl DemoControls {
-    fn reset_in(&self, models: &mut fret_runtime::ModelStore) {
-        let _ = models.update(&self.enabled, |v| *v = true);
-        let _ = models.update(&self.mode, |v| *v = Some(Arc::from("backdrop")));
-        let _ = models.update(&self.quality, |v| *v = Some(Arc::from("high")));
-        let _ = models.update(&self.sampling, |v| *v = Some(Arc::from("linear")));
-        let _ = models.update(&self.uv_span, |v| *v = vec![1.0]);
-        let _ = models.update(&self.strength_px, |v| *v = vec![0.85]);
-        let _ = models.update(&self.max_sample_offset_px, |v| *v = vec![0.0]);
-        let _ = models.update(&self.tint_strength, |v| *v = vec![0.5]);
-        let _ = models.update(&self.blur_radius_px, |v| *v = vec![0.0]);
-        let _ = models.update(&self.blur_downsample, |v| *v = vec![1.0]);
-        let _ = models.update(&self.lens_corner_radius_px, |v| *v = vec![24.0]);
-        let _ = models.update(&self.tile_corner_radius_px, |v| *v = vec![18.0]);
-        let _ = models.update(&self.debug_input, |v| *v = false);
+type CustomEffectV2LutWebModelStore = fret_runtime::ModelStore;
+
+struct CustomEffectV2LutWebModelOwner<'a> {
+    models: &'a mut CustomEffectV2LutWebModelStore,
+}
+
+impl<'a> CustomEffectV2LutWebModelOwner<'a> {
+    fn new(models: &'a mut CustomEffectV2LutWebModelStore) -> Self {
+        Self { models }
+    }
+
+    fn set_model<T: std::any::Any>(&mut self, model: &Model<T>, value: T) -> bool {
+        self.models
+            .update(model, |current| {
+                *current = value;
+                true
+            })
+            .unwrap_or(false)
+    }
+
+    fn toggle_surface(&mut self, show: &Model<bool>) -> bool {
+        self.models
+            .update(show, |v| {
+                *v = !*v;
+                true
+            })
+            .unwrap_or(false)
+    }
+
+    fn reset_controls(&mut self, controls: &DemoControls) -> bool {
+        let mut changed = false;
+        changed = self.set_model(&controls.enabled, true) || changed;
+        changed = self.set_model(&controls.mode, Some(Arc::from("backdrop"))) || changed;
+        changed = self.set_model(&controls.quality, Some(Arc::from("high"))) || changed;
+        changed = self.set_model(&controls.sampling, Some(Arc::from("linear"))) || changed;
+        changed = self.set_model(&controls.uv_span, vec![1.0]) || changed;
+        changed = self.set_model(&controls.strength_px, vec![0.85]) || changed;
+        changed = self.set_model(&controls.max_sample_offset_px, vec![0.0]) || changed;
+        changed = self.set_model(&controls.tint_strength, vec![0.5]) || changed;
+        changed = self.set_model(&controls.blur_radius_px, vec![0.0]) || changed;
+        changed = self.set_model(&controls.blur_downsample, vec![1.0]) || changed;
+        changed = self.set_model(&controls.lens_corner_radius_px, vec![24.0]) || changed;
+        changed = self.set_model(&controls.tile_corner_radius_px, vec![18.0]) || changed;
+        self.set_model(&controls.debug_input, false) || changed
     }
 }
 
@@ -646,7 +675,7 @@ impl CustomEffectV2LutWebDriver {
 
         let reset_controls = controls.clone();
         let reset = on_activate_request_redraw(move |host| {
-            reset_controls.reset_in(host.models_mut());
+            CustomEffectV2LutWebModelOwner::new(host.models_mut()).reset_controls(&reset_controls);
         });
 
         let mut layout = LayoutStyle::default();
@@ -1189,13 +1218,13 @@ fn handle_event(
     if let fret_core::Event::KeyDown { key, .. } = event
         && *key == KeyCode::KeyV
     {
-        let _ = app.models_mut().update(&state.show, |v| *v = !*v);
+        let _ = CustomEffectV2LutWebModelOwner::new(app.models_mut()).toggle_surface(&state.show);
         app.request_redraw(window);
     }
     if let fret_core::Event::KeyDown { key, .. } = event
         && *key == KeyCode::KeyR
     {
-        state.controls.reset_in(app.models_mut());
+        CustomEffectV2LutWebModelOwner::new(app.models_mut()).reset_controls(&state.controls);
         app.request_redraw(window);
     }
 

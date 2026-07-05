@@ -176,6 +176,10 @@ fn assert_custom_effect_v2_web_model_writes_stay_behind_owner_helper(
         "ModelStore::update::<",
         "ModelStore::update_any(",
         "ModelStore::update_any::<",
+        "ModelStore>::update(",
+        "ModelStore>::update::<",
+        "ModelStore>::update_any(",
+        "ModelStore>::update_any::<",
         "models.update(",
         "models.update::<",
         "models.update_any(",
@@ -644,6 +648,41 @@ fn custom_effect_v2_identity_web_model_writes_stay_behind_owner_helper() {
                 "self.set_model(&controls.sampling, Some(Arc::from(\"linear\")))",
                 "self.set_model(&controls.uv_span, vec![1.0])",
                 "self.set_model(&controls.mix01, vec![0.65])",
+                "self.set_model(&controls.debug_input, false)",
+            ],
+        },
+    );
+}
+
+#[test]
+fn custom_effect_v2_lut_web_model_writes_stay_behind_owner_helper() {
+    let source = include_str!("../src/custom_effect_v2_lut_web_demo.rs");
+    assert_custom_effect_v2_web_model_writes_stay_behind_owner_helper(
+        CustomEffectV2WebModelOwnerContract {
+            label: "custom_effect_v2_lut_web_demo",
+            source,
+            model_store_alias: "type CustomEffectV2LutWebModelStore = fret_runtime::ModelStore;",
+            owner_struct: "struct CustomEffectV2LutWebModelOwner<'a> {",
+            state_struct: "pub struct CustomEffectV2LutWebWindowState",
+            reset_controls_sig: "fn reset_controls(&mut self, controls: &DemoControls) -> bool",
+            call_markers: &[
+                "CustomEffectV2LutWebModelOwner::new(host.models_mut()).reset_controls(&reset_controls);",
+                "CustomEffectV2LutWebModelOwner::new(app.models_mut()).toggle_surface(&state.show);",
+                "CustomEffectV2LutWebModelOwner::new(app.models_mut()).reset_controls(&state.controls);",
+            ],
+            reset_markers: &[
+                "self.set_model(&controls.enabled, true)",
+                "self.set_model(&controls.mode, Some(Arc::from(\"backdrop\")))",
+                "self.set_model(&controls.quality, Some(Arc::from(\"high\")))",
+                "self.set_model(&controls.sampling, Some(Arc::from(\"linear\")))",
+                "self.set_model(&controls.uv_span, vec![1.0])",
+                "self.set_model(&controls.strength_px, vec![0.85])",
+                "self.set_model(&controls.max_sample_offset_px, vec![0.0])",
+                "self.set_model(&controls.tint_strength, vec![0.5])",
+                "self.set_model(&controls.blur_radius_px, vec![0.0])",
+                "self.set_model(&controls.blur_downsample, vec![1.0])",
+                "self.set_model(&controls.lens_corner_radius_px, vec![24.0])",
+                "self.set_model(&controls.tile_corner_radius_px, vec![18.0])",
                 "self.set_model(&controls.debug_input, false)",
             ],
         },
