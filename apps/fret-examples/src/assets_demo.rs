@@ -1,12 +1,17 @@
 use std::sync::Arc;
 
-use fret::advanced::kernel::core::{ImageColorSpace, SvgId};
-use fret::advanced::kernel::ui::element::{ImageProps, SvgIconProps};
-use fret::app::ui_assets;
-use fret::{FretApp, advanced::prelude::*, component::prelude::*, shadcn};
-use fret_ui_assets::{UiAssets, image_asset_state, svg_asset_state};
-use fret_ui_kit::declarative::{style as decl_style, text as decl_text};
-use fret_ui_kit::{ColorRef, IntoUiElement, LayoutRefinement, Radius, Space, ui};
+use fret::advanced::driver::UiAppBuilderAdvancedExt as _;
+use fret::advanced::kernel::core::{ImageColorSpace, ImageId, SvgFit, SvgId, UiServices};
+use fret::advanced::kernel::ui::{
+    SvgSource,
+    element::{ImageProps, SvgIconProps},
+};
+use fret::app::AppComponentCx;
+use fret::app::prelude::*;
+use fret::style::{ColorRef, LayoutRefinement, Radius, Space, ThemeSnapshot};
+use fret_ui_assets::{image_asset_state, svg_asset_state};
+use fret_ui_kit::IntoUiElement;
+use fret_ui_kit::declarative::{GlobalWatchExt as _, style as decl_style, text as decl_text};
 
 static DEMO_SVG: &[u8] = br##"
 <svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
@@ -21,13 +26,7 @@ struct AssetsDemoSvg {
     svg: SvgId,
 }
 
-#[derive(Debug, Default, Clone, Copy)]
-struct AssetsDemoImageEvents {
-    registered: u64,
-    failed: u64,
-}
-
-fn install_demo_theme(app: &mut KernelApp) {
+fn install_demo_theme(app: &mut App) {
     shadcn::themes::apply_shadcn_new_york(
         app,
         shadcn::themes::ShadcnBaseColor::Slate,
@@ -38,7 +37,7 @@ fn install_demo_theme(app: &mut KernelApp) {
 pub fn run() -> anyhow::Result<()> {
     FretApp::new("assets-demo")
         .window("assets_demo", (720.0, 520.0))
-        .view_with_hooks::<AssetsDemoView>(|d| d.on_event(on_event))?
+        .view::<AssetsDemoView>()?
         .with_ui_assets_budgets(64 * 1024 * 1024, 2048, 16 * 1024 * 1024, 4096)
         .setup(install_demo_theme)
         .on_gpu_ready(|app, _context, renderer| {
@@ -54,83 +53,12 @@ pub fn run() -> anyhow::Result<()> {
 struct AssetsDemoView;
 
 impl View for AssetsDemoView {
-    fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self {
+    fn init(_app: &mut App, _window: WindowId) -> Self {
         Self
     }
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         render_view(cx)
-    }
-}
-
-fn on_event(
-    app: &mut KernelApp,
-    _services: &mut dyn UiServices,
-    window: AppWindowId,
-    _ui: &mut fret::advanced::raw::UiTree<KernelApp>,
-    _state: &mut fret::advanced::view::ViewWindowState<AssetsDemoView>,
-    event: &Event,
-) {
-    match event {
-        Event::ImageRegistered { .. } => {
-            let log_events = std::env::var_os("FRET_ASSETS_DEMO_LOG_IMAGE_EVENTS")
-                .is_some_and(|v| !v.is_empty());
-            let log_stats =
-                std::env::var_os("FRET_ASSETS_DEMO_LOG_STATS").is_some_and(|v| !v.is_empty());
-
-            if log_events {
-                eprintln!("[assets_demo] ImageRegistered window={window:?}");
-            }
-            if log_stats {
-                let images = UiAssets::image_stats(app);
-                let svgs = UiAssets::svg_stats(app);
-                eprintln!(
-                    "[assets_demo] stats images(ready={} pending={} failed={} bytes={} / {}) svgs(ready={} bytes={} / {})",
-                    images.ready_count,
-                    images.pending_count,
-                    images.failed_count,
-                    images.bytes_ready,
-                    images.bytes_budget,
-                    svgs.ready_count,
-                    svgs.bytes_ready,
-                    svgs.bytes_budget
-                );
-            }
-            app.with_global_mut(AssetsDemoImageEvents::default, |c, app| {
-                c.registered = c.registered.saturating_add(1);
-                app.request_redraw(window);
-            });
-        }
-        Event::ImageRegisterFailed { .. } => {
-            let log_events = std::env::var_os("FRET_ASSETS_DEMO_LOG_IMAGE_EVENTS")
-                .is_some_and(|v| !v.is_empty());
-            let log_stats =
-                std::env::var_os("FRET_ASSETS_DEMO_LOG_STATS").is_some_and(|v| !v.is_empty());
-
-            if log_events {
-                eprintln!("[assets_demo] ImageRegisterFailed window={window:?}");
-            }
-            if log_stats {
-                let images = UiAssets::image_stats(app);
-                let svgs = UiAssets::svg_stats(app);
-                eprintln!(
-                    "[assets_demo] stats images(ready={} pending={} failed={} bytes={} / {}) svgs(ready={} bytes={} / {})",
-                    images.ready_count,
-                    images.pending_count,
-                    images.failed_count,
-                    images.bytes_ready,
-                    images.bytes_budget,
-                    svgs.ready_count,
-                    svgs.bytes_ready,
-                    svgs.bytes_budget
-                );
-            }
-            app.with_global_mut(AssetsDemoImageEvents::default, |c, app| {
-                c.failed = c.failed.saturating_add(1);
-                app.request_redraw(window);
-            });
-        }
-        _ => {}
     }
 }
 
@@ -160,12 +88,6 @@ where
     };
 
     let svg = cx.watch_global::<AssetsDemoSvg>().layout().map(|v| v.svg);
-
-    let image_events = cx
-        .watch_global::<AssetsDemoImageEvents>()
-        .layout()
-        .copied()
-        .unwrap_or_default();
 
     let header = shadcn::CardHeader::new([
         shadcn::CardTitle::new("UI Assets (Golden Path)").into_element(cx),
@@ -203,11 +125,10 @@ where
                 svg_stats.ready_count, svg_stats.bytes_ready, svg_stats.bytes_budget
             ),
             format!(
-                "Debug: window={:?} image_key={} events(registered={}, failed={})",
+                "Debug: window={:?} image_key={} status={:?}",
                 cx.window,
                 image_key.as_u64(),
-                image_events.registered,
-                image_events.failed
+                image_status
             ),
         ];
 
@@ -233,7 +154,7 @@ where
     let card = shadcn::Card::new([header, content])
         .ui()
         .w_full()
-        .max_w(fret_core::Px(560.0))
+        .max_w(Px(560.0))
         .into_element(cx);
 
     assets_page(cx, &theme, card)
@@ -241,7 +162,7 @@ where
 
 fn assets_page<C>(cx: &mut AppComponentCx<'_>, theme: &ThemeSnapshot, card: C) -> Ui
 where
-    C: IntoUiElement<KernelApp>,
+    C: IntoUiElement<App>,
 {
     ui::container(move |cx| {
         ui::children![
@@ -265,11 +186,11 @@ fn render_image_panel(
     cx: &mut AppComponentCx<'_>,
     theme: &ThemeSnapshot,
     frame: u64,
-    image: Option<fret_core::ImageId>,
+    image: Option<ImageId>,
     status: image_asset_state::ImageLoadingStatus,
     error: Option<Arc<str>>,
     stats: fret_ui_assets::image_asset_cache::ImageAssetStats,
-) -> impl IntoUiElement<KernelApp> + use<> {
+) -> impl IntoUiElement<App> + use<> {
     let title = match status {
         image_asset_state::ImageLoadingStatus::Idle => "Image (idle)",
         image_asset_state::ImageLoadingStatus::Loading => "Image (loading...)",
@@ -289,8 +210,8 @@ fn render_image_panel(
     .border_1()
     .border_color(ColorRef::Color(theme.color_token("border")))
     .rounded(Radius::Lg)
-    .w_px(fret_core::Px(160.0))
-    .h_px(fret_core::Px(160.0))
+    .w_px(Px(160.0))
+    .h_px(Px(160.0))
     .overflow_hidden()
     .into_element(cx);
 
@@ -333,17 +254,15 @@ fn render_image_panel(
 fn render_svg_panel(
     cx: &mut AppComponentCx<'_>,
     theme: &ThemeSnapshot,
-    svg: Option<fret_core::SvgId>,
-) -> impl IntoUiElement<KernelApp> + use<> {
+    svg: Option<SvgId>,
+) -> impl IntoUiElement<App> + use<> {
     let icon = if let Some(svg) = svg {
-        let mut props = SvgIconProps::new(fret_ui::SvgSource::Id(svg));
+        let mut props = SvgIconProps::new(SvgSource::Id(svg));
         props.layout = decl_style::layout_style(
             theme,
-            LayoutRefinement::default()
-                .w_px(fret_core::Px(160.0))
-                .h_px(fret_core::Px(160.0)),
+            LayoutRefinement::default().w_px(Px(160.0)).h_px(Px(160.0)),
         );
-        props.fit = fret_core::SvgFit::Contain;
+        props.fit = SvgFit::Contain;
         props.color = theme.color_token("foreground");
         Some(props)
     } else {

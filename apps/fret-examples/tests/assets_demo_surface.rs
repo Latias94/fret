@@ -8,8 +8,9 @@ fn assets_demo_uses_app_ui_assets_facade_for_render_helpers() {
     let source = compact(source);
 
     for needle in [
-        "usefret::app::ui_assets;",
+        "usefret::app::prelude::*;",
         "Cx:fret::app::AppRenderContext<'a>,",
+        ".view::<AssetsDemoView>()?",
         "ui_assets::rgba8_image_state(cx,96,96,checker_rgba.as_slice(),ImageColorSpace::Srgb)",
         "letimage_stats=ui_assets::image_stats(cx);",
         "letsvg_stats=ui_assets::svg_stats(cx);",
@@ -26,6 +27,12 @@ fn assets_demo_uses_app_ui_assets_facade_for_render_helpers() {
         "image_stats_in(cx)",
         "svg_stats_in(cx)",
         "Cx:fret::app::RenderContextAccess<'a,KernelApp>,",
+        "advanced::prelude::*",
+        "component::prelude::*",
+        "view_with_hooks::<AssetsDemoView>",
+        "fnon_event(",
+        "fret::advanced::raw::UiTree",
+        "AssetsDemoImageEvents",
     ] {
         assert!(
             !source.contains(needle),
