@@ -25,7 +25,24 @@
 //!   already implement `fret_launch::WinitAppDriver`, or for code that already holds a fully built
 //!   driver value.
 //!
-//! Minimal example (native):
+//! UI app “golden path” example (native, requires the `ui-app-driver` feature):
+//!
+//! ```no_run
+//! # #[cfg(all(not(target_arch = "wasm32"), feature = "launch", feature = "ui-app-driver"))]
+//! # fn demo() -> Result<(), Box<dyn std::error::Error>> {
+//! let builder = fret_bootstrap::ui_app(
+//!     "todo",
+//!     |_app, _window| (),
+//!     |_cx, _state| fret_bootstrap::ui_app_driver::ViewElements::default(),
+//! )
+//!     .with_default_config_files()?
+//!     .register_icon_pack(|_icons| {});
+//! builder.run()?;
+//! # Ok(())
+//! # }
+//! ```
+//!
+//! Advanced/manual driver example (native):
 //!
 //! ```no_run
 //! # #[cfg(feature = "launch")]
@@ -37,25 +54,6 @@
 //! # fn render(_d: &mut (), _cx: fret_launch::WinitRenderContext<'_, ()>) {}
 //! #
 //! let builder = BootstrapBuilder::new_fn(App::new(), (), |_d, _app, _w| (), event, render)
-//!     .with_default_config_files()?
-//!     .register_icon_pack(|_icons| {});
-//! builder.run()?;
-//! # Ok(())
-//! # }
-//! ```
-//!
-//! UI app “golden path” example (native, requires the `ui-app-driver` feature):
-//!
-//! ```no_run
-//! # #[cfg(all(not(target_arch = "wasm32"), feature = "launch", feature = "ui-app-driver"))]
-//! # fn demo() -> Result<(), Box<dyn std::error::Error>> {
-//! use fret_bootstrap::BootstrapBuilder;
-//!
-//! let builder = fret_bootstrap::ui_app(
-//!     "todo",
-//!     |_app, _window| (),
-//!     |_cx, _state| fret_bootstrap::ui_app_driver::ViewElements::default(),
-//! )
 //!     .with_default_config_files()?
 //!     .register_icon_pack(|_icons| {});
 //! builder.run()?;

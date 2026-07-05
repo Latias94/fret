@@ -9,31 +9,6 @@
 //! - it is **not** the repository?s canonical example host; runnable lessons stay in app-owned
 //!   surfaces such as `apps/fret-cookbook`, `apps/fret-ui-gallery`, and other app shells.
 //!
-//! ## Choosing a native entry path
-//!
-//! `FretApp::new(...)` is available in the backend-free `app` profile as an app-authoring spec.
-//! Native window creation, `view::<V>()?`, `UiAppBuilder`, and `.run()` are `desktop` surfaces.
-//!
-//! - `fret::FretApp::new(...).window(...).view::<V>()?` is the recommended app-author path.
-//! - `fret::FretApp::new(...).window(...).view_with_hooks::<V>(...)?` is the recommended advanced
-//!   app-author path when driver hooks are required.
-//! - `fret::advanced::ui_app(...)` and `fret::advanced::ui_app_with_hooks(...)` are the
-//!   recommended explicit manual-assembly entry points when you want the golden-path UI app
-//!   builder without depending on `fret-bootstrap` directly.
-//! - `fret::advanced::view::render_root_with_app_ui(...)` is the recommended bridge when a manual
-//!   `UiTree` / `FnDriver` surface still wants grouped `AppUi` + `LocalState` authoring without
-//!   switching the whole window to `View`.
-//! - `fret::advanced::run_native_with_fn_driver(...)`,
-//!   `fret::advanced::run_native_with_fn_driver_with_hooks(...)`, and
-//!   `fret::advanced::run_native_with_configured_fn_driver(...)` are the recommended advanced
-//!   escape hatches when you need runner-level customization but still want the `fret`
-//!   defaults/bootstrap story.
-//! - `fret::advanced::interop::run_native_with_compat_driver(...)` is an advanced low-level
-//!   interop path (non-default) for retained/bridge integrations that still implement
-//!   `fret_launch::WinitAppDriver` directly.
-//! - `fret::advanced::kernel::*` and `fret::advanced::interop::*` keep low-level runtime,
-//!   rendering, and viewport/foreign-surface seams explicit on the advanced lane.
-//!
 //! ## Getting started (desktop)
 //!
 //! ```no_run
@@ -65,6 +40,25 @@
 //! placement or stepwise resizing is part of the product surface.
 //! For multi-window apps that rely on fallback-created auxiliary windows, configure
 //! `.with_default_window(...)` and related `with_default_window_*` methods on `UiAppBuilder`.
+//!
+//! ## Choosing a native entry path
+//!
+//! `FretApp::new(...)` is available in the backend-free `app` profile as an app-authoring spec.
+//! Native window creation, `view::<V>()?`, `UiAppBuilder`, and `.run()` are `desktop` surfaces.
+//!
+//! - Default app path: `fret::FretApp::new(...).window(...).view::<V>()?`.
+//! - App-author hooks: `fret::FretApp::new(...).window(...).view_with_hooks::<V>(...)?` when a
+//!   window needs lifecycle hooks but should still read as a `View` app.
+//! - Advanced/manual assembly: `fret::advanced::ui_app(...)`,
+//!   `fret::advanced::ui_app_with_hooks(...)`,
+//!   `fret::advanced::view::render_root_with_app_ui(...)`,
+//!   `fret::advanced::run_native_with_fn_driver(...)`,
+//!   `fret::advanced::run_native_with_fn_driver_with_hooks(...)`, and
+//!   `fret::advanced::run_native_with_configured_fn_driver(...)`.
+//! - Compat interop: `fret::advanced::interop::run_native_with_compat_driver(...)` for retained or
+//!   bridge integrations that still implement `fret_launch::WinitAppDriver` directly.
+//! - Low-level runtime/rendering seams stay explicit under `fret::advanced::kernel::*` and
+//!   `fret::advanced::interop::*`.
 //!
 //! Optional ecosystem extensions stay explicit:
 //!
@@ -3523,9 +3517,17 @@ mod authoring_surface_policy_tests {
     #[test]
     fn crate_docs_only_teach_view_entry() {
         let rustdoc = crate_rustdoc();
+        let getting_started = rustdoc
+            .find("//! ## Getting started (desktop)")
+            .expect("rustdoc should lead with the default app skeleton");
+        let choosing_entry = rustdoc
+            .find("//! ## Choosing a native entry path")
+            .expect("rustdoc should still include progressive entry-path guidance");
+        assert!(getting_started < choosing_entry);
         assert!(rustdoc.contains(
-            "//! - `fret::FretApp::new(...).window(...).view::<V>()?` is the recommended app-author path."
+            "//! - Default app path: `fret::FretApp::new(...).window(...).view::<V>()?`."
         ));
+        assert!(rustdoc.contains("//! - Advanced/manual assembly:"));
         assert!(rustdoc.contains("use fret::app::prelude::*;"));
         assert!(rustdoc.contains("FretApp::new(\"hello\")"));
         assert!(rustdoc.contains("&mut App"));

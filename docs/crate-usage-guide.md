@@ -830,6 +830,10 @@ directly for pure state transitions.
 policy/defaults and logical asset vocabulary; the `launch` feature enables the concrete
 `fret-launch` / `fret-render` adapter layer.
 
+Most apps should start with `fret`; depend on `fret-bootstrap` directly only for manual assembly,
+host/runner integration, facade/tooling crates, or tests that intentionally exercise bootstrap
+policy without the full app facade.
+
 **Use it when:** you want:
 
 - layered settings/keymap loading,
