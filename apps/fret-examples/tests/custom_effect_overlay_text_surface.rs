@@ -168,7 +168,7 @@ fn assert_postprocess_theme_overlay_text_roles(source: &str) {
     let source = compact(source);
 
     for needle in [
-        "usefret::app::AppRenderContext;",
+        "usefret::app::{AppComponentCx,AppRenderContext,LocalState};",
         "usefret_ui_kit::declarative::textasdecl_text;",
         "fnpostprocess_title_text<'a,Cx>(",
         "fnpostprocess_readout_text<'a,Cx>(",
@@ -366,6 +366,48 @@ fn custom_effect_v3_demo_uses_app_view_imports_with_explicit_effect_hooks() {
         assert!(
             !source.contains(forbidden),
             "custom_effect_v3_demo should not reintroduce broad or kernel-facing imports: `{forbidden}`",
+        );
+    }
+}
+
+#[test]
+fn postprocess_theme_demo_uses_app_view_imports_with_explicit_effect_hook() {
+    let source = include_str!("../src/postprocess_theme_demo.rs");
+    let compact = compact(source);
+
+    for needle in [
+        "usefret::advanced::driver::UiAppBuilderAdvancedExtas_;",
+        "usefret::advanced::raw::{LocalStateElementContextExtas_,LocalStateRawModelExtas_};",
+        "usefret::app::prelude::*;",
+        "usefret::app::{AppComponentCx,AppRenderContext,LocalState};",
+        "usefret_ui::Theme;",
+        "usefret_ui_kit::declarative::action_hooks::ActionHooksExtas_;",
+        "usefret_ui_kit::{IntoUiElement,IntoUiElementInExtas_,LayoutRefinement,Space,UiSupportsLayoutas_,ui,};",
+        "usefret_ui_shadcn::facadeasshadcn;",
+        ".view::<ThemePostprocessView>()?",
+        ".install_custom_effects(install_custom_effect)",
+        "fninstall_demo_theme(app:&mutApp)",
+        "fninstall_custom_effect(app:&mutApp,effects:&mutdynfret_core::CustomEffectService)",
+        "fninit(_app:&mutApp,_window:WindowId)->Self",
+        "implIntoUiElement<App>",
+    ] {
+        assert!(
+            compact.contains(needle),
+            "postprocess_theme_demo should keep app view imports and explicit effect hook; missing `{needle}`",
+        );
+    }
+
+    for forbidden in [
+        "use fret::{FretApp",
+        "advanced::prelude::*",
+        "component::prelude::*",
+        "KernelApp",
+        "AppWindowId",
+        "ViewElements",
+    ] {
+        assert!(
+            !source.contains(forbidden),
+            "postprocess_theme_demo should not reintroduce broad or kernel-facing imports: `{forbidden}`",
         );
     }
 }

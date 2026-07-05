@@ -12,21 +12,27 @@
 
 use std::sync::Arc;
 
+use fret::advanced::driver::UiAppBuilderAdvancedExt as _;
 use fret::advanced::raw::{LocalStateElementContextExt as _, LocalStateRawModelExt as _};
-use fret::app::AppRenderContext;
-use fret::{FretApp, advanced::prelude::*, component::prelude::*, shadcn};
+use fret::app::prelude::*;
+use fret::app::{AppComponentCx, AppRenderContext, LocalState};
 use fret_core::scene::{
     DitherMode, EffectChain, EffectMode, EffectParamsV1, EffectQuality, EffectStep,
 };
 use fret_core::{Color, Corners, Edges, EffectId, Px};
+use fret_ui::Theme;
 use fret_ui::element::{
     AnyElement, ContainerProps, EffectLayerProps, LayoutStyle, Length, Overflow, PositionStyle,
     SpacerProps,
 };
 use fret_ui_kit::custom_effects::CustomEffectProgramV1;
+use fret_ui_kit::declarative::UiElementTestIdExt as _;
+use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::text as decl_text;
-use fret_ui_kit::ui;
-use fret_ui_kit::{IntoUiElement, IntoUiElementInExt as _, Space};
+use fret_ui_kit::{
+    IntoUiElement, IntoUiElementInExt as _, LayoutRefinement, Space, UiSupportsLayout as _, ui,
+};
+use fret_ui_shadcn::facade as shadcn;
 
 mod act {
     fret::actions!([Reset = "postprocess_theme_demo.reset.v1"]);
@@ -48,7 +54,7 @@ where
         .inherit_foreground(srgb(255, 255, 255, 0.68))
 }
 
-fn install_demo_theme(app: &mut KernelApp) {
+fn install_demo_theme(app: &mut App) {
     shadcn::themes::apply_shadcn_new_york(
         app,
         shadcn::themes::ShadcnBaseColor::Slate,
@@ -189,7 +195,7 @@ pub fn run() -> anyhow::Result<()> {
         .map_err(anyhow::Error::from)
 }
 
-fn install_custom_effect(app: &mut KernelApp, effects: &mut dyn fret_core::CustomEffectService) {
+fn install_custom_effect(app: &mut App, effects: &mut dyn fret_core::CustomEffectService) {
     let mut program = CustomEffectProgramV1::wgsl_utf8(WGSL);
     let id = program
         .ensure_registered(effects)
@@ -219,7 +225,7 @@ impl ThemePostprocessState {
 }
 
 impl View for ThemePostprocessView {
-    fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self {
+    fn init(_app: &mut App, _window: WindowId) -> Self {
         Self
     }
 
@@ -346,7 +352,7 @@ fn inspector(
     grain_scale: f32,
     retro_pixel_scale: f32,
     retro_dither: bool,
-) -> impl IntoUiElement<KernelApp> + use<> {
+) -> impl IntoUiElement<App> + use<> {
     let theme_snapshot = Theme::global(&*cx.app).snapshot();
 
     let enabled_model = st.enabled.clone_model();
@@ -556,7 +562,7 @@ fn stage(
     grain_scale: f32,
     retro_pixel_scale: f32,
     retro_dither: bool,
-) -> impl IntoUiElement<KernelApp> + use<> {
+) -> impl IntoUiElement<App> + use<> {
     let mut layout = LayoutStyle::default();
     layout.size.width = Length::Fill;
     layout.size.height = Length::Fill;
@@ -679,7 +685,7 @@ fn stage_body(
     cx: &mut AppComponentCx<'_>,
     postprocess_applied: bool,
     label: &str,
-) -> impl IntoUiElement<KernelApp> + use<> {
+) -> impl IntoUiElement<App> + use<> {
     let mut layout = LayoutStyle::default();
     layout.size.width = Length::Fill;
     layout.size.height = Length::Fill;
@@ -748,7 +754,7 @@ fn stage_body(
     )
 }
 
-fn stage_cards(cx: &mut AppComponentCx<'_>) -> impl IntoUiElement<KernelApp> + use<> {
+fn stage_cards(cx: &mut AppComponentCx<'_>) -> impl IntoUiElement<App> + use<> {
     let theme_snapshot = Theme::global(&*cx.app).snapshot();
 
     let card = |cx: &mut AppComponentCx<'_>, title: &str, subtitle: &str| {
