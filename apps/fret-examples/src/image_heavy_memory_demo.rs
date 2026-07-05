@@ -2,8 +2,11 @@
 
 use std::sync::Arc;
 
-use fret::{FretApp, advanced::prelude::*};
-use fret_core::{AlphaMode, AppWindowId, ImageColorSpace, ImageId, Px};
+use fret::advanced::driver::UiAppBuilderAdvancedExt as _;
+use fret::advanced::view::ViewWindowState;
+use fret::app::ElementContextAccess;
+use fret::app::prelude::*;
+use fret_core::{AlphaMode, ImageColorSpace, ImageId, Px};
 use fret_render::{ImageDescriptor, Renderer, WgpuContext, write_rgba8_texture_region};
 use fret_ui::element::{
     FlexProps, ImageProps, LayoutStyle, Length, ScrollProps, SizeStyle, SpacingEdges, SpacingLength,
@@ -42,7 +45,7 @@ pub fn run() -> anyhow::Result<()> {
 }
 
 impl View for ImageHeavyMemoryView {
-    fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self {
+    fn init(_app: &mut App, _window: WindowId) -> Self {
         Self
     }
 
@@ -52,10 +55,10 @@ impl View for ImageHeavyMemoryView {
 }
 
 fn record_engine_frame(
-    app: &mut KernelApp,
-    _window: AppWindowId,
-    _ui: &mut fret_ui::UiTree<KernelApp>,
-    _st: &mut fret::advanced::view::ViewWindowState<ImageHeavyMemoryView>,
+    app: &mut App,
+    _window: WindowId,
+    _ui: &mut fret_ui::UiTree<App>,
+    _st: &mut ViewWindowState<ImageHeavyMemoryView>,
     context: &WgpuContext,
     renderer: &mut Renderer,
     _dt_s: f32,
@@ -100,7 +103,7 @@ fn record_engine_frame(
     fret_launch::EngineFrameUpdate::default()
 }
 
-fn upload_images(app: &mut KernelApp, context: &WgpuContext, renderer: &mut Renderer) {
+fn upload_images(app: &mut App, context: &WgpuContext, renderer: &mut Renderer) {
     let count: usize = std::env::var("FRET_IMAGE_HEAVY_DEMO_COUNT")
         .ok()
         .and_then(|v| v.trim().parse::<usize>().ok())
@@ -181,7 +184,7 @@ fn upload_images(app: &mut KernelApp, context: &WgpuContext, renderer: &mut Rend
 
 fn render_view<'a, Cx>(cx: &mut Cx) -> Ui
 where
-    Cx: fret::app::ElementContextAccess<'a, KernelApp>,
+    Cx: ElementContextAccess<'a, App>,
 {
     let cx = cx.elements();
     let images = cx
