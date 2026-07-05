@@ -78,7 +78,8 @@ pub use raw::{
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 pub use runtime::view_record_engine_frame;
 pub use runtime::{
-    AppUiRenderRootState, ViewWindowState, render_root_with_app_ui, view_init_window, view_view,
+    AppUiRenderRootState, ViewWindowState, render_root_with_app_ui, view_child, view_child_with,
+    view_init_window, view_view,
 };
 pub use shell::AppUi;
 pub use state::AppUiState;
@@ -2574,6 +2575,10 @@ mod tests {
         let api_source = view_authoring_api_source();
 
         assert!(api_source.contains("#[doc(hidden)]\npub struct LocalStateTxn<'a>"));
+        assert!(
+            api_source.contains("pub fn update_shared_model<T: Any>("),
+            "LocalStateTxn should expose the narrow shared-model bridge instead of forcing default app code back to ModelStore"
+        );
         assert!(api_source.contains("#[doc(hidden)]\npub trait LocalActionCapture"));
         assert!(
             api_source.contains(

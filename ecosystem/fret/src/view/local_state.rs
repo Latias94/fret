@@ -262,6 +262,20 @@ impl<'a> LocalStateTxn<'a> {
     ) -> bool {
         local.update_in_if(self.models, f)
     }
+
+    /// Update an existing shared `Model<T>` while staying inside a LocalState-first action
+    /// transaction.
+    ///
+    /// Prefer [`Self::update`] for ordinary view-owned state. Use this only when a default app
+    /// surface already receives a shared model handle from a parent component and should not reopen
+    /// the broader `ModelStore` action API just to coordinate one shared readout.
+    pub fn update_shared_model<T: Any>(
+        &mut self,
+        model: &Model<T>,
+        f: impl FnOnce(&mut T),
+    ) -> bool {
+        self.models.update(model, f).is_ok()
+    }
 }
 
 /// Hidden capture helper for `locals_with(...)`.

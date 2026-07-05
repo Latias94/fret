@@ -120,7 +120,8 @@ pub(super) fn preview_command_palette(cx: &mut AppComponentCx<'_>) -> Vec<AnyEle
             .test_id_prefix("ui-gallery-command-action-first-view-runtime")
             .descriptions([
                 "This section demonstrates action-first authoring using the ecosystem view runtime (`View` + `AppUi`).",
-                "The button binds a stable `ActionId` via `.action(...)`, while the view root stays on the grouped default surface (`cx.state()` + `cx.actions().models::<...>(...)`).",
+                "The button binds a stable `ActionId` via `.action(...)`, while the view root stays on the grouped default surface (`cx.state()` + `cx.actions().locals_with(...).on::<...>(...)`).",
+                "The section embeds the view through `fret::app::view_child_with(...)`, so copyable code no longer needs `ViewWindowState`, `view_init_window`, or `view_view`.",
                 "Advanced host-side action-handler cases stay in cookbook/reference docs; the gallery keeps the default teaching path small on purpose.",
             ])
             .code_rust_from_file_region(snippets::action_first_view::SOURCE, "example");

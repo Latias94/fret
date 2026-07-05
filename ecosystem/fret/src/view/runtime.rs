@@ -1,3 +1,6 @@
+use std::cell::RefCell;
+use std::rc::Rc;
+
 use fret_core::AppWindowId;
 use fret_ui::action::{OnCommand, OnCommandAvailability};
 use fret_ui::{ElementContext, UiHost};
@@ -120,6 +123,77 @@ pub fn view_view<'a, V: View>(
         cached_action_root,
         |app_ui| view.render(app_ui),
     )
+}
+
+/// Render a stateful [`View`] as a single child inside an app-hosted component tree.
+///
+/// This is the app-facing bridge for gallery snippets, app-local component helpers, and other
+/// ordinary `AppComponentCx` call sites that want `View` + `AppUi` authoring without owning
+/// `ViewWindowState` or calling advanced runtime helpers directly.
+#[track_caller]
+pub fn view_child<V>(
+    cx: &mut crate::AppComponentCx<'_>,
+    name: &'static str,
+) -> impl crate::UiChild + use<V>
+where
+    V: View,
+{
+    view_child_with::<V, _>(cx, name, |_| {})
+}
+
+/// Render a stateful [`View`] as a single child and update the view instance before rendering.
+///
+/// The `configure` callback is intended for app-local bridges that need to pass existing app
+/// handles into an embedded view each frame, while keeping the retained view state and action-hook
+/// cache hidden behind the app facade.
+#[track_caller]
+pub fn view_child_with<V, F>(
+    cx: &mut crate::AppComponentCx<'_>,
+    name: &'static str,
+    configure: F,
+) -> impl crate::UiChild + use<V, F>
+where
+    V: View,
+    F: FnOnce(&mut V),
+{
+    let mut configure = Some(configure);
+    cx.named(name, move |cx| {
+        let slot = cx.slot_id();
+        let state = cx.state_for(
+            slot,
+            || None::<Rc<RefCell<ViewWindowState<V>>>>,
+            |slot| slot.clone(),
+        );
+        let state = match state {
+            Some(state) => state,
+            None => {
+                let state = Rc::new(RefCell::new(view_init_window::<V>(&mut *cx.app, cx.window)));
+                cx.state_for(
+                    slot,
+                    || None::<Rc<RefCell<ViewWindowState<V>>>>,
+                    |slot| {
+                        if slot.is_none() {
+                            *slot = Some(state.clone());
+                        }
+                        slot.clone()
+                            .expect("embedded view slot must contain state after init")
+                    },
+                )
+            }
+        };
+
+        let mut state = state.borrow_mut();
+        let configure = configure
+            .take()
+            .expect("embedded view configure callback should run once");
+        configure(&mut state.view);
+
+        view_view(cx, &mut *state)
+            .into_vec()
+            .into_iter()
+            .next()
+            .expect("embedded View must render at least one root element")
+    })
 }
 
 /// Render a manual declarative root through the grouped `AppUi` authoring surface.

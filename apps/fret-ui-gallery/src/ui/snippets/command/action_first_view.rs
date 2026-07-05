@@ -1,20 +1,14 @@
 pub const SOURCE: &str = include_str!("action_first_view.rs");
 
 // region: example
-#[cfg(not(target_arch = "wasm32"))]
-use std::cell::RefCell;
-#[cfg(not(target_arch = "wasm32"))]
-use std::rc::Rc;
 use std::sync::Arc;
 
-use fret::advanced::prelude::*;
-use fret::advanced::raw::LocalStateModelStoreExt;
-use fret::app::App;
-use fret::component::prelude::*;
-use fret::{AppComponentCx, UiChild};
+use fret::AppComponentCx;
+use fret::app::prelude::*;
+use fret::style::Space;
 use fret_runtime::Model;
 use fret_ui::CommandAvailability;
-use fret_ui_kit::{IntoUiElementInExt as _, declarative::text as decl_text};
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_shadcn::facade as shadcn;
 
 mod act {
@@ -27,7 +21,7 @@ struct ActionFirstViewRuntimeDemo {
 }
 
 impl View for ActionFirstViewRuntimeDemo {
-    fn init(_app: &mut App, _window: AppWindowId) -> Self {
+    fn init(_app: &mut App, _window: WindowId) -> Self {
         Self { last_action: None }
     }
 
@@ -41,17 +35,13 @@ impl View for ActionFirstViewRuntimeDemo {
         let count_value = count_state.watch(cx).layout().value_or(0);
         let last_action_value = last_action.watch(cx).layout().value_or_default();
 
-        cx.actions().models::<act::Ping>({
-            let count_state = count_state.clone();
+        cx.actions().locals_with(&count_state).on::<act::Ping>({
             let last_action = last_action.clone();
-            move |models| {
-                let count_updated = count_state.update_in(models, |v| *v = v.saturating_add(1));
-                let last_action_updated = models
-                    .update(&last_action, |v| {
-                        *v = Arc::from("Ping (view runtime)");
-                    })
-                    .is_ok();
-                count_updated && last_action_updated
+            move |tx, count_state| {
+                let count_updated = tx.update(&count_state, |v| *v = v.saturating_add(1));
+                let last_action_updated =
+                    tx.update_shared_model(&last_action, |v| *v = Arc::from("Ping (view runtime)"));
+                count_updated || last_action_updated
             }
         });
 
@@ -83,62 +73,13 @@ impl View for ActionFirstViewRuntimeDemo {
 #[cfg(not(target_arch = "wasm32"))]
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let last_action = super::last_action_model(cx);
-    cx.named("ui-gallery.command.action_first.view_runtime", move |cx| {
-        let view_state_slot = cx.slot_id();
-        let view_state =
-            cx.state_for(
-                view_state_slot,
-                || {
-                    None::<
-                        Rc<
-                            RefCell<
-                                fret::advanced::view::ViewWindowState<ActionFirstViewRuntimeDemo>,
-                            >,
-                        >,
-                    >
-                },
-                |slot| slot.clone(),
-            );
-        let view_state = match view_state {
-            Some(state) => state,
-            None => {
-                let state = Rc::new(RefCell::new(fret::advanced::view::view_init_window::<
-                    ActionFirstViewRuntimeDemo,
-                >(&mut *cx.app, cx.window)));
-                cx.state_for(
-                    view_state_slot,
-                    || {
-                        None::<
-                            Rc<
-                                RefCell<
-                                    fret::advanced::view::ViewWindowState<
-                                        ActionFirstViewRuntimeDemo,
-                                    >,
-                                >,
-                            >,
-                        >
-                    },
-                    |slot| {
-                        if slot.is_none() {
-                            *slot = Some(state.clone());
-                        }
-                        slot.clone()
-                            .expect("view runtime slot must contain state after init")
-                    },
-                )
-            }
-        };
-
-        let mut st = view_state.borrow_mut();
-        st.view.last_action = Some(last_action.clone());
-
-        let elements = fret::advanced::view::view_view(cx, &mut *st);
-        elements
-            .into_vec()
-            .into_iter()
-            .next()
-            .expect("view runtime must produce a root element")
-    })
+    fret::app::view_child_with(
+        cx,
+        "ui-gallery.command.action_first.view_runtime",
+        move |view: &mut ActionFirstViewRuntimeDemo| {
+            view.last_action = Some(last_action.clone());
+        },
+    )
 }
 
 #[cfg(target_arch = "wasm32")]

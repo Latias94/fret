@@ -777,7 +777,7 @@ pub mod app {
     /// Explicit helper types/traits for app helper signatures that intentionally name them.
     pub use crate::view::{
         AppLocalStateExt, AppRenderActionsExt, AppRenderContext, AppRenderDataExt, LocalState,
-        LocalStateTxn, RenderContextAccess,
+        LocalStateTxn, RenderContextAccess, view_child, view_child_with,
     };
     /// Canonical app-facing runtime handle on the default `fret` surface.
     ///
@@ -4470,7 +4470,11 @@ mod authoring_surface_policy_tests {
         assert!(LIB_RS.contains(
             "AppLocalStateExt, AppRenderActionsExt, AppRenderContext, AppRenderDataExt, LocalState,"
         ));
-        assert!(LIB_RS.contains("LocalStateTxn, RenderContextAccess,"));
+        assert!(
+            LIB_RS.contains("LocalStateTxn, RenderContextAccess, view_child, view_child_with,")
+        );
+        assert!(!app_prelude_exports_symbol("view_child"));
+        assert!(!app_prelude_exports_symbol("view_child_with"));
         assert!(!public_surface.contains("pub use crate::view::{UiCxActionsExt, UiCxDataExt};"));
         assert!(LIB_RS.contains("pub use fret_ui::{Theme, ThemeSnapshot};"));
     }

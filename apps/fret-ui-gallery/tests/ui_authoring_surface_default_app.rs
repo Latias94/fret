@@ -252,21 +252,25 @@ fn gallery_sources_do_not_depend_on_the_legacy_fret_prelude() {
     assert!(menubar.contains("use fret::in_window_menubar::{"));
 
     assert!(!action_first_view.contains("use fret::prelude::*;"));
-    assert!(action_first_view.contains("use fret::advanced::prelude::*;"));
-    assert!(action_first_view.contains("use fret::component::prelude::*;"));
-    assert!(action_first_view.contains("use fret::app::App;"));
-    assert!(
-        action_first_view.contains(
-            "use fret_ui_kit::{IntoUiElementInExt as _, declarative::text as decl_text};"
-        )
-    );
-    assert!(action_first_view.contains("fn init(_app: &mut App, _window: AppWindowId) -> Self"));
+    assert!(!action_first_view.contains("use fret::advanced::prelude::*;"));
+    assert!(!action_first_view.contains("use fret::advanced::raw::"));
+    assert!(!action_first_view.contains("fret::advanced::view::"));
+    assert!(!action_first_view.contains("ViewWindowState"));
+    assert!(!action_first_view.contains("view_init_window"));
+    assert!(!action_first_view.contains("view_view"));
+    assert!(action_first_view.contains("use fret::app::prelude::*;"));
+    assert!(action_first_view.contains("use fret_ui_kit::declarative::text as decl_text;"));
+    assert!(!action_first_view.contains("IntoUiElementInExt as _"));
+    assert!(action_first_view.contains("fn init(_app: &mut App, _window: WindowId) -> Self"));
     assert!(!action_first_view.contains("ViewCx<'_, '_, App>"));
     assert!(!action_first_view.contains("ViewCx<'_, '_, KernelApp>"));
     assert!(!action_first_view.contains(") -> Elements {"));
     assert!(action_first_view.contains("fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui"));
     assert!(action_first_view.contains("cx.state().local::<u32>()"));
-    assert!(action_first_view.contains("cx.actions().models::<act::Ping>"));
+    assert!(action_first_view.contains("cx.actions().locals_with(&count_state).on::<act::Ping>"));
+    assert!(action_first_view.contains("tx.update_shared_model(&last_action"));
+    assert!(!action_first_view.contains("LocalStateModelStoreExt"));
+    assert!(!action_first_view.contains("cx.actions().models::<act::Ping>"));
     assert!(action_first_view.contains(".into_element_in(cx)"));
     assert!(action_first_view_normalized.contains(
         "cx.actions().availability::<act::Ping>(|_host,_acx|CommandAvailability::Available);"
@@ -276,6 +280,8 @@ fn gallery_sources_do_not_depend_on_the_legacy_fret_prelude() {
             .contains("pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>")
     );
     assert!(action_first_view.contains("let last_action = super::last_action_model(cx);"));
+    assert!(action_first_view.contains("fret::app::view_child_with("));
+    assert!(action_first_view.contains("move |view: &mut ActionFirstViewRuntimeDemo|"));
     assert!(!action_first_view.contains("KernelApp"));
     assert!(!action_first_view.contains("ElementContext<'_, App>"));
     assert!(!action_first_view.contains("cx.use_local"));

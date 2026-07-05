@@ -149,7 +149,6 @@ fn advanced_call_sites_import_component_prelude_explicitly_when_needed() {
     for (label, source) in [
         ("async_playground_demo", ASYNC_PLAYGROUND_DEMO),
         ("imui_editor_proof_demo", IMUI_EDITOR_PROOF_DEMO),
-        ("action_first_view", ACTION_FIRST_VIEW),
     ] {
         assert!(
             source.contains("advanced::prelude::*"),
@@ -160,4 +159,18 @@ fn advanced_call_sites_import_component_prelude_explicitly_when_needed() {
             "{label} should add an explicit component lane import when it needs component authoring vocabulary",
         );
     }
+
+    assert!(
+        !ACTION_FIRST_VIEW.contains("advanced::prelude::*"),
+        "action_first_view should stay on the default app-facing lane"
+    );
+    assert!(
+        !ACTION_FIRST_VIEW.contains("advanced::raw"),
+        "action_first_view should not teach raw model/store seams"
+    );
+    assert!(
+        ACTION_FIRST_VIEW.contains("fret::app::view_child_with(")
+            && ACTION_FIRST_VIEW.contains("move |view: &mut ActionFirstViewRuntimeDemo|"),
+        "action_first_view should use the app-facing embedded View helper"
+    );
 }
