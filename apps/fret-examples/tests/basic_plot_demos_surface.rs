@@ -120,7 +120,7 @@ fn plot_image_demo_uses_default_declarative_line_plot_panel() {
 }
 
 #[test]
-fn drag_demo_uses_default_declarative_line_plot_panel() {
+fn drag_demo_uses_manual_harness_declarative_line_plot_panel() {
     let source = compact(include_str!("../src/drag_demo.rs"));
 
     for needle in [
@@ -137,7 +137,7 @@ fn drag_demo_uses_default_declarative_line_plot_panel() {
     ] {
         assert!(
             source.contains(needle),
-            "drag_demo should teach default declarative plot authoring; missing `{needle}`"
+            "drag_demo manual harness should use declarative plot authoring; missing `{needle}`"
         );
     }
 
@@ -156,7 +156,7 @@ fn drag_demo_uses_default_declarative_line_plot_panel() {
 }
 
 #[test]
-fn plot_stress_demo_uses_default_declarative_line_plot_panel() {
+fn plot_stress_demo_uses_manual_harness_declarative_line_plot_panel() {
     let source = compact(include_str!("../src/plot_stress_demo.rs"));
 
     for needle in [
@@ -171,7 +171,7 @@ fn plot_stress_demo_uses_default_declarative_line_plot_panel() {
     ] {
         assert!(
             source.contains(needle),
-            "plot_stress_demo should teach default declarative plot authoring; missing `{needle}`"
+            "plot_stress_demo manual harness should use declarative plot authoring; missing `{needle}`"
         );
     }
 
@@ -190,7 +190,7 @@ fn plot_stress_demo_uses_default_declarative_line_plot_panel() {
 }
 
 #[test]
-fn inf_lines_demo_uses_default_declarative_line_plot_panel() {
+fn inf_lines_demo_uses_manual_harness_declarative_line_plot_panel() {
     let source = compact(include_str!("../src/inf_lines_demo.rs"));
 
     for needle in [
@@ -212,7 +212,7 @@ fn inf_lines_demo_uses_default_declarative_line_plot_panel() {
     ] {
         assert!(
             source.contains(needle),
-            "inf_lines_demo should teach default declarative plot authoring; missing `{needle}`"
+            "inf_lines_demo manual harness should use declarative plot authoring; missing `{needle}`"
         );
     }
 
@@ -231,7 +231,7 @@ fn inf_lines_demo_uses_default_declarative_line_plot_panel() {
 }
 
 #[test]
-fn plot_demo_uses_default_declarative_line_plot_panel() {
+fn plot_demo_uses_manual_harness_declarative_line_plot_panel() {
     let source = compact(include_str!("../src/plot_demo.rs"));
 
     for needle in [
@@ -253,7 +253,7 @@ fn plot_demo_uses_default_declarative_line_plot_panel() {
     ] {
         assert!(
             source.contains(needle),
-            "plot_demo should teach default declarative plot authoring; missing `{needle}`"
+            "plot_demo manual harness should use declarative plot authoring; missing `{needle}`"
         );
     }
 
@@ -272,7 +272,7 @@ fn plot_demo_uses_default_declarative_line_plot_panel() {
 }
 
 #[test]
-fn linked_cursor_demo_uses_declarative_top_line_plot_panel() {
+fn linked_cursor_demo_uses_manual_harness_declarative_top_line_plot_panel() {
     let source = compact(include_str!("../src/linked_cursor_demo.rs"));
 
     for needle in [
@@ -293,7 +293,7 @@ fn linked_cursor_demo_uses_declarative_top_line_plot_panel() {
     ] {
         assert!(
             source.contains(needle),
-            "linked_cursor_demo should teach declarative line/area plot authoring; missing `{needle}`"
+            "linked_cursor_demo manual harness should use declarative line/area plot authoring; missing `{needle}`"
         );
     }
 
@@ -311,7 +311,7 @@ fn linked_cursor_demo_uses_declarative_top_line_plot_panel() {
 }
 
 #[test]
-fn area_demo_uses_default_declarative_area_plot_panel() {
+fn area_demo_uses_manual_harness_declarative_area_plot_panel() {
     let source = compact(include_str!("../src/area_demo.rs"));
 
     for needle in [
@@ -328,7 +328,7 @@ fn area_demo_uses_default_declarative_area_plot_panel() {
     ] {
         assert!(
             source.contains(needle),
-            "area_demo should teach default declarative area plot authoring; missing `{needle}`"
+            "area_demo manual harness should use declarative area plot authoring; missing `{needle}`"
         );
     }
 
@@ -347,7 +347,7 @@ fn area_demo_uses_default_declarative_area_plot_panel() {
 }
 
 #[test]
-fn stems_demo_uses_default_declarative_stems_plot_panel() {
+fn stems_demo_uses_manual_harness_declarative_stems_plot_panel() {
     let source = compact(include_str!("../src/stems_demo.rs"));
 
     for needle in [
@@ -364,7 +364,7 @@ fn stems_demo_uses_default_declarative_stems_plot_panel() {
     ] {
         assert!(
             source.contains(needle),
-            "stems_demo should teach default declarative stems plot authoring; missing `{needle}`"
+            "stems_demo manual harness should use declarative stems plot authoring; missing `{needle}`"
         );
     }
 
@@ -383,7 +383,7 @@ fn stems_demo_uses_default_declarative_stems_plot_panel() {
 }
 
 #[test]
-fn stairs_demo_uses_default_declarative_line_plot_panel_with_step_mode() {
+fn stairs_demo_uses_manual_harness_declarative_line_plot_panel_with_step_mode() {
     let source = compact(include_str!("../src/stairs_demo.rs"));
 
     for needle in [
@@ -401,7 +401,7 @@ fn stairs_demo_uses_default_declarative_line_plot_panel_with_step_mode() {
     ] {
         assert!(
             source.contains(needle),
-            "stairs_demo should teach default declarative step-mode plot authoring; missing `{needle}`"
+            "stairs_demo manual harness should use declarative step-mode plot authoring; missing `{needle}`"
         );
     }
 
@@ -420,7 +420,7 @@ fn stairs_demo_uses_default_declarative_line_plot_panel_with_step_mode() {
 }
 
 #[test]
-fn shaded_demo_uses_default_declarative_shaded_plot_panel() {
+fn shaded_demo_uses_manual_harness_declarative_shaded_plot_panel() {
     let source = compact(include_str!("../src/shaded_demo.rs"));
 
     for needle in [
@@ -438,7 +438,7 @@ fn shaded_demo_uses_default_declarative_shaded_plot_panel() {
     ] {
         assert!(
             source.contains(needle),
-            "shaded_demo should teach default declarative shaded plot authoring; missing `{needle}`"
+            "shaded_demo manual harness should use declarative shaded plot authoring; missing `{needle}`"
         );
     }
 
@@ -457,7 +457,7 @@ fn shaded_demo_uses_default_declarative_shaded_plot_panel() {
 }
 
 #[test]
-fn error_bars_demo_uses_default_declarative_error_bars_plot_panel() {
+fn error_bars_demo_uses_manual_harness_declarative_error_bars_plot_panel() {
     let source = compact(include_str!("../src/error_bars_demo.rs"));
 
     for needle in [
@@ -476,7 +476,7 @@ fn error_bars_demo_uses_default_declarative_error_bars_plot_panel() {
     ] {
         assert!(
             source.contains(needle),
-            "error_bars_demo should teach default declarative error-bars plot authoring; missing `{needle}`"
+            "error_bars_demo manual harness should use declarative error-bars plot authoring; missing `{needle}`"
         );
     }
 
@@ -495,7 +495,7 @@ fn error_bars_demo_uses_default_declarative_error_bars_plot_panel() {
 }
 
 #[test]
-fn histogram_demo_uses_default_declarative_histogram_plot_panel() {
+fn histogram_demo_uses_manual_harness_declarative_histogram_plot_panel() {
     let source = compact(include_str!("../src/histogram_demo.rs"));
 
     for needle in [
@@ -514,7 +514,7 @@ fn histogram_demo_uses_default_declarative_histogram_plot_panel() {
     ] {
         assert!(
             source.contains(needle),
-            "histogram_demo should teach default declarative histogram plot authoring; missing `{needle}`"
+            "histogram_demo manual harness should use declarative histogram plot authoring; missing `{needle}`"
         );
     }
 
@@ -533,7 +533,7 @@ fn histogram_demo_uses_default_declarative_histogram_plot_panel() {
 }
 
 #[test]
-fn grouped_bars_demo_uses_default_declarative_bars_plot_panel() {
+fn grouped_bars_demo_uses_manual_harness_declarative_bars_plot_panel() {
     let source = compact(include_str!("../src/grouped_bars_demo.rs"));
 
     for needle in [
@@ -550,7 +550,7 @@ fn grouped_bars_demo_uses_default_declarative_bars_plot_panel() {
     ] {
         assert!(
             source.contains(needle),
-            "grouped_bars_demo should teach default declarative grouped bars authoring; missing `{needle}`"
+            "grouped_bars_demo manual harness should use declarative grouped bars authoring; missing `{needle}`"
         );
     }
 
@@ -569,7 +569,7 @@ fn grouped_bars_demo_uses_default_declarative_bars_plot_panel() {
 }
 
 #[test]
-fn stacked_bars_demo_uses_default_declarative_bars_plot_panel() {
+fn stacked_bars_demo_uses_manual_harness_declarative_bars_plot_panel() {
     let source = compact(include_str!("../src/stacked_bars_demo.rs"));
 
     for needle in [
@@ -586,7 +586,7 @@ fn stacked_bars_demo_uses_default_declarative_bars_plot_panel() {
     ] {
         assert!(
             source.contains(needle),
-            "stacked_bars_demo should teach default declarative stacked bars authoring; missing `{needle}`"
+            "stacked_bars_demo manual harness should use declarative stacked bars authoring; missing `{needle}`"
         );
     }
 
@@ -604,7 +604,7 @@ fn stacked_bars_demo_uses_default_declarative_bars_plot_panel() {
     }
 }
 #[test]
-fn candlestick_demo_uses_default_declarative_candlestick_plot_panel() {
+fn candlestick_demo_uses_manual_harness_declarative_candlestick_plot_panel() {
     let source = compact(include_str!("../src/candlestick_demo.rs"));
 
     for needle in [
@@ -622,7 +622,7 @@ fn candlestick_demo_uses_default_declarative_candlestick_plot_panel() {
     ] {
         assert!(
             source.contains(needle),
-            "candlestick_demo should teach default declarative candlestick plot authoring; missing `{needle}`"
+            "candlestick_demo manual harness should use declarative candlestick plot authoring; missing `{needle}`"
         );
     }
 
@@ -641,7 +641,7 @@ fn candlestick_demo_uses_default_declarative_candlestick_plot_panel() {
 }
 
 #[test]
-fn heatmap_demo_uses_default_declarative_heatmap_plot_panel() {
+fn heatmap_demo_uses_manual_harness_declarative_heatmap_plot_panel() {
     let source = compact(include_str!("../src/heatmap_demo.rs"));
 
     for needle in [
@@ -658,7 +658,7 @@ fn heatmap_demo_uses_default_declarative_heatmap_plot_panel() {
     ] {
         assert!(
             source.contains(needle),
-            "heatmap_demo should teach default declarative heatmap plot authoring; missing `{needle}`"
+            "heatmap_demo manual harness should use declarative heatmap plot authoring; missing `{needle}`"
         );
     }
 
@@ -677,7 +677,7 @@ fn heatmap_demo_uses_default_declarative_heatmap_plot_panel() {
 }
 
 #[test]
-fn histogram2d_demo_uses_default_declarative_histogram2d_plot_panel() {
+fn histogram2d_demo_uses_manual_harness_declarative_histogram2d_plot_panel() {
     let source = compact(include_str!("../src/histogram2d_demo.rs"));
 
     for needle in [
@@ -696,7 +696,7 @@ fn histogram2d_demo_uses_default_declarative_histogram2d_plot_panel() {
     ] {
         assert!(
             source.contains(needle),
-            "histogram2d_demo should teach default declarative histogram2d plot authoring; missing `{needle}`"
+            "histogram2d_demo manual harness should use declarative histogram2d plot authoring; missing `{needle}`"
         );
     }
 
@@ -712,6 +712,27 @@ fn histogram2d_demo_uses_default_declarative_histogram2d_plot_panel() {
             "histogram2d_demo should not teach retained plot authoring; unexpected `{legacy}`"
         );
     }
+}
+
+#[test]
+fn docs_index_separates_default_app_plot_demo_from_manual_harnesses() {
+    let docs = include_str!("../../../docs/README.md");
+    let default_app =
+        "Default app plot demo (FretApp + View): [apps/fret-examples/src/plot_declarative_demo.rs]";
+    let manual_harness = "Manual plot harnesses (driver-level declarative panels): [apps/fret-examples/src/plot_demo.rs]";
+
+    assert!(
+        docs.contains(default_app),
+        "docs/README.md should expose the FretApp + View plot demo before lower-level harnesses"
+    );
+    assert!(
+        docs.contains(manual_harness),
+        "docs/README.md should classify plot_demo.rs as a manual harness"
+    );
+    assert!(
+        docs.find(default_app) < docs.find(manual_harness),
+        "docs/README.md should list the default app plot demo before manual harnesses"
+    );
 }
 
 #[test]

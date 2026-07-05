@@ -67,7 +67,7 @@ fn on_event(
     app: &mut KernelApp,
     _services: &mut dyn UiServices,
     window: AppWindowId,
-    _ui: &mut UiTree<KernelApp>,
+    _ui: &mut fret::advanced::raw::UiTree<KernelApp>,
     _state: &mut fret::advanced::view::ViewWindowState<AssetsDemoView>,
     event: &Event,
 ) {

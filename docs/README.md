@@ -311,8 +311,9 @@ now taught as `LocalState` + view runtime + typed actions.
 - Docking + viewport + overlays conformance harness (ADR 0072): [apps/fret-examples/src/docking_arbitration_demo.rs](../apps/fret-examples/src/docking_arbitration_demo.rs)
   - Run: `cargo run -p fretboard-dev -- dev native --bin docking_arbitration_demo`
   - Checklist: [docs/docking-arbitration-checklist.md](./docking-arbitration-checklist.md)
-- Plot demos (2D): [apps/fret-examples/src/plot_demo.rs](../apps/fret-examples/src/plot_demo.rs)
-- Plot stress harness (desktop-only): [apps/fret-examples/src/plot_stress_demo.rs](../apps/fret-examples/src/plot_stress_demo.rs)
+- Default app plot demo (FretApp + View): [apps/fret-examples/src/plot_declarative_demo.rs](../apps/fret-examples/src/plot_declarative_demo.rs)
+- Manual plot harnesses (driver-level declarative panels): [apps/fret-examples/src/plot_demo.rs](../apps/fret-examples/src/plot_demo.rs)
+- Manual plot stress harness (desktop-only): [apps/fret-examples/src/plot_stress_demo.rs](../apps/fret-examples/src/plot_stress_demo.rs)
 - A11y manual acceptance checklist (overlays + demo): [docs/a11y-acceptance-checklist.md](./a11y-acceptance-checklist.md)
 - App runtime (effects + models + commands): [crates/fret-app/src/app.rs](../crates/fret-app/src/app.rs)
 - Desktop runner (integrated example; winit window lifecycle + scheduling): [crates/fret-launch/src/runner/mod.rs](../crates/fret-launch/src/runner/mod.rs)
