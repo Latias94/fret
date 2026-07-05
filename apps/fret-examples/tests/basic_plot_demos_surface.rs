@@ -49,8 +49,11 @@ fn tags_demo_uses_default_declarative_line_plot_panel() {
     let source = compact(include_str!("../src/tags_demo.rs"));
 
     for needle in [
+        "usefret::advanced::raw::Model;",
+        "usefret::app::prelude::*;",
         "usefret_plot::declarative::{LinePlotPanelProps,line_plot_panel_in};",
         "TagsDemoView",
+        "fninit(app:&mutApp,_window:WindowId)->Self",
         "LinePlotModel::from_series(",
         "LineSeries::new(",
         "Series::from_points_sorted(",
@@ -79,6 +82,10 @@ fn tags_demo_uses_default_declarative_line_plot_panel() {
         "LinePlotCanvas",
         "PlotCanvas",
         "create_node_retained(",
+        "advanced::prelude::*",
+        "component::prelude::*",
+        "KernelApp",
+        "AppWindowId",
     ] {
         assert!(
             !source.contains(legacy),

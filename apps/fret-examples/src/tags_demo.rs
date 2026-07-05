@@ -1,5 +1,6 @@
 use anyhow::Context as _;
-use fret::{FretApp, advanced::prelude::*, component::prelude::*};
+use fret::advanced::raw::Model;
+use fret::app::prelude::*;
 use fret_bootstrap::ui_app_driver;
 use fret_plot::cartesian::DataPoint;
 use fret_plot::declarative::{LinePlotPanelProps, line_plot_panel_in};
@@ -56,7 +57,7 @@ pub fn run() -> anyhow::Result<()> {
 }
 
 impl View for TagsDemoView {
-    fn init(app: &mut KernelApp, _window: AppWindowId) -> Self {
+    fn init(app: &mut App, _window: WindowId) -> Self {
         let n = 2048usize;
         let mut series0 = Vec::with_capacity(n);
         for i in 0..n {
