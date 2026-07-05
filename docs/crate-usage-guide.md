@@ -285,6 +285,10 @@ When app-owned callbacks or function-driver hooks have `&mut App` and need to re
 helpers.
 When widget-owned activation callbacks have `&mut dyn UiActionHost`, use
 `host.local_state_txn(|tx| ...)` for the same reason.
+On the explicit `fret::imui` lane, boolean model controls accept app-local state directly:
+`ui.checkbox_model("Enabled", &enabled_state)` / `ui.switch_model("Enabled", &enabled_state)`.
+For adjacent IMUI button or callback writes that receive `&mut App`, use
+`app.local_state_txn(|tx| ...)` instead of importing the raw LocalState model bridge.
 When app code needs explicit command identity, metadata, availability, keybinding, keymap, or
 shortcut-display nouns, import them from `fret::commands::{...}` instead of importing `fret_app`,
 `fret_runtime`, `fret_core`, or `fret_ui` from default app/tutorial code.

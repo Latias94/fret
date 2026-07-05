@@ -307,7 +307,9 @@ pub mod imui {
         ImUi, Response, imui, imui_build, imui_build_in, imui_in, imui_raw, imui_raw_in,
         prelude::UiWriter,
     };
-    pub use fret_ui_kit::imui::{ImUiFacade, ResponseExt, UiWriterImUiFacadeExt, UiWriterUiKitExt};
+    pub use fret_ui_kit::imui::{
+        ImUiFacade, IntoImUiBoolModel, ResponseExt, UiWriterImUiFacadeExt, UiWriterUiKitExt,
+    };
 
     /// App-facing IMUI text helpers for view-local state.
     ///
@@ -492,7 +494,7 @@ pub mod imui {
     /// Common imports for immediate-mode authoring on the explicit `fret::imui` lane.
     pub mod prelude {
         pub use crate::imui::{
-            AppImUiLocalTextExt as _, ImUi, ImUiFacade, Response, ResponseExt,
+            AppImUiLocalTextExt as _, ImUi, ImUiFacade, IntoImUiBoolModel, Response, ResponseExt,
             UiWriterImUiFacadeExt, UiWriterUiKitExt, docking, editor, imui, imui_build,
             imui_build_in, imui_in, imui_raw, imui_raw_in, kit,
         };
@@ -5435,6 +5437,7 @@ mod authoring_surface_policy_tests {
         assert!(public_surface.contains("pub mod prelude {"));
         assert!(public_surface.contains("pub use fret_imui::prelude::*;"));
         assert!(public_surface.contains("AppImUiLocalTextExt as _,"));
+        assert!(public_surface.contains("IntoImUiBoolModel,"));
         assert!(public_surface.contains("docking, editor, imui, imui_build,"));
         assert!(public_surface.contains("imui_build_in, imui_in, imui_raw, imui_raw_in,"));
         assert!(public_surface.contains("kit,"));

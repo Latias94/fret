@@ -22,6 +22,7 @@ use fret_ui::{ElementContext, GlobalElementId, UiHost};
 
 mod active_trigger_behavior;
 pub mod adapters;
+mod bool_model;
 mod boolean_controls;
 mod bullet_text_controls;
 mod button_controls;
@@ -71,6 +72,7 @@ mod text_picker_controls;
 mod tooltip_overlay;
 mod virtual_list_controls;
 
+pub use bool_model::IntoImUiBoolModel;
 use containers::{
     grid_container_element, horizontal_container_element, scroll_container_element,
     vertical_container_element,

@@ -1985,6 +1985,7 @@ mod tests {
         assert!(DATA_RS_SOURCE.contains("mod render;"));
         assert!(DATA_RS_SOURCE.contains("pub use render::{AppRenderData, AppRenderDataExt};"));
         assert!(DATA_RENDER_RS_SOURCE.contains("pub struct AppRenderData"));
+        assert!(LOCAL_STATE_ADAPTERS_RS_SOURCE.contains("IntoImUiBoolModel for LocalState<bool>"));
         assert!(LOCAL_STATE_ADAPTERS_RS_SOURCE.contains("IntoBoolModel for LocalState<bool>"));
         assert!(LOCAL_STATE_BRIDGES_RS_SOURCE.contains("pub trait LocalStateRawModelExt<T>"));
         assert!(LOCAL_STATE_BRIDGES_RS_SOURCE.contains("pub trait LocalStateModelStoreExt<T>"));

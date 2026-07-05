@@ -69,6 +69,20 @@ impl fret_ui_kit::declarative::table::IntoTableViewOutputModel
     }
 }
 
+#[cfg(feature = "imui")]
+impl fret_ui_kit::imui::IntoImUiBoolModel for LocalState<bool> {
+    fn into_imui_bool_model(self) -> Model<bool> {
+        self.clone_model()
+    }
+}
+
+#[cfg(feature = "imui")]
+impl fret_ui_kit::imui::IntoImUiBoolModel for &LocalState<bool> {
+    fn into_imui_bool_model(self) -> Model<bool> {
+        self.clone_model()
+    }
+}
+
 #[cfg(feature = "shadcn")]
 impl fret_ui_shadcn::facade::IntoBoolModel for LocalState<bool> {
     fn into_bool_model(self) -> Model<bool> {

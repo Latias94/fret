@@ -5,10 +5,7 @@
 //! Prefer `apps/fret-cookbook/examples/imui_action_basics.rs` for the generic/default immediate
 //! path, then `apps/fret-examples/src/imui_editor_proof_demo.rs` for the editor-grade path.
 
-use fret::advanced::raw::{
-    LocalStateElementContextExt as _, LocalStateModelStoreExt as _, LocalStateRawModelExt as _,
-};
-use fret::{FretApp, advanced::prelude::*, imui::prelude::*};
+use fret::{FretApp, advanced::prelude::*, app::AppLocalStateTxnExt as _, imui::prelude::*};
 
 const TEST_ID_COUNT_TEXT: &str = "imui-hello-demo.count-text";
 const TEST_ID_ENABLED_TEXT: &str = "imui-hello-demo.enabled-text";
@@ -45,7 +42,9 @@ impl View for ImUiHelloView {
                 ]
             });
             if ui.button("Increment").clicked() {
-                let _ = count_state.update_in(ui.cx_mut().app.models_mut(), |value| *value += 1);
+                ui.cx_mut()
+                    .app
+                    .local_state_txn(|tx| tx.update(&count_state, |value| *value += 1));
             }
 
             ui.separator();
@@ -56,11 +55,9 @@ impl View for ImUiHelloView {
                         .test_id(TEST_ID_ENABLED_TEXT),
                 ]
             });
-            let changed = ui
-                .checkbox_model("Enabled", enabled_state.model())
-                .changed();
+            let changed = ui.checkbox_model("Enabled", &enabled_state).changed();
             if changed {
-                let enabled = enabled_state.paint_value_in(ui.cx_mut());
+                let enabled = enabled_state.paint_value(ui.cx_mut());
                 ui.text(format!("Toggled to: {enabled}"));
             }
         })
