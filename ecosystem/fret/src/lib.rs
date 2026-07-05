@@ -842,6 +842,37 @@ pub mod app {
                 .inherit_foreground(foreground)
         }
 
+        /// Chrome/header title text.
+        pub fn chrome_title<'a, Cx, T>(cx: &mut Cx, text: T) -> fret_ui::element::AnyElement
+        where
+            Cx: crate::app::AppRenderContext<'a>,
+            T: Into<Arc<str>>,
+        {
+            fret_ui_kit::declarative::text::text_chrome_title(cx.elements(), text)
+        }
+
+        /// Button/control label text.
+        pub fn button_label<'a, Cx, T>(cx: &mut Cx, text: T) -> fret_ui::element::AnyElement
+        where
+            Cx: crate::app::AppRenderContext<'a>,
+            T: Into<Arc<str>>,
+        {
+            fret_ui_kit::declarative::text::text_button_label(cx.elements(), text)
+        }
+
+        /// Attributed list-row label text with an inherited foreground.
+        pub fn list_row_label_attributed_with_foreground<'a, Cx>(
+            cx: &mut Cx,
+            rich: fret_core::AttributedText,
+            foreground: fret_core::Color,
+        ) -> fret_ui::element::AnyElement
+        where
+            Cx: crate::app::AppRenderContext<'a>,
+        {
+            fret_ui_kit::declarative::text::text_list_row_label_attributed(cx.elements(), rich)
+                .inherit_foreground(foreground)
+        }
+
         /// Section/chrome label text.
         pub fn section_chrome_label<'a, Cx, T>(cx: &mut Cx, text: T) -> fret_ui::element::AnyElement
         where
@@ -4923,6 +4954,9 @@ mod authoring_surface_policy_tests {
         assert!(LIB_RS.contains("pub fn compact_paragraph<'a, Cx, T>("));
         assert!(LIB_RS.contains("pub fn list_row_label<'a, Cx, T>("));
         assert!(LIB_RS.contains("pub fn list_row_label_with_foreground<'a, Cx, T>("));
+        assert!(LIB_RS.contains("pub fn chrome_title<'a, Cx, T>("));
+        assert!(LIB_RS.contains("pub fn button_label<'a, Cx, T>("));
+        assert!(LIB_RS.contains("pub fn list_row_label_attributed_with_foreground<'a, Cx>("));
         assert!(LIB_RS.contains("pub fn section_chrome_label<'a, Cx, T>("));
         assert!(LIB_RS.contains("pub fn code_label<'a, Cx, T>("));
         assert!(LIB_RS.contains(") -> fret_ui::element::AnyElement"));
@@ -4937,6 +4971,17 @@ mod authoring_surface_policy_tests {
                 "fret_ui_kit::declarative::text::text_list_row_label(cx.elements(), text)"
             )
         );
+        assert!(
+            LIB_RS
+                .contains("fret_ui_kit::declarative::text::text_chrome_title(cx.elements(), text)")
+        );
+        assert!(
+            LIB_RS
+                .contains("fret_ui_kit::declarative::text::text_button_label(cx.elements(), text)")
+        );
+        assert!(LIB_RS.contains(
+            "fret_ui_kit::declarative::text::text_list_row_label_attributed(cx.elements(), rich)"
+        ));
         assert!(app_prelude_exports_symbol("text"));
         assert!(!app_prelude_exports_symbol("AnyElement"));
         assert!(!app_prelude_exports_symbol("ElementContext"));
