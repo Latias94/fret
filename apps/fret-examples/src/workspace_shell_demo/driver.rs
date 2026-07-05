@@ -1,6 +1,7 @@
 use anyhow::Context as _;
 use fret::advanced::view::AppRenderDataExt as _;
-use fret::{imui::prelude::*, shadcn, shadcn::themes::ShadcnColorScheme};
+use fret::imui::{UiWriterImUiFacadeExt as _, imui_build, kit};
+use fret::{shadcn, shadcn::themes::ShadcnColorScheme};
 use fret_app::{App, CommandId, Effect, WindowRequest};
 use fret_bootstrap::ui_diagnostics::UiDiagnosticsService;
 use fret_core::{AppWindowId, Axis, Edges, Event, Px, Rect, SemanticsRole};

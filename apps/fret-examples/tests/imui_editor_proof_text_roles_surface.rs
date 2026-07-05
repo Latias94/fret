@@ -13,6 +13,7 @@ fn imui_editor_proof_main_fixed_text_uses_shared_roles() {
         "use fret::AppComponentCx;",
         "use fret::advanced::KernelApp;",
         "use fret::app::AppRenderDataExt as _;",
+        "use fret::imui::UiWriterImUiFacadeExt;",
         "use fret_ui_kit::IntoUiElement;",
         "decl_text::text_section_chrome_label(cx, text)",
         "decl_text::text_control_readout(cx, text)",
@@ -29,6 +30,7 @@ fn imui_editor_proof_main_fixed_text_uses_shared_roles() {
         "use fret::component::prelude::*;",
         "advanced::prelude::*",
         "component::prelude::*",
+        "use fret::imui::prelude::UiWriterImUiFacadeExt;",
     ] {
         assert!(
             !helper_source.contains(forbidden),

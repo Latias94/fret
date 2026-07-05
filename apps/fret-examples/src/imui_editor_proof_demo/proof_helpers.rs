@@ -3,7 +3,7 @@ use std::sync::Arc;
 use fret::AppComponentCx;
 use fret::advanced::KernelApp;
 use fret::app::AppRenderDataExt as _;
-use fret::imui::prelude::UiWriterImUiFacadeExt;
+use fret::imui::UiWriterImUiFacadeExt;
 use fret_core::{Color, Corners, Edges, Px};
 use fret_runtime::Model;
 use fret_ui::element::{AnyElement, Length};
