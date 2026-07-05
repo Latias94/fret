@@ -40,3 +40,47 @@ fn embedded_viewport_demo_keeps_fixed_chrome_text_on_roles() {
         );
     }
 }
+
+#[test]
+fn embedded_viewport_demo_uses_app_view_imports_with_explicit_interop_hooks() {
+    let source = include_str!("../src/embedded_viewport_demo.rs");
+    let compact = compact(source);
+
+    for needle in [
+        "usefret::advanced::driver::UiAppBuilderAdvancedExtas_;",
+        "usefret::advanced::interop::embedded_viewport::{selfasembedded,EmbeddedViewportUiAppDriverExtas_,};",
+        "usefret::app::prelude::*;",
+        "usefret::app::AppComponentCx;",
+        "usefret_ui::{ElementContext,ThemeSnapshot,UiHost};",
+        "usefret_ui_kit::declarative::ElementContextThemeExtas_;",
+        "usefret_ui_kit::declarative::UiElementTestIdExtas_;",
+        "usefret_ui_kit::{ColorRef,IntoUiElement,IntoUiElementInExtas_,LayoutRefinement,Radius,Space,UiSupportsLayoutas_,ui,};",
+        "usefret_ui_shadcn::facadeasshadcn;",
+        "fninit(app:&mutApp,window:WindowId)->Self",
+        "Cx:fret::app::ElementContextAccess<'a,App>,",
+        "C:IntoUiElement<App>,",
+        "fnrecord_embedded_viewport(&mutself,app:&mutApp,window:WindowId,",
+        ".view_with_hooks::<EmbeddedViewportDemoView>(|d|d.drive_embedded_viewport())?",
+        "fninstall_demo_theme(app:&mutApp)",
+    ] {
+        assert!(
+            compact.contains(needle),
+            "embedded viewport demo should keep app view imports and explicit interop hooks; missing `{needle}`"
+        );
+    }
+
+    for forbidden in [
+        "use fret::{FretApp",
+        "advanced::prelude::*",
+        "component::prelude::*",
+        "KernelApp",
+        "AppWindowId",
+        "ViewElements",
+        "IntoUiElement<KernelApp>",
+    ] {
+        assert!(
+            !source.contains(forbidden),
+            "embedded viewport demo should not reintroduce broad or kernel-facing imports: `{forbidden}`"
+        );
+    }
+}

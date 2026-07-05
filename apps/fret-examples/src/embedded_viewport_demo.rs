@@ -1,13 +1,23 @@
 use std::sync::Arc;
 
-use fret::advanced::interop::embedded_viewport as embedded;
-use fret::{FretApp, advanced::prelude::*, component::prelude::*, shadcn};
-use fret_core::ViewportFit;
+use fret::advanced::driver::UiAppBuilderAdvancedExt as _;
+use fret::advanced::interop::embedded_viewport::{
+    self as embedded, EmbeddedViewportUiAppDriverExt as _,
+};
+use fret::app::AppComponentCx;
+use fret::app::prelude::*;
+use fret_core::{Px, ViewportFit};
 use fret_render::{RenderTargetColorSpace, Renderer, WgpuContext};
 use fret_runtime::{FrameId, TickId};
-use fret_ui::UiHost;
-use fret_ui_kit::IntoUiElementInExt as _;
+use fret_ui::{ElementContext, ThemeSnapshot, UiHost};
+use fret_ui_kit::declarative::ElementContextThemeExt as _;
+use fret_ui_kit::declarative::UiElementTestIdExt as _;
 use fret_ui_kit::declarative::text as decl_text;
+use fret_ui_kit::{
+    ColorRef, IntoUiElement, IntoUiElementInExt as _, LayoutRefinement, Radius, Space,
+    UiSupportsLayout as _, ui,
+};
+use fret_ui_shadcn::facade as shadcn;
 
 const DEFAULT_VIEWPORT_PX_SIZE: (u32, u32) = (960, 540);
 const SIZE_PRESET_640: &str = "640x360";
@@ -15,14 +25,14 @@ const SIZE_PRESET_960: &str = "960x540";
 const SIZE_PRESET_1280: &str = "1280x720";
 
 fn embedded_viewport_button_label_text<H: UiHost>(
-    cx: &mut fret_ui::ElementContext<'_, H>,
+    cx: &mut ElementContext<'_, H>,
     text: impl Into<Arc<str>>,
 ) -> fret_ui::element::AnyElement {
     decl_text::text_button_label(cx, text)
 }
 
 fn embedded_viewport_readout_text<H: UiHost>(
-    cx: &mut fret_ui::ElementContext<'_, H>,
+    cx: &mut ElementContext<'_, H>,
     text: impl Into<Arc<str>>,
 ) -> fret_ui::element::AnyElement {
     decl_text::text_control_readout(cx, text)
@@ -45,7 +55,7 @@ struct EmbeddedViewportDemoView {
 }
 
 impl View for EmbeddedViewportDemoView {
-    fn init(app: &mut KernelApp, window: AppWindowId) -> Self {
+    fn init(app: &mut App, window: WindowId) -> Self {
         let models = embedded::ensure_models(app, window);
         let _ = app.models_mut().update(&models.last_input, |v| {
             *v = Arc::<str>::from("Click inside the viewport panel to see input forwarding.");
@@ -178,8 +188,8 @@ fn embedded_viewport_page<'a, Cx, C>(
     diag: bool,
 ) -> Ui
 where
-    Cx: fret::app::ElementContextAccess<'a, KernelApp>,
-    C: IntoUiElement<KernelApp>,
+    Cx: fret::app::ElementContextAccess<'a, App>,
+    C: IntoUiElement<App>,
 {
     let cx = cx.elements();
     let page = ui::container(move |cx| {
@@ -216,8 +226,8 @@ impl embedded::EmbeddedViewportView for EmbeddedViewportDemoView {
 
     fn record_embedded_viewport(
         &mut self,
-        app: &mut KernelApp,
-        window: AppWindowId,
+        app: &mut App,
+        window: WindowId,
         _context: &WgpuContext,
         _renderer: &mut Renderer,
         _scale_factor: f32,
@@ -251,7 +261,7 @@ pub fn run() -> anyhow::Result<()> {
     Ok(())
 }
 
-fn install_demo_theme(app: &mut KernelApp) {
+fn install_demo_theme(app: &mut App) {
     shadcn::themes::apply_shadcn_new_york(
         app,
         shadcn::themes::ShadcnBaseColor::Slate,
