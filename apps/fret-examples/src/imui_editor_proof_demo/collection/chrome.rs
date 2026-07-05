@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret::imui::prelude::*;
+use fret::imui::{UiWriter as _, UiWriterImUiFacadeExt};
 
 use super::super::{KernelApp, proof_compact_readout_element, proof_section_chrome_label};
 

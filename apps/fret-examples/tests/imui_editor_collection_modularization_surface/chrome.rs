@@ -1,5 +1,6 @@
 pub(super) fn assert_chrome_owner_split(collection_source: &str, chrome_source: &str) {
     for needle in [
+        "use fret::imui::{UiWriter as _, UiWriterImUiFacadeExt};",
         "pub(in super::super) fn proof_collection_readout_text(",
         "pub(super) fn render_collection_header(",
         "pub(super) fn proof_collection_section_label(",
@@ -30,4 +31,9 @@ pub(super) fn assert_chrome_owner_split(collection_source: &str, chrome_source: 
             "the collection root should route chrome/readout mounting through collection/chrome.rs; unexpected `{needle}`"
         );
     }
+
+    assert!(
+        !chrome_source.contains("use fret::imui::prelude::*;"),
+        "the demo-local collection chrome owner should not rely on the broad imui prelude",
+    );
 }

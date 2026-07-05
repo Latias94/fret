@@ -4,7 +4,7 @@ use std::sync::Arc;
 use fret::advanced::KernelApp;
 use fret::advanced::interop::embedded_viewport as embedded;
 use fret::app::AppRenderDataExt as _;
-use fret::imui::prelude::*;
+use fret::imui::{UiWriter as _, UiWriterImUiFacadeExt as _, imui};
 use fret_app::{CreateWindowKind, CreateWindowRequest, Effect, WindowRequest};
 use fret_core::{AppWindowId, Color, DockFloatingWindow, DockNode, Point, Px, Rect, Size};
 use fret_docking::{

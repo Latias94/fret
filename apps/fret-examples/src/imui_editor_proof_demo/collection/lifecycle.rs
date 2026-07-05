@@ -1,4 +1,4 @@
-use fret::imui::prelude::*;
+use fret::imui::ImUi;
 
 use super::runtime_state::{ProofCollectionRuntimeModels, ProofCollectionRuntimeSnapshot};
 use super::{KernelApp, ProofCollectionAsset};

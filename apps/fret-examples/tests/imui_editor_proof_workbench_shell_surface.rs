@@ -74,6 +74,7 @@ fn imui_editor_proof_workbench_shell_uses_explicit_public_surfaces() {
     for needle in [
         "usefret::advanced::KernelApp;",
         "usefret::app::AppRenderDataExtas_;",
+        "usefret::imui::{UiWriteras_,UiWriterImUiFacadeExtas_,imui};",
         "usefret_app::{CreateWindowKind,CreateWindowRequest,Effect,WindowRequest};",
         "usefret_core::{AppWindowId,Color,DockFloatingWindow,DockNode,Point,Px,Rect,Size};",
         "usefret_ui::ElementContext;",
@@ -85,7 +86,11 @@ fn imui_editor_proof_workbench_shell_uses_explicit_public_surfaces() {
         );
     }
 
-    for forbidden in ["advanced::prelude::*", "component::prelude::*"] {
+    for forbidden in [
+        "advanced::prelude::*",
+        "component::prelude::*",
+        "imui::prelude::*",
+    ] {
         assert!(
             !shell_source.contains(forbidden),
             "workbench_shell should not reintroduce broad prelude imports: `{forbidden}`",

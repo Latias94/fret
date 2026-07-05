@@ -1,5 +1,6 @@
 pub(super) fn assert_collection_module_routing(collection_source: &str) {
     for needle in [
+        "use fret::imui::ImUi;",
         "pub(super) fn render_collection_first_asset_browser_proof(",
         "ui: &mut ImUi<'_, '_, KernelApp>",
         "mod asset_grid;",
@@ -49,4 +50,9 @@ pub(super) fn assert_collection_module_routing(collection_source: &str) {
             "the demo-local collection module should keep the modularized implementation explicit; missing `{needle}`"
         );
     }
+
+    assert!(
+        !collection_source.contains("use fret::imui::prelude::*;"),
+        "the demo-local collection module should not rely on the broad imui prelude",
+    );
 }

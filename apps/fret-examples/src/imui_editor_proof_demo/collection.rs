@@ -1,4 +1,4 @@
-use fret::imui::prelude::*;
+use fret::imui::ImUi;
 
 use super::KernelApp;
 

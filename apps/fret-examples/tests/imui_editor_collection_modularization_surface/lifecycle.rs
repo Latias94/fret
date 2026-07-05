@@ -1,5 +1,6 @@
 pub(super) fn assert_lifecycle_owner_split(collection_source: &str, lifecycle_source: &str) {
     for needle in [
+        "use fret::imui::ImUi;",
         "pub(super) fn clear_stale_collection_rename_session(",
         "models: &ProofCollectionRuntimeModels",
         "snapshot: &ProofCollectionRuntimeSnapshot",
@@ -27,4 +28,9 @@ pub(super) fn assert_lifecycle_owner_split(collection_source: &str, lifecycle_so
             "the collection root should route stale rename cleanup through collection/lifecycle.rs; unexpected `{needle}`"
         );
     }
+
+    assert!(
+        !lifecycle_source.contains("use fret::imui::prelude::*;"),
+        "the demo-local collection lifecycle owner should not rely on the broad imui prelude",
+    );
 }
