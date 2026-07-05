@@ -12601,6 +12601,15 @@ fn ai_curated_snippets_prefer_ui_cx_on_the_default_app_surface() {
             path.display()
         );
     }
+
+    assert_sources_absent(
+        "src/ui/snippets/ai",
+        &[
+            "use fret_core::ImageId;",
+            "use fret_core::{ImageId, Px};",
+            "Option<fret_core::ImageId>",
+        ],
+    );
 }
 
 #[test]

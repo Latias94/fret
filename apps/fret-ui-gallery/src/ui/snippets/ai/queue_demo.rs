@@ -2,8 +2,9 @@ pub const SOURCE: &str = include_str!("queue_demo.rs");
 
 // region: example
 use super::shared_preview_image_id;
+use fret::component::ui_assets::ImageId;
 use fret::{AppComponentCx, UiChild};
-use fret_core::{ImageId, Px};
+use fret_core::Px;
 use fret_ui::Invalidation;
 use fret_ui::element::{AnyElement, Length, SemanticsProps, SpacerProps};
 use fret_ui_ai as ui_ai;
