@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use fret::advanced::KernelApp;
 use fret::advanced::driver::{UiAppDriver, ViewElements, ui_app_with_hooks};
-use fret::advanced::raw::{LocalStateElementContextExt as _, LocalStateModelStoreExt as _};
+use fret::advanced::raw::LocalStateModelStoreExt as _;
 use fret::app::{AppLocalStateExt as _, LocalState};
 use fret_app::{CommandId, Effect, WindowRequest};
 use fret_core::{AppWindowId, Px};
@@ -148,7 +148,7 @@ fn view(
     let theme = cx.theme().snapshot();
     let color_secondary = theme.color_token("secondary");
 
-    let status = st.status.layout_value_in(cx);
+    let status = st.status.layout_value(cx);
 
     let effective_style = cx
         .app

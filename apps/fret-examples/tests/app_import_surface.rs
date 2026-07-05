@@ -77,6 +77,14 @@ fn low_risk_function_driver_demos_use_explicit_advanced_imports() {
                 && !source.contains("advanced::prelude::{"),
             "{name} should not import app local state from the advanced prelude",
         );
+        assert!(
+            compact.contains("usefret::advanced::raw::LocalStateModelStoreExtas_;"),
+            "{name} should keep the command-handler ModelStore bridge explicit while it still uses function-driver hooks",
+        );
+        assert!(
+            !source.contains("LocalStateElementContextExt"),
+            "{name} should use app-facing `LocalState::layout_value(...)` instead of the raw ElementContext bridge",
+        );
     }
 }
 
