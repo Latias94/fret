@@ -8,7 +8,7 @@ use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn rtl_image<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    demo_image: Option<Model<Option<fret_core::ImageId>>>,
+    demo_image: Option<Model<Option<ImageId>>>,
     content_test_id: &'static str,
 ) -> impl IntoUiElement<H> + use<H> {
     let model_image_id = demo_image
@@ -35,7 +35,7 @@ fn ratio_example<H: UiHost>(
     figure_test_id: &'static str,
     content_test_id: &'static str,
     caption_test_id: &'static str,
-    demo_image: Option<Model<Option<fret_core::ImageId>>>,
+    demo_image: Option<Model<Option<ImageId>>>,
 ) -> impl IntoUiElement<H> + use<H> {
     let theme = Theme::global(&*cx.app);
     let muted_bg = theme.color_token("muted");
@@ -90,12 +90,13 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
 // endregion: example
 
 use fret::component::prelude::Model;
+use fret::component::ui_assets::ImageId;
 use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::declarative::ModelWatchExt as _;
 
 pub fn render_preview<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    demo_image: Option<Model<Option<fret_core::ImageId>>>,
+    demo_image: Option<Model<Option<ImageId>>>,
 ) -> impl IntoUiElement<H> + use<H> {
     with_direction_provider(cx, LayoutDirection::Rtl, move |cx| {
         ratio_example(

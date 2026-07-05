@@ -1,8 +1,9 @@
 pub const SOURCE: &str = include_str!("mapping.rs");
 
 // region: example
+use fret::component::ui_assets::ImageId;
 use fret::{AppComponentCx, UiChild};
-use fret_core::{ImageId, ViewportFit};
+use fret_core::ViewportFit;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn image_cell(

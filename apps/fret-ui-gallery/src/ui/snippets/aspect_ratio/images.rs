@@ -4,12 +4,11 @@ pub const SOURCE: &str = include_str!("images.rs");
 use crate::demo_assets;
 use fret::assets::AssetRequest;
 use fret::component::ui_assets::{self, ImageLoadingStatus};
-use fret_core::ImageId;
 use fret_ui::{ElementContext, UiHost};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct PreviewImageState {
-    pub image: Option<ImageId>,
+    pub image: Option<ui_assets::ImageId>,
     pub loading: bool,
 }
 

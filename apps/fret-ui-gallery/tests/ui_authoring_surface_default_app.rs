@@ -7145,6 +7145,9 @@ fn image_object_fit_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "pub fn render<H: UiHost>(",
             "pub fn render(cx: &mut ElementContext<'_, H>",
             "-> AnyElement",
+            "use fret_core::ImageId;",
+            "use fret_core::{ImageId, ViewportFit};",
+            "Option<fret_core::ImageId>",
         ],
     );
 }
@@ -11699,11 +11702,13 @@ fn selected_aspect_ratio_snippet_helpers_prefer_into_ui_element_over_anyelement(
         "src/ui/snippets/aspect_ratio/demo.rs",
         &[
             "fn render_frame<H: UiHost, E>(image: E) -> impl IntoUiElement<H> + use<H, E>",
-            "pub fn render_preview<H: UiHost>(cx: &mut ElementContext<'_, H>, demo_image: Option<Model<Option<fret_core::ImageId>>>,) -> impl IntoUiElement<H> + use<H>",
+            "pub fn render_preview<H: UiHost>(cx: &mut ElementContext<'_, H>, demo_image: Option<Model<Option<ImageId>>>,) -> impl IntoUiElement<H> + use<H>",
+            "use fret::component::ui_assets::ImageId;",
         ],
         &[
             "fn render_frame<H: UiHost>(cx: &mut ElementContext<'_, H>, image: AnyElement,) -> impl IntoUiElement<H> + use<H>",
-            "pub fn render_preview<H: UiHost>(cx: &mut ElementContext<'_, H>, demo_image: Option<Model<Option<fret_core::ImageId>>>,) -> AnyElement",
+            "pub fn render_preview<H: UiHost>(cx: &mut ElementContext<'_, H>, demo_image: Option<Model<Option<ImageId>>>,) -> AnyElement",
+            "Option<Model<Option<fret_core::ImageId>>>",
         ],
     );
 
@@ -11713,29 +11718,29 @@ fn selected_aspect_ratio_snippet_helpers_prefer_into_ui_element_over_anyelement(
         "src/ui/snippets/aspect_ratio/rtl.rs",
     ] {
         let image_helper = if relative_path.ends_with("portrait.rs") {
-            "fn portrait_image<H: UiHost>(cx: &mut ElementContext<'_, H>, demo_image: Option<Model<Option<fret_core::ImageId>>>, content_test_id: &'static str,) -> impl IntoUiElement<H> + use<H>"
+            "fn portrait_image<H: UiHost>(cx: &mut ElementContext<'_, H>, demo_image: Option<Model<Option<ImageId>>>, content_test_id: &'static str,) -> impl IntoUiElement<H> + use<H>"
         } else if relative_path.ends_with("square.rs") {
-            "fn square_image<H: UiHost>(cx: &mut ElementContext<'_, H>, demo_image: Option<Model<Option<fret_core::ImageId>>>, content_test_id: &'static str,) -> impl IntoUiElement<H> + use<H>"
+            "fn square_image<H: UiHost>(cx: &mut ElementContext<'_, H>, demo_image: Option<Model<Option<ImageId>>>, content_test_id: &'static str,) -> impl IntoUiElement<H> + use<H>"
         } else {
-            "fn rtl_image<H: UiHost>(cx: &mut ElementContext<'_, H>, demo_image: Option<Model<Option<fret_core::ImageId>>>, content_test_id: &'static str,) -> impl IntoUiElement<H> + use<H>"
+            "fn rtl_image<H: UiHost>(cx: &mut ElementContext<'_, H>, demo_image: Option<Model<Option<ImageId>>>, content_test_id: &'static str,) -> impl IntoUiElement<H> + use<H>"
         };
 
         let image_helper_old = if relative_path.ends_with("portrait.rs") {
-            "fn portrait_image<H: UiHost>(cx: &mut ElementContext<'_, H>, demo_image: Option<Model<Option<fret_core::ImageId>>>, content_test_id: &'static str,) -> AnyElement"
+            "fn portrait_image<H: UiHost>(cx: &mut ElementContext<'_, H>, demo_image: Option<Model<Option<ImageId>>>, content_test_id: &'static str,) -> AnyElement"
         } else if relative_path.ends_with("square.rs") {
-            "fn square_image<H: UiHost>(cx: &mut ElementContext<'_, H>, demo_image: Option<Model<Option<fret_core::ImageId>>>, content_test_id: &'static str,) -> AnyElement"
+            "fn square_image<H: UiHost>(cx: &mut ElementContext<'_, H>, demo_image: Option<Model<Option<ImageId>>>, content_test_id: &'static str,) -> AnyElement"
         } else {
-            "fn rtl_image<H: UiHost>(cx: &mut ElementContext<'_, H>, demo_image: Option<Model<Option<fret_core::ImageId>>>, content_test_id: &'static str,) -> AnyElement"
+            "fn rtl_image<H: UiHost>(cx: &mut ElementContext<'_, H>, demo_image: Option<Model<Option<ImageId>>>, content_test_id: &'static str,) -> AnyElement"
         };
         let ratio_helper = if relative_path.ends_with("rtl.rs") {
-            "fn ratio_example<H: UiHost>(cx: &mut ElementContext<'_, H>, ratio: f32, max_w: Px, test_id: &'static str, figure_test_id: &'static str, content_test_id: &'static str, caption_test_id: &'static str, demo_image: Option<Model<Option<fret_core::ImageId>>>,) -> impl IntoUiElement<H> + use<H>"
+            "fn ratio_example<H: UiHost>(cx: &mut ElementContext<'_, H>, ratio: f32, max_w: Px, test_id: &'static str, figure_test_id: &'static str, content_test_id: &'static str, caption_test_id: &'static str, demo_image: Option<Model<Option<ImageId>>>,) -> impl IntoUiElement<H> + use<H>"
         } else {
-            "fn ratio_example<H: UiHost>(cx: &mut ElementContext<'_, H>, ratio: f32, max_w: Px, test_id: &'static str, content_test_id: &'static str, demo_image: Option<Model<Option<fret_core::ImageId>>>,) -> impl IntoUiElement<H> + use<H>"
+            "fn ratio_example<H: UiHost>(cx: &mut ElementContext<'_, H>, ratio: f32, max_w: Px, test_id: &'static str, content_test_id: &'static str, demo_image: Option<Model<Option<ImageId>>>,) -> impl IntoUiElement<H> + use<H>"
         };
         let ratio_helper_old = if relative_path.ends_with("rtl.rs") {
-            "fn ratio_example<H: UiHost>(cx: &mut ElementContext<'_, H>, ratio: f32, max_w: Px, test_id: &'static str, figure_test_id: &'static str, content_test_id: &'static str, caption_test_id: &'static str, demo_image: Option<Model<Option<fret_core::ImageId>>>,) -> AnyElement"
+            "fn ratio_example<H: UiHost>(cx: &mut ElementContext<'_, H>, ratio: f32, max_w: Px, test_id: &'static str, figure_test_id: &'static str, content_test_id: &'static str, caption_test_id: &'static str, demo_image: Option<Model<Option<ImageId>>>,) -> AnyElement"
         } else {
-            "fn ratio_example<H: UiHost>(cx: &mut ElementContext<'_, H>, ratio: f32, max_w: Px, test_id: &'static str, content_test_id: &'static str, demo_image: Option<Model<Option<fret_core::ImageId>>>,) -> AnyElement"
+            "fn ratio_example<H: UiHost>(cx: &mut ElementContext<'_, H>, ratio: f32, max_w: Px, test_id: &'static str, content_test_id: &'static str, demo_image: Option<Model<Option<ImageId>>>,) -> AnyElement"
         };
 
         assert_selected_generic_helpers_prefer_into_ui_element(
@@ -11743,15 +11748,26 @@ fn selected_aspect_ratio_snippet_helpers_prefer_into_ui_element_over_anyelement(
             &[
                 image_helper,
                 ratio_helper,
-                "pub fn render_preview<H: UiHost>(cx: &mut ElementContext<'_, H>, demo_image: Option<Model<Option<fret_core::ImageId>>>,) -> impl IntoUiElement<H> + use<H>",
+                "pub fn render_preview<H: UiHost>(cx: &mut ElementContext<'_, H>, demo_image: Option<Model<Option<ImageId>>>,) -> impl IntoUiElement<H> + use<H>",
+                "use fret::component::ui_assets::ImageId;",
             ],
             &[
                 image_helper_old,
                 ratio_helper_old,
-                "pub fn render_preview<H: UiHost>(cx: &mut ElementContext<'_, H>, demo_image: Option<Model<Option<fret_core::ImageId>>>,) -> AnyElement",
+                "pub fn render_preview<H: UiHost>(cx: &mut ElementContext<'_, H>, demo_image: Option<Model<Option<ImageId>>>,) -> AnyElement",
+                "Option<Model<Option<fret_core::ImageId>>>",
             ],
         );
     }
+
+    assert_sources_absent(
+        "src/ui/snippets/aspect_ratio",
+        &[
+            "use fret_core::ImageId;",
+            "Option<Model<Option<fret_core::ImageId>>>",
+            "Option<fret_core::ImageId>",
+        ],
+    );
 }
 
 #[test]

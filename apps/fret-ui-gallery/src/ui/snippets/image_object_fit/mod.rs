@@ -3,9 +3,8 @@
 use crate::demo_assets;
 use fret::AppComponentCx;
 use fret::component::ui_assets;
-use fret_core::ImageId;
 
-pub(crate) fn square_image(cx: &mut AppComponentCx<'_>) -> Option<ImageId> {
+pub(crate) fn square_image(cx: &mut AppComponentCx<'_>) -> Option<ui_assets::ImageId> {
     ui_assets::image_source_state_from_asset_request(
         cx,
         &demo_assets::ui_gallery_profile_square_request(),
@@ -13,7 +12,7 @@ pub(crate) fn square_image(cx: &mut AppComponentCx<'_>) -> Option<ImageId> {
     .image
 }
 
-pub(crate) fn wide_image(cx: &mut AppComponentCx<'_>) -> Option<ImageId> {
+pub(crate) fn wide_image(cx: &mut AppComponentCx<'_>) -> Option<ui_assets::ImageId> {
     ui_assets::image_source_state_from_asset_request(
         cx,
         &demo_assets::ui_gallery_aspect_ratio_landscape_request(),
@@ -21,7 +20,7 @@ pub(crate) fn wide_image(cx: &mut AppComponentCx<'_>) -> Option<ImageId> {
     .image
 }
 
-pub(crate) fn tall_image(cx: &mut AppComponentCx<'_>) -> Option<ImageId> {
+pub(crate) fn tall_image(cx: &mut AppComponentCx<'_>) -> Option<ui_assets::ImageId> {
     ui_assets::image_source_state_from_asset_request(
         cx,
         &demo_assets::ui_gallery_aspect_ratio_portrait_request(),
@@ -29,7 +28,7 @@ pub(crate) fn tall_image(cx: &mut AppComponentCx<'_>) -> Option<ImageId> {
     .image
 }
 
-pub(crate) fn sampling_image(cx: &mut AppComponentCx<'_>) -> Option<ImageId> {
+pub(crate) fn sampling_image(cx: &mut AppComponentCx<'_>) -> Option<ui_assets::ImageId> {
     ui_assets::image_source_state_from_asset_request(
         cx,
         &demo_assets::ui_gallery_image_object_fit_sampling_request(),

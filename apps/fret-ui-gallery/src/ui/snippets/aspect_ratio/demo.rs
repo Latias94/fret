@@ -46,12 +46,13 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
 // endregion: example
 
 use fret::component::prelude::Model;
+use fret::component::ui_assets::ImageId;
 use fret_ui_kit::declarative::ModelWatchExt as _;
 use fret_ui_kit::primitives::visually_hidden::visually_hidden_label;
 
 fn preview_status_marker<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    image_id: Option<fret_core::ImageId>,
+    image_id: Option<ImageId>,
     loading: bool,
 ) -> AnyElement {
     let (test_id, label) = if image_id.is_some() {
@@ -76,7 +77,7 @@ fn preview_status_marker<H: UiHost>(
 
 pub fn render_preview<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    demo_image: Option<Model<Option<fret_core::ImageId>>>,
+    demo_image: Option<Model<Option<ImageId>>>,
 ) -> impl IntoUiElement<H> + use<H> {
     let model_image_id = demo_image
         .as_ref()
