@@ -603,12 +603,18 @@ SELECTED_GROUPED_STATE_POLICIES = [
             'let theme = cx.theme().snapshot();',
             'fn view_settings(',
             '-> CustomEffectV2IdentityWebViewSettings {',
-            'fn reset_in(&self, models: &mut fret_runtime::ModelStore) {',
+            'type CustomEffectV2IdentityWebModelStore = fret_runtime::ModelStore;',
+            "struct CustomEffectV2IdentityWebModelOwner<'a> {",
+            'fn set_model<T: std::any::Any>(&mut self, model: &Model<T>, value: T) -> bool {',
+            'fn reset_controls(&mut self, controls: &DemoControls) -> bool {',
             'cx.data().selector_model_paint(',
             '&controls.enabled,',
             '&controls.debug_input,',
-            'reset_controls.reset_in(host.models_mut());',
-            'state.controls.reset_in(app.models_mut());',
+            'CustomEffectV2IdentityWebModelOwner::new(host.models_mut())',
+            '.reset_controls(&reset_controls);',
+            'CustomEffectV2IdentityWebModelOwner::new(app.models_mut()).toggle_surface(&state.show);',
+            'CustomEffectV2IdentityWebModelOwner::new(app.models_mut())',
+            '.reset_controls(&state.controls);',
             'let view_settings = Self::view_settings(cx, &controls);',
         ],
         [
@@ -621,6 +627,10 @@ SELECTED_GROUPED_STATE_POLICIES = [
             'model.paint_in(cx).read_ref(|v| v.as_ref().map(|s| s.to_string()))',
             'CustomEffectV2IdentityWebDriver::reset_controls(app, &state.controls);',
             'let _ = models.update(&reset_controls.enabled, |v| *v = true);',
+            'fn reset_in(&self, models: &mut fret_runtime::ModelStore) {',
+            'reset_controls.reset_in(host.models_mut());',
+            'state.controls.reset_in(app.models_mut());',
+            'models_mut().update(',
             'let enabled = controls.enabled.paint_in(cx).value_or(true);',
             'let debug_input = controls.debug_input.paint_in(cx).value_or(false);',
             'Theme::global(&*cx.app).snapshot()',
@@ -926,6 +936,57 @@ CUSTOM_EFFECT_V2_WEB_RESET_REQUIRED = [
     'self.set_model(&controls.tile_corner_radius_px, vec![18.0])',
     'self.set_model(&controls.debug_input, false)',
 ]
+CUSTOM_EFFECT_V2_IDENTITY_WEB_OWNER_START = (
+    'type CustomEffectV2IdentityWebModelStore = fret_runtime::ModelStore;'
+)
+CUSTOM_EFFECT_V2_IDENTITY_WEB_OWNER_END = 'pub struct CustomEffectV2IdentityWebWindowState'
+CUSTOM_EFFECT_V2_IDENTITY_WEB_RESET_REQUIRED = [
+    'self.set_model(&controls.enabled, true)',
+    'self.set_model(&controls.mode, Some(Arc::from("backdrop")))',
+    'self.set_model(&controls.quality, Some(Arc::from("high")))',
+    'self.set_model(&controls.sampling, Some(Arc::from("linear")))',
+    'self.set_model(&controls.uv_span, vec![1.0])',
+    'self.set_model(&controls.mix01, vec![0.65])',
+    'self.set_model(&controls.debug_input, false)',
+]
+CUSTOM_EFFECT_V2_OWNER_SLICES = {
+    'custom_effect_v2_web_demo.rs': (
+        CUSTOM_EFFECT_V2_WEB_OWNER_START,
+        CUSTOM_EFFECT_V2_WEB_OWNER_END,
+        CUSTOM_EFFECT_V2_WEB_RESET_REQUIRED,
+    ),
+    'custom_effect_v2_identity_web_demo.rs': (
+        CUSTOM_EFFECT_V2_IDENTITY_WEB_OWNER_START,
+        CUSTOM_EFFECT_V2_IDENTITY_WEB_OWNER_END,
+        CUSTOM_EFFECT_V2_IDENTITY_WEB_RESET_REQUIRED,
+    ),
+}
+CUSTOM_EFFECT_V2_OWNER_OUTSIDE_FORBIDDEN = [
+    'ModelStore::update(',
+    'ModelStore::update::<',
+    'ModelStore::update_any(',
+    'ModelStore::update_any::<',
+    'self.models.update(',
+    'self.models.update::<',
+    'self.models.update_any(',
+    'self.models.update_any::<',
+    'models.update(',
+    'models.update::<',
+    'models.update_any(',
+    'models.update_any::<',
+    'model_store.update(',
+    'model_store.update::<',
+    'model_store.update_any(',
+    'model_store.update_any::<',
+    'store.update(',
+    'store.update::<',
+    'store.update_any(',
+    'store.update_any::<',
+    'models_mut().update(',
+    'models_mut().update::<',
+    'models_mut().update_any(',
+    'models_mut().update_any::<',
+]
 
 
 def source_path(examples_src: Path, source_name: str) -> Path:
@@ -949,16 +1010,18 @@ def check_selected_grouped_state_source_policies(
             forbidden=list(forbidden),
             failures=failures,
         )
-        if source_name == 'custom_effect_v2_web_demo.rs':
-            owner_start = source.find(CUSTOM_EFFECT_V2_WEB_OWNER_START)
-            owner_end = source.find(CUSTOM_EFFECT_V2_WEB_OWNER_END)
+        owner_slice = CUSTOM_EFFECT_V2_OWNER_SLICES.get(source_name)
+        if owner_slice is not None:
+            owner_start_marker, owner_end_marker, reset_required = owner_slice
+            owner_start = source.find(owner_start_marker)
+            owner_end = source.find(owner_end_marker)
             if owner_start >= 0 and owner_end > owner_start:
                 owner_source = source[owner_start:owner_end]
                 outside_owner_source = source[:owner_start] + source[owner_end:]
                 check_required_forbidden_markers(
                     path,
                     owner_source,
-                    required=CUSTOM_EFFECT_V2_WEB_RESET_REQUIRED,
+                    required=reset_required,
                     forbidden=[],
                     failures=failures,
                 )
@@ -966,6 +1029,6 @@ def check_selected_grouped_state_source_policies(
                     path,
                     outside_owner_source,
                     required=[],
-                    forbidden=['.update('],
+                    forbidden=CUSTOM_EFFECT_V2_OWNER_OUTSIDE_FORBIDDEN,
                     failures=failures,
                 )
