@@ -59,6 +59,16 @@ impl LinePlotPanelBinding {
             .unwrap_or_default()
     }
 
+    /// Read the latest plot output without registering a UI invalidation dependency.
+    ///
+    /// This is intended for event handlers, diagnostics, and logging code that needs to observe
+    /// interaction output outside a render/layout context.
+    pub fn output_untracked(&self, host: &impl ModelHost) -> PlotOutput {
+        self.output
+            .read_ref(host, |output| *output)
+            .unwrap_or_default()
+    }
+
     /// Advanced bridge for component authors that already own raw model handles.
     ///
     /// Prefer [`Self::new`] for app code. This method exists so advanced plot coordinators can
@@ -83,6 +93,7 @@ mod tests {
     use crate::cartesian::DataPoint;
     use crate::models::{LinePlotModel, LineSeries};
     use crate::series::Series;
+    use crate::state::PlotOutput;
 
     use super::LinePlotPanelBinding;
 
@@ -125,5 +136,26 @@ mod tests {
                 .read(&props.model, |model| model.series.len())
                 .is_ok()
         );
+    }
+
+    #[test]
+    fn line_plot_binding_reads_output_without_exposing_output_model_handle() {
+        let mut host = TestHost::default();
+
+        let binding = LinePlotPanelBinding::new(&mut host, sample_model());
+        let props = binding.panel_props();
+        let output = props
+            .output
+            .expect("binding props should include output model");
+        output
+            .update(&mut host, |output, _cx| {
+                *output = PlotOutput {
+                    revision: 42,
+                    ..Default::default()
+                };
+            })
+            .expect("output model update should succeed");
+
+        assert_eq!(binding.output_untracked(&host).revision, 42);
     }
 }

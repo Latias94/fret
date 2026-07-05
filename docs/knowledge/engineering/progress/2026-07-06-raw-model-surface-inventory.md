@@ -22,12 +22,14 @@ component-specific public surface.
 
 Keep raw/shared-model mechanisms for now:
 
-- Plot/chart demos such as `plot_demo`, `stems_demo`, `histogram_demo`, `chart_multi_axis_demo`.
+- Plot/chart demos such as `stems_demo`, `histogram_demo`, `chart_multi_axis_demo`.
   They allocate model graphs that are consumed by plot/chart component APIs rather than ordinary
   view-local app state.
   - Follow-up: `plot_declarative_demo.rs` now uses `LinePlotPanelBinding` as the app-facing tracer
-    bullet. Keep explicit raw `LinePlotPanelProps` in advanced/linked/overlay plot demos until
-    each plot family has an equivalent binding contract.
+    bullet. `plot_demo.rs` also stores `LinePlotPanelBinding` and reads event output through
+    `LinePlotPanelBinding::output_untracked(...)`, so the manual harness no longer exposes the
+    line plot's raw state/output models. Keep explicit raw `LinePlotPanelProps` in
+    advanced/linked/overlay plot demos until each plot family has an equivalent binding contract.
 - Custom effect demos such as `custom_effect_v2_*`. They expose effect parameter models and reset
   groups; these need a dedicated parameter/control-surface design before deletion.
   - Follow-up: `custom_effect_v2_web_demo.rs`, `custom_effect_v2_identity_web_demo.rs`,
@@ -58,6 +60,9 @@ Likely next cleanup slices:
 
 - Custom-effect parameter binding contracts after the V2 web variants have the same owner boundary
   and duplicated parameter shapes are clearer.
+- Plot/chart family-specific bindings for remaining first-contact demos, especially histogram and
+  chart canvas surfaces, once their output/state contracts are named explicitly.
+
 # Verification
 
 - `git status --short --branch` on latest `main`

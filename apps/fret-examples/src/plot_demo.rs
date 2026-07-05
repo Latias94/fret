@@ -5,12 +5,12 @@ use fret_core::{AppWindowId, Event};
 use fret_launch::{
     FnDriver, WinitEventContext, WinitHotReloadContext, WinitRenderContext, WinitRunnerConfig,
 };
+use fret_plot::LinePlotPanelBinding;
 use fret_plot::cartesian::{AxisScale, DataPoint};
-use fret_plot::declarative::{LinePlotPanelProps, line_plot_panel_in};
+use fret_plot::declarative::line_plot_panel_in;
 use fret_plot::models::{LinePlotModel, LineSeries, YAxis};
 use fret_plot::plot::axis::AxisLabelFormatter;
 use fret_plot::series::Series;
-use fret_plot::state::{PlotOutput, PlotState};
 use fret_plot::style::LinePlotStyle;
 use fret_runtime::PlatformCapabilities;
 use fret_ui::{UiTree, declarative};
@@ -18,9 +18,7 @@ use fret_ui::{UiTree, declarative};
 pub struct PlotDemoWindowState {
     ui: UiTree<App>,
     root: Option<fret_core::NodeId>,
-    plot: fret_runtime::Model<LinePlotModel>,
-    plot_state: fret_runtime::Model<PlotState>,
-    plot_output: fret_runtime::Model<PlotOutput>,
+    plot: LinePlotPanelBinding,
     last_logged_output_revision: u64,
 }
 
@@ -72,28 +70,29 @@ impl PlotDemoDriver {
             push(&mut series5, x, (u * 0.08).sin() * 1_500.0 + 2_000.0);
         }
 
-        let plot = app.models_mut().insert(LinePlotModel::from_series(vec![
-            LineSeries::new("signal A", Series::from_points_sorted(series0, true)),
-            LineSeries::new("signal B", Series::from_points_sorted(series1, true)),
-            LineSeries::new("signal C", Series::from_points_sorted(series2, true)),
-            LineSeries::new(
-                "signal D (right)",
-                Series::from_points_sorted(series3, true),
-            )
-            .y_axis(YAxis::Right),
-            LineSeries::new(
-                "signal E (right2)",
-                Series::from_points_sorted(series4, true),
-            )
-            .y_axis(YAxis::Right2),
-            LineSeries::new(
-                "signal F (right3)",
-                Series::from_points_sorted(series5, true),
-            )
-            .y_axis(YAxis::Right3),
-        ]));
-        let plot_state = app.models_mut().insert(PlotState::default());
-        let plot_output = app.models_mut().insert(PlotOutput::default());
+        let plot = LinePlotPanelBinding::new(
+            app,
+            LinePlotModel::from_series(vec![
+                LineSeries::new("signal A", Series::from_points_sorted(series0, true)),
+                LineSeries::new("signal B", Series::from_points_sorted(series1, true)),
+                LineSeries::new("signal C", Series::from_points_sorted(series2, true)),
+                LineSeries::new(
+                    "signal D (right)",
+                    Series::from_points_sorted(series3, true),
+                )
+                .y_axis(YAxis::Right),
+                LineSeries::new(
+                    "signal E (right2)",
+                    Series::from_points_sorted(series4, true),
+                )
+                .y_axis(YAxis::Right2),
+                LineSeries::new(
+                    "signal F (right3)",
+                    Series::from_points_sorted(series5, true),
+                )
+                .y_axis(YAxis::Right3),
+            ]),
+        );
 
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
@@ -102,8 +101,6 @@ impl PlotDemoDriver {
             ui,
             root: None,
             plot,
-            plot_state,
-            plot_output,
             last_logged_output_revision: 0,
         }
     }
@@ -163,10 +160,7 @@ fn handle_event(
                 event,
                 Event::Pointer(fret_core::PointerEvent::Up { .. }) | Event::KeyDown { .. }
             ) {
-                let output = state
-                    .plot_output
-                    .read(app, |_app, o| *o)
-                    .unwrap_or_default();
+                let output = state.plot.output_untracked(app);
                 if output.revision != state.last_logged_output_revision {
                     state.last_logged_output_revision = output.revision;
                     if let Some(query) = output.snapshot.query {
@@ -196,12 +190,11 @@ fn render(_driver: &mut PlotDemoDriver, context: WinitRenderContext<'_, PlotDemo
     } = context;
 
     let plot = state.plot.clone();
-    let plot_state = state.plot_state.clone();
-    let plot_output = state.plot_output.clone();
     let root = declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
         .render_root("plot-demo", move |cx| {
             let style = LinePlotStyle::default();
-            let props = LinePlotPanelProps::new(plot.clone())
+            let props = plot
+                .panel_props()
                 .style(style)
                 .x_scale(AxisScale::Log10)
                 .y_axis_labels(AxisLabelFormatter::custom(0x554e4954u64, |v, span| {
@@ -233,9 +226,7 @@ fn render(_driver: &mut PlotDemoDriver, context: WinitRenderContext<'_, PlotDemo
                         return "NA".to_string();
                     }
                     format!("{v:.0} Pa")
-                }))
-                .state(plot_state.clone())
-                .output(plot_output.clone());
+                }));
             vec![line_plot_panel_in(cx, props)]
         });
 

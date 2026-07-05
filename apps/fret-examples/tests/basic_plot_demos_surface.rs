@@ -271,20 +271,21 @@ fn plot_demo_uses_manual_harness_declarative_line_plot_panel() {
     let source = compact(include_str!("../src/plot_demo.rs"));
 
     for needle in [
-        "usefret_plot::declarative::{LinePlotPanelProps,line_plot_panel_in};",
+        "usefret_plot::LinePlotPanelBinding;",
+        "usefret_plot::declarative::line_plot_panel_in;",
         "usefret_plot::models::{LinePlotModel,LineSeries,YAxis};",
         "usefret_ui::{UiTree,declarative};",
+        "plot:LinePlotPanelBinding",
         "declarative::RenderRootContext::new(&mutstate.ui,app,services,window,bounds)",
-        "LinePlotModel::from_series(vec![",
+        "LinePlotPanelBinding::new(app,LinePlotModel::from_series(vec![",
         "LinePlotStyle::default()",
-        "LinePlotPanelProps::new(plot.clone())",
+        "state.plot.output_untracked(app)",
+        "plot.panel_props()",
         ".x_scale(AxisScale::Log10)",
         ".y_axis_labels(",
         ".y2_axis_labels(",
         ".y3_axis_labels(",
         ".y4_axis_labels(",
-        ".state(plot_state.clone())",
-        ".output(plot_output.clone())",
         "vec![line_plot_panel_in(cx,props)]",
     ] {
         assert!(
@@ -299,6 +300,9 @@ fn plot_demo_uses_manual_harness_declarative_line_plot_panel() {
         "LinePlotCanvas",
         "PlotCanvas",
         "create_node_retained(",
+        "fret_runtime::Model<",
+        "app.models_mut().insert(PlotState::default())",
+        "app.models_mut().insert(PlotOutput::default())",
     ] {
         assert!(
             !source.contains(legacy),
