@@ -1,18 +1,22 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use fret::advanced::prelude::*;
-use fret::component::prelude::*;
-use fret_app::{CreateWindowKind, CreateWindowRequest, WindowRequest};
-use fret_bootstrap::ui_app_driver;
+use fret::advanced::KernelApp;
+use fret::advanced::interop::run_native_with_compat_driver;
+use fret_app::{CreateWindowKind, CreateWindowRequest, Effect, WindowRequest};
+use fret_bootstrap::ui_app_driver::{self, ViewElements};
 use fret_core::{AppWindowId, Px};
 use fret_launch::{WindowCreateSpec, WindowLogicalSize, WinitRunnerConfig};
+use fret_runtime::Model;
 use fret_runtime::{
     ActivationPolicy, WindowDecorationsRequest, WindowRole, WindowStyleRequest, WindowZLevel,
 };
 use fret_ui::element::{LayoutStyle, Length, SizeStyle};
 use fret_ui::{ElementContext, UiHost};
+use fret_ui_kit::IntoUiElement as _;
+use fret_ui_kit::declarative::TrackedModelExt as _;
 use fret_ui_kit::declarative::text as decl_text;
+use fret_ui_kit::declarative::{ElementContextThemeExt as _, UiElementTestIdExt as _};
 use fret_ui_kit::{LayoutRefinement, Space, ui};
 use fret_ui_shadcn::facade as shadcn;
 
@@ -55,7 +59,7 @@ pub fn run() -> anyhow::Result<()> {
     // Keep deterministic overlap: place restored windows relative to the anchor point.
     config.new_window_anchor_offset = (0.0, 0.0);
 
-    fret::advanced::interop::run_native_with_compat_driver(config, KernelApp::new(), driver)?;
+    run_native_with_compat_driver(config, KernelApp::new(), driver)?;
     Ok(())
 }
 
