@@ -78,7 +78,8 @@
 //!   `cx.data().mutation_async_local(...)` plus `handle.submit(...)`, `handle.submit_action(...)`,
 //!   or explicit `handle.retry_last(...)` replay instead of teaching click-driven submit flows
 //!   through `query_async(...)`
-//! - enable `router` for `fret::router::{app::install, RouterUiStore, RouterOutlet, router_link, ...}`
+//! - enable `router` for
+//!   `fret::router::{app::install, RouterUiStore, router_link, router_outlet_by_leaf_with_test_id, ...}`
 //!   plus `fret::router::bind_history_actions(...)` history bindings
 //! - depend on `fret-docking` directly for editor-grade docking workflows instead of expecting a
 //!   `fret` root feature proxy
@@ -1110,11 +1111,202 @@ pub mod router {
     };
     pub use fret_router_ui::{
         RouterLeafStatus, RouterLink, RouterLinkContextMenuAction, RouterLinkContextMenuItem,
-        RouterOutlet, RouterUiSnapshot, RouterUiStore, router_link, router_link_to,
-        router_link_to_typed_route, router_link_to_typed_route_with_test_id,
-        router_link_to_with_test_id, router_link_with_props, router_link_with_test_id,
-        router_outlet, router_outlet_with_test_id,
+        RouterOutlet, RouterUiSnapshot, RouterUiStore,
     };
+
+    pub fn router_outlet<'a, Cx, R, T>(
+        cx: &mut Cx,
+        snapshot: &fret_runtime::Model<RouterUiSnapshot<R>>,
+        render: impl FnOnce(&mut crate::AppRenderCx<'_>, &RouterUiSnapshot<R>) -> T,
+    ) -> fret_ui::element::AnyElement
+    where
+        Cx: crate::app::AppRenderContext<'a>,
+        R: Clone + 'static,
+        T: fret_ui_kit::IntoUiElement<crate::app::App>,
+    {
+        fret_router_ui::router_outlet(cx.elements(), snapshot, render)
+    }
+
+    pub fn router_outlet_with_test_id<'a, Cx, R, T>(
+        cx: &mut Cx,
+        snapshot: &fret_runtime::Model<RouterUiSnapshot<R>>,
+        test_id: impl Into<std::sync::Arc<str>>,
+        render: impl FnOnce(&mut crate::AppRenderCx<'_>, &RouterUiSnapshot<R>) -> T,
+    ) -> fret_ui::element::AnyElement
+    where
+        Cx: crate::app::AppRenderContext<'a>,
+        R: Clone + 'static,
+        T: fret_ui_kit::IntoUiElement<crate::app::App>,
+    {
+        fret_router_ui::router_outlet_with_test_id(cx.elements(), snapshot, test_id, render)
+    }
+
+    pub fn router_outlet_by_leaf_with_test_id<'a, Cx, R, T, N>(
+        cx: &mut Cx,
+        snapshot: &fret_runtime::Model<RouterUiSnapshot<R>>,
+        test_id: impl Into<std::sync::Arc<str>>,
+        render: impl FnOnce(&mut crate::AppRenderCx<'_>, &R, &RouterUiSnapshot<R>) -> T,
+        not_found: impl FnOnce(&mut crate::AppRenderCx<'_>, &RouterUiSnapshot<R>) -> N,
+    ) -> fret_ui::element::AnyElement
+    where
+        Cx: crate::app::AppRenderContext<'a>,
+        R: Clone + 'static,
+        T: fret_ui_kit::IntoUiElement<crate::app::App>,
+        N: fret_ui_kit::IntoUiElement<crate::app::App>,
+    {
+        fret_router_ui::RouterOutlet::new(snapshot.clone())
+            .test_id(test_id)
+            .into_element_by_leaf(cx.elements(), render, not_found)
+    }
+
+    pub fn router_link<'a, Cx, R, H, I, T>(
+        cx: &mut Cx,
+        store: &RouterUiStore<R, H>,
+        link: RouterLink,
+        children: I,
+    ) -> fret_ui::element::AnyElement
+    where
+        Cx: crate::app::AppRenderContext<'a>,
+        R: Clone + Eq + std::hash::Hash + 'static,
+        H: fret_router::HistoryAdapter + 'static,
+        I: IntoIterator<Item = T>,
+        T: fret_ui_kit::IntoUiElement<crate::app::App>,
+    {
+        fret_router_ui::router_link(cx.elements(), store, link, children)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn router_link_to<'a, Cx, R, H, I, T>(
+        cx: &mut Cx,
+        store: &RouterUiStore<R, H>,
+        action: NavigationAction,
+        route: &R,
+        params: &[PathParam],
+        search: SearchMap,
+        fragment: Option<String>,
+        children: I,
+    ) -> Result<fret_ui::element::AnyElement, RouterBuildLocationError>
+    where
+        Cx: crate::app::AppRenderContext<'a>,
+        R: Clone + Eq + std::hash::Hash + 'static,
+        H: fret_router::HistoryAdapter + 'static,
+        I: IntoIterator<Item = T>,
+        T: fret_ui_kit::IntoUiElement<crate::app::App>,
+    {
+        fret_router_ui::router_link_to(
+            cx.elements(),
+            store,
+            action,
+            route,
+            params,
+            search,
+            fragment,
+            children,
+        )
+    }
+
+    pub fn router_link_to_typed_route<'a, Cx, R, H, C, I, T>(
+        cx: &mut Cx,
+        store: &RouterUiStore<R, H>,
+        action: NavigationAction,
+        codec: &C,
+        route: &C::Route,
+        children: I,
+    ) -> fret_ui::element::AnyElement
+    where
+        Cx: crate::app::AppRenderContext<'a>,
+        R: Clone + Eq + std::hash::Hash + 'static,
+        H: fret_router::HistoryAdapter + 'static,
+        C: RouteCodec,
+        I: IntoIterator<Item = T>,
+        T: fret_ui_kit::IntoUiElement<crate::app::App>,
+    {
+        fret_router_ui::router_link_to_typed_route(
+            cx.elements(),
+            store,
+            action,
+            codec,
+            route,
+            children,
+        )
+    }
+
+    pub fn router_link_to_typed_route_with_test_id<'a, Cx, R, H, C, I, T>(
+        cx: &mut Cx,
+        store: &RouterUiStore<R, H>,
+        action: NavigationAction,
+        codec: &C,
+        route: &C::Route,
+        test_id: impl Into<std::sync::Arc<str>>,
+        children: I,
+    ) -> fret_ui::element::AnyElement
+    where
+        Cx: crate::app::AppRenderContext<'a>,
+        R: Clone + Eq + std::hash::Hash + 'static,
+        H: fret_router::HistoryAdapter + 'static,
+        C: RouteCodec,
+        I: IntoIterator<Item = T>,
+        T: fret_ui_kit::IntoUiElement<crate::app::App>,
+    {
+        fret_router_ui::router_link_to_typed_route_with_test_id(
+            cx.elements(),
+            store,
+            action,
+            codec,
+            route,
+            test_id,
+            children,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn router_link_to_with_test_id<'a, Cx, R, H, I, T>(
+        cx: &mut Cx,
+        store: &RouterUiStore<R, H>,
+        action: NavigationAction,
+        route: &R,
+        params: &[PathParam],
+        search: SearchMap,
+        fragment: Option<String>,
+        test_id: impl Into<std::sync::Arc<str>>,
+        children: I,
+    ) -> Result<fret_ui::element::AnyElement, RouterBuildLocationError>
+    where
+        Cx: crate::app::AppRenderContext<'a>,
+        R: Clone + Eq + std::hash::Hash + 'static,
+        H: fret_router::HistoryAdapter + 'static,
+        I: IntoIterator<Item = T>,
+        T: fret_ui_kit::IntoUiElement<crate::app::App>,
+    {
+        fret_router_ui::router_link_to_with_test_id(
+            cx.elements(),
+            store,
+            action,
+            route,
+            params,
+            search,
+            fragment,
+            test_id,
+            children,
+        )
+    }
+
+    pub fn router_link_with_test_id<'a, Cx, R, H, I, T>(
+        cx: &mut Cx,
+        store: &RouterUiStore<R, H>,
+        link: RouterLink,
+        test_id: impl Into<std::sync::Arc<str>>,
+        children: I,
+    ) -> fret_ui::element::AnyElement
+    where
+        Cx: crate::app::AppRenderContext<'a>,
+        R: Clone + Eq + std::hash::Hash + 'static,
+        H: fret_router::HistoryAdapter + 'static,
+        I: IntoIterator<Item = T>,
+        T: fret_ui_kit::IntoUiElement<crate::app::App>,
+    {
+        fret_router_ui::router_link_with_test_id(cx.elements(), store, link, test_id, children)
+    }
 
     /// Bind router back/forward handlers to typed app actions.
     ///
@@ -3495,16 +3687,25 @@ mod authoring_surface_policy_tests {
     fn readme_and_rustdoc_expose_router_as_explicit_optional_surface() {
         assert!(CRATE_README.contains("- `router`: enable the explicit app-level router surface"));
         assert!(CRATE_README.contains(
-            "`fret::router::{app::install, bind_history_actions, RouterUiStore, RouterOutlet, ...}`"
+            "`fret::router::{app::install, bind_history_actions, RouterUiStore, router_outlet_by_leaf_with_test_id, ...}`"
         ));
 
         let rustdoc = crate_rustdoc();
         let public_surface = crate_public_surface_source();
         assert!(rustdoc.contains(
-            "`fret::router::{app::install, RouterUiStore, RouterOutlet, router_link, ...}`"
+            "`fret::router::{app::install, RouterUiStore, router_link, router_outlet_by_leaf_with_test_id, ...}`"
         ));
         assert!(rustdoc.contains("`fret::router::bind_history_actions(...)`"));
         assert!(public_surface.contains("pub mod router {"));
+        assert!(public_surface.contains("pub fn router_link_to_typed_route_with_test_id<'a, Cx"));
+        assert!(public_surface.contains("pub fn router_link_with_test_id<'a, Cx"));
+        assert!(public_surface.contains("pub fn router_outlet_by_leaf_with_test_id<'a, Cx"));
+        assert!(public_surface.contains("Cx: crate::app::AppRenderContext<'a>"));
+        assert!(
+            public_surface.contains("fret_router_ui::router_link_to_typed_route_with_test_id(")
+        );
+        assert!(public_surface.contains("fret_router_ui::router_link_with_test_id("));
+        assert!(public_surface.contains("fret_router_ui::RouterOutlet::new(snapshot.clone())"));
         assert!(public_surface.contains("pub fn bind_history_actions<Back, Forward, R, H>("));
         assert!(public_surface.contains("pub mod app {"));
         assert!(public_surface.contains("pub fn install(app: &mut crate::app::App) {"));
@@ -4062,6 +4263,7 @@ mod authoring_surface_policy_tests {
     fn usage_docs_expose_router_as_explicit_extension_surface() {
         assert!(CRATE_USAGE_GUIDE.contains("enable `fret`'s `router` feature"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::router::*`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`router_outlet_by_leaf_with_test_id(...)`"));
         assert!(
             CRATE_USAGE_GUIDE.contains(
                 "`bind_history_actions(cx, &store, act::RouterBack, act::RouterForward)`"

@@ -615,8 +615,10 @@ mod authoring_surface_policy_tests {
         assert!(!ROUTER_EXAMPLE.contains("use fret_router::{"));
         assert!(!ROUTER_EXAMPLE.contains("use fret_router_ui::{"));
         assert!(ROUTER_EXAMPLE.contains("router_link_to_typed_route_with_test_id"));
+        assert!(ROUTER_EXAMPLE.contains("router_outlet_by_leaf_with_test_id"));
         assert!(ROUTER_EXAMPLE.contains("models::<act::ClearIntents>"));
         assert!(ROUTER_EXAMPLE.contains("bind_history_actions(cx, &self.store"));
+        assert!(!ROUTER_EXAMPLE.contains("cx.elements()"));
         assert!(!ROUTER_EXAMPLE.contains("on_action_notify::<act::RouterBack>"));
         assert!(!ROUTER_EXAMPLE.contains("self.store.back_on_action()"));
         assert!(!ROUTER_EXAMPLE.contains("self.store.forward_on_action()"));
@@ -632,7 +634,7 @@ mod authoring_surface_policy_tests {
         assert!(!ROUTER_EXAMPLE.contains("set_router_command_availability(window"));
         assert!(ROUTER_EXAMPLE.contains(".setup(fret::router::app::install)"));
         assert!(!ROUTER_EXAMPLE.contains(".setup(fret::router::install_app)"));
-        assert!(ROUTER_EXAMPLE.contains(".into_element_by_leaf("));
+        assert!(!ROUTER_EXAMPLE.contains(".into_element_by_leaf("));
         assert!(!ROUTER_EXAMPLE.contains(".into_element_by_leaf_ui("));
         assert!(!ROUTER_EXAMPLE.contains("router_outlet_ui("));
 

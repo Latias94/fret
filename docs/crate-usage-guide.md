@@ -997,8 +997,8 @@ UI gallery-scale harnesses.
 Notes:
 
 - On the default app path, enable `fret`'s `router` feature and prefer the explicit
-  `fret::router::*` seam (`fret::router::app::install(...)`, `RouterUiStore`, `RouterOutlet`,
-  link helpers, and `bind_history_actions(...)`).
+  `fret::router::*` seam (`fret::router::app::install(...)`, `RouterUiStore`,
+  `router_outlet_by_leaf_with_test_id(...)`, link helpers, and `bind_history_actions(...)`).
 - When depending on `fret-router-ui` directly, keep the same shape and use
   `fret_router_ui::app::install(...)` for command registration instead of inventing a parallel
   root-level app helper.

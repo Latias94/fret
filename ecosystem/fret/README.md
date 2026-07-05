@@ -269,7 +269,7 @@ The same ordered builder surface now also includes compile-time/static entries t
   `cx.data().query_snapshot_entry(...)` for explicit app-lane query maintenance/diagnostics), plus
   the explicit `fret::selector::*` / `fret::query::*`
   secondary lanes when app code needs state helper nouns.
-- `router`: enable the explicit app-level router surface (`fret::router::{app::install, bind_history_actions, RouterUiStore, RouterOutlet, ...}`).
+- `router`: enable the explicit app-level router surface (`fret::router::{app::install, bind_history_actions, RouterUiStore, router_outlet_by_leaf_with_test_id, ...}`).
 - `imui`: enable the explicit immediate-mode authoring lane
   (`fret::imui::{prelude::*, kit, editor, docking}`) for imgui-style control flow while keeping
   `fret::app::prelude::*` declarative-first.

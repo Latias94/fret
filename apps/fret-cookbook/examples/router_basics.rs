@@ -4,9 +4,9 @@ use fret::app::prelude::*;
 use fret::commands::CommandAvailability;
 use fret::router::{
     MemoryHistory, NavigationAction, PathPattern, RouteCodec, RouteHooks, RouteLocation, RouteNode,
-    RoutePrefetchIntent, RouteSearchTable, RouteTree, Router, RouterOutlet, RouterUiStore,
-    SearchValidationMode, bind_history_actions, router_link_to_typed_route_with_test_id,
-    router_link_with_test_id,
+    RoutePrefetchIntent, RouteSearchTable, RouteTree, Router, RouterUiStore, SearchValidationMode,
+    bind_history_actions, router_link_to_typed_route_with_test_id, router_link_with_test_id,
+    router_outlet_by_leaf_with_test_id,
 };
 use fret::style::{LayoutRefinement, Space};
 
@@ -221,7 +221,7 @@ impl View for RouterBasicsView {
         let missing_label = ui::text("Missing").into_element_in(cx);
 
         let home_link = router_link_to_typed_route_with_test_id(
-            cx.elements(),
+            cx,
             &self.store,
             NavigationAction::Push,
             &APP_ROUTE_CODEC,
@@ -231,7 +231,7 @@ impl View for RouterBasicsView {
         );
 
         let settings_link = router_link_to_typed_route_with_test_id(
-            cx.elements(),
+            cx,
             &self.store,
             NavigationAction::Push,
             &APP_ROUTE_CODEC,
@@ -241,7 +241,7 @@ impl View for RouterBasicsView {
         );
 
         let user_link = router_link_to_typed_route_with_test_id(
-            cx.elements(),
+            cx,
             &self.store,
             NavigationAction::Push,
             &APP_ROUTE_CODEC,
@@ -256,13 +256,7 @@ impl View for RouterBasicsView {
             let link = self
                 .store
                 .link_to_location(NavigationAction::Push, RouteLocation::parse("/missing"));
-            router_link_with_test_id(
-                cx.elements(),
-                &self.store,
-                link,
-                TEST_ID_LINK_MISSING,
-                [missing_label],
-            )
+            router_link_with_test_id(cx, &self.store, link, TEST_ID_LINK_MISSING, [missing_label])
         };
 
         let nav = shadcn::card(|cx| {
@@ -288,62 +282,62 @@ impl View for RouterBasicsView {
         .ui()
         .w_px(Px(200.0));
 
-        let outlet = RouterOutlet::new(snapshot_model.clone())
-            .test_id(TEST_ID_OUTLET)
-            .into_element_by_leaf(
-                cx.elements(),
-                |_cx, route, snap| {
-                    let leaf = snap.leaf_match().expect("leaf match should exist");
-                    let matched_path = leaf.matched_path.clone();
-                    let params = leaf.params.clone();
-                    let depth = snap.match_depth();
+        let outlet = router_outlet_by_leaf_with_test_id(
+            cx,
+            &snapshot_model,
+            TEST_ID_OUTLET,
+            |_cx, route, snap| {
+                let leaf = snap.leaf_match().expect("leaf match should exist");
+                let matched_path = leaf.matched_path.clone();
+                let params = leaf.params.clone();
+                let depth = snap.match_depth();
 
-                    let title = match route {
-                        RouteId::Home => "Home",
-                        RouteId::Settings => "Settings",
-                        RouteId::User => "User",
-                    };
+                let title = match route {
+                    RouteId::Home => "Home",
+                    RouteId::Settings => "Settings",
+                    RouteId::User => "User",
+                };
 
-                    let params_line: Arc<str> = if params.is_empty() {
-                        Arc::from("<no params>")
-                    } else {
-                        Arc::from(format!("params={params:?}"))
-                    };
+                let params_line: Arc<str> = if params.is_empty() {
+                    Arc::from("<no params>")
+                } else {
+                    Arc::from(format!("params={params:?}"))
+                };
 
-                    shadcn::card(move |cx| {
-                        ui::children![cx;
-                            shadcn::card_header(|cx| {
-                                ui::children![cx;
-                                    shadcn::card_title(title),
-                                    shadcn::card_description(format!("matched_path={matched_path}")),
-                                ]
-                            }),
-                            shadcn::card_content(|cx| {
-                                ui::children![cx;
-                                    ui::text(params_line),
-                                    ui::text(format!("depth={depth}")),
-                                ]
-                            }),
-                        ]
-                    })
-                    .refine_layout(LayoutRefinement::default().w_full())
-                },
-                |_cx, snap| {
-                    let location = snap.location.to_url();
+                shadcn::card(move |cx| {
+                    ui::children![cx;
+                        shadcn::card_header(|cx| {
+                            ui::children![cx;
+                                shadcn::card_title(title),
+                                shadcn::card_description(format!("matched_path={matched_path}")),
+                            ]
+                        }),
+                        shadcn::card_content(|cx| {
+                            ui::children![cx;
+                                ui::text(params_line),
+                                ui::text(format!("depth={depth}")),
+                            ]
+                        }),
+                    ]
+                })
+                .refine_layout(LayoutRefinement::default().w_full())
+            },
+            |_cx, snap| {
+                let location = snap.location.to_url();
 
-                    shadcn::card(move |cx| {
-                        ui::children![cx;
-                            shadcn::card_header(|cx| {
-                                ui::children![cx;
-                                    shadcn::card_title("Not found"),
-                                    shadcn::card_description(format!("location={}", location)),
-                                ]
-                            }),
-                        ]
-                    })
-                    .refine_layout(LayoutRefinement::default().w_full())
-                },
-            );
+                shadcn::card(move |cx| {
+                    ui::children![cx;
+                        shadcn::card_header(|cx| {
+                            ui::children![cx;
+                                shadcn::card_title("Not found"),
+                                shadcn::card_description(format!("location={}", location)),
+                            ]
+                        }),
+                    ]
+                })
+                .refine_layout(LayoutRefinement::default().w_full())
+            },
+        );
 
         let intents_panel = shadcn::card(|cx| {
             ui::children![cx;
