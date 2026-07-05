@@ -14,10 +14,7 @@
 
 use std::sync::Arc;
 
-use fret::advanced::raw::{
-    LocalStateElementContextExt as _, LocalStateModelStoreExt as _, LocalStateRawModelExt as _,
-};
-use fret::{FretApp, advanced::prelude::*, imui::prelude::*};
+use fret::{FretApp, advanced::prelude::*, app::AppLocalStateTxnExt as _, imui::prelude::*};
 use fret_core::Px;
 use fret_ui::Invalidation;
 use fret_ui::element::AnyElement;
@@ -741,8 +738,9 @@ fn render_interaction_lab_card(
                     );
                     set_bool_if_changed(ui.cx_mut().app, &pulse_holding, pulse.press_holding());
                     if pulse.clicked() {
-                        let _ =
-                            pulse_count.update_in(ui.cx_mut().app.models_mut(), |value| *value += 1);
+                        ui.cx_mut()
+                            .app
+                            .local_state_txn(|tx| tx.update(&pulse_count, |value| *value += 1));
                         push_showcase_event(
                             ui.cx_mut().app,
                             &timeline_next_id,
@@ -763,8 +761,9 @@ fn render_interaction_lab_card(
                         );
                     }
                     if pulse.secondary_clicked() {
-                        let _ = secondary_pulse_count
-                            .update_in(ui.cx_mut().app.models_mut(), |value| *value += 1);
+                        ui.cx_mut().app.local_state_txn(|tx| {
+                            tx.update(&secondary_pulse_count, |value| *value += 1)
+                        });
                         push_showcase_event(
                             ui.cx_mut().app,
                             &timeline_next_id,
@@ -785,8 +784,9 @@ fn render_interaction_lab_card(
                         );
                     }
                     if pulse.long_pressed() {
-                        let _ = long_press_count
-                            .update_in(ui.cx_mut().app.models_mut(), |value| *value += 1);
+                        ui.cx_mut().app.local_state_txn(|tx| {
+                            tx.update(&long_press_count, |value| *value += 1)
+                        });
                         push_showcase_event(
                             ui.cx_mut().app,
                             &timeline_next_id,
@@ -816,8 +816,9 @@ fn render_interaction_lab_card(
                     );
                     if drag.drag_started() {
                         set_bool_if_changed(ui.cx_mut().app, &drag_active, true);
-                        let _ =
-                            drag_count.update_in(ui.cx_mut().app.models_mut(), |value| *value += 1);
+                        ui.cx_mut()
+                            .app
+                            .local_state_txn(|tx| tx.update(&drag_count, |value| *value += 1));
                         push_showcase_event(
                             ui.cx_mut().app,
                             &timeline_next_id,
@@ -848,8 +849,10 @@ fn render_interaction_lab_card(
                     if drag.dragging() {
                         set_bool_if_changed(ui.cx_mut().app, &drag_active, true);
                         let delta = drag.drag_delta();
-                        let _ = drag_distance.update_in(ui.cx_mut().app.models_mut(), |value| {
-                            *value += delta.x.0.abs() + delta.y.0.abs();
+                        ui.cx_mut().app.local_state_txn(|tx| {
+                            tx.update(&drag_distance, |value| {
+                                *value += delta.x.0.abs() + delta.y.0.abs();
+                            })
                         });
                     }
                     if drag.drag_stopped() {
@@ -921,9 +924,13 @@ fn render_interaction_lab_card(
                             },
                         );
                         if previous.clicked() {
-                            let next = bookmark_slot.layout_value_in(ui.cx_mut()).saturating_sub(1).max(1);
-                            let _ = bookmark_slot
-                                .set_in(ui.cx_mut().app.models_mut(), next);
+                            let next = bookmark_slot
+                                .layout_value(ui.cx_mut())
+                                .saturating_sub(1)
+                                .max(1);
+                            ui.cx_mut()
+                                .app
+                                .local_state_txn(|tx| tx.set(&bookmark_slot, next));
                             push_showcase_event(
                                 ui.cx_mut().app,
                                 &timeline_next_id,
@@ -939,7 +946,7 @@ fn render_interaction_lab_card(
                             );
                         }
 
-                        let current_bookmark = bookmark_slot.layout_value_in(ui.cx_mut());
+                        let current_bookmark = bookmark_slot.layout_value(ui.cx_mut());
                         ui.text(format!("Bookmark slot {current_bookmark}"));
 
                         let next = ui.arrow_button_with_options(
@@ -952,9 +959,10 @@ fn render_interaction_lab_card(
                             },
                         );
                         if next.clicked() {
-                            let next = (bookmark_slot.layout_value_in(ui.cx_mut()) + 1).min(5);
-                            let _ = bookmark_slot
-                                .set_in(ui.cx_mut().app.models_mut(), next);
+                            let next = (bookmark_slot.layout_value(ui.cx_mut()) + 1).min(5);
+                            ui.cx_mut()
+                                .app
+                                .local_state_txn(|tx| tx.set(&bookmark_slot, next));
                             push_showcase_event(
                                 ui.cx_mut().app,
                                 &timeline_next_id,
@@ -971,7 +979,7 @@ fn render_interaction_lab_card(
                         }
                     });
 
-                    let active_tool = tool_mode.layout_value_in(ui.cx_mut());
+                    let active_tool = tool_mode.layout_value(ui.cx_mut());
                     for candidate in ["Move", "Rotate", "Scale"] {
                         let chosen = active_tool.as_ref() == candidate;
                         let response = ui.radio_with_options(
@@ -986,8 +994,9 @@ fn render_interaction_lab_card(
                             },
                         );
                         if response.clicked() && !chosen {
-                            let _ = tool_mode
-                                .set_in(ui.cx_mut().app.models_mut(), Arc::from(candidate));
+                            ui.cx_mut().app.local_state_txn(|tx| {
+                                tx.set(&tool_mode, Arc::<str>::from(candidate))
+                            });
                             push_showcase_event(
                                 ui.cx_mut().app,
                                 &timeline_next_id,
@@ -1008,9 +1017,9 @@ fn render_interaction_lab_card(
                     }
 
                     ui.separator_text("Controls");
-                    let toggle = ui.switch_model("Autosave snapshots", autosave_enabled.model());
+                    let toggle = ui.switch_model("Autosave snapshots", &autosave_enabled);
                     if toggle.changed() {
-                        let autosave_now = autosave_enabled.layout_value_in(ui.cx_mut());
+                        let autosave_now = autosave_enabled.layout_value(ui.cx_mut());
                         let label = if autosave_now {
                             "Autosave re-armed."
                         } else {
@@ -1035,7 +1044,7 @@ fn render_interaction_lab_card(
 
                     let exposure = ui.slider_f32_model_with_options(
                         "Exposure bias",
-                        exposure_value.model(),
+                        &exposure_value,
                         kit::SliderOptions {
                             min: 0.0,
                             max: 100.0,
@@ -1044,7 +1053,7 @@ fn render_interaction_lab_card(
                         },
                     );
                     if exposure.deactivated_after_edit() {
-                        let value = exposure_value.layout_value_in(ui.cx_mut());
+                        let value = exposure_value.layout_value(ui.cx_mut());
                         push_showcase_event(
                             ui.cx_mut().app,
                             &timeline_next_id,
@@ -1066,7 +1075,7 @@ fn render_interaction_lab_card(
                     let combo = ui.combo_model_with_options(
                         "imui-showcase.review-mode",
                         "Review mode",
-                        review_mode.model(),
+                        &review_mode,
                         &mode_items,
                         kit::ComboModelOptions {
                             placeholder: Some(Arc::from("Choose a review mode")),
@@ -1075,7 +1084,7 @@ fn render_interaction_lab_card(
                     );
                     if combo.deactivated_after_edit() {
                         let mode = review_mode
-                            .layout_value_in(ui.cx_mut())
+                            .layout_value(ui.cx_mut())
                             .unwrap_or_else(|| Arc::from("none"));
                         push_showcase_event(
                             ui.cx_mut().app,
@@ -1096,7 +1105,7 @@ fn render_interaction_lab_card(
                     }
 
                     let notes = ui.input_text_model_with_options(
-                        draft_note.model(),
+                        &draft_note,
                         kit::InputTextOptions {
                             placeholder: Some(Arc::from("Narrate what this interaction should feel like")),
                             ..Default::default()
@@ -1256,10 +1265,9 @@ fn render_shell_showcase_card(
                                         },
                                     );
                                     if staging.toggled() {
-                                        let _ = submenu_toggle_count
-                                            .update_in(ui.cx_mut().app.models_mut(), |value| {
-                                                *value += 1
-                                            });
+                                        ui.cx_mut().app.local_state_txn(|tx| {
+                                            tx.update(&submenu_toggle_count, |value| *value += 1)
+                                        });
                                         push_showcase_event(
                                             ui.cx_mut().app,
                                             &timeline_next_id,
@@ -1286,8 +1294,9 @@ fn render_shell_showcase_card(
                                 },
                             );
                             if file_menu.opened() {
-                                let _ = menu_open_count
-                                    .update_in(ui.cx_mut().app.models_mut(), |value| *value += 1);
+                                ui.cx_mut().app.local_state_txn(|tx| {
+                                    tx.update(&menu_open_count, |value| *value += 1)
+                                });
                                 push_showcase_event(
                                     ui.cx_mut().app,
                                     &timeline_next_id,
@@ -1311,11 +1320,9 @@ fn render_shell_showcase_card(
 
                     let tabs = ui.tab_bar_with_options(
                         "imui-showcase.tabs",
-                        kit::TabBarOptions {
-                            selected: Some(selected_tab.model().clone()),
-                            test_id: Some(Arc::from("imui-showcase.tabs.root")),
-                            ..Default::default()
-                        },
+                        kit::TabBarOptions::default()
+                            .selected_model(&selected_tab)
+                            .test_id("imui-showcase.tabs.root"),
                         |tabs| {
                             tabs.begin_tab_item_with_options(
                                 "overview",
@@ -1362,10 +1369,11 @@ fn render_shell_showcase_card(
                         },
                     );
                     if tabs.selected_changed() {
-                        let _ =
-                            tab_switch_count.update_in(ui.cx_mut().app.models_mut(), |value| *value += 1);
+                        ui.cx_mut().app.local_state_txn(|tx| {
+                            tx.update(&tab_switch_count, |value| *value += 1)
+                        });
                         let selected = selected_tab
-                            .layout_value_in(ui.cx_mut())
+                            .layout_value(ui.cx_mut())
                             .unwrap_or_else(|| Arc::from("overview"));
                         push_showcase_event(
                             ui.cx_mut().app,
@@ -1425,11 +1433,11 @@ fn render_shell_showcase_card(
                             },
                         );
                         if toggle.clicked() {
-                            let _ = context_toggle
-                                .update_in(ui.cx_mut().app.models_mut(), |value| *value = !*value);
-                            let _ = context_action_count
-                                .update_in(ui.cx_mut().app.models_mut(), |value| *value += 1);
-                            let pinned_now = context_toggle.layout_value_in(ui.cx_mut());
+                            ui.cx_mut().app.local_state_txn(|tx| {
+                                tx.update(&context_toggle, |value| *value = !*value);
+                                tx.update(&context_action_count, |value| *value += 1);
+                            });
+                            let pinned_now = context_toggle.layout_value(ui.cx_mut());
                             push_showcase_event(
                                 ui.cx_mut().app,
                                 &timeline_next_id,
@@ -1461,8 +1469,9 @@ fn render_shell_showcase_card(
                             },
                         );
                         if close.clicked() {
-                            let _ = context_action_count
-                                .update_in(ui.cx_mut().app.models_mut(), |value| *value += 1);
+                            ui.cx_mut().app.local_state_txn(|tx| {
+                                tx.update(&context_action_count, |value| *value += 1)
+                            });
                             push_showcase_event(
                                 ui.cx_mut().app,
                                 &timeline_next_id,
@@ -1496,9 +1505,9 @@ fn render_shell_showcase_card(
                         },
                         |ui| {
                             let selected = selected_tab
-                                .layout_value_in(ui.cx_mut())
+                                .layout_value(ui.cx_mut())
                                 .unwrap_or_else(|| Arc::from("overview"));
-                            let rail_state = if context_toggle.layout_value_in(ui.cx_mut()) {
+                            let rail_state = if context_toggle.layout_value(ui.cx_mut()) {
                                 "Pinned"
                             } else {
                                 "Floating"
@@ -2168,15 +2177,16 @@ fn push_showcase_event(
     timeline: &LocalState<Vec<ShowcaseEvent>>,
     label: impl Into<Arc<str>>,
 ) {
-    let id = next_id.value_in_or_default(app.models());
-    let _ = next_id.set_in(app.models_mut(), id.saturating_add(1));
-
     let label = label.into();
-    let _ = timeline.update_in(app.models_mut(), |events| {
-        events.insert(0, ShowcaseEvent { id, label });
-        if events.len() > 8 {
-            events.truncate(8);
-        }
+    app.local_state_txn(|tx| {
+        let id = tx.value_or_default(next_id);
+        tx.set(next_id, id.saturating_add(1));
+        tx.update(timeline, |events| {
+            events.insert(0, ShowcaseEvent { id, label });
+            if events.len() > 8 {
+                events.truncate(8);
+            }
+        });
     });
 }
 
@@ -2187,18 +2197,22 @@ fn record_showcase_response(
     summary: impl Into<Arc<str>>,
     flags: Vec<ShowcaseInspectorFlag>,
 ) {
-    let _ = inspector.set_in(
-        app.models_mut(),
-        ShowcaseInspectorState {
-            source: source.into(),
-            summary: summary.into(),
-            flags,
-        },
-    );
+    app.local_state_txn(|tx| {
+        tx.set(
+            inspector,
+            ShowcaseInspectorState {
+                source: source.into(),
+                summary: summary.into(),
+                flags,
+            },
+        );
+    });
 }
 
 fn set_bool_if_changed(app: &mut KernelApp, state: &LocalState<bool>, next: bool) {
-    if state.value_in_or_default(app.models()) != next {
-        let _ = state.set_in(app.models_mut(), next);
-    }
+    app.local_state_txn(|tx| {
+        if tx.value_or_default(state) != next {
+            tx.set(state, next);
+        }
+    });
 }
