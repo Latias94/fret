@@ -36,15 +36,15 @@ Keep raw/shared-model mechanisms for now:
 - `workspace_shell_demo/*`. Audited after the initial inventory: it is application-level workspace
   shell state, so the shared model graph remains. The follow-up cleanup routes writes through
   demo-local owner helpers instead of scattering raw `models_mut().update(...)` calls.
+- `components_gallery.rs`, `virtual_list_stress_demo.rs`, and `editor_notes_demo.rs`. Audited and
+  cleaned after the initial inventory: each keeps intentional shared models but routes writes
+  through local owner helpers with source gates.
+- `genui_demo.rs`. Audited and cleaned after the initial inventory: it remains an advanced GenUI
+  runtime/reference surface with shared runtime models, while raw model reads/writes are routed
+  through local owner helpers.
 
 Likely next cleanup slices:
 
-- `components_gallery.rs`: high hit count in `apps/fret-examples/src` and likely user-visible. Audit
-  whether it is still an app-facing gallery or an advanced/reference surface. If app-facing, add
-  public helper/builder APIs instead of exposing raw model plumbing.
-- `genui_demo.rs`: existing tests already guard LocalState raw bridge imports, but it still imports
-  `fret_runtime::Model` intentionally. Audit whether that model should remain shared or move behind
-  `LocalState` / action helpers.
 - `api_workbench_lite_demo.rs`: tests show it is app-facing and should stay on `LocalState` /
   `LocalStateTxn`; keep it as the regression template for first-contact app authoring.
 # Verification

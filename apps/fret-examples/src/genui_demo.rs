@@ -8,6 +8,7 @@
 //! Not a first-contact teaching surface: treat it as reference/product-validation material for the
 //! GenUI integration seam.
 
+use std::any::Any;
 use std::sync::Arc;
 
 use fret::AppComponentCx;
@@ -31,6 +32,7 @@ use fret_genui_core::validate::ValidationMode;
 use fret_genui_shadcn::catalog::shadcn_catalog_v1;
 use fret_genui_shadcn::resolver::ShadcnResolver;
 use fret_runtime::Model;
+use fret_ui::action::UiActionHost;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
 use fret_ui_kit::IntoUiElement;
@@ -79,6 +81,26 @@ fn genui_paragraph_text<H: UiHost>(
     text: impl Into<Arc<str>>,
 ) -> AnyElement {
     decl_text::text_compact_paragraph(cx, text)
+}
+
+fn genui_update_model<T: Any>(app: &mut KernelApp, model: &Model<T>, f: impl FnOnce(&mut T)) {
+    let _ = app.models_mut().update(model, f);
+}
+
+fn genui_host_update_model<T: Any>(
+    host: &mut dyn UiActionHost,
+    model: &Model<T>,
+    f: impl FnOnce(&mut T),
+) {
+    let _ = host.models_mut().update(model, f);
+}
+
+fn genui_host_read_model<T: Any, R>(
+    host: &mut dyn UiActionHost,
+    model: &Model<T>,
+    f: impl FnOnce(&T) -> R,
+) -> Option<R> {
+    host.models_mut().read(model, f).ok()
 }
 
 pub fn run() -> anyhow::Result<()> {
@@ -454,9 +476,15 @@ struct GenUiState {
 
 impl GenUiState {
     fn clear_action_queue(&self, app: &mut KernelApp) {
-        let _ = app
-            .models_mut()
-            .update(&self.action_queue, |q| q.invocations.clear());
+        genui_update_model(app, &self.action_queue, |q| q.invocations.clear());
+    }
+
+    fn reset_runtime_models(&self, app: &mut KernelApp, seed: Value) {
+        genui_update_model(app, &self.genui_state, |v| *v = seed);
+        genui_update_model(app, &self.validation_state, |v| {
+            *v = ValidationStateV1::default()
+        });
+        self.clear_action_queue(app);
     }
 
     fn queued_invocations(
@@ -608,20 +636,17 @@ impl GenUiView {
                             return true;
                         }
 
-                        let enabled = host
-                            .models_mut()
-                            .read(&state_model_for_confirm, |v| {
-                                json_pointer::get_opt(v, "/enabled")
-                                    .and_then(|v| v.as_bool())
-                                    .unwrap_or(true)
-                            })
-                            .ok()
-                            .unwrap_or(true);
+                        let enabled = genui_host_read_model(host, &state_model_for_confirm, |v| {
+                            json_pointer::get_opt(v, "/enabled")
+                                .and_then(|v| v.as_bool())
+                                .unwrap_or(true)
+                        })
+                        .unwrap_or(true);
                         if enabled {
                             return true;
                         }
 
-                        let _ = host.models_mut().update(&state_model_for_confirm, |v| {
+                        genui_host_update_model(host, &state_model_for_confirm, |v| {
                             let _ = json_pointer::set(
                                 v,
                                 "/lastResult",
@@ -637,10 +662,7 @@ impl GenUiView {
                     executor.register_handler(
                         "formSubmit",
                         Arc::new(move |host, state, _inv| {
-                            let current = host
-                                .models_mut()
-                                .read(state, Clone::clone)
-                                .ok()
+                            let current = genui_host_read_model(host, state, Clone::clone)
                                 .unwrap_or(Value::Null);
                             let out = validate_all(&current, &validation_registry);
                             let ok = out.is_ok();
@@ -667,8 +689,8 @@ impl GenUiView {
                                     .collect::<Vec<_>>(),
                             );
 
-                            let _ = host.models_mut().update(&validation_model, |v| *v = out);
-                            let _ = host.models_mut().update(&state_model_for_submit, |v| {
+                            genui_host_update_model(host, &validation_model, |v| *v = out);
+                            genui_host_update_model(host, &state_model_for_submit, |v| {
                                 let _ = json_pointer::set(
                                     v,
                                     "/validation/issues",
@@ -734,11 +756,7 @@ impl GenUiView {
             }
             Msg::ResetState => {
                 let seed = state.spec.state.clone().unwrap_or(Value::Null);
-                let _ = app.models_mut().update(&state.genui_state, |v| *v = seed);
-                let _ = app.models_mut().update(&state.validation_state, |v| {
-                    *v = ValidationStateV1::default()
-                });
-                state.clear_action_queue(app);
+                state.reset_runtime_models(app, seed);
                 state.queue_summary = None;
             }
             Msg::ApplyEditorSpec => {
@@ -751,11 +769,7 @@ impl GenUiView {
                         state.editor_error = None;
                         state.auto_fix_summary = summarize_fixups(auto_fix, &fixups);
                         let seed = state.spec.state.clone().unwrap_or(Value::Null);
-                        let _ = app.models_mut().update(&state.genui_state, |v| *v = seed);
-                        let _ = app.models_mut().update(&state.validation_state, |v| {
-                            *v = ValidationStateV1::default()
-                        });
-                        state.clear_action_queue(app);
+                        state.reset_runtime_models(app, seed);
                         state.queue_summary = None;
 
                         if auto_fix {
@@ -826,11 +840,7 @@ impl GenUiView {
                         )));
 
                         let seed = state.spec.state.clone().unwrap_or(Value::Null);
-                        let _ = app.models_mut().update(&state.genui_state, |v| *v = seed);
-                        let _ = app.models_mut().update(&state.validation_state, |v| {
-                            *v = ValidationStateV1::default()
-                        });
-                        state.clear_action_queue(app);
+                        state.reset_runtime_models(app, seed);
                         state.queue_summary = None;
 
                         let pretty = serde_json::to_string_pretty(&state.spec)

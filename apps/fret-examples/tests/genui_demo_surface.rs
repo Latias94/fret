@@ -62,6 +62,7 @@ fn genui_demo_uses_explicit_public_surfaces() {
         "usefret::style::{ColorRef,Space,ThemeSnapshot};",
         "usefret::AppComponentCx;",
         "usefret_runtime::Model;",
+        "usefret_ui::action::UiActionHost;",
         "usefret_ui_kit::IntoUiElement;",
     ] {
         assert!(
@@ -81,4 +82,38 @@ fn genui_demo_uses_explicit_public_surfaces() {
             "GenUI demo should not reintroduce broad prelude imports: `{forbidden}`",
         );
     }
+}
+
+#[test]
+fn genui_demo_model_writes_stay_behind_owner_helpers() {
+    let source = include_str!("../src/genui_demo.rs");
+    let compact_source = compact(source);
+
+    for needle in [
+        "fngenui_update_model<T:Any>(",
+        "fngenui_host_update_model<T:Any>(",
+        "fngenui_host_read_model<T:Any,R>(",
+        "fnreset_runtime_models(&self,app:&mutKernelApp,seed:Value)",
+        "state.reset_runtime_models(app,seed);",
+        "genui_host_read_model(host,&state_model_for_confirm,",
+        "genui_host_update_model(host,&state_model_for_confirm,",
+        "genui_host_update_model(host,&validation_model,|v|*v=out);",
+        "genui_host_update_model(host,&state_model_for_submit,",
+    ] {
+        assert!(
+            compact_source.contains(needle),
+            "GenUI demo should keep shared runtime-model access behind explicit owner helpers; missing `{needle}`"
+        );
+    }
+
+    assert_eq!(
+        source.matches("models_mut().update(").count(),
+        2,
+        "GenUI demo should not scatter raw ModelStore updates outside app/host owner helpers"
+    );
+    assert_eq!(
+        source.matches("models_mut().read(").count(),
+        1,
+        "GenUI demo should not scatter raw ModelStore reads outside the host owner helper"
+    );
 }
