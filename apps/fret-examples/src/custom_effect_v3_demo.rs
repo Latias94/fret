@@ -14,7 +14,6 @@ use std::sync::Arc;
 
 use fret::UiAppBuilder;
 use fret::advanced::driver::UiAppBuilderAdvancedExt as _;
-use fret::advanced::raw::LocalStateRawModelExt as _;
 use fret::app::prelude::*;
 use fret::app::{AppComponentCx, AppRenderContext, LocalState};
 use fret_core::scene::{
@@ -570,17 +569,17 @@ fn stage_controls(
     use_non_filterable_user0: bool,
     use_non_filterable_user1: bool,
 ) -> impl IntoUiElement<App> + use<> {
-    let enabled_model = st.enabled.clone_model();
-    let show_user0_probe_model = st.show_user0_probe.clone_model();
-    let show_user1_probe_model = st.show_user1_probe.clone_model();
-    let use_non_filterable_user0_model = st.use_non_filterable_user0.clone_model();
-    let use_non_filterable_user1_model = st.use_non_filterable_user1.clone_model();
+    let enabled_state = st.enabled.clone();
+    let show_user0_probe_state = st.show_user0_probe.clone();
+    let show_user1_probe_state = st.show_user1_probe.clone();
+    let use_non_filterable_user0_state = st.use_non_filterable_user0.clone();
+    let use_non_filterable_user1_state = st.use_non_filterable_user1.clone();
 
     ui::h_row(move |cx| {
         let mut out: Vec<AnyElement> = Vec::new();
 
         out.push(
-            shadcn::Switch::new(enabled_model.clone())
+            shadcn::Switch::new(&enabled_state)
                 .a11y_label("Enable CustomV3 lens")
                 .test_id("custom-effect-v3.enabled")
                 .into_element(cx),
@@ -588,7 +587,7 @@ fn stage_controls(
         out.push(shadcn::Label::new(if enabled { "Enabled" } else { "Disabled" }).into_element(cx));
 
         out.push(
-            shadcn::Switch::new(show_user0_probe_model.clone())
+            shadcn::Switch::new(&show_user0_probe_state)
                 .a11y_label("Show CustomV3 user0 probe")
                 .test_id("custom-effect-v3.show-user0-probe")
                 .into_element(cx),
@@ -603,7 +602,7 @@ fn stage_controls(
         );
 
         out.push(
-            shadcn::Switch::new(show_user1_probe_model.clone())
+            shadcn::Switch::new(&show_user1_probe_state)
                 .a11y_label("Show CustomV3 user1 probe")
                 .test_id("custom-effect-v3.show-user1-probe")
                 .into_element(cx),
@@ -618,7 +617,7 @@ fn stage_controls(
         );
 
         out.push(
-            shadcn::Switch::new(use_non_filterable_user0_model.clone())
+            shadcn::Switch::new(&use_non_filterable_user0_state)
                 .a11y_label("Use non-filterable user0 image (expect fallback)")
                 .test_id("custom-effect-v3.use-non-filterable-user0")
                 .into_element(cx),
@@ -633,7 +632,7 @@ fn stage_controls(
         );
 
         out.push(
-            shadcn::Switch::new(use_non_filterable_user1_model.clone())
+            shadcn::Switch::new(&use_non_filterable_user1_state)
                 .a11y_label("Use non-filterable user1 image (expect fallback)")
                 .test_id("custom-effect-v3.use-non-filterable-user1")
                 .into_element(cx),

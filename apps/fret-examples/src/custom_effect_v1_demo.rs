@@ -13,7 +13,6 @@
 use std::sync::Arc;
 
 use fret::advanced::driver::UiAppBuilderAdvancedExt as _;
-use fret::advanced::raw::LocalStateRawModelExt as _;
 use fret::app::prelude::*;
 use fret::app::{AppComponentCx, LocalState};
 use fret_core::scene::{EffectChain, EffectMode, EffectParamsV1, EffectQuality, EffectStep};
@@ -721,7 +720,7 @@ fn inspector(
 ) -> impl IntoUiElement<App> + use<> {
     let theme = cx.theme_snapshot();
 
-    let enabled_model = st.enabled.clone_model();
+    let enabled_state = st.enabled.clone();
     let blur_radius_state = st.blur_radius_px.clone();
     let blur_downsample_state = st.blur_downsample.clone();
     let refraction_height_state = st.refraction_height_px.clone();
@@ -909,7 +908,7 @@ fn inspector(
                 [
                     ui::h_flex(|cx| {
                         [
-                            shadcn::Switch::new(enabled_model.clone())
+                            shadcn::Switch::new(&enabled_state)
                                 .a11y_label("Enable custom effect")
                                 .test_id("custom-effect-v1.enabled")
                                 .into_element(cx),

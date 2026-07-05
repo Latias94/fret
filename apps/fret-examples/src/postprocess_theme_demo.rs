@@ -13,7 +13,6 @@
 use std::sync::Arc;
 
 use fret::advanced::driver::UiAppBuilderAdvancedExt as _;
-use fret::advanced::raw::LocalStateRawModelExt as _;
 use fret::app::prelude::*;
 use fret::app::{AppComponentCx, AppRenderContext, LocalState};
 use fret_core::scene::{
@@ -355,10 +354,10 @@ fn inspector(
 ) -> impl IntoUiElement<App> + use<> {
     let theme_snapshot = Theme::global(&*cx.app).snapshot();
 
-    let enabled_model = st.enabled.clone_model();
-    let compare_model = st.compare.clone_model();
-    let theme_model = st.theme.clone_model();
-    let theme_open_model = st.theme_open.clone_model();
+    let enabled_state = st.enabled.clone();
+    let compare_state = st.compare.clone();
+    let theme_state = st.theme.clone();
+    let theme_open_state = st.theme_open.clone();
 
     let chromatic_state = st.chromatic_offset_px.clone();
     let scanline_strength_state = st.scanline_strength.clone();
@@ -367,7 +366,7 @@ fn inspector(
     let grain_strength_state = st.grain_strength.clone();
     let grain_scale_state = st.grain_scale.clone();
     let retro_pixel_scale_state = st.retro_pixel_scale.clone();
-    let retro_dither_model = st.retro_dither.clone_model();
+    let retro_dither_state = st.retro_dither.clone();
 
     let mut layout = LayoutStyle::default();
     layout.size.width = Length::Px(Px(380.0));
@@ -416,7 +415,7 @@ fn inspector(
             let theme_row = ui::v_flex(move |cx| {
                 vec![
                     label_row(cx, "Theme", theme.to_string()),
-                    shadcn::Select::new(theme_model.clone(), theme_open_model.clone())
+                    shadcn::Select::new(&theme_state, &theme_open_state)
                         .value(shadcn::SelectValue::new().placeholder("Pick a theme"))
                         .items([
                             shadcn::SelectItem::new("none", "None"),
@@ -448,7 +447,7 @@ fn inspector(
                 label_row(cx, "Retro pixel scale", format!("{retro_pixel_scale:.2}"));
             let retro_dither_row = ui::h_row(move |cx| {
                 [
-                    shadcn::Switch::new(retro_dither_model.clone())
+                    shadcn::Switch::new(&retro_dither_state)
                         .a11y_label("Enable retro dither")
                         .test_id("postprocess.retro.dither")
                         .into_element(cx),
@@ -463,7 +462,7 @@ fn inspector(
                 vec![
                     ui::h_row(|cx| {
                         [
-                            shadcn::Switch::new(enabled_model.clone())
+                            shadcn::Switch::new(&enabled_state)
                                 .a11y_label("Enable postprocess")
                                 .test_id("postprocess.enabled")
                                 .into_element(cx),
@@ -475,7 +474,7 @@ fn inspector(
                     .into_element(cx),
                     ui::h_row(|cx| {
                         [
-                            shadcn::Switch::new(compare_model.clone())
+                            shadcn::Switch::new(&compare_state)
                                 .a11y_label("Compare raw vs processed")
                                 .test_id("postprocess.compare")
                                 .into_element(cx),

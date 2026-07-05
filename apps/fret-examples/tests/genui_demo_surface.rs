@@ -72,6 +72,7 @@ fn genui_demo_uses_explicit_public_surfaces() {
 
     for forbidden in [
         "LocalStateElementContextExt",
+        "LocalStateRawModelExt",
         "advanced::prelude::*",
         "component::prelude::*",
     ] {

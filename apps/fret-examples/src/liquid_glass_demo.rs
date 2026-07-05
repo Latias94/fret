@@ -13,7 +13,6 @@
 use std::sync::Arc;
 
 use fret::advanced::driver::UiAppBuilderAdvancedExt as _;
-use fret::advanced::raw::LocalStateRawModelExt as _;
 use fret::app::prelude::*;
 use fret::app::{AppComponentCx, AppRenderContext, LocalState};
 use fret_core::scene::{
@@ -677,18 +676,18 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut LiquidGlassState) -> Ui {
     let right = Px(24.0);
     let bottom = Px(24.0);
 
-    let show_fake_switch_model = st.show_fake.clone_model();
-    let show_warp_switch_model = st.show_warp.clone_model();
-    let show_warp_v2_switch_model = st.show_warp_v2.clone_model();
-    let show_custom_v2_switch_model = st.show_custom_v2.clone_model();
-    let show_custom_v3_switch_model = st.show_custom_v3.clone_model();
-    let custom_v3_pair_switch_model = st.custom_v3_pair.clone_model();
-    let custom_v3_source_group_switch_model = st.custom_v3_source_group.clone_model();
-    let show_inspector_switch_model = st.show_inspector.clone_model();
-    let animate_switch_model = st.animate.clone_model();
+    let show_fake_switch_state = st.show_fake.clone();
+    let show_warp_switch_state = st.show_warp.clone();
+    let show_warp_v2_switch_state = st.show_warp_v2.clone();
+    let show_custom_v2_switch_state = st.show_custom_v2.clone();
+    let show_custom_v3_switch_state = st.show_custom_v3.clone();
+    let custom_v3_pair_switch_state = st.custom_v3_pair.clone();
+    let custom_v3_source_group_switch_state = st.custom_v3_source_group.clone();
+    let show_inspector_switch_state = st.show_inspector.clone();
+    let animate_switch_state = st.animate.clone();
     let phase_speed_state = st.phase_speed.clone();
-    let use_backdrop_switch_model = st.use_backdrop.clone_model();
-    let use_dither_switch_model = st.use_dither.clone_model();
+    let use_backdrop_switch_state = st.use_backdrop.clone();
+    let use_dither_switch_state = st.use_dither.clone();
 
     let warp_strength_state = st.warp_strength_px.clone();
     let warp_scale_state = st.warp_scale_px.clone();
@@ -1266,7 +1265,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut LiquidGlassState) -> Ui {
                                                 ui::h_row(|cx| {
                                                         vec![
                                                             shadcn::Switch::new(
-                                                                show_fake_switch_model.clone(),
+                                                                &show_fake_switch_state,
                                                             )
                                                             .a11y_label("Show fake lens")
                                                             .test_id("liquid-glass-switch-show-fake")
@@ -1274,7 +1273,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut LiquidGlassState) -> Ui {
                                                             shadcn::Label::new("Fake")
                                                                 .into_element(cx),
                                                             shadcn::Switch::new(
-                                                                show_warp_switch_model.clone(),
+                                                                &show_warp_switch_state,
                                                             )
                                                             .a11y_label("Show warp v1 lens")
                                                             .test_id(
@@ -1284,7 +1283,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut LiquidGlassState) -> Ui {
                                                             shadcn::Label::new("Warp v1")
                                                                 .into_element(cx),
                                                             shadcn::Switch::new(
-                                                                show_warp_v2_switch_model.clone(),
+                                                                &show_warp_v2_switch_state,
                                                             )
                                                             .a11y_label("Show warp v2 lens")
                                                             .test_id(
@@ -1301,7 +1300,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut LiquidGlassState) -> Ui {
                                                 ui::h_row(|cx| {
                                                         vec![
                                                             shadcn::Switch::new(
-                                                                show_custom_v2_switch_model.clone(),
+                                                                &show_custom_v2_switch_state,
                                                             )
                                                             .a11y_label("Show custom v2 lens")
                                                             .test_id(
@@ -1311,7 +1310,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut LiquidGlassState) -> Ui {
                                                             shadcn::Label::new("Custom v2")
                                                                 .into_element(cx),
                                                             shadcn::Switch::new(
-                                                                show_custom_v3_switch_model.clone(),
+                                                                &show_custom_v3_switch_state,
                                                             )
                                                             .a11y_label("Show custom v3 lens")
                                                             .test_id(
@@ -1328,7 +1327,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut LiquidGlassState) -> Ui {
                                                 ui::h_row(|cx| {
                                                         vec![
                                                             shadcn::Switch::new(
-                                                                custom_v3_pair_switch_model.clone(),
+                                                                &custom_v3_pair_switch_state,
                                                             )
                                                             .a11y_label(
                                                                 "Show two custom v3 lenses",
@@ -1340,8 +1339,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut LiquidGlassState) -> Ui {
                                                             shadcn::Label::new("V3 pair")
                                                                 .into_element(cx),
                                                             shadcn::Switch::new(
-                                                                custom_v3_source_group_switch_model
-                                                                    .clone(),
+                                                                &custom_v3_source_group_switch_state,
                                                             )
                                                             .a11y_label(
                                                                 "Use custom v3 backdrop source group",
@@ -1360,7 +1358,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut LiquidGlassState) -> Ui {
                                                 ui::h_row(|cx| {
                                                         vec![
                                                             shadcn::Switch::new(
-                                                                use_backdrop_switch_model.clone(),
+                                                                &use_backdrop_switch_state,
                                                             )
                                                             .a11y_label("Backdrop mode")
                                                             .test_id(
@@ -1370,7 +1368,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut LiquidGlassState) -> Ui {
                                                             shadcn::Label::new("Backdrop")
                                                                 .into_element(cx),
                                                             shadcn::Switch::new(
-                                                                use_dither_switch_model.clone(),
+                                                                &use_dither_switch_state,
                                                             )
                                                             .a11y_label("Dither")
                                                             .test_id(
@@ -1380,7 +1378,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut LiquidGlassState) -> Ui {
                                                             shadcn::Label::new("Dither")
                                                                 .into_element(cx),
                                                             shadcn::Switch::new(
-                                                                animate_switch_model.clone(),
+                                                                &animate_switch_state,
                                                             )
                                                             .a11y_label("Animate phase")
                                                             .test_id("liquid-glass-switch-animate")
@@ -1395,7 +1393,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut LiquidGlassState) -> Ui {
                                                 ui::h_row(|cx| {
                                                         vec![
                                                             shadcn::Switch::new(
-                                                                show_inspector_switch_model.clone(),
+                                                                &show_inspector_switch_state,
                                                             )
                                                             .a11y_label("Show inspector")
                                                             .test_id(

@@ -14,7 +14,6 @@ use std::sync::Arc;
 
 use fret::UiAppBuilder;
 use fret::advanced::driver::UiAppBuilderAdvancedExt as _;
-use fret::advanced::raw::LocalStateRawModelExt as _;
 use fret::app::prelude::*;
 use fret::app::{AppComponentCx, LocalState};
 use fret_core::scene::{
@@ -725,15 +724,15 @@ fn inspector(
 ) -> impl IntoUiElement<App> + use<> {
     let theme = cx.theme_snapshot();
 
-    let enabled_model = st.enabled.clone_model();
-    let non_filterable_model = st.use_non_filterable_input.clone_model();
-    let sampling_model = st.sampling.clone_model();
-    let sampling_open_model = st.sampling_open.clone_model();
+    let enabled_state = st.enabled.clone();
+    let non_filterable_state = st.use_non_filterable_input.clone();
+    let sampling_state = st.sampling.clone();
+    let sampling_open_state = st.sampling_open.clone();
     let uv_span_state = st.uv_span.clone();
     let input_strength_state = st.input_strength.clone();
     let rim_strength_state = st.rim_strength.clone();
     let blur_radius_state = st.blur_radius_px.clone();
-    let debug_model = st.debug_input.clone_model();
+    let debug_state = st.debug_input.clone();
 
     let mut layout = LayoutStyle::default();
     layout.size.width = Length::Px(Px(380.0));
@@ -782,7 +781,7 @@ fn inspector(
             let sampling_row = ui::v_flex(move |cx| {
                 [
                     label_row(cx, "Input sampling", sampling_value.to_string()),
-                    shadcn::Select::new(sampling_model.clone(), sampling_open_model.clone())
+                    shadcn::Select::new(&sampling_state, &sampling_open_state)
                         .value(shadcn::SelectValue::new().placeholder("Pick sampling"))
                         .items([
                             shadcn::SelectItem::new("default", "Default"),
@@ -863,7 +862,7 @@ fn inspector(
                 [
                     ui::h_flex(|cx| {
                         [
-                            shadcn::Switch::new(enabled_model.clone())
+                            shadcn::Switch::new(&enabled_state)
                                 .a11y_label("Enable custom effect v2")
                                 .test_id("custom-effect-v2.enabled")
                                 .into_element(cx),
@@ -875,7 +874,7 @@ fn inspector(
                     .into_element(cx),
                     ui::h_flex(|cx| {
                         [
-                            shadcn::Switch::new(non_filterable_model.clone())
+                            shadcn::Switch::new(&non_filterable_state)
                                 .a11y_label("Use non-filterable input image (expect fallback)")
                                 .test_id("custom-effect-v2.use-non-filterable-input")
                                 .into_element(cx),
@@ -892,7 +891,7 @@ fn inspector(
                     blur_row,
                     ui::h_flex(|cx| {
                         [
-                            shadcn::Switch::new(debug_model.clone())
+                            shadcn::Switch::new(&debug_state)
                                 .a11y_label("Show input image")
                                 .test_id("custom-effect-v2.debug-input")
                                 .into_element(cx),

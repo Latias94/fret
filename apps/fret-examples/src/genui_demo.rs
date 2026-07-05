@@ -13,7 +13,7 @@ use std::sync::Arc;
 use fret::AppComponentCx;
 use fret::advanced::KernelApp;
 use fret::advanced::driver::ViewElements;
-use fret::advanced::raw::{LocalStateModelStoreExt as _, LocalStateRawModelExt as _};
+use fret::advanced::raw::LocalStateModelStoreExt as _;
 use fret::app::LocalState;
 use fret::app::prelude::*;
 use fret::style::{ColorRef, Space, ThemeSnapshot};
@@ -938,10 +938,10 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut GenUiState) -> ViewElem
     let apply_queue_cmd_toolbar = apply_queue_cmd.clone();
     let apply_queue_cmd_banner = apply_queue_cmd.clone();
 
-    let auto_apply_model = st.auto_apply_standard_actions.clone_model();
+    let auto_apply_state = st.auto_apply_standard_actions.clone();
     let auto_apply_enabled = st.auto_apply_standard_actions.layout_value(cx);
 
-    let auto_fix_model = st.auto_fix_on_apply.clone_model();
+    let auto_fix_state = st.auto_fix_on_apply.clone();
     let _auto_fix_enabled = st.auto_fix_on_apply.layout_value(cx);
 
     let count_label: Arc<str> = st
@@ -1037,7 +1037,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut GenUiState) -> ViewElem
 
         items.push(genui_readout_text(cx, "auto-apply"));
         items.push(
-            shadcn::Switch::new(auto_apply_model.clone())
+            shadcn::Switch::new(&auto_apply_state)
                 .a11y_label("Auto-apply standard actions")
                 .on_click(auto_apply_toggled_cmd)
                 .into_element(cx),
@@ -1045,7 +1045,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut GenUiState) -> ViewElem
 
         items.push(genui_readout_text(cx, "auto-fix on apply"));
         items.push(
-            shadcn::Switch::new(auto_fix_model.clone())
+            shadcn::Switch::new(&auto_fix_state)
                 .a11y_label("Auto-fix spec on apply")
                 .into_element(cx),
         );
@@ -1202,7 +1202,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut GenUiState) -> ViewElem
     let auto_fix_summary = st.auto_fix_summary.clone();
     let queue_summary = st.queue_summary.clone();
     let stream_model = st.stream_text.clone();
-    let stream_patch_only_model = st.stream_patch_only.clone_model();
+    let stream_patch_only_state = st.stream_patch_only.clone();
     let stream_patch_only = st.stream_patch_only.layout_value(cx);
     let stream_summary = st.stream_summary.clone();
     let stream_error = st.stream_error.clone();
@@ -1386,7 +1386,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut GenUiState) -> ViewElem
                             if stream_patch_only { "on" } else { "off" }
                         )),
                     ),
-                    shadcn::Switch::new(stream_patch_only_model.clone())
+                    shadcn::Switch::new(&stream_patch_only_state)
                         .a11y_label("Patch-only stream mode")
                         .into_element(cx),
                 ]
