@@ -63,3 +63,41 @@ fn async_playground_demo_keeps_visible_text_on_roles() {
         );
     }
 }
+
+#[test]
+fn async_playground_demo_uses_app_view_imports() {
+    let source = include_str!("../src/async_playground_demo.rs");
+    let compact_source = compact(source);
+
+    for needle in [
+        "usefret::app::prelude::*;",
+        "usefret::app::{AppRenderContext,LocalState,RenderContextAccessas_};",
+        "usefret::actions::CommandId;",
+        "usefret_ui::{ElementContext,ThemeSnapshot,UiHost};",
+        ".view::<AsyncPlaygroundView>()?",
+        "fninstall_tokio_spawner(app:&mutApp)",
+        "fnapply_theme(app:&mutApp,dark:bool)",
+        "fninstall_light_theme(app:&mutApp)",
+        "fnnew(app:&mutApp,initial:Option<&'staticstr>)->Self",
+        "fnnew(app:&mutApp)->Self",
+        "fninit(app:&mutApp,_window:WindowId)->Self",
+        "fnrender(&mutself,cx:&mutAppUi<'_,'_>)->Ui",
+    ] {
+        assert!(
+            compact_source.contains(needle),
+            "async playground should stay on app-facing view imports; missing `{needle}`"
+        );
+    }
+
+    for forbidden in [
+        "advanced::prelude::*",
+        "component::prelude::*",
+        "KernelApp",
+        "AppWindowId",
+    ] {
+        assert!(
+            !source.contains(forbidden),
+            "async playground should not reintroduce broad or kernel-facing imports: `{forbidden}`"
+        );
+    }
+}

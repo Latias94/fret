@@ -5,16 +5,17 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
-use fret::app::{AppRenderContext, RenderContextAccess as _};
+use fret::actions::CommandId;
+use fret::app::prelude::*;
+use fret::app::{AppRenderContext, LocalState, RenderContextAccess as _};
 use fret::children::UiElementSinkExt as _;
 use fret::query::{
     CancellationToken, FutureSpawner, FutureSpawnerHandle, QueryCancelMode, QueryError, QueryKey,
     QueryPolicy, QuerySnapshotEntry, QueryState, QueryStatus,
 };
-use fret::{FretApp, actions::CommandId, advanced::prelude::*, app::AppLocalStateExt as _, shadcn};
 use fret_core::{Px, SemanticsRole};
 use fret_ui::element::{AnyElement, PressableA11y, PressableProps};
-use fret_ui::{ElementContext, UiHost};
+use fret_ui::{ElementContext, ThemeSnapshot, UiHost};
 use fret_ui_kit::IntoUiElementInExt as _;
 use fret_ui_kit::declarative::QueryHandleWatchExt as _;
 use fret_ui_kit::declarative::UiElementTestIdExt as _;
@@ -141,7 +142,7 @@ impl FutureSpawner for TokioHandleSpawner {
     }
 }
 
-fn install_tokio_spawner(app: &mut KernelApp) {
+fn install_tokio_spawner(app: &mut App) {
     let rt = tokio::runtime::Builder::new_multi_thread()
         .enable_time()
         .build()
@@ -153,7 +154,7 @@ fn install_tokio_spawner(app: &mut KernelApp) {
     app.set_global::<TokioRuntimeGlobal>(TokioRuntimeGlobal { _rt: rt });
 }
 
-fn apply_theme(app: &mut KernelApp, dark: bool) {
+fn apply_theme(app: &mut App, dark: bool) {
     shadcn::themes::apply_shadcn_new_york(
         app,
         shadcn::themes::ShadcnBaseColor::Zinc,
@@ -165,7 +166,7 @@ fn apply_theme(app: &mut KernelApp, dark: bool) {
     );
 }
 
-fn install_light_theme(app: &mut KernelApp) {
+fn install_light_theme(app: &mut App) {
     apply_theme(app, false);
 }
 
@@ -176,7 +177,7 @@ struct SelectLocals {
 }
 
 impl SelectLocals {
-    fn new(app: &mut KernelApp, initial: Option<&'static str>) -> Self {
+    fn new(app: &mut App, initial: Option<&'static str>) -> Self {
         Self {
             value: app.local_state(initial.map(Arc::from)),
             open: app.local_state(false),
@@ -193,7 +194,7 @@ struct QueryConfigLocals {
 }
 
 impl QueryConfigLocals {
-    fn new(app: &mut KernelApp) -> Self {
+    fn new(app: &mut App) -> Self {
         Self {
             stale_time_s: app.local_state("2".to_string()),
             cache_time_s: app.local_state("30".to_string()),
@@ -289,10 +290,6 @@ fn default_namespace_for_id(id: QueryId) -> &'static str {
 }
 
 pub fn run() -> anyhow::Result<()> {
-    // Keep the explicit component lane named on this advanced surface.
-    #[allow(unused_imports)]
-    use fret::component::prelude::*;
-
     FretApp::new("async-playground")
         .window("async-playground", (1180.0, 720.0))
         .config_files(false)
@@ -303,7 +300,7 @@ pub fn run() -> anyhow::Result<()> {
 }
 
 impl View for AsyncPlaygroundView {
-    fn init(app: &mut KernelApp, _window: AppWindowId) -> Self {
+    fn init(app: &mut App, _window: WindowId) -> Self {
         let mut configs = HashMap::new();
         for id in QueryId::ALL {
             configs.insert(id, QueryConfigLocals::new(app));
