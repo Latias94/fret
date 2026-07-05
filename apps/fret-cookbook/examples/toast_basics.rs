@@ -90,7 +90,7 @@ impl View for ToastBasicsView {
         let mut root = fret_cookbook::scaffold::centered_page_muted(cx, TEST_ID_ROOT, card);
 
         // `Toaster` is layout-neutral but must be in the tree so toast layer + store are installed.
-        root.push(shadcn::Toaster::new().into_element(cx.elements()));
+        root.push(shadcn::Toaster::new().into_element_in(cx));
         root.into()
     }
 }

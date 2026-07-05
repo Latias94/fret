@@ -318,7 +318,7 @@ impl View for MutationToastFeedbackBasicsView {
 
         // Keep the toaster mounted in-tree so feedback projection remains a replaceable recipe
         // concern above the authoritative mutation state.
-        root.push(shadcn::Toaster::new().into_element(cx.elements()));
+        root.push(shadcn::Toaster::new().into_element_in(cx));
         root.into()
     }
 }

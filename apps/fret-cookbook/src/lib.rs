@@ -708,6 +708,8 @@ mod authoring_surface_policy_tests {
         assert!(normalized.contains("cx.actions().mutation_retry_last::<act::RetryLastSave"));
         assert!(normalized.contains("cx.effects().toast_success("));
         assert!(normalized.contains("cx.effects().toast_error("));
+        assert!(normalized.contains("shadcn::Toaster::new().into_element_in(cx)"));
+        assert!(!MUTATION_TOAST_FEEDBACK_EXAMPLE.contains("cx.elements()"));
         assert!(!MUTATION_TOAST_FEEDBACK_EXAMPLE.contains("UiActionHostAdapter"));
         assert!(!MUTATION_TOAST_FEEDBACK_EXAMPLE.contains("fret_runtime::ModelStore"));
         assert!(!MUTATION_TOAST_FEEDBACK_EXAMPLE.contains("toast_promise_async"));
@@ -722,6 +724,8 @@ mod authoring_surface_policy_tests {
         assert!(normalized.contains("cx.effects().toast_message("));
         assert!(normalized.contains("cx.effects().toast_success("));
         assert!(normalized.contains("cx.effects().toast_dismiss_all("));
+        assert!(normalized.contains("shadcn::Toaster::new().into_element_in(cx)"));
+        assert!(!TOAST_EXAMPLE.contains("cx.elements()"));
         assert!(!TOAST_EXAMPLE.contains("AppUiRawActionNotifyExt"));
         assert!(!TOAST_EXAMPLE.contains("cx.on_action_notify::<"));
         assert!(!TOAST_EXAMPLE.contains("Sonner::global"));
