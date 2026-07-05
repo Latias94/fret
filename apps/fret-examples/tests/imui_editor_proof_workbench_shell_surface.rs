@@ -65,3 +65,30 @@ fn imui_editor_proof_demo_routes_dock_window_shell_through_demo_local_owner() {
         );
     }
 }
+
+#[test]
+fn imui_editor_proof_workbench_shell_uses_explicit_public_surfaces() {
+    let shell_source = include_str!("../src/imui_editor_proof_demo/workbench_shell.rs");
+    let compact: String = shell_source.split_whitespace().collect();
+
+    for needle in [
+        "usefret::advanced::KernelApp;",
+        "usefret::app::AppRenderDataExtas_;",
+        "usefret_app::{CreateWindowKind,CreateWindowRequest,Effect,WindowRequest};",
+        "usefret_core::{AppWindowId,Color,DockFloatingWindow,DockNode,Point,Px,Rect,Size};",
+        "usefret_ui::ElementContext;",
+        "usefret_ui_kit::{IntoUiElementas_,StyledExtas_,UiExtas_};",
+    ] {
+        assert!(
+            compact.contains(needle),
+            "workbench_shell should name required advanced/app/component surfaces explicitly; missing `{needle}`",
+        );
+    }
+
+    for forbidden in ["advanced::prelude::*", "component::prelude::*"] {
+        assert!(
+            !shell_source.contains(forbidden),
+            "workbench_shell should not reintroduce broad prelude imports: `{forbidden}`",
+        );
+    }
+}

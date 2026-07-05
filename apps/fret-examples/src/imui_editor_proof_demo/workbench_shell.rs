@@ -1,18 +1,20 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use fret::advanced::KernelApp;
 use fret::advanced::interop::embedded_viewport as embedded;
-use fret::advanced::prelude::*;
-use fret::component::prelude::*;
+use fret::app::AppRenderDataExt as _;
 use fret::imui::prelude::*;
-use fret_app::{CreateWindowKind, CreateWindowRequest, WindowRequest};
-use fret_core::{Color, DockFloatingWindow, DockNode, Point, Px, Rect, Size};
+use fret_app::{CreateWindowKind, CreateWindowRequest, Effect, WindowRequest};
+use fret_core::{AppWindowId, Color, DockFloatingWindow, DockNode, Point, Px, Rect, Size};
 use fret_docking::{
     DockManager, DockPanel, DockPanelElementRegistry, DockPanelElementRegistryService,
     ViewportPanel, runtime as dock_runtime,
 };
 use fret_runtime::{ActivationPolicy, WindowRole, WindowStyleRequest};
+use fret_ui::ElementContext;
 use fret_ui::element::AnyElement;
+use fret_ui_kit::{IntoUiElement as _, StyledExt as _, UiExt as _};
 
 use super::{AUX_LOGICAL_WINDOW_ID, VIEWPORT_PX_SIZE, diag_enabled, single_window_mode_enabled};
 
