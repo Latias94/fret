@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret::advanced::prelude::*;
+use fret::advanced::prelude::{AppWindowId, KernelApp, ViewElements, ui_app_with_hooks};
 use fret_core::Px;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};

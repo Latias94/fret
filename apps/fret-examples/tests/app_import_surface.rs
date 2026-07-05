@@ -16,6 +16,11 @@ fn low_risk_function_driver_demos_use_explicit_advanced_imports() {
             "ui_app_with_hooks",
         ),
         (
+            "extras_marquee_perf_demo",
+            include_str!("../src/extras_marquee_perf_demo.rs"),
+            "ui_app_with_hooks",
+        ),
+        (
             "text_heavy_memory_demo",
             include_str!("../src/text_heavy_memory_demo.rs"),
             "ui_app",
