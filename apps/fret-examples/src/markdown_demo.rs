@@ -10,7 +10,6 @@ use std::time::Duration;
 
 use anyhow::Context as _;
 use fret::advanced::kernel::app::Effect;
-use fret::advanced::raw::LocalStateModelStoreExt as _;
 use fret::app::prelude::*;
 use fret::app::{AppComponentCx, LocalState, RenderContextAccess as _, ui_assets};
 use fret::query::{QueryError, QueryKey, QueryPolicy, QueryStatus};
@@ -184,8 +183,8 @@ impl MarkdownDemoView {
                     return;
                 }
                 let fragment: Arc<str> = Arc::from(fragment.to_string());
-                let _ = pending_anchor.update_in(host.models_mut(), |v| {
-                    *v = Some(fragment.clone());
+                host.local_state_txn(|tx| {
+                    tx.set(&pending_anchor, Some(fragment.clone()));
                 });
                 host.request_redraw(cx.window);
                 return;
@@ -247,7 +246,9 @@ impl MarkdownDemoView {
                 .set_offset(Point::new(prev.x, Px(prev.y.0 + delta_y)));
         }
 
-        let _ = pending_anchor.set_in(cx.app_mut().models_mut(), None);
+        cx.app_mut().local_state_txn(|tx| {
+            tx.set(pending_anchor, None);
+        });
     }
 }
 

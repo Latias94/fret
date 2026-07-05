@@ -13,7 +13,6 @@ use std::sync::Arc;
 use fret::AppComponentCx;
 use fret::advanced::KernelApp;
 use fret::advanced::driver::ViewElements;
-use fret::advanced::raw::LocalStateModelStoreExt as _;
 use fret::app::LocalState;
 use fret::app::prelude::*;
 use fret::style::{ColorRef, Space, ThemeSnapshot};
@@ -470,25 +469,24 @@ impl GenUiState {
             .unwrap_or_default()
     }
 
-    fn auto_apply_enabled(&self, app: &KernelApp) -> bool {
-        self.auto_apply_standard_actions
-            .value_in_or(app.models(), true)
+    fn auto_apply_enabled(&self, app: &mut KernelApp) -> bool {
+        app.local_state_txn(|tx| tx.value_or(&self.auto_apply_standard_actions, true))
     }
 
-    fn auto_fix_enabled(&self, app: &KernelApp) -> bool {
-        self.auto_fix_on_apply.value_in_or(app.models(), true)
+    fn auto_fix_enabled(&self, app: &mut KernelApp) -> bool {
+        app.local_state_txn(|tx| tx.value_or(&self.auto_fix_on_apply, true))
     }
 
-    fn editor_text_value(&self, app: &KernelApp) -> String {
-        self.editor_text.value_in_or_default(app.models())
+    fn editor_text_value(&self, app: &mut KernelApp) -> String {
+        app.local_state_txn(|tx| tx.value_or_default(&self.editor_text))
     }
 
-    fn stream_text_value(&self, app: &KernelApp) -> String {
-        self.stream_text.value_in_or_default(app.models())
+    fn stream_text_value(&self, app: &mut KernelApp) -> String {
+        app.local_state_txn(|tx| tx.value_or_default(&self.stream_text))
     }
 
-    fn stream_patch_only_enabled(&self, app: &KernelApp) -> bool {
-        self.stream_patch_only.value_in_or(app.models(), false)
+    fn stream_patch_only_enabled(&self, app: &mut KernelApp) -> bool {
+        app.local_state_txn(|tx| tx.value_or(&self.stream_patch_only, false))
     }
 }
 
@@ -707,9 +705,9 @@ impl GenUiView {
                 state.clear_action_queue(app);
             }
             Msg::SetAutoApply(value) => {
-                let _ = state
-                    .auto_apply_standard_actions
-                    .set_in(app.models_mut(), value);
+                app.local_state_txn(|tx| {
+                    tx.set(&state.auto_apply_standard_actions, value);
+                });
                 if value {
                     state.clear_action_queue(app);
                     state.queue_summary = Some(Arc::<str>::from(
@@ -763,7 +761,9 @@ impl GenUiView {
                         if auto_fix {
                             let pretty = serde_json::to_string_pretty(&state.spec)
                                 .unwrap_or_else(|_| "<spec>".to_string());
-                            let _ = state.editor_text.set_in(app.models_mut(), pretty);
+                            app.local_state_txn(|tx| {
+                                tx.set(&state.editor_text, pretty);
+                            });
                         }
                     }
                     Err(err) => {
@@ -772,9 +772,9 @@ impl GenUiView {
                 }
             }
             Msg::ResetEditor => {
-                let _ = state
-                    .editor_text
-                    .set_in(app.models_mut(), SPEC_JSON.to_string());
+                app.local_state_txn(|tx| {
+                    tx.set(&state.editor_text, SPEC_JSON.to_string());
+                });
                 state.editor_error = None;
                 state.auto_fix_summary = None;
                 state.queue_summary = None;
@@ -835,7 +835,9 @@ impl GenUiView {
 
                         let pretty = serde_json::to_string_pretty(&state.spec)
                             .unwrap_or_else(|_| "<spec>".to_string());
-                        let _ = state.editor_text.set_in(app.models_mut(), pretty);
+                        app.local_state_txn(|tx| {
+                            tx.set(&state.editor_text, pretty);
+                        });
                     }
                     Err(err) => {
                         state.stream_error =
@@ -844,8 +846,10 @@ impl GenUiView {
                 }
             }
             Msg::ResetStream => {
-                let _ = state.stream_text.set_in(app.models_mut(), String::new());
-                let _ = state.stream_patch_only.set_in(app.models_mut(), false);
+                app.local_state_txn(|tx| {
+                    tx.set(&state.stream_text, String::new());
+                    tx.set(&state.stream_patch_only, false);
+                });
                 state.stream_summary = None;
                 state.stream_error = None;
                 state.auto_fix_summary = None;

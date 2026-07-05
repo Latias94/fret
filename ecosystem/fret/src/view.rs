@@ -66,7 +66,7 @@ pub use effects::AppUiEffects;
 pub use local_state::{
     AppLocalStateExt, AppLocalStateTxnExt, LocalActionCapture, LocalState,
     LocalStateElementContextExt, LocalStateModelStoreExt, LocalStateRawModelExt, LocalStateTxn,
-    TrackedStateExt, WatchedState,
+    TrackedStateExt, UiActionHostLocalStateTxnExt, WatchedState,
 };
 pub use pointer::{
     AppPointerRegion, CursorIcon, MouseButton, Point, PointerActionCx, PointerCancel, PointerDown,
@@ -91,9 +91,9 @@ mod tests {
         AppActivateExt, AppActivateSurface, AppLocalStateExt as _, AppLocalStateTxnExt as _,
         AppRenderActionsExt as _, AppUiRenderRootState, LocalActionCapture, LocalState,
         LocalStateElementContextExt as _, LocalStateModelStoreExt as _, LocalStateRawModelExt as _,
-        LocalStateTxn, OnActivate, View, ViewWindowState, action_listener,
-        dispatch_action_listener, dispatch_payload_action_listener, inbox_drain_apply, inbox_local,
-        render_root_with_app_ui, view_init_window, view_view,
+        LocalStateTxn, OnActivate, UiActionHostLocalStateTxnExt as _, View, ViewWindowState,
+        action_listener, dispatch_action_listener, dispatch_payload_action_listener,
+        inbox_drain_apply, inbox_local, render_root_with_app_ui, view_init_window, view_view,
     };
     use std::any::Any;
     #[cfg(feature = "state-mutation")]
@@ -845,6 +845,18 @@ mod tests {
 
         assert!(changed);
         assert_eq!(value, 2);
+    }
+
+    #[test]
+    fn ui_action_host_local_state_txn_updates_locals_without_model_store_callsite() {
+        let mut host = FakeHost::default();
+        let local = LocalState::new_in(&mut host.models, 1u32);
+
+        let changed = host.local_state_txn(|tx| tx.update(&local, |value| *value += 4));
+        let value = host.local_state_txn(|tx| tx.value(&local));
+
+        assert!(changed);
+        assert_eq!(value, 5);
     }
 
     #[test]
@@ -1953,6 +1965,7 @@ mod tests {
         assert!(LOCAL_STATE_RS_SOURCE.contains("mod bridges;"));
         assert!(LOCAL_STATE_RS_SOURCE.contains("pub use bridges::{"));
         assert!(view_api.contains("AppLocalStateTxnExt"));
+        assert!(view_api.contains("UiActionHostLocalStateTxnExt"));
         assert!(view_api.contains("LocalActionCapture"));
         assert!(view_api.contains("LocalStateTxn"));
         assert!(view_api.contains("LocalStateRawModelExt"));
@@ -2341,6 +2354,13 @@ mod tests {
             api_source.contains("pub fn value<T: Any + Clone>(&self, local: &LocalState<T>) -> T")
         );
         assert!(
+            api_source.contains("pub fn with_model_store<R>(\n        models: &mut ModelStore,"),
+            "LocalStateTxn should provide a narrow bridge for mixed ModelStore handlers without exposing raw LocalStateModelStoreExt at call sites"
+        );
+        assert!(api_source.contains(
+            "pub fn value_or_default<T: Any + Clone + Default>(&self, local: &LocalState<T>) -> T"
+        ));
+        assert!(
             api_source
                 .contains("pub fn layout_value<'a, H: UiHost + 'a, Cx>(&self, cx: &mut Cx) -> T")
         );
@@ -2593,6 +2613,7 @@ mod tests {
             api_source.contains("pub fn update_shared_model<T: Any>("),
             "LocalStateTxn should expose the narrow shared-model bridge instead of forcing default app code back to ModelStore"
         );
+        assert!(api_source.contains("pub trait UiActionHostLocalStateTxnExt"));
         assert!(api_source.contains("#[doc(hidden)]\npub trait LocalActionCapture"));
         assert!(
             api_source.contains(

@@ -4,9 +4,8 @@ use std::pin::Pin;
 use std::sync::Arc;
 use std::time::Duration;
 
-use fret::advanced::raw::LocalStateModelStoreExt as _;
-use fret::app::LocalState;
 use fret::app::prelude::*;
+use fret::app::{LocalState, LocalStateTxn};
 use fret::children::UiElementSinkExt as _;
 use fret::icons::IconId;
 use fret::mutation::{
@@ -281,7 +280,11 @@ impl View for ApiWorkbenchLiteView {
             &response_mutation,
             {
                 let locals = locals.clone();
-                move |models, state| apply_response_snapshot(models, &locals, state)
+                move |models, state| {
+                    LocalStateTxn::with_model_store(models, |tx| {
+                        apply_response_snapshot(tx, &locals, state)
+                    })
+                }
             },
         );
 
@@ -439,16 +442,15 @@ fn bind_actions(
         }
     });
 
-    cx.actions().availability::<act::SendRequest>({
-        let url = locals.url.clone();
-        move |host, _acx| {
-            if url.value_in_or_default(host.models_mut()).trim().is_empty() {
+    cx.actions()
+        .locals_with(&locals.url)
+        .availability::<act::SendRequest>(|tx, url| {
+            if tx.value_or_default(&url).trim().is_empty() {
                 fret_ui::CommandAvailability::Blocked
             } else {
                 fret_ui::CommandAvailability::Available
             }
-        }
-    });
+        });
     cx.actions().availability::<act::RetryLastRequest>({
         let response_mutation = response_mutation.clone();
         move |host, _acx| {
@@ -462,7 +464,9 @@ fn bind_actions(
 
     cx.actions().payload_models::<act::LoadCollection>({
         let locals = locals.clone();
-        move |models, preset_id| apply_collection(models, &locals, preset_id)
+        move |models, preset_id| {
+            LocalStateTxn::with_model_store(models, |tx| apply_collection(tx, &locals, preset_id))
+        }
     });
 
     cx.actions().payload_models::<act::LoadHistory>({
@@ -479,37 +483,40 @@ fn submit_request(
     response_mutation: &MutationHandle<RequestSnapshot, ResponsePayload>,
     history_save_mutation: &MutationHandle<RequestSnapshot, ()>,
 ) -> bool {
-    let url_value = locals.url.value_in_or_default(models);
-    if url_value.trim().is_empty() {
-        return false;
-    }
+    let Some(snapshot) = LocalStateTxn::with_model_store(models, |tx| {
+        let url_value = tx.value_or_default(&locals.url);
+        if url_value.trim().is_empty() {
+            return None;
+        }
 
-    let selected_collection = locals.selected_collection.value_in(models).flatten();
-    let snapshot = RequestSnapshot {
-        collection_id: selected_collection
-            .as_deref()
-            .and_then(collection_id_from_key),
-        collection_label: selected_collection
-            .as_deref()
-            .and_then(collection_id_from_key)
-            .map(|id| Arc::<str>::from(collection_preset(id).label))
-            .unwrap_or_else(|| Arc::<str>::from("Scratch request")),
-        method: locals
-            .method
-            .value_in(models)
-            .flatten()
-            .unwrap_or_else(|| Arc::<str>::from("GET")),
-        url: Arc::from(url_value),
-        headers_text: Arc::from(locals.headers.value_in_or_default(models)),
-        body: Arc::from(locals.body.value_in_or_default(models)),
-        env: EnvironmentSnapshot {
-            base_url: Arc::from(locals.base_url.value_in_or_default(models)),
-            auth_token: Arc::from(locals.auth_token.value_in_or_default(models)),
-        },
+        let selected_collection = tx.value_or(&locals.selected_collection, None);
+        Some(RequestSnapshot {
+            collection_id: selected_collection
+                .as_deref()
+                .and_then(collection_id_from_key),
+            collection_label: selected_collection
+                .as_deref()
+                .and_then(collection_id_from_key)
+                .map(|id| Arc::<str>::from(collection_preset(id).label))
+                .unwrap_or_else(|| Arc::<str>::from("Scratch request")),
+            method: tx
+                .value_or(&locals.method, None)
+                .unwrap_or_else(|| Arc::<str>::from("GET")),
+            url: Arc::from(url_value),
+            headers_text: Arc::from(tx.value_or_default(&locals.headers)),
+            body: Arc::from(tx.value_or_default(&locals.body)),
+            env: EnvironmentSnapshot {
+                base_url: Arc::from(tx.value_or_default(&locals.base_url)),
+                auth_token: Arc::from(tx.value_or_default(&locals.auth_token)),
+            },
+        })
+    }) else {
+        return false;
     };
     let snapshot_url = snapshot.url.clone();
 
-    let mut handled = prepare_request_submission_ui(models, locals);
+    let mut handled =
+        LocalStateTxn::with_model_store(models, |tx| prepare_request_submission_ui(tx, locals));
     handled = history_save_mutation.submit(models, window, snapshot.clone()) || handled;
     handled = response_mutation.submit(models, window, snapshot) || handled;
 
@@ -529,7 +536,8 @@ fn retry_last_request(
         return false;
     }
 
-    let mut handled = prepare_request_submission_ui(models, locals);
+    let mut handled =
+        LocalStateTxn::with_model_store(models, |tx| prepare_request_submission_ui(tx, locals));
     handled = history_save_mutation.retry_last(models, window) || handled;
     handled = response_mutation.retry_last(models, window) || handled;
     tracing::info!(handled, "api_workbench_lite retried last request");
@@ -548,29 +556,17 @@ fn can_retry_last_request(
         .unwrap_or(false)
 }
 
-fn prepare_request_submission_ui(
-    models: &mut fret_runtime::ModelStore,
-    locals: &WorkbenchLocals,
-) -> bool {
+fn prepare_request_submission_ui(tx: &mut LocalStateTxn<'_>, locals: &WorkbenchLocals) -> bool {
     let mut handled = false;
-    handled = locals.selected_history.set_in(models, None) || handled;
-    handled = locals
-        .response_tab
-        .set_in(models, Some(Arc::<str>::from("pretty")))
-        || handled;
-    handled = locals.response_status.set_in(models, "Loading".to_string()) || handled;
-    handled = locals
-        .response_pretty
-        .set_in(models, "Sending request...".to_string())
-        || handled;
-    handled = locals
-        .response_raw
-        .set_in(models, "Sending request...".to_string())
-        || handled;
-    handled = locals
-        .response_headers
-        .set_in(models, "Response headers will appear here.".to_string())
-        || handled;
+    handled = tx.set(&locals.selected_history, None) || handled;
+    handled = tx.set(&locals.response_tab, Some(Arc::<str>::from("pretty"))) || handled;
+    handled = tx.set(&locals.response_status, "Loading".to_string()) || handled;
+    handled = tx.set(&locals.response_pretty, "Sending request...".to_string()) || handled;
+    handled = tx.set(&locals.response_raw, "Sending request...".to_string()) || handled;
+    handled = tx.set(
+        &locals.response_headers,
+        "Response headers will appear here.".to_string(),
+    ) || handled;
     handled
 }
 
@@ -990,7 +986,7 @@ where
 }
 
 fn apply_response_snapshot(
-    models: &mut fret_runtime::ModelStore,
+    tx: &mut LocalStateTxn<'_>,
     locals: &WorkbenchLocals,
     state: MutationState<RequestSnapshot, ResponsePayload>,
 ) -> bool {
@@ -1023,10 +1019,10 @@ fn apply_response_snapshot(
     };
 
     let mut changed = false;
-    changed = locals.response_status.set_in(models, status_line) || changed;
-    changed = locals.response_pretty.set_in(models, pretty) || changed;
-    changed = locals.response_raw.set_in(models, raw) || changed;
-    changed = locals.response_headers.set_in(models, headers) || changed;
+    changed = tx.set(&locals.response_status, status_line) || changed;
+    changed = tx.set(&locals.response_pretty, pretty) || changed;
+    changed = tx.set(&locals.response_raw, raw) || changed;
+    changed = tx.set(&locals.response_headers, headers) || changed;
     changed
 }
 
@@ -1497,27 +1493,18 @@ fn pretty_body(raw_body: &str, content_type: &str) -> String {
     raw_body.to_string()
 }
 
-fn apply_collection(
-    models: &mut fret_runtime::ModelStore,
-    locals: &WorkbenchLocals,
-    preset_id: u8,
-) -> bool {
+fn apply_collection(tx: &mut LocalStateTxn<'_>, locals: &WorkbenchLocals, preset_id: u8) -> bool {
     let preset = collection_preset(preset_id);
-    let mut handled = locals
-        .selected_collection
-        .set_in(models, Some(Arc::<str>::from(collection_key(preset_id))));
-    handled = locals.selected_history.set_in(models, None) || handled;
-    handled = locals
-        .method
-        .set_in(models, Some(Arc::<str>::from(preset.method)))
-        || handled;
-    handled = locals.url.set_in(models, preset.url.to_string()) || handled;
-    handled = locals.headers.set_in(models, preset.headers.to_string()) || handled;
-    handled = locals.body.set_in(models, preset.body.to_string()) || handled;
-    handled = locals
-        .request_tab
-        .set_in(models, Some(Arc::<str>::from("body")))
-        || handled;
+    let mut handled = tx.set(
+        &locals.selected_collection,
+        Some(Arc::<str>::from(collection_key(preset_id))),
+    );
+    handled = tx.set(&locals.selected_history, None) || handled;
+    handled = tx.set(&locals.method, Some(Arc::<str>::from(preset.method))) || handled;
+    handled = tx.set(&locals.url, preset.url.to_string()) || handled;
+    handled = tx.set(&locals.headers, preset.headers.to_string()) || handled;
+    handled = tx.set(&locals.body, preset.body.to_string()) || handled;
+    handled = tx.set(&locals.request_tab, Some(Arc::<str>::from("body"))) || handled;
     handled
 }
 
@@ -1538,25 +1525,21 @@ fn load_history(
         return false;
     };
 
-    let mut handled = locals.selected_history.set_in(models, Some(history_id));
-    handled = locals.selected_collection.set_in(
-        models,
-        entry
-            .collection_id
-            .map(|id| Arc::<str>::from(collection_key(id))),
-    ) || handled;
-    handled = locals.method.set_in(models, Some(entry.method.clone())) || handled;
-    handled = locals.url.set_in(models, entry.url.to_string()) || handled;
-    handled = locals
-        .headers
-        .set_in(models, entry.headers_text.to_string())
-        || handled;
-    handled = locals.body.set_in(models, entry.body.to_string()) || handled;
-    handled = locals
-        .request_tab
-        .set_in(models, Some(Arc::<str>::from("body")))
-        || handled;
-    handled
+    LocalStateTxn::with_model_store(models, |tx| {
+        let mut handled = tx.set(&locals.selected_history, Some(history_id));
+        handled = tx.set(
+            &locals.selected_collection,
+            entry
+                .collection_id
+                .map(|id| Arc::<str>::from(collection_key(id))),
+        ) || handled;
+        handled = tx.set(&locals.method, Some(entry.method.clone())) || handled;
+        handled = tx.set(&locals.url, entry.url.to_string()) || handled;
+        handled = tx.set(&locals.headers, entry.headers_text.to_string()) || handled;
+        handled = tx.set(&locals.body, entry.body.to_string()) || handled;
+        handled = tx.set(&locals.request_tab, Some(Arc::<str>::from("body"))) || handled;
+        handled
+    })
 }
 
 fn status_badge(label: &str) -> shadcn::Badge {

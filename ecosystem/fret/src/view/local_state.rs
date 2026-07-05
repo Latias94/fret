@@ -228,6 +228,27 @@ impl AppLocalStateTxnExt for crate::app::App {
     }
 }
 
+/// Action-host transaction entry for local state writes in app-facing activation callbacks.
+///
+/// Use this for widget or ecosystem callbacks that receive `&mut dyn UiActionHost` rather than
+/// `&mut App`. It keeps callback code on the LocalState-first surface without reopening the raw
+/// `ModelStore` bridge.
+pub trait UiActionHostLocalStateTxnExt {
+    fn local_state_txn<R>(&mut self, f: impl FnOnce(&mut LocalStateTxn<'_>) -> R) -> R;
+}
+
+impl<H> UiActionHostLocalStateTxnExt for H
+where
+    H: fret_ui::action::UiActionHost + ?Sized,
+{
+    fn local_state_txn<R>(&mut self, f: impl FnOnce(&mut LocalStateTxn<'_>) -> R) -> R {
+        let mut tx = LocalStateTxn {
+            models: self.models_mut(),
+        };
+        f(&mut tx)
+    }
+}
+
 /// A narrow, LocalState-focused transaction wrapper used to keep the default authoring surface
 /// free of direct `ModelStore` plumbing.
 ///
@@ -239,6 +260,18 @@ pub struct LocalStateTxn<'a> {
 }
 
 impl<'a> LocalStateTxn<'a> {
+    /// Borrow an existing action `ModelStore` as a local-state transaction.
+    ///
+    /// This is for mixed handlers that already receive `ModelStore` for shared model or mutation
+    /// coordination but still want app-local reads/writes to stay on the LocalState surface.
+    pub fn with_model_store<R>(
+        models: &mut ModelStore,
+        f: impl FnOnce(&mut LocalStateTxn<'_>) -> R,
+    ) -> R {
+        let mut tx = LocalStateTxn { models };
+        f(&mut tx)
+    }
+
     /// Read the current value from an initialized local slot.
     ///
     /// `LocalState<T>` on the app lane always owns an inserted model slot, so ordinary
@@ -256,6 +289,10 @@ impl<'a> LocalStateTxn<'a> {
 
     pub fn value_or_else<T: Any + Clone>(&self, local: &LocalState<T>, f: impl FnOnce() -> T) -> T {
         local.value_in_or_else(self.models, f)
+    }
+
+    pub fn value_or_default<T: Any + Clone + Default>(&self, local: &LocalState<T>) -> T {
+        local.value_in_or_default(self.models)
     }
 
     pub fn read_ref<T: Any, R>(

@@ -313,7 +313,6 @@ COMPARISON_SURFACES: tuple[SurfacePath, ...] = (
         "it is an API ergonomics and migration reference while public workbench-lite and "
         "mutation-workbench starters cover default onboarding flows",
         (
-            "fret::advanced",
             "fret_app",
             "fret_core",
             "fret_runtime",

@@ -2,6 +2,42 @@ fn compact(source: &str) -> String {
     source.split_whitespace().collect()
 }
 
+fn collect_rs_files(root: &std::path::Path, out: &mut Vec<std::path::PathBuf>) {
+    for entry in std::fs::read_dir(root).expect("example source directory should be readable") {
+        let entry = entry.expect("example source entry should be readable");
+        let path = entry.path();
+        if path.is_dir() {
+            collect_rs_files(&path, out);
+        } else if path.extension().and_then(|ext| ext.to_str()) == Some("rs") {
+            out.push(path);
+        }
+    }
+}
+
+#[test]
+fn examples_src_keeps_local_state_raw_bridges_out() {
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
+    let mut files = Vec::new();
+    collect_rs_files(&root, &mut files);
+
+    for path in files {
+        let source = std::fs::read_to_string(&path)
+            .unwrap_or_else(|err| panic!("failed to read {}: {err}", path.display()));
+        for forbidden in [
+            "fret::advanced::raw",
+            "LocalStateModelStoreExt",
+            "LocalStateRawModelExt",
+            "LocalStateElementContextExt",
+        ] {
+            assert!(
+                !source.contains(forbidden),
+                "{} should stay on app-facing LocalState APIs instead of `{forbidden}`",
+                path.strip_prefix(&root).unwrap_or(&path).display(),
+            );
+        }
+    }
+}
+
 #[test]
 fn low_risk_function_driver_demos_use_explicit_advanced_imports() {
     for (name, source, expected_driver_import, expected_window_import) in [

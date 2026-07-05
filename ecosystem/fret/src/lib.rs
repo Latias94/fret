@@ -774,7 +774,7 @@ pub mod app {
     pub use crate::view::{
         AppLocalStateExt, AppLocalStateTxnExt, AppRenderActionsExt, AppRenderContext,
         AppRenderDataExt, LocalState, LocalStateTxn, RenderContextAccess, TrackedStateExt,
-        view_child, view_child_with,
+        UiActionHostLocalStateTxnExt, view_child, view_child_with,
     };
     /// Canonical app-facing runtime handle on the default `fret` surface.
     ///
@@ -1008,6 +1008,7 @@ pub mod app {
         #[cfg(feature = "state-query")]
         pub use crate::view::QueryHandleReadLayoutExt as _;
         pub use crate::view::TrackedStateExt as _;
+        pub use crate::view::UiActionHostLocalStateTxnExt as _;
         pub use crate::view::View;
         pub use crate::{AppUi, Ui, UiChild, WindowId};
         pub use fret_core::Px;
@@ -4766,6 +4767,7 @@ mod authoring_surface_policy_tests {
         assert!(!app_prelude_exports_symbol("LocalStateTxn"));
         assert!(!app_prelude_exports_symbol("AppLocalStateExt"));
         assert!(!app_prelude_exports_symbol("AppLocalStateTxnExt"));
+        assert!(!app_prelude_exports_symbol("UiActionHostLocalStateTxnExt"));
         assert!(!app_prelude_exports_symbol("CommandId"));
         assert!(!app_prelude_exports_symbol("ThemeSnapshot"));
         assert!(!app_prelude_exports_symbol("actions"));
@@ -4775,6 +4777,7 @@ mod authoring_surface_policy_tests {
         assert!(!app_prelude.contains("pub use crate::view::AppActivateExt as _;"));
         assert!(app_prelude.contains("pub use crate::view::QueryHandleReadLayoutExt as _;"));
         assert!(app_prelude.contains("pub use crate::view::TrackedStateExt as _;"));
+        assert!(app_prelude.contains("pub use crate::view::UiActionHostLocalStateTxnExt as _;"));
         assert!(app_prelude.contains("pub use crate::view::AppLocalStateExt as _;"));
         assert!(app_prelude.contains("pub use crate::view::AppLocalStateTxnExt as _;"));
         assert!(app_prelude.contains("pub use crate::view::AppRenderActionsExt as _;"));
@@ -4888,6 +4891,7 @@ mod authoring_surface_policy_tests {
             "pub use crate::view::MutationHandleReadLayoutExt as _;",
             "pub use crate::view::QueryHandleReadLayoutExt as _;",
             "pub use crate::view::TrackedStateExt as _;",
+            "pub use crate::view::UiActionHostLocalStateTxnExt as _;",
             "pub use crate::view::View;",
             "pub use crate::{AppUi, Ui, UiChild, WindowId};",
             "pub use fret_core::Px;",
@@ -5070,6 +5074,7 @@ mod authoring_surface_policy_tests {
         assert!(LIB_RS.contains(
             "AppRenderDataExt, LocalState, LocalStateTxn, RenderContextAccess, TrackedStateExt,"
         ));
+        assert!(LIB_RS.contains("UiActionHostLocalStateTxnExt, view_child, view_child_with,"));
         assert!(!app_prelude_exports_symbol("view_child"));
         assert!(!app_prelude_exports_symbol("view_child_with"));
         assert!(!public_surface.contains("pub use crate::view::{UiCxActionsExt, UiCxDataExt};"));

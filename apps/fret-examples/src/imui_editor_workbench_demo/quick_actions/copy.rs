@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use fret::advanced::raw::LocalStateModelStoreExt as _;
 use fret::app::LocalState;
 use fret::app::prelude::*;
 use fret_app::Effect;
@@ -70,7 +69,9 @@ fn workbench_copy_text_on_activate(
             token,
             text: text.clone(),
         });
-        let _ = copy_status.set_in(host.models_mut(), next_status.clone());
+        host.local_state_txn(|tx| {
+            tx.set(&copy_status, next_status.clone());
+        });
         host.request_redraw(action_cx.window);
     })
 }

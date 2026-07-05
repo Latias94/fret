@@ -638,3 +638,14 @@ timestamp: 2026-06-30
   bans. Verification passed for focused chart-feature compile, default/chart cookbook all-targets,
   full `fret-cookbook` lib nextest, focused `fret` facade tests with `chart`, source-policy
   tests/gate, consumption-profile, execution-surface, layering, formatting, and whitespace.
+- 2026-07-05: Public app LocalState cleanup adds `UiActionHostLocalStateTxnExt`,
+  `LocalStateTxn::with_model_store(...)`, and `LocalStateTxn::value_or_default(...)`, then migrates
+  the remaining `apps/fret-examples/src` LocalState raw bridge users (`api_workbench_lite_demo`,
+  `genui_demo`, `markdown_demo`, and IMUI workbench copy actions) off
+  `LocalStateModelStoreExt`/`LocalStateRawModelExt`. `api_workbench_lite_demo` keeps shared
+  `ModelStore` usage only for mutation/query comparison work, while app-local reads/writes now go
+  through `LocalStateTxn`. The examples import-surface gate now recursively forbids raw LocalState
+  bridge imports in `apps/fret-examples/src`, and the surface-policy record drops the stale
+  `fret::advanced` allowance for API workbench lite. Verification passed for focused `fret` and
+  `fret-examples` nextest checks, `cargo check -p fret`, `cargo check -p fret-examples --lib
+  --tests`, source-policy tests/gate, consumption-profile, layering, formatting, and whitespace.

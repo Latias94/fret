@@ -193,18 +193,22 @@ the control already exposes a stable action slot. Pair transient app-only action
 effects such as `cx.effects().toast_message(...)`, `cx.effects().toast_success(...)`, or
 `cx.effects().toast_dismiss_all()`. For ordinary initialized locals inside
 `locals_with((...)).on::<A>(...)`, prefer `tx.value(&local)` for reads and keep
-`tx.value_or(...)` / `tx.value_or_else(...)` for explicit fallback cases only. For view-owned keyed
-lists, bind row payloads with `.action_payload(...)` and prefer
+`tx.value_or(...)` / `tx.value_or_else(...)` / `tx.value_or_default(...)` for explicit fallback
+cases only. For view-owned keyed lists, bind row payloads with `.action_payload(...)` and prefer
 `cx.actions().local(&rows_state).payload_update_if::<A>(...)` as the default row-write path. If a
 widget already exposes its own `.on_activate(...)` hook, stay on that component-owned surface
 instead of importing the activation bridge just to attach a no-op or side effect override. Only add
 `use fret::app::AppActivateExt as _;` for activation-only surfaces that do not yet offer a narrower
 widget-owned app-facing helper, and keep the same action-first vocabulary there via
 `widget.action(act::Save)`, `widget.action_payload(act::Remove, payload)`, and
-`widget.listen(|host, acx| { ... })`. Drop down to `cx.actions().models::<A>(...)` for shared
-`Model<T>` graphs and `cx.actions().payload_models::<A>(...)` when the same graph needs typed
-payload actions without reopening the deleted payload-carrier namespace. There is one explicit
-advanced raw-model seam: import `use fret::advanced::raw::AppUiRawModelExt;` and call
+`widget.listen(|host, acx| { ... })`. When an ecosystem or widget callback receives
+`&mut dyn UiActionHost` and only needs app-local state, use `host.local_state_txn(|tx| ...)` rather
+than importing the raw `LocalStateModelStoreExt` bridge. Drop down to
+`cx.actions().models::<A>(...)` for shared `Model<T>` graphs and
+`cx.actions().payload_models::<A>(...)` when the same graph needs typed payload actions without
+reopening the deleted payload-carrier namespace; if that mixed handler also updates view-local
+state, wrap just that portion with `LocalStateTxn::with_model_store(models, |tx| ...)`. There is
+one explicit advanced raw-model seam: import `use fret::advanced::raw::AppUiRawModelExt;` and call
 `cx.raw_model::<T>()` only when the raw handle itself is the point. Treat lower-level payload
 helpers, raw `AppUi::on_action_notify*`, and low-level `.on_activate(cx.actions().listen(...))`
 glue as advanced/reference host-side escape hatches; if you intentionally reopen that seam, keep it
@@ -279,6 +283,8 @@ signatures, import `fret::app::{LocalState, LocalStateTxn}` instead of expecting
 When app-owned callbacks or function-driver hooks have `&mut App` and need to read/write
 `LocalState`, use `app.local_state_txn(|tx| ...)` rather than importing raw `ModelStore` bridge
 helpers.
+When widget-owned activation callbacks have `&mut dyn UiActionHost`, use
+`host.local_state_txn(|tx| ...)` for the same reason.
 When app code needs explicit command identity, metadata, availability, keybinding, keymap, or
 shortcut-display nouns, import them from `fret::commands::{...}` instead of importing `fret_app`,
 `fret_runtime`, `fret_core`, or `fret_ui` from default app/tutorial code.
