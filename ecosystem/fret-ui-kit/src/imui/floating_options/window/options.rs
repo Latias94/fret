@@ -22,8 +22,8 @@ pub struct WindowOptions {
 }
 
 impl WindowOptions {
-    pub fn with_open(mut self, open: &fret_runtime::Model<bool>) -> Self {
-        self.open = Some(open.clone());
+    pub fn with_open(mut self, open: impl crate::imui::IntoImUiBoolModel) -> Self {
+        self.open = Some(open.into_imui_bool_model());
         self
     }
 

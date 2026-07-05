@@ -292,6 +292,8 @@ Text and value controls follow the same rule:
 `ui.combo_model("mode.popup", "Mode", &mode_state, &items)`.
 For IMUI tab state, prefer `kit::TabBarOptions::default().selected_model(&tab_state)` over
 reopening a raw `Model<Option<Arc<str>>>` handle.
+For IMUI floating windows, prefer `kit::WindowOptions::default().with_open(&open_state)` over
+reopening a raw `Model<bool>` handle.
 For adjacent IMUI button or callback writes that receive `&mut App`, use
 `app.local_state_txn(|tx| ...)` instead of importing the raw LocalState model bridge.
 When app code needs explicit command identity, metadata, availability, keybinding, keymap, or

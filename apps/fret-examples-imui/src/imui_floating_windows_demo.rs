@@ -10,8 +10,9 @@
 
 use std::sync::Arc;
 
-use fret::advanced::raw::{LocalStateElementContextExt as _, LocalStateRawModelExt as _};
-use fret::{FretApp, advanced::prelude::*, imui::prelude::*};
+use fret::{
+    FretApp, advanced::prelude::*, app::UiActionHostLocalStateTxnExt as _, imui::prelude::*,
+};
 use fret_core::{Point, Px, Rect, SemanticsRole, Size};
 use fret_ui_kit::on_activate_notify;
 
@@ -85,13 +86,13 @@ impl View for ImUiFloatingWindowsView {
                     "Window A",
                     initial_position,
                     kit::WindowOptions::default()
-                        .with_open(open_a_state.model())
+                        .with_open(&open_a_state)
                         .with_size(initial_size)
                         .with_resize(kit::FloatingWindowResizeOptions::default()),
                     |ui| {
                         ui.vertical(|ui| {
                             ui.mount(|cx| {
-                                let clicked_model = a_overlap_clicked_state.clone_model();
+                                let clicked_state = a_overlap_clicked_state.clone();
 
                                 let activate = cx.pressable(
                                     {
@@ -120,15 +121,13 @@ impl View for ImUiFloatingWindowsView {
                                     },
                                     move |cx, _state| {
                                         cx.pressable_on_activate(on_activate_notify(move |host| {
-                                            let _ = host
-                                                .models_mut()
-                                                .update(&clicked_model, |v| *v = true);
+                                            host.local_state_txn(|tx| tx.set(&clicked_state, true));
                                         }));
                                         vec![cx.text("Overlap target (A)")]
                                     },
                                 );
 
-                                let clicked = a_overlap_clicked_state.paint_value_in(cx);
+                                let clicked = a_overlap_clicked_state.paint(cx).value_or_default();
 
                                 let clicked_label = clicked.then(|| {
                                     cx.text("A overlap clicked").attach_semantics(
@@ -196,7 +195,7 @@ impl View for ImUiFloatingWindowsView {
                             let _ = ui.combo_model_with_options(
                                 "imui-float-demo.select.popup",
                                 "Mode",
-                                select_mode_state.model(),
+                                &select_mode_state,
                                 &select_items,
                                 kit::ComboModelOptions {
                                     test_id: Some(Arc::from("imui-float-demo.select")),
