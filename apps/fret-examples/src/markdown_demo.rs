@@ -9,10 +9,12 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Context as _;
+use fret::advanced::kernel::app::Effect;
 use fret::advanced::raw::{LocalStateElementContextExt as _, LocalStateModelStoreExt as _};
-use fret::app::ui_assets;
+use fret::app::prelude::*;
+use fret::app::{AppComponentCx, LocalState, RenderContextAccess as _, ui_assets};
 use fret::query::{QueryError, QueryKey, QueryPolicy, QueryStatus};
-use fret::{FretApp, advanced::prelude::*, component::prelude::*};
+use fret::style::{ColorRef, LayoutRefinement, Space};
 use fret_core::{ImageColorSpace, Point, Px, SvgFit};
 use fret_markdown as markdown;
 use fret_ui::element::{
@@ -20,11 +22,10 @@ use fret_ui::element::{
     SvgIconProps,
 };
 use fret_ui::{Invalidation, Theme, ThemeConfig};
+use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::IntoUiElementInExt as _;
 use fret_ui_kit::declarative::QueryHandleWatchExt as _;
 use fret_ui_kit::declarative::text as decl_text;
-use fret_ui_kit::{ColorRef, IntoUiElement, Space, ui};
-use fret_ui_shadcn::facade as shadcn;
 
 mod act {
     fret::actions!([RefreshRemoteImages = "markdown_demo.refresh_remote_images.v1"]);
@@ -251,7 +252,7 @@ impl MarkdownDemoView {
 }
 
 impl View for MarkdownDemoView {
-    fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self {
+    fn init(_app: &mut App, _window: WindowId) -> Self {
         let markdown: Arc<str> = Arc::from(
             r##"# Markdown Demo
 
@@ -395,7 +396,7 @@ $$
         let wrap_enabled = wrap_code_state.layout_value(cx);
         let cap_enabled = cap_code_height_state.layout_value(cx);
 
-        let mut components = markdown::MarkdownComponents::<KernelApp>::default();
+        let mut components = markdown::MarkdownComponents::<App>::default();
         components.on_link_activate = Some(Self::on_link_activate(pending_anchor_state.clone()));
         components.code_block_ui.wrap = if wrap_enabled {
             fret_code_view::CodeBlockWrap::Word
@@ -741,7 +742,7 @@ fn render_image_placeholder<H: fret_ui::UiHost>(
     markdown_demo_image_placeholder_text(cx, text, foreground)
 }
 
-fn apply_markdown_demo_theme_tokens(app: &mut KernelApp) {
+fn apply_markdown_demo_theme_tokens(app: &mut App) {
     Theme::with_global_mut(app, |theme| {
         // Demo-only: inject explicit markdown math tokens so theme tuning is discoverable.
         let font_size = theme.metric_token("metric.font.size").0;
