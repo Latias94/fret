@@ -12,9 +12,10 @@
 
 use std::sync::Arc;
 
+use fret::advanced::driver::UiAppBuilderAdvancedExt as _;
 use fret::advanced::raw::{LocalStateElementContextExt as _, LocalStateRawModelExt as _};
-use fret::app::AppRenderContext;
-use fret::{FretApp, advanced::prelude::*, component::prelude::*};
+use fret::app::prelude::*;
+use fret::app::{AppComponentCx, AppRenderContext, LocalState};
 use fret_core::scene::{
     BackdropWarpFieldV2, BackdropWarpKindV1, BackdropWarpV1, BackdropWarpV2,
     CustomEffectImageInputV1, CustomEffectPyramidRequestV1, CustomEffectSourcesV3, DitherMode,
@@ -23,16 +24,17 @@ use fret_core::scene::{
 };
 use fret_core::{Color, Corners, Edges, EffectId, ImageColorSpace, Px};
 use fret_render::RendererCapabilities;
-use fret_ui::Invalidation;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, EffectLayerProps, InsetStyle, LayoutStyle, Length,
     MainAlign, Overflow, PositionStyle, RowProps, SizeStyle, SpacerProps, SpacingLength,
 };
+use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_assets::image_asset_cache::{ImageAssetCacheHostExt, ImageAssetKey};
 use fret_ui_kit::custom_effects::{CustomEffectProgramV2, CustomEffectProgramV3};
+use fret_ui_kit::declarative::UiElementTestIdExt as _;
+use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::text as decl_text;
-use fret_ui_kit::ui;
-use fret_ui_kit::{IntoUiElement, Space};
+use fret_ui_kit::{IntoUiElement, Space, UiSupportsLayout as _, ui};
 use fret_ui_shadcn::facade as shadcn;
 
 use crate::custom_effect_v3_wgsl::CUSTOM_EFFECT_V3_LENS_WGSL;
@@ -429,7 +431,7 @@ struct LiquidGlassModeSettings {
     use_dither: bool,
 }
 
-fn install_demo_theme(app: &mut KernelApp) {
+fn install_demo_theme(app: &mut App) {
     shadcn::themes::apply_shadcn_new_york(
         app,
         shadcn::themes::ShadcnBaseColor::Slate,
@@ -447,7 +449,7 @@ pub fn run() -> anyhow::Result<()> {
         .map_err(anyhow::Error::from)
 }
 
-fn install_custom_effects(app: &mut KernelApp, effects: &mut dyn fret_core::CustomEffectService) {
+fn install_custom_effects(app: &mut App, effects: &mut dyn fret_core::CustomEffectService) {
     let mut program_v2 = CustomEffectProgramV2::wgsl_utf8(CUSTOM_WARP_V2_WGSL);
     let v2 = match program_v2.ensure_registered(effects) {
         Ok(id) => Some(id),
@@ -633,7 +635,7 @@ impl LiquidGlassState {
 }
 
 impl View for LiquidGlassView {
-    fn init(app: &mut KernelApp, _window: AppWindowId) -> Self {
+    fn init(app: &mut App, _window: WindowId) -> Self {
         let warp_map_size = (128u32, 128u32);
         let warp_map_rgba = generate_warp_map_rg_signed(warp_map_size.0, warp_map_size.1);
         let warp_map_key = ImageAssetKey::from_rgba8(
@@ -666,7 +668,7 @@ impl View for LiquidGlassView {
     }
 }
 
-fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> ViewElements {
+fn view(cx: &mut ElementContext<'_, App>, st: &mut LiquidGlassState) -> Ui {
     let theme = Theme::global(&*cx.app).snapshot();
     let theme_stage = theme.clone();
     let viewport = cx.environment_viewport_bounds(Invalidation::Layout);
