@@ -7,8 +7,8 @@ fn chart_declarative_demo_uses_app_view_imports() {
     let source = compact(include_str!("../src/chart_declarative_demo.rs"));
 
     for needle in [
-        "usefret::advanced::raw::Model;",
         "usefret::app::prelude::*;",
+        "usefret_runtime::Model;",
         "structChartDeclarativeView{engine:Model<ChartEngine>,spec:ChartSpec,}",
         "fninit(app:&mutApp,_window:WindowId)->Self",
         "ChartCanvasPanelProps::new(self.spec.clone())",
@@ -17,11 +17,12 @@ fn chart_declarative_demo_uses_app_view_imports() {
     ] {
         assert!(
             source.contains(needle),
-            "chart_declarative_demo should stay on the app View skeleton with an explicit raw Model handle; missing `{needle}`"
+            "chart_declarative_demo should stay on the app View skeleton with an explicit runtime Model handle; missing `{needle}`"
         );
     }
 
     for legacy in [
+        "usefret::advanced::raw::Model;",
         "advanced::prelude::*",
         "component::prelude::*",
         "KernelApp",

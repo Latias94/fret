@@ -1,5 +1,4 @@
 use anyhow::Context as _;
-use fret::advanced::raw::Model;
 use fret::app::prelude::*;
 use fret_bootstrap::ui_app_driver;
 use fret_plot::cartesian::DataPoint;
@@ -8,6 +7,7 @@ use fret_plot::models::{LinePlotModel, LineSeries};
 use fret_plot::series::Series;
 use fret_plot::state::{PlotOutput, PlotOverlays, PlotState};
 use fret_plot::style::{LinePlotStyle, SeriesTooltipMode};
+use fret_runtime::Model;
 use fret_runtime::PlatformCapabilities;
 
 struct TagsDemoView {

@@ -1,5 +1,4 @@
 use anyhow::Context as _;
-use fret::advanced::raw::Model;
 use fret::app::prelude::*;
 use fret::app::{RenderContextAccess as _, ui_assets};
 use fret_bootstrap::ui_app_driver;
@@ -10,6 +9,7 @@ use fret_plot::plot::axis::{AxisLabelFormatter, AxisNumberFormat};
 use fret_plot::series::Series;
 use fret_plot::state::{PlotImage, PlotImageLayer, PlotOutput, PlotOverlays, PlotState};
 use fret_plot::style::{LinePlotStyle, SeriesTooltipMode};
+use fret_runtime::Model;
 use fret_runtime::PlatformCapabilities;
 
 struct PlotImageDemoView {

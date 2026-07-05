@@ -1,11 +1,11 @@
 use anyhow::Context as _;
-use fret::advanced::raw::Model;
 use fret::app::prelude::*;
 use fret_plot::cartesian::{AxisScale, DataPoint};
 use fret_plot::declarative::{LinePlotPanelProps, line_plot_panel_in};
 use fret_plot::models::{LinePlotModel, LineSeries};
 use fret_plot::series::Series;
 use fret_plot::style::LinePlotStyle;
+use fret_runtime::Model;
 
 struct PlotDeclarativeView {
     model: Model<LinePlotModel>,

@@ -7,8 +7,8 @@ fn plot_declarative_demo_uses_default_declarative_line_plot_panel() {
     let source = compact(include_str!("../src/plot_declarative_demo.rs"));
 
     for needle in [
-        "usefret::advanced::raw::Model;",
         "usefret::app::prelude::*;",
+        "usefret_runtime::Model;",
         "usefret_plot::declarative::{LinePlotPanelProps,line_plot_panel_in};",
         "model:Model<LinePlotModel>",
         "fninit(app:&mutApp,_window:WindowId)->Self",
@@ -26,6 +26,7 @@ fn plot_declarative_demo_uses_default_declarative_line_plot_panel() {
     }
 
     for legacy in [
+        "usefret::advanced::raw::Model;",
         "usefret_plot::retained",
         "fret_plot::retained::",
         "LinePlotCanvas",
@@ -49,8 +50,8 @@ fn tags_demo_uses_default_declarative_line_plot_panel() {
     let source = compact(include_str!("../src/tags_demo.rs"));
 
     for needle in [
-        "usefret::advanced::raw::Model;",
         "usefret::app::prelude::*;",
+        "usefret_runtime::Model;",
         "usefret_plot::declarative::{LinePlotPanelProps,line_plot_panel_in};",
         "TagsDemoView",
         "fninit(app:&mutApp,_window:WindowId)->Self",
@@ -77,6 +78,7 @@ fn tags_demo_uses_default_declarative_line_plot_panel() {
     }
 
     for legacy in [
+        "usefret::advanced::raw::Model;",
         "usefret_plot::retained",
         "fret_plot::retained::",
         "LinePlotCanvas",
@@ -99,9 +101,9 @@ fn plot_image_demo_uses_default_declarative_line_plot_panel() {
     let source = compact(include_str!("../src/plot_image_demo.rs"));
 
     for needle in [
-        "usefret::advanced::raw::Model;",
         "usefret::app::prelude::*;",
         "usefret::app::{RenderContextAccessas_,ui_assets};",
+        "usefret_runtime::Model;",
         "usefret_plot::declarative::{LinePlotPanelProps,line_plot_panel_in};",
         "PlotImageDemoView",
         "image:Option<ui_assets::ImageId>",
@@ -126,6 +128,7 @@ fn plot_image_demo_uses_default_declarative_line_plot_panel() {
     }
 
     for legacy in [
+        "usefret::advanced::raw::Model;",
         "usefret_plot::retained",
         "fret_plot::retained::",
         "LinePlotCanvas",
