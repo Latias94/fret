@@ -3,13 +3,13 @@ pub const SOURCE: &str = include_str!("image.rs");
 // region: example
 use fret::component::ui_assets::{self, ImageSource};
 use fret::{AppComponentCx, UiChild};
-use fret_core::{Color as CoreColor, ImageColorSpace, ImageId};
+use fret_core::Color as CoreColor;
 use fret_ui::Theme;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::{Arc, OnceLock};
 
-fn demo_cover_image(cx: &mut AppComponentCx<'_>) -> Option<ImageId> {
+fn demo_cover_image(cx: &mut AppComponentCx<'_>) -> Option<ui_assets::ImageId> {
     let source = ImageSource::rgba8(
         4,
         4,
@@ -19,7 +19,7 @@ fn demo_cover_image(cx: &mut AppComponentCx<'_>) -> Option<ImageId> {
             69, 54, 255, 98, 188, 153, 255, 42, 124, 108, 255, 181, 68, 50, 255, 151, 56, 58, 255,
             95, 161, 118, 255, 54, 103, 86, 255,
         ],
-        ImageColorSpace::Srgb,
+        ui_assets::ImageColorSpace::Srgb,
     );
     ui_assets::image_source_state(cx, &source).image
 }
@@ -46,7 +46,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                     .is_some_and(|v| !v.is_empty())
             });
 
-            let event_cover: Option<ImageId> = demo_cover_image(cx);
+            let event_cover: Option<ui_assets::ImageId> = demo_cover_image(cx);
             let event_cover_source = "rgba8";
 
             let image = shadcn::MediaImage::maybe(event_cover)

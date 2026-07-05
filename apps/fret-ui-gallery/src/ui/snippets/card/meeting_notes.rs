@@ -3,14 +3,13 @@ pub const SOURCE: &str = include_str!("meeting_notes.rs");
 // region: example
 use fret::component::ui_assets::{self, ImageSource};
 use fret::{AppComponentCx, UiChild};
-use fret_core::{ImageColorSpace, ImageId};
 use fret_ui::Theme;
 use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::ui;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-fn demo_avatar_image(cx: &mut AppComponentCx<'_>) -> Option<ImageId> {
+fn demo_avatar_image(cx: &mut AppComponentCx<'_>) -> Option<ui_assets::ImageId> {
     let source = ImageSource::rgba8(
         4,
         4,
@@ -20,7 +19,7 @@ fn demo_avatar_image(cx: &mut AppComponentCx<'_>) -> Option<ImageId> {
             146, 255, 203, 146, 110, 255, 73, 111, 150, 255, 52, 86, 121, 255, 161, 112, 82, 255,
             132, 90, 68, 255, 49, 73, 104, 255, 33, 54, 80, 255,
         ],
-        ImageColorSpace::Srgb,
+        ui_assets::ImageColorSpace::Srgb,
     );
     ui_assets::image_source_state(cx, &source).image
 }

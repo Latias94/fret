@@ -125,7 +125,8 @@ fn card_docs_path_snippets_stay_copyable_and_docs_aligned() {
     for needle in [
         "use fret::component::ui_assets::{self, ImageSource};",
         "ImageSource::rgba8(",
-        "fn demo_cover_image(cx: &mut AppComponentCx<'_>) -> Option<ImageId>",
+        "fn demo_cover_image(cx: &mut AppComponentCx<'_>) -> Option<ui_assets::ImageId>",
+        "ui_assets::ImageColorSpace::Srgb",
         "ui_assets::image_source_state(cx, &source).image",
         "A practical talk on component APIs, accessibility, and shipping faster.",
     ] {
@@ -145,7 +146,8 @@ fn card_docs_path_snippets_stay_copyable_and_docs_aligned() {
 
     for needle in [
         "ImageSource::rgba8(",
-        "fn demo_avatar_image(cx: &mut AppComponentCx<'_>) -> Option<ImageId>",
+        "fn demo_avatar_image(cx: &mut AppComponentCx<'_>) -> Option<ui_assets::ImageId>",
+        "ui_assets::ImageColorSpace::Srgb",
         "AvatarImage::maybe(avatar_image)",
     ] {
         assert!(
@@ -157,6 +159,27 @@ fn card_docs_path_snippets_stay_copyable_and_docs_aligned() {
         !meeting_notes.contains("super::super::avatar::demo_image"),
         "card meeting-notes snippet should not depend on UI Gallery avatar helpers",
     );
+
+    for (source_name, source_body) in [("card image", image), ("card meeting-notes", meeting_notes)]
+    {
+        for needle in [
+            "use fret_core::{ImageColorSpace, ImageId};",
+            "use fret_core::ImageColorSpace;",
+            "use fret_core::ImageId;",
+        ] {
+            assert!(
+                !source_body.contains(needle),
+                "{} snippet should use the component ui_assets facade for app-facing image ids/color spaces",
+                source_name,
+            );
+        }
+        assert!(
+            !source_body
+                .lines()
+                .any(|line| line.trim() == "ImageColorSpace::Srgb,"),
+            "{source_name} snippet should qualify image color spaces through component ui_assets",
+        );
+    }
 
     for needle in [
         "shadcn::card_title_children(|cx|",
