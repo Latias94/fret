@@ -1,13 +1,13 @@
 use std::sync::Arc;
 
 use fret::advanced::KernelApp;
-use fret::component::prelude::*;
 use fret_runtime::Model;
 use fret_ui::ElementContext;
 use fret_ui::element::{AnyElement, LayoutStyle, Length, SizeStyle};
 use fret_ui_editor::composites::{
     InspectorPanel, InspectorPanelCx, InspectorPanelOptions, InspectorPanelSearchAssistOptions,
 };
+use fret_ui_kit::IntoUiElement as _;
 
 use super::editor_advanced::render_editor_advanced_surface;
 use super::editor_gradient::render_editor_gradient_surface;

@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use fret::AppComponentCx;
-use fret::component::prelude::*;
 use fret_runtime::Model;
 use fret_ui::ElementContext;
 use fret_ui::element::AnyElement;
@@ -10,6 +9,7 @@ use fret_ui_editor::composites::PropertyGridRowCx;
 use fret_ui_editor::controls::{
     AssetRefField, AssetRefFieldOptions, AssetRefFieldValue, FieldStatus, OnAssetRefFieldAction,
 };
+use fret_ui_kit::IntoUiElement as _;
 
 pub(super) const DEFAULT_ASSET: &str = "textures/default/basecolor.ktx2";
 const CHOSEN_ASSET: &str = "textures/props/brushed-metal-albedo.ktx2";

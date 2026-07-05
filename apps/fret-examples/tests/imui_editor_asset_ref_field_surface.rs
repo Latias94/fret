@@ -5,6 +5,7 @@ fn imui_editor_proof_demo_mounts_asset_ref_field_as_ui_shell() {
     let material_router_source = include_str!("../src/imui_editor_proof_demo/editor_material.rs");
     let material_source = include_str!("../src/imui_editor_proof_demo/editor_material/surface.rs");
     let owner_source = include_str!("../src/imui_editor_proof_demo/asset_ref.rs");
+    let compact_owner_source: String = owner_source.split_whitespace().collect();
 
     for needle in ["mod asset_ref;", "render_editor_inspector_surface("] {
         assert!(
@@ -80,6 +81,15 @@ fn imui_editor_proof_demo_mounts_asset_ref_field_as_ui_shell() {
             "imui_editor_proof_demo asset-ref owner should keep the proof surface visible; missing `{needle}`"
         );
     }
+
+    assert!(
+        compact_owner_source.contains("usefret_ui_kit::IntoUiElementas_;"),
+        "asset-ref owner should import `IntoUiElement` explicitly",
+    );
+    assert!(
+        !owner_source.contains("use fret::component::prelude::*;"),
+        "asset-ref owner should not rely on the broad component prelude",
+    );
 
     for unexpected in [
         "fret_ui_assets",

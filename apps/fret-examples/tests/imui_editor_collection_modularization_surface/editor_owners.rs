@@ -10,6 +10,33 @@ pub(super) fn assert_editor_owner_split(
     editor_state_source: &str,
     editor_text_assist_source: &str,
 ) {
+    let compact_editor_inspector_source: String =
+        editor_inspector_source.split_whitespace().collect();
+    let compact_editor_gradient_source: String =
+        editor_gradient_source.split_whitespace().collect();
+
+    for (owner, compact_source, source) in [
+        (
+            "editor inspector",
+            compact_editor_inspector_source.as_str(),
+            editor_inspector_source,
+        ),
+        (
+            "editor gradient",
+            compact_editor_gradient_source.as_str(),
+            editor_gradient_source,
+        ),
+    ] {
+        assert!(
+            compact_source.contains("usefret_ui_kit::IntoUiElementas_;"),
+            "the demo-local {owner} owner should import `IntoUiElement` explicitly",
+        );
+        assert!(
+            !source.contains("use fret::component::prelude::*;"),
+            "the demo-local {owner} owner should not rely on the broad component prelude",
+        );
+    }
+
     for needle in [
         "pub(super) struct EditorInspectorModels",
         "pub(super) fn editor_inspector_models(",

@@ -1,8 +1,7 @@
 use std::sync::Arc;
 
 use fret::advanced::KernelApp;
-use fret::advanced::view::AppRenderDataExt as _;
-use fret::component::prelude::*;
+use fret::app::AppRenderDataExt as _;
 use fret_core::Color;
 use fret_runtime::Model;
 use fret_ui::ElementContext;
@@ -11,6 +10,7 @@ use fret_ui_editor::composites::{
     GradientEditor, GradientEditorOptions, GradientStopBinding, InspectorPanelCx, OnGradientAction,
     OnGradientStopAction, PropertyGroup, PropertyGroupOptions,
 };
+use fret_ui_kit::IntoUiElement as _;
 
 use super::editor_state::{
     GradientDemoStop, editor_demo_gradient_angle_model, editor_demo_gradient_next_id_model,
