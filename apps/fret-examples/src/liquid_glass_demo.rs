@@ -13,7 +13,7 @@
 use std::sync::Arc;
 
 use fret::advanced::driver::UiAppBuilderAdvancedExt as _;
-use fret::advanced::raw::{LocalStateElementContextExt as _, LocalStateRawModelExt as _};
+use fret::advanced::raw::LocalStateRawModelExt as _;
 use fret::app::prelude::*;
 use fret::app::{AppComponentCx, AppRenderContext, LocalState};
 use fret_core::scene::{
@@ -209,7 +209,7 @@ where
 }
 
 fn watch_first_f32(cx: &mut AppComponentCx<'_>, model: &LocalState<Vec<f32>>, default: f32) -> f32 {
-    model.layout_read_ref_in(cx, |v| v.first().copied().unwrap_or(default))
+    model.layout_read_ref(cx, |v| v.first().copied().unwrap_or(default))
 }
 
 fn build_chain(

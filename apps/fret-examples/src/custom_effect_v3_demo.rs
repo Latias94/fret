@@ -14,7 +14,7 @@ use std::sync::Arc;
 
 use fret::UiAppBuilder;
 use fret::advanced::driver::UiAppBuilderAdvancedExt as _;
-use fret::advanced::raw::{LocalStateElementContextExt as _, LocalStateRawModelExt as _};
+use fret::advanced::raw::LocalStateRawModelExt as _;
 use fret::app::prelude::*;
 use fret::app::{AppComponentCx, AppRenderContext, LocalState};
 use fret_core::scene::{

@@ -70,7 +70,11 @@ fn genui_demo_uses_explicit_public_surfaces() {
         );
     }
 
-    for forbidden in ["advanced::prelude::*", "component::prelude::*"] {
+    for forbidden in [
+        "LocalStateElementContextExt",
+        "advanced::prelude::*",
+        "component::prelude::*",
+    ] {
         assert!(
             !source.contains(forbidden),
             "GenUI demo should not reintroduce broad prelude imports: `{forbidden}`",

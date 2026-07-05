@@ -13,7 +13,7 @@
 use std::sync::Arc;
 
 use fret::advanced::driver::UiAppBuilderAdvancedExt as _;
-use fret::advanced::raw::{LocalStateElementContextExt as _, LocalStateRawModelExt as _};
+use fret::advanced::raw::LocalStateRawModelExt as _;
 use fret::app::prelude::*;
 use fret::app::{AppComponentCx, LocalState};
 use fret_core::scene::{EffectChain, EffectMode, EffectParamsV1, EffectQuality, EffectStep};
@@ -308,7 +308,7 @@ fn custom_effect_label_text<H: UiHost>(
 }
 
 fn watch_first_f32(cx: &mut AppComponentCx<'_>, model: &LocalState<Vec<f32>>, default: f32) -> f32 {
-    model.layout_read_ref_in(cx, |v| v.first().copied().unwrap_or(default))
+    model.layout_read_ref(cx, |v| v.first().copied().unwrap_or(default))
 }
 
 fn view(cx: &mut ElementContext<'_, App>, st: &mut CustomEffectV1State) -> Ui {
@@ -317,7 +317,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut CustomEffectV1State) -> Ui {
             .into();
     };
 
-    let enabled = st.enabled.layout_value_in(cx);
+    let enabled = st.enabled.layout_value(cx);
     let blur_radius_px = watch_first_f32(cx, &st.blur_radius_px, 14.0);
     let blur_downsample = watch_first_f32(cx, &st.blur_downsample, 2.0);
     let refraction_height_px = watch_first_f32(cx, &st.refraction_height_px, 20.0);

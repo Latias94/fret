@@ -1,5 +1,4 @@
 use anyhow::Context as _;
-use fret::advanced::raw::LocalStateElementContextExt as _;
 use fret::app::AppLocalStateExt as _;
 use fret::app::LocalState;
 use fret_app::{App, CommandId, Effect, Model, WindowRequest};
@@ -224,7 +223,7 @@ fn render(_driver: &mut DataTableDemoDriver, context: WinitRenderContext<'_, Dem
             let theme = cx.theme_snapshot();
             let padding = theme.metric_token("metric.padding.md");
 
-            let (selected, sorting) = table_state.layout_read_ref_in(cx, |st| {
+            let (selected, sorting) = table_state.layout_read_ref(cx, |st| {
                 let selected = st.row_selection.len();
                 let sorting = st
                     .sorting

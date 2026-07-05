@@ -10,7 +10,7 @@ use std::time::Duration;
 
 use anyhow::Context as _;
 use fret::advanced::kernel::app::Effect;
-use fret::advanced::raw::{LocalStateElementContextExt as _, LocalStateModelStoreExt as _};
+use fret::advanced::raw::LocalStateModelStoreExt as _;
 use fret::app::prelude::*;
 use fret::app::{AppComponentCx, LocalState, RenderContextAccess as _, ui_assets};
 use fret::query::{QueryError, QueryKey, QueryPolicy, QueryStatus};
@@ -413,7 +413,7 @@ $$
             let expanded_for_resolver = expanded_code_blocks_state.clone();
             components.code_block_ui_resolver = Some(Arc::new(move |cx, info, options| {
                 let expanded = expanded_for_resolver
-                    .layout_in(cx)
+                    .layout(cx)
                     .read_ref(|set| set.contains(&info.id))
                     .ok()
                     .unwrap_or(false);
@@ -426,7 +426,7 @@ $$
             let expanded_for_actions = expanded_code_blocks_state.clone();
             components.code_block_actions = Some(Arc::new(move |cx, info| {
                 let expanded = expanded_for_actions
-                    .layout_in(cx)
+                    .layout(cx)
                     .read_ref(|set| set.contains(&info.id))
                     .ok()
                     .unwrap_or(false);

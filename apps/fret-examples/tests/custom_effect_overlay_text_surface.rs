@@ -247,7 +247,7 @@ fn custom_effect_v1_demo_uses_app_view_imports_with_explicit_effect_hook() {
 
     for needle in [
         "usefret::advanced::driver::UiAppBuilderAdvancedExtas_;",
-        "usefret::advanced::raw::{LocalStateElementContextExtas_,LocalStateRawModelExtas_};",
+        "usefret::advanced::raw::LocalStateRawModelExtas_;",
         "usefret::app::prelude::*;",
         "usefret::app::{AppComponentCx,LocalState};",
         "usefret_ui_kit::declarative::action_hooks::ActionHooksExtas_;",
@@ -267,6 +267,7 @@ fn custom_effect_v1_demo_uses_app_view_imports_with_explicit_effect_hook() {
     }
 
     for forbidden in [
+        "LocalStateElementContextExt",
         "advanced::prelude::*",
         "component::prelude::*",
         "KernelApp",
@@ -288,7 +289,7 @@ fn custom_effect_v2_demo_uses_app_view_imports_with_explicit_effect_hooks() {
     for needle in [
         "usefret::UiAppBuilder;",
         "usefret::advanced::driver::UiAppBuilderAdvancedExtas_;",
-        "usefret::advanced::raw::{LocalStateElementContextExtas_,LocalStateRawModelExtas_};",
+        "usefret::advanced::raw::LocalStateRawModelExtas_;",
         "usefret::app::prelude::*;",
         "usefret::app::{AppComponentCx,LocalState};",
         "usefret_ui_kit::declarative::action_hooks::ActionHooksExtas_;",
@@ -311,6 +312,7 @@ fn custom_effect_v2_demo_uses_app_view_imports_with_explicit_effect_hooks() {
     }
 
     for forbidden in [
+        "LocalStateElementContextExt",
         "advanced::prelude::*",
         "component::prelude::*",
         "KernelApp",
@@ -332,7 +334,7 @@ fn custom_effect_v3_demo_uses_app_view_imports_with_explicit_effect_hooks() {
     for needle in [
         "usefret::UiAppBuilder;",
         "usefret::advanced::driver::UiAppBuilderAdvancedExtas_;",
-        "usefret::advanced::raw::{LocalStateElementContextExtas_,LocalStateRawModelExtas_};",
+        "usefret::advanced::raw::LocalStateRawModelExtas_;",
         "usefret::app::prelude::*;",
         "usefret::app::{AppComponentCx,AppRenderContext,LocalState};",
         "usefret_ui_kit::declarative::action_hooks::ActionHooksExtas_;",
@@ -356,6 +358,7 @@ fn custom_effect_v3_demo_uses_app_view_imports_with_explicit_effect_hooks() {
     }
 
     for forbidden in [
+        "LocalStateElementContextExt",
         "use fret::{FretApp",
         "advanced::prelude::*",
         "component::prelude::*",
@@ -377,7 +380,7 @@ fn postprocess_theme_demo_uses_app_view_imports_with_explicit_effect_hook() {
 
     for needle in [
         "usefret::advanced::driver::UiAppBuilderAdvancedExtas_;",
-        "usefret::advanced::raw::{LocalStateElementContextExtas_,LocalStateRawModelExtas_};",
+        "usefret::advanced::raw::LocalStateRawModelExtas_;",
         "usefret::app::prelude::*;",
         "usefret::app::{AppComponentCx,AppRenderContext,LocalState};",
         "usefret_ui::Theme;",
@@ -398,6 +401,7 @@ fn postprocess_theme_demo_uses_app_view_imports_with_explicit_effect_hook() {
     }
 
     for forbidden in [
+        "LocalStateElementContextExt",
         "use fret::{FretApp",
         "advanced::prelude::*",
         "component::prelude::*",
@@ -419,7 +423,7 @@ fn liquid_glass_demo_uses_app_view_imports_with_explicit_effect_hooks() {
 
     for needle in [
         "usefret::advanced::driver::UiAppBuilderAdvancedExtas_;",
-        "usefret::advanced::raw::{LocalStateElementContextExtas_,LocalStateRawModelExtas_};",
+        "usefret::advanced::raw::LocalStateRawModelExtas_;",
         "usefret::app::prelude::*;",
         "usefret::app::{AppComponentCx,AppRenderContext,LocalState};",
         "usefret_ui::{ElementContext,Invalidation,Theme,UiHost};",
@@ -441,6 +445,7 @@ fn liquid_glass_demo_uses_app_view_imports_with_explicit_effect_hooks() {
     }
 
     for forbidden in [
+        "LocalStateElementContextExt",
         "use fret::{FretApp",
         "advanced::prelude::*",
         "component::prelude::*",

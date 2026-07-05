@@ -1,5 +1,5 @@
 use anyhow::Context as _;
-use fret::advanced::raw::{LocalStateElementContextExt as _, LocalStateModelStoreExt as _};
+use fret::advanced::raw::LocalStateModelStoreExt as _;
 use fret::app::AppLocalStateExt as _;
 use fret::app::LocalState;
 use fret_app::{App, CommandId, Effect, WindowRequest};
@@ -331,7 +331,7 @@ fn render(_driver: &mut TableDemoDriver, context: WinitRenderContext<'_, TableDe
     let header_menu_score_open = state.header_menu_score_open.clone();
     let root = declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
         .render_root("table-demo", move |cx| {
-            let (selected, sorting) = table_state.layout_read_ref_in(cx, |st| {
+            let (selected, sorting) = table_state.layout_read_ref(cx, |st| {
                 let selected = st.row_selection.len();
                 let sorting = st
                     .sorting
@@ -389,8 +389,8 @@ fn render(_driver: &mut TableDemoDriver, context: WinitRenderContext<'_, TableDe
             let header_menu_role_open = header_menu_role_open.clone();
             let header_menu_score_open = header_menu_score_open.clone();
 
-            let enable_grouping = enable_grouping.layout_value_in(cx);
-            let grouped_column_mode = grouped_column_mode.layout_value_in(cx);
+            let enable_grouping = enable_grouping.layout_value(cx);
+            let grouped_column_mode = grouped_column_mode.layout_value(cx);
             let grouped_column_mode = match grouped_column_mode.as_deref() {
                 Some("remove") => GroupedColumnMode::Remove,
                 Some("none") => GroupedColumnMode::None,
@@ -587,7 +587,7 @@ fn render(_driver: &mut TableDemoDriver, context: WinitRenderContext<'_, TableDe
                                                         let id: Arc<str> = Arc::from(col.id.as_ref());
                                                         let groupable = col.facet_key_fn.is_some()
                                                             || col.facet_str_fn.is_some();
-                                                        let is_grouped = table_state.layout_read_ref_in(
+                                                        let is_grouped = table_state.layout_read_ref(
                                                             cx,
                                                             |st| {
                                                                 st.grouping.iter().any(|c| {
@@ -596,7 +596,7 @@ fn render(_driver: &mut TableDemoDriver, context: WinitRenderContext<'_, TableDe
                                                             },
                                                         );
                                                         let has_grouping =
-                                                            table_state.layout_read_ref_in(cx, |st| {
+                                                            table_state.layout_read_ref(cx, |st| {
                                                                 !st.grouping.is_empty()
                                                             });
 

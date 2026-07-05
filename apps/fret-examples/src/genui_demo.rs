@@ -13,9 +13,7 @@ use std::sync::Arc;
 use fret::AppComponentCx;
 use fret::advanced::KernelApp;
 use fret::advanced::driver::ViewElements;
-use fret::advanced::raw::{
-    LocalStateElementContextExt as _, LocalStateModelStoreExt as _, LocalStateRawModelExt as _,
-};
+use fret::advanced::raw::{LocalStateModelStoreExt as _, LocalStateRawModelExt as _};
 use fret::app::LocalState;
 use fret::app::prelude::*;
 use fret::style::{ColorRef, Space, ThemeSnapshot};
@@ -941,14 +939,14 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut GenUiState) -> ViewElem
     let apply_queue_cmd_banner = apply_queue_cmd.clone();
 
     let auto_apply_model = st.auto_apply_standard_actions.clone_model();
-    let auto_apply_enabled = st.auto_apply_standard_actions.layout_value_in(cx);
+    let auto_apply_enabled = st.auto_apply_standard_actions.layout_value(cx);
 
     let auto_fix_model = st.auto_fix_on_apply.clone_model();
-    let _auto_fix_enabled = st.auto_fix_on_apply.layout_value_in(cx);
+    let _auto_fix_enabled = st.auto_fix_on_apply.layout_value(cx);
 
     let count_label: Arc<str> = st
         .genui_state
-        .layout_in(cx)
+        .layout(cx)
         .read_ref(|v| {
             let count = json_pointer::get_opt(v, "/count");
             let s = match count {
@@ -965,7 +963,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut GenUiState) -> ViewElem
 
     let queue_snapshot: Vec<Arc<str>> = st
         .action_queue
-        .layout_in(cx)
+        .layout(cx)
         .read_ref(|q| {
             q.invocations
                 .iter()
@@ -985,7 +983,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut GenUiState) -> ViewElem
 
     let state_snapshot: Vec<Arc<str>> = st
         .genui_state
-        .layout_in(cx)
+        .layout(cx)
         .read_ref(|v| {
             let pretty = serde_json::to_string_pretty(v).unwrap_or_else(|_| v.to_string());
             pretty
@@ -1002,7 +1000,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut GenUiState) -> ViewElem
 
     let (validation_issue_count, validation_snapshot): (usize, Vec<Arc<str>>) = st
         .validation_state
-        .layout_in(cx)
+        .layout(cx)
         .read_ref(|v| {
             let pretty =
                 serde_json::to_string_pretty(v).unwrap_or_else(|_| "<validation>".to_string());
@@ -1205,7 +1203,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut GenUiState) -> ViewElem
     let queue_summary = st.queue_summary.clone();
     let stream_model = st.stream_text.clone();
     let stream_patch_only_model = st.stream_patch_only.clone_model();
-    let stream_patch_only = st.stream_patch_only.layout_value_in(cx);
+    let stream_patch_only = st.stream_patch_only.layout_value(cx);
     let stream_summary = st.stream_summary.clone();
     let stream_error = st.stream_error.clone();
 
