@@ -22,7 +22,7 @@ component-specific public surface.
 
 Keep raw/shared-model mechanisms for now:
 
-- Plot/chart demos such as `stems_demo`, `histogram_demo`, `chart_multi_axis_demo`.
+- Plot/chart demos such as `stems_demo`, `chart_multi_axis_demo`.
   They allocate model graphs that are consumed by plot/chart component APIs rather than ordinary
   view-local app state.
   - Follow-up: `plot_declarative_demo.rs` now uses `LinePlotPanelBinding` as the app-facing tracer
@@ -30,6 +30,9 @@ Keep raw/shared-model mechanisms for now:
     `LinePlotPanelBinding::output_untracked(...)`, so the manual harness no longer exposes the
     line plot's raw state/output models. Keep explicit raw `LinePlotPanelProps` in
     advanced/linked/overlay plot demos until each plot family has an equivalent binding contract.
+  - Follow-up: `histogram_demo.rs` now uses `HistogramPlotPanelBinding`; `fret-plot` shares the
+    state/output machinery through a private binding core instead of copying per-family output
+    reads. Keep explicit raw histogram props in component tests and advanced composition paths.
   - Follow-up: `chart_declarative_demo.rs` now uses `ChartCanvasPanelBinding`, so the default
     FretApp chart example no longer imports `fret_runtime::Model` or wires
     `ChartCanvasPanelProps::engine` directly. Keep explicit raw chart panel props in stress,
@@ -64,8 +67,8 @@ Likely next cleanup slices:
 
 - Custom-effect parameter binding contracts after the V2 web variants have the same owner boundary
   and duplicated parameter shapes are clearer.
-- Plot/chart family-specific bindings for remaining first-contact demos, especially histogram and
-  chart canvas surfaces, once their output/state contracts are named explicitly.
+- Plot/chart family-specific bindings for remaining first-contact demos once their output/state
+  contracts are named explicitly.
 
 # Verification
 

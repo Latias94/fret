@@ -539,17 +539,19 @@ fn histogram_demo_uses_manual_harness_declarative_histogram_plot_panel() {
     let source = compact(include_str!("../src/histogram_demo.rs"));
 
     for needle in [
-        "usefret_plot::declarative::{HistogramPlotPanelProps,histogram_plot_panel_in};",
+        "usefret_plot::HistogramPlotPanelBinding;",
+        "usefret_plot::declarative::histogram_plot_panel_in;",
         "usefret_plot::models::{HistogramPlotModel,HistogramSeries};",
         "usefret_ui::{UiTree,declarative};",
+        "plot:HistogramPlotPanelBinding",
         "HistogramPlotModel::from_series(series)",
         "HistogramSeries::new(",
         ".bins(80)",
         ".bar_gap_fraction(0.12)",
+        "HistogramPlotPanelBinding::new(app,HistogramPlotModel::from_series(series))",
         "declarative::RenderRootContext::new(&mutstate.ui,app,services,window,bounds).render_root(\"histogram-demo\"",
-        "HistogramPlotPanelProps::new(plot.clone())",
-        ".state(plot_state.clone())",
-        ".output(plot_output.clone())",
+        "plot.panel_props()",
+        "state.plot.output_untracked(app)",
         "vec![histogram_plot_panel_in(cx,props)]",
     ] {
         assert!(
@@ -564,6 +566,9 @@ fn histogram_demo_uses_manual_harness_declarative_histogram_plot_panel() {
         "HistogramPlotCanvas",
         "PlotCanvas",
         "create_node_retained(",
+        "fret_runtime::Model<",
+        "app.models_mut().insert(PlotState::default())",
+        "app.models_mut().insert(PlotOutput::default())",
     ] {
         assert!(
             !source.contains(legacy),

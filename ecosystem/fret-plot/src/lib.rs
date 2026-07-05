@@ -20,7 +20,7 @@ mod theme_tokens;
 
 mod binding;
 
-pub use binding::LinePlotPanelBinding;
+pub use binding::{HistogramPlotPanelBinding, LinePlotPanelBinding};
 
 #[cfg(test)]
 mod surface_policy_tests {
