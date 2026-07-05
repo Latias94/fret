@@ -9,10 +9,13 @@
 
 use std::sync::Arc;
 
-use fret::{FretApp, advanced::prelude::*, component::prelude::*};
+use fret::app::prelude::*;
 use fret_core::scene::{Color, DropShadowV1, EffectChain, EffectMode, EffectQuality, EffectStep};
 use fret_core::{Corners, Edges, Point, Px};
-use fret_ui::element::{ContainerProps, LayoutStyle, Length, Overflow, SizeStyle, SpacerProps};
+use fret_ui::element::{
+    AnyElement, ContainerProps, LayoutStyle, Length, Overflow, SizeStyle, SpacerProps,
+};
+use fret_ui::{ElementContext, UiHost};
 use fret_ui_kit::{IntoUiElement, LayoutRefinement, Space, ui};
 use fret_ui_shadcn::facade as shadcn;
 
@@ -34,7 +37,7 @@ fn shadow_chain() -> EffectChain {
     .sanitize()
 }
 
-fn install_demo_theme(app: &mut KernelApp) {
+fn install_demo_theme(app: &mut App) {
     shadcn::themes::apply_shadcn_new_york(
         app,
         shadcn::themes::ShadcnBaseColor::Slate,
@@ -126,7 +129,7 @@ fn card<H: UiHost>(
 struct DropShadowDemoView;
 
 impl View for DropShadowDemoView {
-    fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self {
+    fn init(_app: &mut App, _window: WindowId) -> Self {
         Self
     }
 
