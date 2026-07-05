@@ -56,3 +56,38 @@ fn api_workbench_lite_demo_keeps_fixed_text_on_roles() {
         );
     }
 }
+
+#[test]
+fn api_workbench_lite_demo_uses_app_local_state_and_explicit_shadcn_imports() {
+    let source = include_str!("../src/api_workbench_lite_demo.rs");
+    let compact = compact(source);
+
+    for needle in [
+        "usefret::advanced::raw::LocalStateModelStoreExtas_;",
+        "usefret::app::LocalState;",
+        "usefret::app::prelude::*;",
+        "usefret_ui_shadcn::facadeasshadcn;",
+        "structWorkbenchLocals{method:LocalState<Option<Arc<str>>>,",
+        "FretApp::new(\"api-workbench-lite\")",
+    ] {
+        assert!(
+            compact.contains(needle),
+            "api workbench lite demo should keep app local state and explicit shadcn imports; missing `{needle}`"
+        );
+    }
+
+    for forbidden in [
+        "advanced::prelude",
+        "use fret::{FretApp",
+        "use fret::{",
+        "component::prelude",
+        "KernelApp",
+        "AppWindowId",
+        "ViewElements",
+    ] {
+        assert!(
+            !source.contains(forbidden),
+            "api workbench lite demo should not reintroduce broad or kernel-facing imports: `{forbidden}`"
+        );
+    }
+}

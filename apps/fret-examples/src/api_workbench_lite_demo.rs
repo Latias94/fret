@@ -4,8 +4,8 @@ use std::pin::Pin;
 use std::sync::Arc;
 use std::time::Duration;
 
-use fret::advanced::prelude::LocalState;
 use fret::advanced::raw::LocalStateModelStoreExt as _;
+use fret::app::LocalState;
 use fret::app::prelude::*;
 use fret::children::UiElementSinkExt as _;
 use fret::icons::IconId;
@@ -15,11 +15,11 @@ use fret::mutation::{
 };
 use fret::query::{QueryError, QueryHandle, QueryKey, QueryPolicy, QueryState};
 use fret::style::{LayoutRefinement, Space};
-use fret::{FretApp, shadcn};
 use fret_app::{CommandId, CommandMeta, DefaultKeybinding, KeyChord, PlatformFilter};
 use fret_core::{KeyCode, Modifiers, Px};
 use fret_ui::element::AnyElement;
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
+use fret_ui_shadcn::facade as shadcn;
 use sqlx::Row;
 use sqlx::sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions};
 
