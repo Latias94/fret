@@ -2,13 +2,13 @@ use std::sync::Arc;
 
 use fret::AppComponentCx;
 use fret::app::AppRenderDataExt as _;
-use fret::component::prelude::*;
 use fret::imui::{ImUi, prelude::*};
 use fret_core::Color;
 use fret_runtime::Model;
 use fret_ui::UiHost;
 use fret_ui_editor::composites::{GradientEditor, GradientEditorOptions, GradientStopBinding};
 use fret_ui_editor::controls::EnumSelectItem;
+use fret_ui_kit::IntoUiElement;
 
 use super::super::GradientDemoStop;
 use super::super::proof_helpers::{

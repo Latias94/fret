@@ -1,7 +1,9 @@
 use std::sync::Arc;
 
+use fret::AppComponentCx;
+use fret::advanced::KernelApp;
+use fret::app::AppRenderDataExt as _;
 use fret::imui::prelude::UiWriterImUiFacadeExt;
-use fret::{advanced::prelude::*, component::prelude::*};
 use fret_core::{Color, Corners, Edges, Px};
 use fret_runtime::Model;
 use fret_ui::element::{AnyElement, Length};
@@ -12,6 +14,7 @@ use fret_ui_editor::controls::{
     VecEditAxisOutcome,
 };
 use fret_ui_editor::primitives::{EditSessionOutcome, EditorTokenKeys};
+use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::headless::text_assist::{
     TextAssistItem, TextAssistMatchMode, controller_with_active_item_id,

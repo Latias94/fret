@@ -10,6 +10,10 @@ fn imui_editor_proof_main_fixed_text_uses_shared_roles() {
         "fn proof_imui_section_text(",
         "fn proof_imui_readout_text(",
         "fn proof_imui_compact_paragraph_text(",
+        "use fret::AppComponentCx;",
+        "use fret::advanced::KernelApp;",
+        "use fret::app::AppRenderDataExt as _;",
+        "use fret_ui_kit::IntoUiElement;",
         "decl_text::text_section_chrome_label(cx, text)",
         "decl_text::text_control_readout(cx, text)",
         "decl_text::text_compact_paragraph(cx, text)",
@@ -17,6 +21,18 @@ fn imui_editor_proof_main_fixed_text_uses_shared_roles() {
         assert!(
             helper_source.contains(needle),
             "imui_editor_proof_demo text helper owner should use shared role helpers; missing `{needle}`"
+        );
+    }
+
+    for forbidden in [
+        "use fret::advanced::prelude::*;",
+        "use fret::component::prelude::*;",
+        "advanced::prelude::*",
+        "component::prelude::*",
+    ] {
+        assert!(
+            !helper_source.contains(forbidden),
+            "imui_editor_proof_demo text helper owner should not rely on broad prelude imports: `{forbidden}`"
         );
     }
 

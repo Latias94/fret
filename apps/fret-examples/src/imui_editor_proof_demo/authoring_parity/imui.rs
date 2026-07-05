@@ -2,7 +2,6 @@ use std::sync::Arc;
 
 use fret::AppComponentCx;
 use fret::advanced::KernelApp;
-use fret::component::prelude::*;
 use fret::imui::{kit, prelude::*};
 use fret_ui_editor::composites::{PropertyGrid, PropertyGroup, PropertyRow};
 use fret_ui_editor::controls::{
@@ -11,6 +10,7 @@ use fret_ui_editor::controls::{
     TextFieldOptions,
 };
 use fret_ui_editor::imui as editor_imui;
+use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::recipes::imui_drag_preview::{
     DragPreviewGhostOptions, drag_preview_ghost_with_options,
     publish_cross_window_drag_preview_ghost_with_options,

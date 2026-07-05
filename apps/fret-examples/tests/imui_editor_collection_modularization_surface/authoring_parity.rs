@@ -6,6 +6,7 @@ pub(super) fn assert_authoring_parity_owner_split(
     authoring_parity_common_source: &str,
     authoring_parity_declarative_source: &str,
     authoring_parity_imui_source: &str,
+    authoring_parity_shared_state_source: &str,
 ) {
     for needle in [
         "mod common;",
@@ -109,4 +110,57 @@ pub(super) fn assert_authoring_parity_owner_split(
             "imui_editor_proof_demo should not own IMUI authoring composition; unexpected `{needle}`"
         );
     }
+
+    for (name, source, expected_import) in [
+        (
+            "authoring parity common",
+            authoring_parity_common_source,
+            "use fret_ui_kit::IntoUiElement;",
+        ),
+        (
+            "authoring parity declarative",
+            authoring_parity_declarative_source,
+            "use fret_ui_kit::IntoUiElement;",
+        ),
+        (
+            "authoring parity imui",
+            authoring_parity_imui_source,
+            "use fret_ui_kit::IntoUiElement;",
+        ),
+        (
+            "authoring parity shared state",
+            authoring_parity_shared_state_source,
+            "use fret_ui_kit::IntoUiElement;",
+        ),
+        (
+            "authoring parity surface",
+            authoring_parity_surface_source,
+            "use fret_ui_kit::IntoUiElement;",
+        ),
+    ] {
+        assert!(
+            source.contains(expected_import),
+            "{name} should import the UI element landing capability explicitly; missing `{expected_import}`"
+        );
+
+        for forbidden in [
+            "use fret::component::prelude::*;",
+            "use fret::advanced::prelude::*;",
+        ] {
+            assert!(
+                !source.contains(forbidden),
+                "{name} should not reintroduce broad prelude imports: `{forbidden}`"
+            );
+        }
+    }
+
+    assert!(
+        authoring_parity_shared_state_source.contains("use fret::app::AppRenderDataExt as _;"),
+        "authoring parity shared state should use the app render-data extension surface"
+    );
+    assert!(
+        !authoring_parity_shared_state_source
+            .contains("use fret::advanced::view::AppRenderDataExt as _;"),
+        "authoring parity shared state should not use the advanced view render-data extension"
+    );
 }

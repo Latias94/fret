@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use fret::AppComponentCx;
 use fret::advanced::KernelApp;
-use fret::component::prelude::*;
 use fret_ui_editor::controls::EnumSelectItem;
+use fret_ui_kit::IntoUiElement;
 
 use super::super::collection;
 use super::super::diag_enabled;

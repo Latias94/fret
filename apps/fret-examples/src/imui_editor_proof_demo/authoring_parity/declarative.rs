@@ -2,7 +2,6 @@ use std::sync::Arc;
 
 use fret::AppComponentCx;
 use fret::advanced::KernelApp;
-use fret::component::prelude::*;
 use fret_core::Color;
 use fret_ui_editor::composites::{
     GradientEditor, GradientEditorOptions, GradientStopBinding, PropertyGrid, PropertyGroup,
@@ -14,6 +13,7 @@ use fret_ui_editor::controls::{
     TextFieldOptions,
 };
 use fret_ui_editor::imui as editor_imui;
+use fret_ui_kit::IntoUiElement;
 
 use super::super::proof_helpers::{
     authoring_parity_blend_presentation, authoring_parity_blend_slider_options,

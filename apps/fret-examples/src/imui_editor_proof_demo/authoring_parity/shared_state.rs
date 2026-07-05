@@ -1,6 +1,6 @@
 use fret::AppComponentCx;
-use fret::advanced::view::AppRenderDataExt as _;
-use fret::component::prelude::*;
+use fret::app::AppRenderDataExt as _;
+use fret_ui_kit::IntoUiElement;
 
 use super::super::proof_helpers::{
     AuthoringParitySharedStateReadout, proof_compact_readout_element,
