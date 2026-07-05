@@ -2,6 +2,7 @@ pub const SOURCE: &str = include_str!("with_badge.rs");
 
 // region: example
 use super::demo_image;
+use fret::component::ui_assets::ImageId;
 use fret::{AppComponentCx, UiChild};
 use fret_core::window::ColorScheme;
 use fret_ui::Invalidation;
@@ -21,7 +22,7 @@ where
 
 fn avatar_with_badge<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    avatar_image: Option<fret_core::ImageId>,
+    avatar_image: Option<ImageId>,
     size: shadcn::AvatarSize,
     badge: shadcn::AvatarBadge,
     test_id: &'static str,

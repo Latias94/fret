@@ -8,10 +8,9 @@
 
 use crate::demo_assets;
 use fret::component::ui_assets;
-use fret_core::ImageId;
 use fret_ui::{ElementContext, UiHost};
 
-pub(crate) fn demo_image<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Option<ImageId> {
+pub(crate) fn demo_image<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Option<ui_assets::ImageId> {
     ui_assets::image_source_state_from_asset_request(
         cx,
         &demo_assets::ui_gallery_profile_square_request(),

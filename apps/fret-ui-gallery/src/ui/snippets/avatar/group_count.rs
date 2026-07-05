@@ -2,8 +2,8 @@ pub const SOURCE: &str = include_str!("group_count.rs");
 
 // region: example
 use super::demo_image;
+use fret::component::ui_assets::ImageId;
 use fret::{AppComponentCx, UiChild};
-use fret_core::ImageId;
 use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 

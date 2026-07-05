@@ -8773,10 +8773,21 @@ fn selected_avatar_snippet_helpers_prefer_into_ui_element_over_anyelement() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/avatar/with_badge.rs",
         &[
-            "fn avatar_with_badge<H: UiHost>(cx: &mut ElementContext<'_, H>, avatar_image: Option<fret_core::ImageId>, size: shadcn::AvatarSize, badge: shadcn::AvatarBadge, test_id: &'static str,) -> impl IntoUiElement<H> + use<H>",
+            "fn avatar_with_badge<H: UiHost>(cx: &mut ElementContext<'_, H>, avatar_image: Option<ImageId>, size: shadcn::AvatarSize, badge: shadcn::AvatarBadge, test_id: &'static str,) -> impl IntoUiElement<H> + use<H>",
+            "use fret::component::ui_assets::ImageId;",
         ],
         &[
-            "fn avatar_with_badge<H: UiHost>(cx: &mut ElementContext<'_, H>, avatar_image: Option<fret_core::ImageId>, size: shadcn::AvatarSize, badge: shadcn::AvatarBadge, test_id: &'static str,) -> AnyElement",
+            "fn avatar_with_badge<H: UiHost>(cx: &mut ElementContext<'_, H>, avatar_image: Option<ImageId>, size: shadcn::AvatarSize, badge: shadcn::AvatarBadge, test_id: &'static str,) -> AnyElement",
+            "Option<fret_core::ImageId>",
+        ],
+    );
+
+    assert_sources_absent(
+        "src/ui/snippets/avatar",
+        &[
+            "use fret_core::ImageId;",
+            "use fret_core::{ImageId, Px};",
+            "Option<fret_core::ImageId>",
         ],
     );
 
