@@ -2,7 +2,7 @@
 //! This example is compatibility-oriented and should not be treated as the default downstream
 //! authoring path for node-graph apps.
 //! Prefer the declarative node-graph surfaces for normal downstream guidance.
-use fret::{FretApp, advanced::prelude::*, component::prelude::*};
+use fret::app::prelude::*;
 use fret_imui::prelude::UiWriter as _;
 use fret_node::core::{
     CanvasPoint, Edge, EdgeId, EdgeKind, Graph, GraphId, Node, NodeId, NodeKindKey, Port,
@@ -36,7 +36,7 @@ pub fn run() -> anyhow::Result<()> {
 }
 
 impl View for ImUiNodeGraphView {
-    fn init(app: &mut KernelApp, _window: AppWindowId) -> Self {
+    fn init(app: &mut App, _window: WindowId) -> Self {
         let graph = demo_graph();
         let graph = app.models_mut().insert(graph);
         let view = app.models_mut().insert(NodeGraphViewState::default());

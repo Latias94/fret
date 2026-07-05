@@ -6,6 +6,7 @@ fn imui_node_graph_demo_keeps_compat_title_on_shared_role() {
         "Retained-bridge IMUI demo for `fret-node`.",
         "compatibility-oriented and should not be treated as the default downstream",
         "Prefer the declarative node-graph surfaces for normal downstream guidance.",
+        "use fret::app::prelude::*;",
         "use fret_imui::prelude::UiWriter as _;",
         "use fret_ui_kit::declarative::text as decl_text;",
         "fn compat_section_text<",
@@ -21,6 +22,8 @@ fn imui_node_graph_demo_keeps_compat_title_on_shared_role() {
     }
 
     for needle in [
+        "advanced::prelude::*",
+        "component::prelude::*",
         "fret_ui_kit::ui::text(\"imui node-graph compatibility proof\")",
         ".font_semibold()",
     ] {

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret::{FretApp, advanced::prelude::*, component::prelude::*};
+use fret::app::prelude::*;
 use fret_core::scene::DashPatternV1;
 use fret_core::{Color, Px};
 use fret_node::core::{
@@ -33,7 +33,7 @@ pub fn run() -> anyhow::Result<()> {
 }
 
 impl View for NodeGraphDemoView {
-    fn init(app: &mut KernelApp, _window: AppWindowId) -> Self {
+    fn init(app: &mut App, _window: WindowId) -> Self {
         let surface = NodeGraphSurfaceBinding::new(
             app.models_mut(),
             demo_graph(),

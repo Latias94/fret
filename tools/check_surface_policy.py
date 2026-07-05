@@ -580,10 +580,7 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
         "advanced_manual",
         "node graph demo is an advanced proof only for app-view prelude plus low-level paint override types",
         owner="examples-node-graph",
-        allowed_raw_seams=(
-            "fret::advanced",
-            "fret_core",
-        ),
+        allowed_raw_seams=("fret_core",),
         retirement=(
             "Reclassify after node/canvas public starter covers graph creation, selection, "
             "diagnostics, and edge paint overrides without direct fret_core paint types"
