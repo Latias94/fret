@@ -17,6 +17,22 @@ impl<T> fret_ui_kit::declarative::form::IntoFormValueModel<T> for &LocalState<T>
     }
 }
 
+impl fret_ui_kit::declarative::form::IntoFormStateModel
+    for LocalState<fret_ui_kit::headless::form_state::FormState>
+{
+    fn into_form_state_model(self) -> Model<fret_ui_kit::headless::form_state::FormState> {
+        self.clone_model()
+    }
+}
+
+impl fret_ui_kit::declarative::form::IntoFormStateModel
+    for &LocalState<fret_ui_kit::headless::form_state::FormState>
+{
+    fn into_form_state_model(self) -> Model<fret_ui_kit::headless::form_state::FormState> {
+        self.clone_model()
+    }
+}
+
 impl fret_ui_kit::declarative::table::IntoTableStateModel
     for LocalState<fret_ui_kit::headless::table::TableState>
 {

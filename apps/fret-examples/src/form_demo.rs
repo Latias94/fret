@@ -1,6 +1,5 @@
 use anyhow::Context as _;
 use fret::advanced;
-use fret::advanced::raw::LocalStateRawModelExt as _;
 use fret::advanced::view::{AppUiRenderRootState, render_root_with_app_ui};
 use fret::app::{AppLocalStateExt as _, AppLocalStateTxnExt as _};
 use fret::app::{LocalState, TrackedStateExt as _};
@@ -79,7 +78,7 @@ impl FormDemoDriver {
         registry.register_field("start_date", &start_date, None, |v| {
             v.is_none().then(|| Arc::from("Start date is required"))
         });
-        registry.register_into_form_state(app, form_state.model());
+        registry.register_into_form_state(app, &form_state);
 
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
@@ -127,11 +126,10 @@ fn handle_model_changes(
     context: WinitWindowContext<'_, DemoWindowState>,
     changed: &[fret_app::ModelId],
 ) {
-    context.state.registry.handle_model_changes(
-        context.app,
-        context.state.form_state.model(),
-        changed,
-    );
+    context
+        .state
+        .registry
+        .handle_model_changes(context.app, &context.state.form_state, changed);
     context
         .state
         .ui
@@ -186,11 +184,11 @@ fn handle_command(
             });
             state
                 .registry
-                .register_into_form_state(app, state.form_state.model());
+                .register_into_form_state(app, &state.form_state);
             app.request_redraw(window);
         }
         "form_demo.submit" => {
-            let ok = state.registry.submit(app, state.form_state.model());
+            let ok = state.registry.submit(app, &state.form_state);
             let msg = if ok {
                 "Submitted (valid)"
             } else {

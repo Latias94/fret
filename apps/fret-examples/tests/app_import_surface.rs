@@ -203,6 +203,7 @@ fn app_state_demos_use_app_local_state_imports() {
             "usefret::advanced::prelude::TrackedStateExtas_;",
             "usefret::advanced::prelude::{LocalState,TrackedStateExtas_};",
             "LocalStateModelStoreExt",
+            "LocalStateRawModelExt",
         ] {
             assert!(
                 !compact.contains(forbidden),

@@ -62,6 +62,23 @@ impl<T> IntoFormValueModel<T> for &Model<T> {
     }
 }
 
+/// Narrow interop bridge for form registries that write into a shared `FormState`.
+pub trait IntoFormStateModel {
+    fn into_form_state_model(self) -> Model<FormState>;
+}
+
+impl IntoFormStateModel for Model<FormState> {
+    fn into_form_state_model(self) -> Model<FormState> {
+        self
+    }
+}
+
+impl IntoFormStateModel for &Model<FormState> {
+    fn into_form_state_model(self) -> Model<FormState> {
+        self.clone()
+    }
+}
+
 /// A lightweight, opt-in registry that connects app-owned `Model<T>` values to a `FormState`.
 ///
 /// Notes:
@@ -101,10 +118,11 @@ impl FormRegistry {
     pub fn register_into_form_state<H: ModelHost>(
         &self,
         host: &mut H,
-        form_state: &Model<FormState>,
+        form_state: impl IntoFormStateModel,
     ) {
+        let form_state = form_state.into_form_state_model();
         let fields: Vec<FormFieldId> = self.field_ids().cloned().collect();
-        let _ = host.models_mut().update(form_state, move |st| {
+        let _ = host.models_mut().update(&form_state, move |st| {
             for id in fields.iter().cloned() {
                 st.register_field(id);
             }
@@ -140,16 +158,17 @@ impl FormRegistry {
     pub fn handle_model_changes<H: ModelHost>(
         &self,
         host: &mut H,
-        form_state: &Model<FormState>,
+        form_state: impl IntoFormStateModel,
         changed: &[ModelId],
     ) {
         if self.fields.is_empty() || changed.is_empty() {
             return;
         }
 
+        let form_state = form_state.into_form_state_model();
         let (validate_mode, submit_count, error_fields) = host
             .models()
-            .read(form_state, |st| {
+            .read(&form_state, |st| {
                 (
                     st.validate_mode,
                     st.submit_count,
@@ -183,7 +202,7 @@ impl FormRegistry {
         }
 
         let touch_on_change = self.options.touch_on_change;
-        let _ = host.models_mut().update(form_state, move |st| {
+        let _ = host.models_mut().update(&form_state, move |st| {
             for (id, eval) in updates.iter() {
                 st.set_dirty(Arc::clone(id), eval.dirty);
                 if touch_on_change && eval.dirty {
@@ -194,7 +213,8 @@ impl FormRegistry {
         });
     }
 
-    pub fn submit<H: ModelHost>(&self, host: &mut H, form_state: &Model<FormState>) -> bool {
+    pub fn submit<H: ModelHost>(&self, host: &mut H, form_state: impl IntoFormStateModel) -> bool {
+        let form_state = form_state.into_form_state_model();
         let store = host.models();
         let mut evals: Vec<(FormFieldId, FieldEval)> = self
             .fields
@@ -202,7 +222,7 @@ impl FormRegistry {
             .map(|f| (Arc::clone(&f.id), (f.eval)(store, true)))
             .collect();
 
-        let _ = host.models_mut().update(form_state, move |st| {
+        let _ = host.models_mut().update(&form_state, move |st| {
             st.begin_submit();
             st.touch_all_registered();
             for (id, eval) in evals.drain(..) {
@@ -213,7 +233,7 @@ impl FormRegistry {
         });
 
         host.models()
-            .read(form_state, |st| st.is_valid())
+            .read(&form_state, |st| st.is_valid())
             .unwrap_or(false)
     }
 
@@ -225,8 +245,9 @@ impl FormRegistry {
     pub fn submit_action_host(
         &self,
         host: &mut dyn UiActionHost,
-        form_state: &Model<FormState>,
+        form_state: impl IntoFormStateModel,
     ) -> bool {
+        let form_state = form_state.into_form_state_model();
         let store = host.models_mut();
         let mut evals: Vec<(FormFieldId, FieldEval)> = self
             .fields
@@ -234,7 +255,7 @@ impl FormRegistry {
             .map(|f| (Arc::clone(&f.id), (f.eval)(&*store, true)))
             .collect();
 
-        let _ = store.update(form_state, move |st| {
+        let _ = store.update(&form_state, move |st| {
             st.begin_submit();
             st.touch_all_registered();
             for (id, eval) in evals.drain(..) {
@@ -244,7 +265,7 @@ impl FormRegistry {
             st.end_submit();
         });
 
-        store.read(form_state, |st| st.is_valid()).unwrap_or(false)
+        store.read(&form_state, |st| st.is_valid()).unwrap_or(false)
     }
 }
 
@@ -269,9 +290,27 @@ mod tests {
         );
         assert!(
             normalized.contains(
+                "pubtraitIntoFormStateModel{fninto_form_state_model(self)->Model<FormState>;}"
+            ),
+            "form registry should expose a dedicated form-state bridge instead of forcing raw Model access at app call sites"
+        );
+        assert!(
+            normalized.contains(
                 "pubfnregister_field<T>(&mutself,id:implInto<FormFieldId>,model:implIntoFormValueModel<T>,initial:T,validate:implFn(&T)->Option<Arc<str>>+'static,)whereT:Clone+PartialEq+'static,"
             ),
             "register_field should accept the dedicated form-value bridge"
+        );
+        assert!(
+            normalized.contains(
+                "pubfnregister_into_form_state<H:ModelHost>(&self,host:&mutH,form_state:implIntoFormStateModel,)"
+            ),
+            "register_into_form_state should accept the dedicated form-state bridge"
+        );
+        assert!(
+            normalized.contains(
+                "pubfnsubmit<H:ModelHost>(&self,host:&mutH,form_state:implIntoFormStateModel)->bool"
+            ),
+            "submit should accept the dedicated form-state bridge"
         );
         assert!(
             !normalized.contains(
