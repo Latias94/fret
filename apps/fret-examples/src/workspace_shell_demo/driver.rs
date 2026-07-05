@@ -2,7 +2,7 @@ use anyhow::Context as _;
 use fret::advanced::view::AppRenderDataExt as _;
 use fret::imui::{UiWriterImUiFacadeExt as _, imui_build, kit};
 use fret::{shadcn, shadcn::themes::ShadcnColorScheme};
-use fret_app::{App, CommandId, Effect, WindowRequest};
+use fret_app::{App, CommandId, Effect, Model, WindowRequest};
 use fret_bootstrap::ui_diagnostics::UiDiagnosticsService;
 use fret_core::{AppWindowId, Axis, Edges, Event, Px, Rect, SemanticsRole};
 use fret_launch::{
@@ -39,6 +39,7 @@ use fret_workspace::{
     WorkspaceCommandScope, WorkspaceFrame, WorkspacePaneContentFocusTarget, WorkspaceTabStrip,
     workspace_pane_tree_element_with_resize,
 };
+use std::any::Any;
 use std::collections::HashSet;
 use std::sync::Arc;
 
@@ -116,6 +117,65 @@ struct WorkspaceShellPaneProofState {
     is_active: bool,
     two_row_pinned: bool,
     prompt_open: bool,
+}
+
+fn workspace_shell_update_model<T: Any, R>(
+    app: &mut App,
+    model: &Model<T>,
+    f: impl FnOnce(&mut T) -> R,
+) -> Option<R> {
+    app.models_mut().update(model, f).ok()
+}
+
+fn workspace_shell_host_update_model<T: Any>(
+    host: &mut dyn fret_ui::action::UiActionHost,
+    model: &Model<T>,
+    f: impl FnOnce(&mut T),
+) {
+    let _ = host.models_mut().update(model, f);
+}
+
+fn workspace_shell_set_model<T: Any>(app: &mut App, model: &Model<T>, value: T) {
+    let _ = workspace_shell_update_model(app, model, |slot| *slot = value);
+}
+
+fn workspace_shell_host_set_model<T: Any>(
+    host: &mut dyn fret_ui::action::UiActionHost,
+    model: &Model<T>,
+    value: T,
+) {
+    workspace_shell_host_update_model(host, model, |slot| *slot = value);
+}
+
+fn workspace_shell_update_window_layout<R>(
+    app: &mut App,
+    state: &WorkspaceShellWindowState,
+    f: impl FnOnce(&mut WorkspaceWindowLayout) -> R,
+) -> Option<R> {
+    workspace_shell_update_model(app, &state.window_layout, f)
+}
+
+fn workspace_shell_open_dirty_close_prompt(
+    app: &mut App,
+    state: &WorkspaceShellWindowState,
+    prompt: WorkspaceShellDirtyClosePrompt,
+) {
+    workspace_shell_set_model(app, &state.dirty_close_prompt, Some(prompt));
+    workspace_shell_set_model(app, &state.dirty_close_prompt_open, true);
+}
+
+fn workspace_shell_clear_dirty_close_prompt(app: &mut App, state: &WorkspaceShellWindowState) {
+    workspace_shell_set_model(app, &state.dirty_close_prompt, None);
+    workspace_shell_set_model(app, &state.dirty_close_prompt_open, false);
+}
+
+fn workspace_shell_host_clear_dirty_close_prompt(
+    host: &mut dyn fret_ui::action::UiActionHost,
+    prompt_model: &Model<Option<WorkspaceShellDirtyClosePrompt>>,
+    open_model: &Model<bool>,
+) {
+    workspace_shell_host_set_model(host, prompt_model, None);
+    workspace_shell_host_set_model(host, open_model, false);
 }
 
 fn workspace_shell_command_button<'a, Cx>(
@@ -785,9 +845,12 @@ impl WorkspaceShellDemoDriver {
 
                         let dismiss_handler: fret_ui_kit::primitives::dismissable_layer::OnDismissRequest =
                             Arc::new(move |host, _acx, _req| {
-                            let _ = host.models_mut().update(&prompt_model, |p| *p = None);
-                            let _ = host.models_mut().update(&open_model, |v| *v = false);
-                        });
+                                workspace_shell_host_clear_dirty_close_prompt(
+                                    host,
+                                    &prompt_model,
+                                    &open_model,
+                                );
+                            });
 
                         let mut req = OverlayRequest::modal(
                             DIRTY_CLOSE_PROMPT_OVERLAY_ID,
@@ -1323,12 +1386,11 @@ fn request_workspace_shell_window_close(
         });
 
     if let Some(req) = outcome.blocked_dirty_close {
-        let _ = app.models_mut().update(&state.dirty_close_prompt, |p| {
-            *p = Some(WorkspaceShellDirtyClosePrompt::window_close(req));
-        });
-        let _ = app
-            .models_mut()
-            .update(&state.dirty_close_prompt_open, |v| *v = true);
+        workspace_shell_open_dirty_close_prompt(
+            app,
+            state,
+            WorkspaceShellDirtyClosePrompt::window_close(req),
+        );
         app.request_redraw(window);
         return;
     }
@@ -1412,8 +1474,9 @@ fn handle_command(
             let prompt = prompt.unwrap();
             if prompt.is_window_close() {
                 if do_save {
-                    let _ = app.models_mut().update(
-                        &state.window_layout,
+                    let _ = workspace_shell_update_window_layout(
+                        app,
+                        state,
                         |layout: &mut WorkspaceWindowLayout| {
                             for dirty_id in prompt.request.dirty_tabs_in_order.clone() {
                                 let mut pane_ids = Vec::new();
@@ -1431,8 +1494,9 @@ fn handle_command(
                 }
                 app.push_effect(Effect::Window(WindowRequest::Close(window)));
             } else {
-                let _ = app.models_mut().update(
-                    &state.window_layout,
+                let _ = workspace_shell_update_window_layout(
+                    app,
+                    state,
                     |layout: &mut WorkspaceWindowLayout| {
                         layout.active_pane = Some(prompt.pane_id.clone());
                         let Some(pane) = layout.pane_tree.find_pane_mut(prompt.pane_id.as_ref())
@@ -1453,12 +1517,7 @@ fn handle_command(
             }
         }
 
-        let _ = app
-            .models_mut()
-            .update(&state.dirty_close_prompt, |p| *p = None);
-        let _ = app
-            .models_mut()
-            .update(&state.dirty_close_prompt_open, |v| *v = false);
+        workspace_shell_clear_dirty_close_prompt(app, state);
         app.request_redraw(window);
         return;
     }
@@ -1488,28 +1547,27 @@ fn handle_command(
             "pane-a"
         };
         let dirty = command.as_str() != CMD_WORKSPACE_SHELL_DEMO_CLEAR_ACTIVE_DIRTY;
-        let did_apply = app
-            .models_mut()
-            .update(
-                &state.window_layout,
-                |layout: &mut WorkspaceWindowLayout| {
-                    let Some(pane) = layout.pane_tree.find_pane_mut(pane_id) else {
-                        return false;
-                    };
-                    let Some(active) = pane
-                        .tabs
-                        .active()
-                        .cloned()
-                        .or_else(|| pane.tabs.tabs().first().cloned())
-                    else {
-                        return false;
-                    };
-                    let _ = pane.tabs.activate(active.clone());
-                    pane.tabs.set_dirty(active, dirty);
-                    true
-                },
-            )
-            .unwrap_or(false);
+        let did_apply = workspace_shell_update_window_layout(
+            app,
+            state,
+            |layout: &mut WorkspaceWindowLayout| {
+                let Some(pane) = layout.pane_tree.find_pane_mut(pane_id) else {
+                    return false;
+                };
+                let Some(active) = pane
+                    .tabs
+                    .active()
+                    .cloned()
+                    .or_else(|| pane.tabs.tabs().first().cloned())
+                else {
+                    return false;
+                };
+                let _ = pane.tabs.activate(active.clone());
+                pane.tabs.set_dirty(active, dirty);
+                true
+            },
+        )
+        .unwrap_or(false);
         if did_apply {
             app.request_redraw(window);
         }
@@ -1517,9 +1575,7 @@ fn handle_command(
     }
 
     if command.as_str() == CMD_WORKSPACE_SHELL_DEMO_TOGGLE_TABSTRIP_TWO_ROW_PINNED {
-        let _ = app
-            .models_mut()
-            .update(&state.tabstrip_two_row_pinned, |v| *v = !*v);
+        let _ = workspace_shell_update_model(app, &state.tabstrip_two_row_pinned, |v| *v = !*v);
         app.request_redraw(window);
         return;
     }
@@ -1532,8 +1588,9 @@ fn handle_command(
             block: block_dirty_close,
         };
 
-        let update = app.models_mut().update(
-            &state.window_layout,
+        let update = workspace_shell_update_window_layout(
+            app,
+            state,
             |layout: &mut WorkspaceWindowLayout| {
                 layout.active_pane = Some(Arc::from("pane-a"));
                 layout.apply_command_with_close_policy(&close_cmd, Some(&mut dirty_close_policy))
@@ -1545,16 +1602,15 @@ fn handle_command(
         });
 
         if let Some(req) = outcome.blocked_dirty_close.clone() {
-            let _ = app.models_mut().update(&state.dirty_close_prompt, |p| {
-                *p = Some(WorkspaceShellDirtyClosePrompt::tab_command(
+            workspace_shell_open_dirty_close_prompt(
+                app,
+                state,
+                WorkspaceShellDirtyClosePrompt::tab_command(
                     Arc::from("pane-a"),
                     close_cmd.clone(),
                     req,
-                ));
-            });
-            let _ = app
-                .models_mut()
-                .update(&state.dirty_close_prompt_open, |v| *v = true);
+                ),
+            );
         }
 
         if outcome.applied || outcome.blocked_dirty_close.is_some() {
@@ -1590,16 +1646,14 @@ fn handle_command(
     let mut dirty_close_policy = WorkspaceShellDemoDirtyClosePolicy {
         block: block_dirty_close,
     };
-    let update = app.models_mut().update(
-        &state.window_layout,
-        |layout: &mut WorkspaceWindowLayout| {
+    let update =
+        workspace_shell_update_window_layout(app, state, |layout: &mut WorkspaceWindowLayout| {
             let active_pane_id = layout.active_pane.clone();
             (
                 layout.apply_command_with_close_policy(&command, Some(&mut dirty_close_policy)),
                 active_pane_id,
             )
-        },
-    );
+        });
     let (outcome, active_pane_id) = update.unwrap_or((
         fret_workspace::tabs::WorkspaceApplyCommandOutcome {
             applied: false,
@@ -1620,16 +1674,11 @@ fn handle_command(
 
     if let Some(req) = outcome.blocked_dirty_close.clone() {
         if let Some(pane_id) = active_pane_id {
-            let _ = app.models_mut().update(&state.dirty_close_prompt, |p| {
-                *p = Some(WorkspaceShellDirtyClosePrompt::tab_command(
-                    pane_id,
-                    command.clone(),
-                    req,
-                ));
-            });
-            let _ = app
-                .models_mut()
-                .update(&state.dirty_close_prompt_open, |v| *v = true);
+            workspace_shell_open_dirty_close_prompt(
+                app,
+                state,
+                WorkspaceShellDirtyClosePrompt::tab_command(pane_id, command.clone(), req),
+            );
         }
     }
 

@@ -33,6 +33,9 @@ Keep raw/shared-model mechanisms for now:
   canvas/node-graph interaction state and should be handled as a dedicated workstream.
 - `imui_editor_proof_demo/*`. This is an editor-grade retained proof lane with explicit model
   graphs; migrate only with editor-state public contracts, not by mechanical LocalState rewrites.
+- `workspace_shell_demo/*`. Audited after the initial inventory: it is application-level workspace
+  shell state, so the shared model graph remains. The follow-up cleanup routes writes through
+  demo-local owner helpers instead of scattering raw `models_mut().update(...)` calls.
 
 Likely next cleanup slices:
 
@@ -44,9 +47,6 @@ Likely next cleanup slices:
   `LocalState` / action helpers.
 - `api_workbench_lite_demo.rs`: tests show it is app-facing and should stay on `LocalState` /
   `LocalStateTxn`; keep it as the regression template for first-contact app authoring.
-- `workspace_shell_demo/*`: likely application-level workspace state; audit whether raw model graph
-  is needed for shell coordination or whether a workspace-state facade should own it.
-
 # Verification
 
 - `git status --short --branch` on latest `main`
