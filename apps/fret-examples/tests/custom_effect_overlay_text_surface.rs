@@ -241,6 +241,46 @@ fn custom_effect_v1_v2_overlay_labels_use_shared_chrome_role() {
 }
 
 #[test]
+fn custom_effect_v1_demo_uses_app_view_imports_with_explicit_effect_hook() {
+    let source = include_str!("../src/custom_effect_v1_demo.rs");
+    let compact = compact(source);
+
+    for needle in [
+        "usefret::advanced::driver::UiAppBuilderAdvancedExtas_;",
+        "usefret::advanced::raw::{LocalStateElementContextExtas_,LocalStateRawModelExtas_};",
+        "usefret::app::prelude::*;",
+        "usefret::app::{AppComponentCx,LocalState};",
+        "usefret_ui_kit::declarative::action_hooks::ActionHooksExtas_;",
+        "usefret_ui_kit::{IntoUiElement,Space,UiSupportsLayoutas_,ui};",
+        ".view::<CustomEffectV1View>()?",
+        ".install_custom_effects(install_custom_effect)",
+        "fninstall_demo_theme(app:&mutApp)",
+        "fninstall_custom_effect(app:&mutApp,effects:&mutdynfret_core::CustomEffectService)",
+        "fninit(_app:&mutApp,_window:WindowId)->Self",
+        "fnview(cx:&mutElementContext<'_,App>,st:&mutCustomEffectV1State)->Ui",
+        "implIntoUiElement<App>",
+    ] {
+        assert!(
+            compact.contains(needle),
+            "custom_effect_v1_demo should keep app view imports and explicit effect hooks; missing `{needle}`",
+        );
+    }
+
+    for forbidden in [
+        "advanced::prelude::*",
+        "component::prelude::*",
+        "KernelApp",
+        "AppWindowId",
+        "ViewElements",
+    ] {
+        assert!(
+            !source.contains(forbidden),
+            "custom_effect_v1_demo should not reintroduce broad or kernel-facing imports: `{forbidden}`",
+        );
+    }
+}
+
+#[test]
 fn custom_effect_v3_and_effect_reference_chrome_use_shared_roles() {
     assert_custom_effect_v3_overlay_text_roles(include_str!("../src/custom_effect_v3_demo.rs"));
     assert_postprocess_theme_overlay_text_roles(include_str!("../src/postprocess_theme_demo.rs"));

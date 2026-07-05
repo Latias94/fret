@@ -12,8 +12,10 @@
 
 use std::sync::Arc;
 
+use fret::advanced::driver::UiAppBuilderAdvancedExt as _;
 use fret::advanced::raw::{LocalStateElementContextExt as _, LocalStateRawModelExt as _};
-use fret::{FretApp, advanced::prelude::*, component::prelude::*, shadcn};
+use fret::app::prelude::*;
+use fret::app::{AppComponentCx, LocalState};
 use fret_core::scene::{EffectChain, EffectMode, EffectParamsV1, EffectQuality, EffectStep};
 use fret_core::{Color, Corners, Edges, EffectId, Px};
 use fret_ui::element::{
@@ -22,8 +24,11 @@ use fret_ui::element::{
 };
 use fret_ui::{ElementContext, UiHost};
 use fret_ui_kit::custom_effects::CustomEffectProgramV1;
+use fret_ui_kit::declarative::ElementContextThemeExt as _;
+use fret_ui_kit::declarative::UiElementTestIdExt as _;
+use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::text as decl_text;
-use fret_ui_kit::{IntoUiElement, Space, ui};
+use fret_ui_kit::{IntoUiElement, Space, UiSupportsLayout as _, ui};
 
 mod act {
     fret::actions!([Reset = "custom_effect_v1_demo.reset.v1"]);
@@ -203,7 +208,7 @@ struct CustomEffectV1State {
 
 struct CustomEffectV1View;
 
-fn install_demo_theme(app: &mut KernelApp) {
+fn install_demo_theme(app: &mut App) {
     shadcn::themes::apply_shadcn_new_york(
         app,
         shadcn::themes::ShadcnBaseColor::Slate,
@@ -221,7 +226,7 @@ pub fn run() -> anyhow::Result<()> {
         .map_err(anyhow::Error::from)
 }
 
-fn install_custom_effect(app: &mut KernelApp, effects: &mut dyn fret_core::CustomEffectService) {
+fn install_custom_effect(app: &mut App, effects: &mut dyn fret_core::CustomEffectService) {
     let mut program = CustomEffectProgramV1::wgsl_utf8(WGSL);
     let id = program
         .ensure_registered(effects)
@@ -247,7 +252,7 @@ impl CustomEffectV1State {
 }
 
 impl View for CustomEffectV1View {
-    fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self {
+    fn init(_app: &mut App, _window: WindowId) -> Self {
         Self
     }
 
@@ -306,7 +311,7 @@ fn watch_first_f32(cx: &mut AppComponentCx<'_>, model: &LocalState<Vec<f32>>, de
     model.layout_read_ref_in(cx, |v| v.first().copied().unwrap_or(default))
 }
 
-fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut CustomEffectV1State) -> ViewElements {
+fn view(cx: &mut ElementContext<'_, App>, st: &mut CustomEffectV1State) -> Ui {
     let Some(effect) = cx.app.global::<DemoEffect>().map(|v| v.0) else {
         return vec![shadcn::raw::typography::h3("Custom effects unavailable").into_element(cx)]
             .into();
@@ -375,7 +380,7 @@ fn stage(
     corner_radius_px: f32,
     grain_strength: f32,
     grain_scale: f32,
-) -> impl IntoUiElement<KernelApp> + use<> {
+) -> impl IntoUiElement<App> + use<> {
     let lenses = lens_row(
         cx,
         enabled,
@@ -519,7 +524,7 @@ fn lens_row(
     corner_radius_px: f32,
     grain_strength: f32,
     grain_scale: f32,
-) -> impl IntoUiElement<KernelApp> + use<> {
+) -> impl IntoUiElement<App> + use<> {
     let radius = Px(corner_radius_px.clamp(0.0, 64.0));
     ui::h_flex(move |cx| {
         let effect_lens = if enabled {
@@ -554,9 +559,9 @@ fn lens_shell<B>(
     label: Arc<str>,
     radius: Px,
     body: B,
-) -> impl IntoUiElement<KernelApp> + use<B>
+) -> impl IntoUiElement<App> + use<B>
 where
-    B: IntoUiElement<KernelApp>,
+    B: IntoUiElement<App>,
 {
     let mut outer_layout = LayoutStyle::default();
     outer_layout.size.width = Length::Px(Px(380.0));
@@ -607,7 +612,7 @@ fn plain_lens<L>(
     cx: &mut AppComponentCx<'_>,
     label: L,
     radius: Px,
-) -> impl IntoUiElement<KernelApp> + use<L>
+) -> impl IntoUiElement<App> + use<L>
 where
     L: Into<Arc<str>>,
 {
@@ -640,7 +645,7 @@ fn custom_effect_lens<L>(
     corner_radius_px: f32,
     grain_strength: f32,
     grain_scale: f32,
-) -> impl IntoUiElement<KernelApp> + use<L>
+) -> impl IntoUiElement<App> + use<L>
 where
     L: Into<Arc<str>>,
 {
@@ -713,7 +718,7 @@ fn inspector(
     corner_radius_px: f32,
     grain_strength: f32,
     grain_scale: f32,
-) -> impl IntoUiElement<KernelApp> + use<> {
+) -> impl IntoUiElement<App> + use<> {
     let theme = cx.theme_snapshot();
 
     let enabled_model = st.enabled.clone_model();
