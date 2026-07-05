@@ -898,6 +898,7 @@ pub mod app {
     /// the ViewCache-safe observation hooks owned by `fret-ui-assets`.
     #[cfg(feature = "ui-assets")]
     pub mod ui_assets {
+        pub use fret_core::{ImageColorSpace, ImageId};
         pub use fret_ui_assets::app::{configure_caches, configure_caches_with_budgets};
         pub use fret_ui_assets::image_asset_cache::{ImageAssetKey, ImageAssetStats};
         pub use fret_ui_assets::image_asset_state::ImageLoadingStatus;
@@ -1034,6 +1035,7 @@ pub mod component {
     /// render code. The default app lane remains `fret::app::ui_assets`.
     #[cfg(feature = "ui-assets")]
     pub mod ui_assets {
+        pub use fret_core::{ImageColorSpace, ImageId};
         pub use fret_ui_assets::image_asset_cache::{ImageAssetKey, ImageAssetStats};
         pub use fret_ui_assets::image_asset_state::ImageLoadingStatus;
         pub use fret_ui_assets::image_source::{ImageSource, ImageSourceOptions, ImageSourceState};
@@ -4990,6 +4992,7 @@ mod authoring_surface_policy_tests {
     #[test]
     fn app_ui_assets_facade_keeps_asset_state_off_raw_element_context() {
         assert!(LIB_RS.contains("pub mod ui_assets {"));
+        assert!(LIB_RS.contains("pub use fret_core::{ImageColorSpace, ImageId};"));
         assert!(LIB_RS.contains(
             "pub use fret_ui_assets::image_asset_cache::{ImageAssetKey, ImageAssetStats};"
         ));
@@ -5024,6 +5027,7 @@ mod authoring_surface_policy_tests {
     fn component_ui_assets_facade_keeps_snippet_assets_off_raw_extension_traits() {
         assert!(LIB_RS.contains("pub mod component {"));
         assert!(LIB_RS.contains("pub mod ui_assets {"));
+        assert!(LIB_RS.contains("pub use fret_core::{ImageColorSpace, ImageId};"));
         assert!(LIB_RS.contains("pub fn image_source_state<H: fret_ui::UiHost>("));
         assert!(
             LIB_RS.contains("pub fn image_source_state_from_asset_request<H: fret_ui::UiHost>(")

@@ -99,11 +99,17 @@ fn plot_image_demo_uses_default_declarative_line_plot_panel() {
     let source = compact(include_str!("../src/plot_image_demo.rs"));
 
     for needle in [
+        "usefret::advanced::raw::Model;",
+        "usefret::app::prelude::*;",
+        "usefret::app::{RenderContextAccessas_,ui_assets};",
         "usefret_plot::declarative::{LinePlotPanelProps,line_plot_panel_in};",
         "PlotImageDemoView",
+        "image:Option<ui_assets::ImageId>",
+        "fninit(app:&mutApp,_window:WindowId)->Self",
         "LinePlotModel::from_series(",
         "LineSeries::new(",
         "Series::from_points_sorted(",
+        "ui_assets::rgba8_image_state(cx,self.image_size.0,self.image_size.1,self.image_bytes.as_slice(),ui_assets::ImageColorSpace::Srgb,)",
         "PlotImage::new(",
         "PlotImageLayer::BelowGrid",
         "AxisLabelFormatter::number(AxisNumberFormat::Fixed(2))",
@@ -125,6 +131,15 @@ fn plot_image_demo_uses_default_declarative_line_plot_panel() {
         "LinePlotCanvas",
         "PlotCanvas",
         "create_node_retained(",
+        "advanced::prelude::*",
+        "component::prelude::*",
+        "KernelApp",
+        "AppWindowId",
+        "ImageAssetCacheHostExt",
+        "ImageAssetKey",
+        "with_image_asset_cache",
+        "use_image_asset(",
+        "fret_core::ImageColorSpace",
     ] {
         assert!(
             !source.contains(legacy),

@@ -1,8 +1,8 @@
 use anyhow::Context as _;
-use fret::{FretApp, advanced::prelude::*, component::prelude::*};
+use fret::advanced::raw::Model;
+use fret::app::prelude::*;
+use fret::app::{RenderContextAccess as _, ui_assets};
 use fret_bootstrap::ui_app_driver;
-use fret_core::ImageColorSpace;
-use fret_core::geometry::Px;
 use fret_plot::cartesian::{AxisScale, DataPoint, DataRect};
 use fret_plot::declarative::{LinePlotPanelProps, line_plot_panel_in};
 use fret_plot::models::{LinePlotModel, LineSeries, YAxis};
@@ -11,15 +11,13 @@ use fret_plot::series::Series;
 use fret_plot::state::{PlotImage, PlotImageLayer, PlotOutput, PlotOverlays, PlotState};
 use fret_plot::style::{LinePlotStyle, SeriesTooltipMode};
 use fret_runtime::PlatformCapabilities;
-use fret_ui_assets::image_asset_cache::{ImageAssetCacheHostExt, ImageAssetKey};
 
 struct PlotImageDemoView {
     model: Model<LinePlotModel>,
     plot_state: Model<PlotState>,
     plot_output: Model<PlotOutput>,
     image_bytes: Vec<u8>,
-    image_key: ImageAssetKey,
-    image: Option<fret_core::ImageId>,
+    image: Option<ui_assets::ImageId>,
     image_size: (u32, u32),
 }
 
@@ -45,26 +43,6 @@ impl PlotImageDemoView {
             }
         }
         out
-    }
-
-    fn use_image_asset(
-        app: &mut KernelApp,
-        window: AppWindowId,
-        key: ImageAssetKey,
-        size: (u32, u32),
-        bytes: &[u8],
-    ) -> Option<fret_core::ImageId> {
-        app.with_image_asset_cache(|cache, app| {
-            cache.use_rgba8_keyed(
-                app,
-                window,
-                key,
-                size.0,
-                size.1,
-                bytes,
-                ImageColorSpace::Srgb,
-            )
-        })
     }
 }
 
@@ -111,7 +89,7 @@ pub fn run() -> anyhow::Result<()> {
 }
 
 impl View for PlotImageDemoView {
-    fn init(app: &mut KernelApp, window: AppWindowId) -> Self {
+    fn init(app: &mut App, _window: WindowId) -> Self {
         let n = 4096usize;
         let mut points = Vec::with_capacity(n);
         for i in 0..n {
@@ -140,28 +118,24 @@ impl View for PlotImageDemoView {
 
         let size = (256, 256);
         let bytes = Self::generate_rgba8_pattern(size.0, size.1);
-        let key = ImageAssetKey::from_rgba8(size.0, size.1, ImageColorSpace::Srgb, &bytes);
-        let image = Self::use_image_asset(app, window, key, size, &bytes);
 
         Self {
             model: plot,
             plot_state,
             plot_output,
             image_bytes: bytes,
-            image_key: key,
-            image,
+            image: None,
             image_size: size,
         }
     }
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
-        let window = cx.window_id();
-        let image = Self::use_image_asset(
-            cx.app_mut(),
-            window,
-            self.image_key,
-            self.image_size,
-            &self.image_bytes,
+        let (_key, image, _status) = ui_assets::rgba8_image_state(
+            cx,
+            self.image_size.0,
+            self.image_size.1,
+            self.image_bytes.as_slice(),
+            ui_assets::ImageColorSpace::Srgb,
         );
         if image != self.image {
             self.image = image;
