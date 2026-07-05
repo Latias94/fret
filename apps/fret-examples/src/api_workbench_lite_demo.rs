@@ -19,7 +19,7 @@ use fret::{FretApp, shadcn};
 use fret_app::{CommandId, CommandMeta, DefaultKeybinding, KeyChord, PlatformFilter};
 use fret_core::{KeyCode, Modifiers, Px};
 use fret_ui::element::AnyElement;
-use fret_ui_kit::declarative::{ElementContextThemeExt as _, text as decl_text};
+use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use sqlx::Row;
 use sqlx::sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions};
 
@@ -51,32 +51,36 @@ const TEST_ID_HISTORY_EMPTY: &str = "api-workbench-lite.history.empty";
 const TEST_ID_HISTORY_LOADING: &str = "api-workbench-lite.history.loading";
 const TEST_ID_HISTORY_ERROR: &str = "api-workbench-lite.history.error";
 
-fn api_workbench_section_text<'a, Cx>(cx: &mut Cx, text: impl Into<Arc<str>>) -> AnyElement
+fn api_workbench_section_text<'a, Cx, T>(cx: &mut Cx, label: T) -> AnyElement
 where
     Cx: AppRenderContext<'a>,
+    T: Into<Arc<str>>,
 {
-    decl_text::text_section_chrome_label(cx.elements(), text)
+    text::section_chrome_label(cx, label)
 }
 
-fn api_workbench_readout_text<'a, Cx>(cx: &mut Cx, text: impl Into<Arc<str>>) -> AnyElement
+fn api_workbench_readout_text<'a, Cx, T>(cx: &mut Cx, readout: T) -> AnyElement
 where
     Cx: AppRenderContext<'a>,
+    T: Into<Arc<str>>,
 {
-    decl_text::text_control_readout(cx.elements(), text)
+    text::control_readout(cx, readout)
 }
 
-fn api_workbench_code_label_text<'a, Cx>(cx: &mut Cx, text: impl Into<Arc<str>>) -> AnyElement
+fn api_workbench_code_label_text<'a, Cx, T>(cx: &mut Cx, code: T) -> AnyElement
 where
     Cx: AppRenderContext<'a>,
+    T: Into<Arc<str>>,
 {
-    decl_text::text_code_label(cx.elements(), text)
+    text::code_label(cx, code)
 }
 
-fn api_workbench_paragraph_text<'a, Cx>(cx: &mut Cx, text: impl Into<Arc<str>>) -> AnyElement
+fn api_workbench_paragraph_text<'a, Cx, T>(cx: &mut Cx, body: T) -> AnyElement
 where
     Cx: AppRenderContext<'a>,
+    T: Into<Arc<str>>,
 {
-    decl_text::text_paragraph(cx.elements(), text)
+    text::paragraph(cx, body)
 }
 
 mod act {

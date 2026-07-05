@@ -8,15 +8,15 @@ fn api_workbench_lite_demo_keeps_fixed_text_on_roles() {
     let source = compact(source);
 
     for needle in [
-        "usefret_ui_kit::declarative::{ElementContextThemeExtas_,textasdecl_text};",
-        "fnapi_workbench_section_text<'a,Cx>(",
-        "fnapi_workbench_readout_text<'a,Cx>(",
-        "fnapi_workbench_code_label_text<'a,Cx>(",
-        "fnapi_workbench_paragraph_text<'a,Cx>(",
-        "decl_text::text_section_chrome_label(cx.elements(),text)",
-        "decl_text::text_control_readout(cx.elements(),text)",
-        "decl_text::text_code_label(cx.elements(),text)",
-        "decl_text::text_paragraph(cx.elements(),text)",
+        "usefret_ui_kit::declarative::ElementContextThemeExtas_;",
+        "fnapi_workbench_section_text<'a,Cx,T>(",
+        "fnapi_workbench_readout_text<'a,Cx,T>(",
+        "fnapi_workbench_code_label_text<'a,Cx,T>(",
+        "fnapi_workbench_paragraph_text<'a,Cx,T>(",
+        "text::section_chrome_label(cx,label)",
+        "text::control_readout(cx,readout)",
+        "text::code_label(cx,code)",
+        "text::paragraph(cx,body)",
         "api_workbench_section_text(cx,\"APIWorkbenchLite\")",
         "api_workbench_paragraph_text(cx,\"First-contacttask:buildaPostman-liketoolonlyfromFret'spublicappsurface.\",)",
         "api_workbench_section_text(cx,\"FretAPIProbe\")",
@@ -46,6 +46,8 @@ fn api_workbench_lite_demo_keeps_fixed_text_on_roles() {
         "ui::text(\"Savedhistoryfailedtoload.\").text_sm().font_semibold()",
         "ui::text(err.to_string()).text_sm()",
         "ui::text(\"Nosavedrequestsyet.\").text_sm()",
+        "cx.elements()",
+        "textasdecl_text",
         "theme:fret::style::ThemeSnapshot,",
     ] {
         assert!(
