@@ -235,7 +235,7 @@ their own app-facing action surface.
 `fret::app::prelude::*` is a closed Golden Path budget, not a staging area. Named exports are
 limited to first-contact app authoring nouns: `FretApp`, `App`, `AppRenderContext`,
 `AppRenderCx`, `AppUi`, `Ui`, `UiChild`, `WindowId`, `View`, `Px`, `ui`, `text`, and optional
-`shadcn`. Anonymous extension traits are also part of the budget: grouped app action/data helpers,
+`shadcn` / `ui_assets` modules. Anonymous extension traits are also part of the budget: grouped app action/data helpers,
 `LocalState` construction and observation,
 state query/mutation read helpers when their features are enabled, `.ui()` / `.into_element*()`,
 style refinement, and a11y/test-id/semantics refinements. New styling nouns, command IDs, assets,
@@ -332,8 +332,8 @@ without teaching raw repo-relative paths in app/widget code; register that resol
 `fret::assets::register_resolver(...)` on the host path.
 When a native/dev-only UI helper still needs real file reload ergonomics, keep the app/widget
 surface on logical bundle locators and let
-`fret-ui-assets::ui::ImageSourceElementContextExt::use_image_source_state_from_asset_request(...)`
-or `fret-ui-assets::ui::SvgAssetElementContextExt::svg_source_state_from_asset_request(...)`
+`fret::app::ui_assets::image_source_state_from_asset_request(cx, ...)`
+or `fret::app::ui_assets::svg_source_state_from_asset_request(cx, ...)`
 consume the resolver's bundle/reference bridge instead of introducing direct raw file-path widget
 loading in app code. Keep `resolve_image_source_from_host_locator(...)` /
 `resolve_svg_source_from_host_locator(...)` as the lower-level UI-ready source seams, and use
@@ -808,8 +808,8 @@ directly for pure state transitions.
   keep packaged bytes on `AssetStartupPlan::packaged_entries(...)`,
   `AssetStartupPlan::packaged_bundle_entries(...)`, or
   `AssetStartupPlan::packaged_embedded_entries(...)`.
-- **Direct app wiring:** use `fret_ui_assets::app::configure_caches(...)` or
-  `fret_ui_assets::app::configure_caches_with_budgets(...)`; keep
+- **Direct app wiring:** use `fret::app::ui_assets::configure_caches(...)` or
+  `fret::app::ui_assets::configure_caches_with_budgets(...)`; keep
   `fret_ui_assets::advanced::{configure_caches_with_ui_services(...), configure_caches_with_ui_services_and_budgets(...)}`
   as explicit advanced/bootstrap-only escape hatches.
 - **Component crates:** prefer receiving handles/IDs from the app; only depend on caches directly if you truly need cache APIs,

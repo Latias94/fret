@@ -106,7 +106,13 @@ material3 = []
 # Discoverability alias only. Intentionally does not proxy `fret-ui-ai` into the `fret`
 # release/publish closure until a stable root AI UI story exists.
 ui-ai = []
-ui-assets = ["desktop", "fret-bootstrap/ui-assets"]
+ui-assets = [
+    "desktop",
+    "dep:fret-ui-assets",
+    "fret-ui-assets/app-integration",
+    "fret-ui-assets/ui",
+    "fret-bootstrap/ui-assets",
+]
 icons = [
     "desktop",
     "fret-bootstrap/icons-lucide",
@@ -143,6 +149,7 @@ fret-router = { version = "0.1.0", path = "../fret-router", optional = true }
 fret-router-ui = { version = "0.1.0", path = "../fret-router-ui", optional = true }
 fret-selector = { version = "0.1.0", path = "../fret-selector", optional = true }
 fret-ui-editor = { version = "0.1.0", path = "../fret-ui-editor", optional = true }
+fret-ui-assets = { version = "0.1.0", path = "../fret-ui-assets", optional = true, default-features = false }
 fret-ui-headless = { version = "0.1.0", path = "../fret-ui-headless" }
 fret-ui-shadcn = { version = "0.1.0", path = "../fret-ui-shadcn", optional = true, features = ["app-integration"] }
 fret-ui-kit = { version = "0.1.0", path = "../fret-ui-kit" }

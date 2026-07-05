@@ -68,6 +68,95 @@ where
     crate::UiAssets::svg_stats(cx.app)
 }
 
+pub fn use_image_source_state_in<'a, H: UiHost + 'a, Cx>(
+    cx: &mut Cx,
+    source: &ImageSource,
+) -> ImageSourceState
+where
+    Cx: ElementContextAccess<'a, H>,
+{
+    cx.elements().use_image_source_state(source)
+}
+
+pub fn use_image_source_state_with_options_in<'a, H: UiHost + 'a, Cx>(
+    cx: &mut Cx,
+    source: &ImageSource,
+    options: ImageSourceOptions,
+) -> ImageSourceState
+where
+    Cx: ElementContextAccess<'a, H>,
+{
+    cx.elements()
+        .use_image_source_state_with_options(source, options)
+}
+
+pub fn use_image_source_state_with_options_and_invalidation_in<'a, H: UiHost + 'a, Cx>(
+    cx: &mut Cx,
+    source: &ImageSource,
+    options: ImageSourceOptions,
+    invalidation: Invalidation,
+) -> ImageSourceState
+where
+    Cx: ElementContextAccess<'a, H>,
+{
+    cx.elements()
+        .use_image_source_state_with_options_and_invalidation(source, options, invalidation)
+}
+
+pub fn use_image_source_state_from_asset_request_in<'a, H: UiHost + 'a, Cx>(
+    cx: &mut Cx,
+    request: &AssetRequest,
+) -> ImageSourceState
+where
+    Cx: ElementContextAccess<'a, H>,
+{
+    cx.elements()
+        .use_image_source_state_from_asset_request(request)
+}
+
+pub fn use_image_source_state_from_asset_request_with_options_in<'a, H: UiHost + 'a, Cx>(
+    cx: &mut Cx,
+    request: &AssetRequest,
+    options: ImageSourceOptions,
+) -> ImageSourceState
+where
+    Cx: ElementContextAccess<'a, H>,
+{
+    cx.elements()
+        .use_image_source_state_from_asset_request_with_options(request, options)
+}
+
+pub fn use_image_source_state_from_asset_request_with_options_and_invalidation_in<
+    'a,
+    H: UiHost + 'a,
+    Cx,
+>(
+    cx: &mut Cx,
+    request: &AssetRequest,
+    options: ImageSourceOptions,
+    invalidation: Invalidation,
+) -> ImageSourceState
+where
+    Cx: ElementContextAccess<'a, H>,
+{
+    cx.elements()
+        .use_image_source_state_from_asset_request_with_options_and_invalidation(
+            request,
+            options,
+            invalidation,
+        )
+}
+
+pub fn use_image_source_state_from_asset_locator_in<'a, H: UiHost + 'a, Cx>(
+    cx: &mut Cx,
+    locator: AssetLocator,
+) -> ImageSourceState
+where
+    Cx: ElementContextAccess<'a, H>,
+{
+    use_image_source_state_from_asset_request_in(cx, &AssetRequest::new(locator))
+}
+
 pub trait ImageSourceElementContextExt {
     fn use_image_source_state(&mut self, source: &ImageSource) -> ImageSourceState;
 
@@ -231,6 +320,38 @@ impl SvgAssetSourceState {
             error: Some(message.into()),
         }
     }
+}
+
+pub fn svg_source_state_from_asset_request_in<'a, H: UiHost + 'a, Cx>(
+    cx: &mut Cx,
+    request: &AssetRequest,
+) -> SvgAssetSourceState
+where
+    Cx: ElementContextAccess<'a, H>,
+{
+    cx.elements().svg_source_state_from_asset_request(request)
+}
+
+pub fn svg_source_state_from_asset_request_with_invalidation_in<'a, H: UiHost + 'a, Cx>(
+    cx: &mut Cx,
+    request: &AssetRequest,
+    invalidation: Invalidation,
+) -> SvgAssetSourceState
+where
+    Cx: ElementContextAccess<'a, H>,
+{
+    cx.elements()
+        .svg_source_state_from_asset_request_with_invalidation(request, invalidation)
+}
+
+pub fn svg_source_state_from_asset_locator_in<'a, H: UiHost + 'a, Cx>(
+    cx: &mut Cx,
+    locator: AssetLocator,
+) -> SvgAssetSourceState
+where
+    Cx: ElementContextAccess<'a, H>,
+{
+    svg_source_state_from_asset_request_in(cx, &AssetRequest::new(locator))
 }
 
 #[cfg(not(target_arch = "wasm32"))]

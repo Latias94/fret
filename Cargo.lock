@@ -1836,6 +1836,7 @@ dependencies = [
  "fret-runtime",
  "fret-selector",
  "fret-ui",
+ "fret-ui-assets",
  "fret-ui-editor",
  "fret-ui-headless",
  "fret-ui-kit",

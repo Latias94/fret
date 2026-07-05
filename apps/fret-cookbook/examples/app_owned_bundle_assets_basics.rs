@@ -1,4 +1,3 @@
-use fret::app::AppComponentCx;
 use fret::app::prelude::*;
 use fret::component::prelude::*;
 use fret::style::ThemeSnapshot;
@@ -11,7 +10,6 @@ use fret::{
     shadcn,
 };
 use fret_ui::element::{ImageProps, LayoutStyle, Length, SizeStyle, SvgIconProps};
-use fret_ui_assets::ui::{ImageSourceElementContextExt as _, SvgAssetElementContextExt as _};
 
 const APP_ID: &str = "cookbook-app-owned-bundle-assets-basics";
 const IMAGE_KEY: &str = "textures/test.jpg";
@@ -48,12 +46,8 @@ impl View for AppOwnedBundleAssetsBasicsView {
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let theme = cx.theme_snapshot();
-        let image_state = cx
-            .elements()
-            .use_image_source_state_from_asset_request(&self.image_request);
-        let svg_state = cx
-            .elements()
-            .svg_source_state_from_asset_request(&self.svg_request);
+        let image_state = ui_assets::image_source_state_from_asset_request(cx, &self.image_request);
+        let svg_state = ui_assets::svg_source_state_from_asset_request(cx, &self.svg_request);
 
         let callouts = ui::h_flex(|cx| {
             ui::children![
@@ -77,8 +71,8 @@ impl View for AppOwnedBundleAssetsBasicsView {
         .justify_center()
         .w_full();
 
-        let image_panel = render_image_panel(cx.elements(), &theme, image_state);
-        let svg_panel = render_svg_panel(cx.elements(), &theme, svg_state);
+        let image_panel = render_image_panel(&theme, image_state);
+        let svg_panel = render_svg_panel(&theme, svg_state);
 
         let card = shadcn::card(|cx| {
             ui::children![
@@ -113,15 +107,14 @@ impl View for AppOwnedBundleAssetsBasicsView {
 }
 
 fn render_image_panel(
-    _cx: &mut AppComponentCx<'_>,
     theme: &ThemeSnapshot,
-    state: fret_ui_assets::ImageSourceState,
+    state: ui_assets::ImageSourceState,
 ) -> impl IntoUiElement<App> + use<> {
     let status = match state.status {
-        fret_ui_assets::image_asset_state::ImageLoadingStatus::Idle => "idle",
-        fret_ui_assets::image_asset_state::ImageLoadingStatus::Loading => "loading",
-        fret_ui_assets::image_asset_state::ImageLoadingStatus::Loaded => "ready",
-        fret_ui_assets::image_asset_state::ImageLoadingStatus::Error => "error",
+        ui_assets::ImageLoadingStatus::Idle => "idle",
+        ui_assets::ImageLoadingStatus::Loading => "loading",
+        ui_assets::ImageLoadingStatus::Loaded => "ready",
+        ui_assets::ImageLoadingStatus::Error => "error",
     };
     let border = ColorRef::Color(theme.color_token("border"));
 
@@ -211,9 +204,8 @@ fn render_image_panel(
 }
 
 fn render_svg_panel(
-    _cx: &mut AppComponentCx<'_>,
     theme: &ThemeSnapshot,
-    state: fret_ui_assets::ui::SvgAssetSourceState,
+    state: ui_assets::SvgAssetSourceState,
 ) -> impl IntoUiElement<App> + use<> {
     let status = if state.error.is_some() {
         "error"

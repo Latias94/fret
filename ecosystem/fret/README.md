@@ -232,8 +232,8 @@ intentionally installs file-backed resolver layers directly instead of staying o
 startup contract.
 When native/dev-only UI helpers still need file reload ergonomics, keep app/widget code on
 logical bundle locators and let
-`fret-ui-assets::ui::ImageSourceElementContextExt::use_image_source_state_from_asset_request(...)`
-or `fret-ui-assets::ui::SvgAssetElementContextExt::svg_source_state_from_asset_request(...)`
+`fret::app::ui_assets::image_source_state_from_asset_request(cx, ...)`
+or `fret::app::ui_assets::svg_source_state_from_asset_request(cx, ...)`
 consume the resolver's bundle/reference bridge instead of introducing direct raw file-path widget
 loading. Keep `resolve_image_source_from_host_locator(...)` /
 `resolve_svg_source_from_host_locator(...)` as the lower-level UI-ready source seams, and use

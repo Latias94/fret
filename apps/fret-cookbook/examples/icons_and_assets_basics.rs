@@ -12,7 +12,6 @@ use fret::{
 use fret_core::{ImageColorSpace, ImageId};
 use fret_icons::FrozenIconRegistry;
 use fret_ui::element::{ImageProps, LayoutStyle, Length, SvgIconProps};
-use fret_ui_assets::ui::{ImageSourceElementContextExt as _, SvgAssetElementContextExt as _};
 
 const TEST_ID_ROOT: &str = "cookbook.icons_and_assets_basics.root";
 const TEST_ID_PANEL_ICONS: &str = "cookbook.icons_and_assets_basics.panel.icons";
@@ -103,7 +102,7 @@ fn render_image_preview(
 
 struct IconsAndAssetsBasicsView {
     bundle_image_request: AssetRequest,
-    memory_image: fret_ui_assets::ImageSource,
+    memory_image: ui_assets::ImageSource,
     svg_request: AssetRequest,
 }
 
@@ -113,7 +112,7 @@ impl View for IconsAndAssetsBasicsView {
             demo_package_bundle(),
             PACKAGE_IMAGE_KEY,
         ));
-        let memory_image = fret_ui_assets::ImageSource::rgba8(
+        let memory_image = ui_assets::ImageSource::rgba8(
             128,
             128,
             checkerboard_rgba8(128, 128, 16),
@@ -264,16 +263,15 @@ impl View for IconsAndAssetsBasicsView {
         .w_full()
         .test_id(TEST_ID_PANEL_ICONS);
 
-        let bundle_image_state = cx
-            .elements()
-            .use_image_source_state_from_asset_request(&self.bundle_image_request);
-        let memory_image_state = cx.elements().use_image_source_state(&self.memory_image);
+        let bundle_image_state =
+            ui_assets::image_source_state_from_asset_request(cx, &self.bundle_image_request);
+        let memory_image_state = ui_assets::image_source_state(cx, &self.memory_image);
 
         let image_status = match bundle_image_state.status {
-            fret_ui_assets::image_asset_state::ImageLoadingStatus::Idle => "idle",
-            fret_ui_assets::image_asset_state::ImageLoadingStatus::Loading => "loading",
-            fret_ui_assets::image_asset_state::ImageLoadingStatus::Loaded => "ready",
-            fret_ui_assets::image_asset_state::ImageLoadingStatus::Error => "error",
+            ui_assets::ImageLoadingStatus::Idle => "idle",
+            ui_assets::ImageLoadingStatus::Loading => "loading",
+            ui_assets::ImageLoadingStatus::Loaded => "ready",
+            ui_assets::ImageLoadingStatus::Error => "error",
         };
 
         let image_panel = shadcn::card(|cx| {
@@ -335,9 +333,7 @@ impl View for IconsAndAssetsBasicsView {
         .w_full()
         .test_id(TEST_ID_PANEL_IMAGE);
 
-        let svg_state = cx
-            .elements()
-            .svg_source_state_from_asset_request(&self.svg_request);
+        let svg_state = ui_assets::svg_source_state_from_asset_request(cx, &self.svg_request);
         let svg_status = if svg_state.source.is_some() {
             "ready"
         } else {

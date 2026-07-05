@@ -116,6 +116,14 @@ mod surface_policy_tests {
         assert!(!public_surface.contains("pub fn image_stats_in("));
         assert!(!public_surface.contains("pub fn svg_stats_in("));
         assert!(UI_RS.contains("pub fn use_rgba8_image_state_in<'a, H: UiHost + 'a, Cx>("));
+        assert!(UI_RS.contains("pub fn use_image_source_state_in<'a, H: UiHost + 'a, Cx>("));
+        assert!(UI_RS.contains(
+            "pub fn use_image_source_state_from_asset_request_in<'a, H: UiHost + 'a, Cx>("
+        ));
+        assert!(
+            UI_RS
+                .contains("pub fn svg_source_state_from_asset_request_in<'a, H: UiHost + 'a, Cx>(")
+        );
         assert!(UI_RS.contains("pub fn image_stats_in<'a, H: UiHost + 'a, Cx>("));
         assert!(UI_RS.contains("pub fn svg_stats_in<'a, H: UiHost + 'a, Cx>("));
     }

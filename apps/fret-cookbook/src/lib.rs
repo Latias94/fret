@@ -215,6 +215,15 @@ mod authoring_surface_policy_tests {
     ) {
         let normalized = src.split_whitespace().collect::<String>();
         assert!(normalized.contains("AppComponentCx<'_>"));
+        assert_advanced_helpers_contain_markers(src, required_markers, forbidden_markers);
+    }
+
+    fn assert_advanced_helpers_contain_markers(
+        src: &str,
+        required_markers: &[&str],
+        forbidden_markers: &[&str],
+    ) {
+        let normalized = src.split_whitespace().collect::<String>();
         for marker in required_markers {
             let marker = marker.split_whitespace().collect::<String>();
             assert!(normalized.contains(&marker), "missing marker: {marker}");
@@ -1232,6 +1241,19 @@ mod authoring_surface_policy_tests {
             icons_and_assets_normalized
                 .contains(".setup((IconsAndAssetsBundle,fret_cookbook::install_cookbook_defaults")
         );
+        assert!(icons_and_assets_normalized.contains(
+            "ui_assets::image_source_state_from_asset_request(cx,&self.bundle_image_request);"
+        ));
+        assert!(
+            icons_and_assets_normalized
+                .contains("ui_assets::image_source_state(cx,&self.memory_image);")
+        );
+        assert!(
+            icons_and_assets_normalized
+                .contains("ui_assets::svg_source_state_from_asset_request(cx,&self.svg_request);")
+        );
+        assert!(!ICONS_AND_ASSETS_EXAMPLE.contains("cx.elements()"));
+        assert!(!ICONS_AND_ASSETS_EXAMPLE.contains("fret_ui_assets::ui::"));
         assert!(!icons_and_assets_normalized.contains(
             ".setup((fret_cookbook::install_cookbook_defaults,fret_icons_lucide::app::install))"
         ));
@@ -1263,6 +1285,17 @@ mod authoring_surface_policy_tests {
             APP_OWNED_BUNDLE_ASSETS_EXAMPLE.contains("without native-only file path assumptions.")
         );
         assert!(!APP_OWNED_BUNDLE_ASSETS_EXAMPLE.contains("ImageSource::from_file_path"));
+        assert!(
+            APP_OWNED_BUNDLE_ASSETS_EXAMPLE.contains(
+                "ui_assets::image_source_state_from_asset_request(cx, &self.image_request)"
+            )
+        );
+        assert!(
+            APP_OWNED_BUNDLE_ASSETS_EXAMPLE
+                .contains("ui_assets::svg_source_state_from_asset_request(cx, &self.svg_request)")
+        );
+        assert!(!APP_OWNED_BUNDLE_ASSETS_EXAMPLE.contains("cx.elements()"));
+        assert!(!APP_OWNED_BUNDLE_ASSETS_EXAMPLE.contains("fret_ui_assets::ui::"));
         assert!(ASSETS_RELOAD_EPOCH_EXAMPLE.contains("use fret::app::prelude::*;"));
         assert!(!ASSETS_RELOAD_EPOCH_EXAMPLE.contains("advanced::prelude::*"));
         assert!(ASSETS_RELOAD_EPOCH_EXAMPLE.contains("fret::assets::bump_asset_reload_epoch"));
@@ -1276,6 +1309,8 @@ mod authoring_surface_policy_tests {
         assert!(ASSETS_RELOAD_EPOCH_EXAMPLE.contains("cx.state().local::<u64>()"));
         assert!(ASSETS_RELOAD_EPOCH_EXAMPLE.contains(".local(&bumps_state)"));
         assert!(ASSETS_RELOAD_EPOCH_EXAMPLE.contains(".update::<act::BumpReload>(|value| {"));
+        assert!(!ASSETS_RELOAD_EPOCH_EXAMPLE.contains("cx.elements()"));
+        assert!(!ASSETS_RELOAD_EPOCH_EXAMPLE.contains("fret_ui_assets::ui::"));
 
         assert!(CUSTOM_V1_EXAMPLE.contains("use fret::{FretApp, advanced::prelude::*, shadcn};"));
         assert!(CUSTOM_V1_EXAMPLE.contains("EffectStep::CustomV1"));
@@ -1348,10 +1383,17 @@ mod authoring_surface_policy_tests {
             ICONS_AND_ASSETS_EXAMPLE,
         ] {
             assert_uses_app_surface(src);
-            assert!(src.contains("use fret::app::AppComponentCx;"));
             assert!(!src.contains("advanced::prelude::*"));
             assert!(!src.contains("advanced::raw::"));
             assert!(!src.contains("use fret::advanced"));
+        }
+
+        for src in [
+            DROP_SHADOW_EXAMPLE,
+            EFFECTS_LAYER_EXAMPLE,
+            ICONS_AND_ASSETS_EXAMPLE,
+        ] {
+            assert!(src.contains("use fret::app::AppComponentCx;"));
         }
     }
 
@@ -1412,12 +1454,14 @@ mod authoring_surface_policy_tests {
             ],
         );
 
-        assert_advanced_helpers_prefer_app_component_cx(
+        assert_advanced_helpers_contain_markers(
             ASSETS_RELOAD_EPOCH_EXAMPLE,
             &[
-                "fn render_image_panel(_cx: &mut AppComponentCx<'_>,",
+                "fn render_image_panel(",
+                "st: ui_assets::ImageSourceState,",
                 ") -> impl IntoUiElement<App> + use<>",
-                "fn render_svg_panel(_cx: &mut AppComponentCx<'_>,",
+                "fn render_svg_panel(",
+                "st: ui_assets::SvgAssetSourceState,",
                 ") -> impl IntoUiElement<App> + use<>",
             ],
             &[
@@ -1425,6 +1469,8 @@ mod authoring_surface_policy_tests {
                 "fn render_svg_panel(cx: &mut ElementContext<'_, KernelApp>,",
                 "fn render_image_panel(cx: &mut AppComponentCx<'_>, theme: &ThemeSnapshot, st: fret_ui_assets::ImageSourceState,) -> AnyElement",
                 "fn render_svg_panel(cx: &mut AppComponentCx<'_>, theme: &ThemeSnapshot, st: fret_ui_assets::SvgFileState,) -> AnyElement",
+                "fn render_image_panel(_cx: &mut AppComponentCx<'_>,",
+                "fn render_svg_panel(_cx: &mut AppComponentCx<'_>,",
             ],
         );
 
@@ -1454,21 +1500,25 @@ mod authoring_surface_policy_tests {
         let normalized = ASSETS_RELOAD_EPOCH_EXAMPLE
             .split_whitespace()
             .collect::<String>();
-        assert!(normalized.contains(
-            &"use fret_ui_assets::ui::{ImageSourceElementContextExt as _, SvgAssetElementContextExt as _, image_stats_in, svg_stats_in,};"
-                .split_whitespace()
-                .collect::<String>()
-        ));
         assert!(
             normalized.contains(
-                &"let images = image_stats_in(cx);"
+                "ui_assets::image_source_state_from_asset_request(cx,&self.image_request);"
+            )
+        );
+        assert!(
+            normalized
+                .contains("ui_assets::svg_source_state_from_asset_request(cx,&self.svg_request);")
+        );
+        assert!(
+            normalized.contains(
+                &"let images = ui_assets::image_stats(cx);"
                     .split_whitespace()
                     .collect::<String>()
             )
         );
         assert!(
             normalized.contains(
-                &"let svgs = svg_stats_in(cx);"
+                &"let svgs = ui_assets::svg_stats(cx);"
                     .split_whitespace()
                     .collect::<String>()
             )

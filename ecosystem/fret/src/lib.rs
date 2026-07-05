@@ -98,8 +98,8 @@
 //!   `AssetLocator::file(...)` / `AssetLocator::url(...)` as capability-gated escape hatches;
 //!   when native/dev-only UI helpers still need file reload ergonomics, keep app/widget code on
 //!   logical bundle locators and let
-//!   `fret-ui-assets::ui::ImageSourceElementContextExt::use_image_source_state_from_asset_request(...)`
-//!   or `fret-ui-assets::ui::SvgAssetElementContextExt::svg_source_state_from_asset_request(...)`
+//!   `fret::app::ui_assets::image_source_state_from_asset_request(cx, ...)`
+//!   or `fret::app::ui_assets::svg_source_state_from_asset_request(cx, ...)`
 //!   consume the resolver's bundle/reference bridge instead of constructing raw file-path sources
 //!   directly; keep `resolve_image_source_from_host_locator(...)` /
 //!   `resolve_svg_source_from_host_locator(...)` as the lower-level UI-ready source seams, and use
@@ -860,6 +860,82 @@ pub mod app {
         }
     }
 
+    /// App-facing UI asset helpers for the default render lane.
+    ///
+    /// These wrappers keep app and cookbook code on `AppUi` / `AppRenderContext` while still using
+    /// the ViewCache-safe observation hooks owned by `fret-ui-assets`.
+    #[cfg(feature = "ui-assets")]
+    pub mod ui_assets {
+        pub use fret_ui_assets::app::{configure_caches, configure_caches_with_budgets};
+        pub use fret_ui_assets::image_asset_cache::ImageAssetStats;
+        pub use fret_ui_assets::image_asset_state::ImageLoadingStatus;
+        pub use fret_ui_assets::image_source::{ImageSource, ImageSourceOptions, ImageSourceState};
+        pub use fret_ui_assets::svg_asset_cache::SvgAssetStats;
+        pub use fret_ui_assets::ui::SvgAssetSourceState;
+        pub use fret_ui_assets::ui_assets::{UiAssets, UiAssetsBudgets};
+
+        pub fn image_source_state<'a, Cx>(cx: &mut Cx, source: &ImageSource) -> ImageSourceState
+        where
+            Cx: crate::app::AppRenderContext<'a>,
+        {
+            fret_ui_assets::ui::use_image_source_state_in(cx, source)
+        }
+
+        pub fn image_source_state_from_asset_request<'a, Cx>(
+            cx: &mut Cx,
+            request: &crate::assets::AssetRequest,
+        ) -> ImageSourceState
+        where
+            Cx: crate::app::AppRenderContext<'a>,
+        {
+            fret_ui_assets::ui::use_image_source_state_from_asset_request_in(cx, request)
+        }
+
+        pub fn image_source_state_from_asset_locator<'a, Cx>(
+            cx: &mut Cx,
+            locator: crate::assets::AssetLocator,
+        ) -> ImageSourceState
+        where
+            Cx: crate::app::AppRenderContext<'a>,
+        {
+            fret_ui_assets::ui::use_image_source_state_from_asset_locator_in(cx, locator)
+        }
+
+        pub fn svg_source_state_from_asset_request<'a, Cx>(
+            cx: &mut Cx,
+            request: &crate::assets::AssetRequest,
+        ) -> SvgAssetSourceState
+        where
+            Cx: crate::app::AppRenderContext<'a>,
+        {
+            fret_ui_assets::ui::svg_source_state_from_asset_request_in(cx, request)
+        }
+
+        pub fn svg_source_state_from_asset_locator<'a, Cx>(
+            cx: &mut Cx,
+            locator: crate::assets::AssetLocator,
+        ) -> SvgAssetSourceState
+        where
+            Cx: crate::app::AppRenderContext<'a>,
+        {
+            fret_ui_assets::ui::svg_source_state_from_asset_locator_in(cx, locator)
+        }
+
+        pub fn image_stats<'a, Cx>(cx: &mut Cx) -> ImageAssetStats
+        where
+            Cx: crate::app::AppRenderContext<'a>,
+        {
+            fret_ui_assets::ui::image_stats_in(cx)
+        }
+
+        pub fn svg_stats<'a, Cx>(cx: &mut Cx) -> SvgAssetStats
+        where
+            Cx: crate::app::AppRenderContext<'a>,
+        {
+            fret_ui_assets::ui::svg_stats_in(cx)
+        }
+    }
+
     /// Common imports for app code on the default authoring surface.
     pub mod prelude {
         pub use crate::FretApp;
@@ -867,6 +943,8 @@ pub mod app {
         pub use crate::app::AppRenderContext;
         pub use crate::app::AppRenderCx;
         pub use crate::app::text;
+        #[cfg(feature = "ui-assets")]
+        pub use crate::app::ui_assets;
         #[cfg(feature = "shadcn")]
         pub use crate::shadcn;
         pub use crate::view::AppLocalStateExt as _;
@@ -3527,13 +3605,13 @@ mod authoring_surface_policy_tests {
         assert!(!CRATE_README.contains("`UiAppBuilder::with_asset_dir(...)`"));
         assert!(!CRATE_README.contains("`FretApp::asset_manifest(...)`"));
         assert!(!CRATE_README.contains("`UiAppBuilder::with_asset_manifest(...)`"));
-        assert!(CRATE_README.contains(
-            "`fret-ui-assets::ui::ImageSourceElementContextExt::use_image_source_state_from_asset_request(...)`"
-        ));
         assert!(
-            CRATE_README.contains(
-                "`fret-ui-assets::ui::SvgAssetElementContextExt::svg_source_state_from_asset_request(...)`"
-            )
+            CRATE_README
+                .contains("`fret::app::ui_assets::image_source_state_from_asset_request(cx, ...)`")
+        );
+        assert!(
+            CRATE_README
+                .contains("`fret::app::ui_assets::svg_source_state_from_asset_request(cx, ...)`")
         );
 
         let rustdoc = crate_rustdoc();
@@ -3558,13 +3636,13 @@ mod authoring_surface_policy_tests {
         assert!(!rustdoc.contains("`UiAppBuilder::with_asset_manifest(...)`"));
         assert!(rustdoc.contains("`AssetLocator::file(...)`"));
         assert!(rustdoc.contains("`AssetLocator::url(...)`"));
-        assert!(rustdoc.contains(
-            "`fret-ui-assets::ui::ImageSourceElementContextExt::use_image_source_state_from_asset_request(...)`"
-        ));
         assert!(
-            rustdoc.contains(
-                "`fret-ui-assets::ui::SvgAssetElementContextExt::svg_source_state_from_asset_request(...)`"
-            )
+            rustdoc
+                .contains("`fret::app::ui_assets::image_source_state_from_asset_request(cx, ...)`")
+        );
+        assert!(
+            rustdoc
+                .contains("`fret::app::ui_assets::svg_source_state_from_asset_request(cx, ...)`")
         );
         assert!(public_surface.contains("pub mod assets {"));
         assert!(!public_surface.contains("pub use fret_runtime::register_bundle_asset_entries;"));
@@ -3782,14 +3860,13 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_USAGE_GUIDE.contains("`AssetStartupPlan::packaged_bundle_entries(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`AssetStartupPlan::packaged_embedded_entries(...)`"));
         assert!(!CRATE_USAGE_GUIDE.contains("the bootstrap crate also exposes the matching"));
-        assert!(CRATE_USAGE_GUIDE.contains(
-            "`fret-ui-assets::ui::ImageSourceElementContextExt::use_image_source_state_from_asset_request(...)`"
-        ));
         assert!(
             CRATE_USAGE_GUIDE
-                .contains(
-                    "`fret-ui-assets::ui::SvgAssetElementContextExt::svg_source_state_from_asset_request(...)`"
-                )
+                .contains("`fret::app::ui_assets::image_source_state_from_asset_request(cx, ...)`")
+        );
+        assert!(
+            CRATE_USAGE_GUIDE
+                .contains("`fret::app::ui_assets::svg_source_state_from_asset_request(cx, ...)`")
         );
         assert!(CRATE_USAGE_GUIDE.contains("`widget.action(act::Save)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`widget.action_payload(act::Remove, payload)`"));
@@ -4062,7 +4139,8 @@ mod authoring_surface_policy_tests {
                 .contains("`IconRegistry` mutation plus `register_bundle_entries(...)` manually")
         );
         assert!(
-            CRATE_USAGE_GUIDE.contains("`fret_ui_assets::app::configure_caches_with_budgets(...)`")
+            CRATE_USAGE_GUIDE
+                .contains("`fret::app::ui_assets::configure_caches_with_budgets(...)`")
         );
         assert!(CRATE_USAGE_GUIDE.contains(
             "`fret_ui_assets::advanced::{configure_caches_with_ui_services(...), configure_caches_with_ui_services_and_budgets(...)}`"
@@ -4339,9 +4417,11 @@ mod authoring_surface_policy_tests {
         assert!(app_prelude.contains("pub use crate::app::App;"));
         assert!(app_prelude.contains("pub use crate::app::AppRenderCx;"));
         assert!(app_prelude.contains("pub use crate::app::text;"));
+        assert!(app_prelude.contains("pub use crate::app::ui_assets;"));
         assert!(app_prelude_exports_symbol("App"));
         assert!(app_prelude_exports_symbol("AppRenderCx"));
         assert!(app_prelude_exports_symbol("text"));
+        assert!(app_prelude_exports_symbol("ui_assets"));
         assert!(!app_prelude_exports_symbol("AppComponentCx"));
         assert!(!app_prelude_exports_symbol("UiCx"));
         assert!(app_prelude.contains("AppUi"));
@@ -4464,6 +4544,7 @@ mod authoring_surface_policy_tests {
             "pub use crate::app::AppRenderContext;",
             "pub use crate::app::AppRenderCx;",
             "pub use crate::app::text;",
+            "pub use crate::app::ui_assets;",
             "pub use crate::shadcn;",
             "pub use crate::view::AppLocalStateExt as _;",
             "pub use crate::view::AppRenderActionsExt as _;",
@@ -4507,6 +4588,7 @@ mod authoring_surface_policy_tests {
             "shadcn",
             "text",
             "ui",
+            "ui_assets",
         ]
         .into_iter()
         .map(str::to_owned)
@@ -4519,6 +4601,7 @@ mod authoring_surface_policy_tests {
 
         let compact = app_prelude.split_whitespace().collect::<String>();
         assert!(compact.contains("#[cfg(feature=\"shadcn\")]pubusecrate::shadcn;"));
+        assert!(compact.contains("#[cfg(feature=\"ui-assets\")]pubusecrate::app::ui_assets;"));
         assert!(compact.contains(
             "#[cfg(feature=\"state-mutation\")]pubusecrate::view::MutationHandleReadLayoutExtas_;"
         ));
@@ -4564,6 +4647,32 @@ mod authoring_surface_policy_tests {
         assert!(app_prelude_exports_symbol("text"));
         assert!(!app_prelude_exports_symbol("AnyElement"));
         assert!(!app_prelude_exports_symbol("ElementContext"));
+    }
+
+    #[test]
+    fn app_ui_assets_facade_keeps_asset_state_off_raw_element_context() {
+        assert!(LIB_RS.contains("pub mod ui_assets {"));
+        assert!(LIB_RS.contains("pub fn image_source_state<'a, Cx>("));
+        assert!(LIB_RS.contains("pub fn image_source_state_from_asset_request<'a, Cx>("));
+        assert!(LIB_RS.contains("pub fn svg_source_state_from_asset_request<'a, Cx>("));
+        assert!(LIB_RS.contains("pub fn image_stats<'a, Cx>("));
+        assert!(LIB_RS.contains("pub fn svg_stats<'a, Cx>("));
+        assert!(LIB_RS.contains("Cx: crate::app::AppRenderContext<'a>"));
+        assert!(LIB_RS.contains("fret_ui_assets::ui::use_image_source_state_in(cx, source)"));
+        assert!(LIB_RS.contains(
+            "fret_ui_assets::ui::use_image_source_state_from_asset_request_in(cx, request)"
+        ));
+        assert!(
+            LIB_RS.contains(
+                "fret_ui_assets::ui::svg_source_state_from_asset_request_in(cx, request)"
+            )
+        );
+        assert!(LIB_RS.contains("fret_ui_assets::ui::image_stats_in(cx)"));
+        assert!(LIB_RS.contains("fret_ui_assets::ui::svg_stats_in(cx)"));
+        assert!(app_prelude_exports_symbol("ui_assets"));
+        assert!(!app_prelude_exports_symbol("ImageSource"));
+        assert!(!app_prelude_exports_symbol("ImageSourceState"));
+        assert!(!app_prelude_exports_symbol("SvgAssetSourceState"));
     }
 
     #[test]

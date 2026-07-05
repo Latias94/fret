@@ -1,4 +1,3 @@
-use fret::app::AppComponentCx;
 use fret::app::RenderContextAccess as _;
 use fret::app::prelude::*;
 use fret::assets::{AssetBundleId, AssetLocator, AssetRequest, AssetStartupMode, AssetStartupPlan};
@@ -6,9 +5,6 @@ use fret::children::UiElementSinkExt as _;
 use fret::component::prelude::IntoUiElement;
 use fret::style::{ColorRef, Radius, Space, ThemeSnapshot};
 use fret_ui::element::{ImageProps, LayoutStyle, Length, SizeStyle, SvgIconProps};
-use fret_ui_assets::ui::{
-    ImageSourceElementContextExt as _, SvgAssetElementContextExt as _, image_stats_in, svg_stats_in,
-};
 use std::path::PathBuf;
 
 mod act {
@@ -49,7 +45,7 @@ struct AssetsReloadEpochBasicsView {
 impl View for AssetsReloadEpochBasicsView {
     fn init(app: &mut App, window: WindowId) -> Self {
         // Optional: configure budgets explicitly so this example is self-contained.
-        fret_ui_assets::UiAssets::configure(app, fret_ui_assets::UiAssetsBudgets::default());
+        ui_assets::configure_caches_with_budgets(app, ui_assets::UiAssetsBudgets::default());
 
         let image_request = AssetRequest::new(AssetLocator::bundle(demo_app_bundle(), IMAGE_KEY));
         let svg_request = AssetRequest::new(AssetLocator::bundle(demo_app_bundle(), SVG_KEY));
@@ -102,18 +98,15 @@ impl View for AssetsReloadEpochBasicsView {
         .gap(Space::N2)
         .items_center();
 
-        let file_image_state = cx
-            .elements()
-            .use_image_source_state_from_asset_request(&self.image_request);
-        let image_panel = render_image_panel(cx.elements(), &theme, file_image_state);
+        let file_image_state =
+            ui_assets::image_source_state_from_asset_request(cx, &self.image_request);
+        let image_panel = render_image_panel(&theme, file_image_state);
 
-        let svg_file_state = cx
-            .elements()
-            .svg_source_state_from_asset_request(&self.svg_request);
-        let svg_panel = render_svg_panel(cx.elements(), &theme, svg_file_state);
+        let svg_file_state = ui_assets::svg_source_state_from_asset_request(cx, &self.svg_request);
+        let svg_panel = render_svg_panel(&theme, svg_file_state);
 
-        let images = image_stats_in(cx);
-        let svgs = svg_stats_in(cx);
+        let images = ui_assets::image_stats(cx);
+        let svgs = ui_assets::svg_stats(cx);
         let stats = shadcn::Alert::build(|cx, out| {
             out.push_ui(cx, shadcn::AlertTitle::new("Budgets + cache stats"));
             out.push_ui(
@@ -158,15 +151,14 @@ impl View for AssetsReloadEpochBasicsView {
 }
 
 fn render_image_panel(
-    _cx: &mut AppComponentCx<'_>,
     theme: &ThemeSnapshot,
-    st: fret_ui_assets::ImageSourceState,
+    st: ui_assets::ImageSourceState,
 ) -> impl IntoUiElement<App> + use<> {
     let status = match st.status {
-        fret_ui_assets::image_asset_state::ImageLoadingStatus::Idle => "idle",
-        fret_ui_assets::image_asset_state::ImageLoadingStatus::Loading => "loading",
-        fret_ui_assets::image_asset_state::ImageLoadingStatus::Loaded => "ready",
-        fret_ui_assets::image_asset_state::ImageLoadingStatus::Error => "error",
+        ui_assets::ImageLoadingStatus::Idle => "idle",
+        ui_assets::ImageLoadingStatus::Loading => "loading",
+        ui_assets::ImageLoadingStatus::Loaded => "ready",
+        ui_assets::ImageLoadingStatus::Error => "error",
     };
     let border = ColorRef::Color(theme.color_token("border"));
 
@@ -239,9 +231,8 @@ fn render_image_panel(
 }
 
 fn render_svg_panel(
-    _cx: &mut AppComponentCx<'_>,
     theme: &ThemeSnapshot,
-    st: fret_ui_assets::ui::SvgAssetSourceState,
+    st: ui_assets::SvgAssetSourceState,
 ) -> impl IntoUiElement<App> + use<> {
     let status = if st.error.is_some() {
         "error"
