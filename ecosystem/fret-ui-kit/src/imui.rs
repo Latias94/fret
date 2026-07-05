@@ -37,6 +37,7 @@ mod drag_drop;
 mod exports;
 mod facade_support;
 mod facade_writer;
+mod float_model;
 mod floating_options;
 mod floating_surface;
 mod floating_window;
@@ -57,6 +58,7 @@ mod list_box_controls;
 mod menu_controls;
 mod menu_family_controls;
 mod multi_select;
+mod optional_text_model;
 mod options;
 mod popup_overlay;
 mod popup_store;
@@ -68,6 +70,7 @@ mod tab_family_controls;
 mod table_column_visibility;
 mod table_controls;
 mod text_controls;
+mod text_model;
 mod text_picker_controls;
 mod tooltip_overlay;
 mod virtual_list_controls;
@@ -90,6 +93,7 @@ use facade_support::{
     slider_step_or_default, slider_value_from_pointer, snap_point_to_device_pixels,
     snap_size_to_device_pixels,
 };
+pub use float_model::IntoImUiFloatModel;
 use floating_surface::{
     FloatWindowResizeHandle, FloatWindowState, FloatingAreaState, FloatingWindowChromeResponse,
     KEY_FLOAT_WINDOW_ACTIVATE, KEY_FLOAT_WINDOW_TOGGLE_COLLAPSED, OnFloatingAreaLeftDoubleClick,
@@ -112,6 +116,8 @@ use interaction_runtime::{
     populate_response_lifecycle_from_active_state, prepare_pointer_region_drag_on_left_down,
     prepare_pressable_drag_on_pointer_down, sanitize_response_for_enabled,
 };
+pub use optional_text_model::IntoImUiOptionalTextModel;
 use popup_store::{
     drop_popup_scope_for_id, popup_render_generation_for_window, with_popup_store_for_id,
 };
+pub use text_model::IntoImUiTextModel;

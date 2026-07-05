@@ -5,7 +5,7 @@ impl<'cx, 'a, H: UiHost> ImUiFacade<'cx, 'a, H> {
         &mut self,
         id: &str,
         label: impl Into<Arc<str>>,
-        model: &fret_runtime::Model<Option<Arc<str>>>,
+        model: impl crate::imui::IntoImUiOptionalTextModel,
         items: &[Arc<str>],
     ) -> ResponseExt {
         self.combo_model_with_options(id, label, model, items, ComboModelOptions::default())
@@ -15,10 +15,11 @@ impl<'cx, 'a, H: UiHost> ImUiFacade<'cx, 'a, H> {
         &mut self,
         id: &str,
         label: impl Into<Arc<str>>,
-        model: &fret_runtime::Model<Option<Arc<str>>>,
+        model: impl crate::imui::IntoImUiOptionalTextModel,
         items: &[Arc<str>],
         options: ComboModelOptions,
     ) -> ResponseExt {
+        let model = model.into_imui_optional_text_model();
         let enabled = options.enabled && self.with_cx_mut(|cx| !imui_is_disabled(cx));
         let focusable = enabled && options.focusable;
         let resp = <Self as UiWriterImUiFacadeExt<H>>::combo_model_with_options(

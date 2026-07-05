@@ -287,6 +287,9 @@ When widget-owned activation callbacks have `&mut dyn UiActionHost`, use
 `host.local_state_txn(|tx| ...)` for the same reason.
 On the explicit `fret::imui` lane, boolean model controls accept app-local state directly:
 `ui.checkbox_model("Enabled", &enabled_state)` / `ui.switch_model("Enabled", &enabled_state)`.
+Text and value controls follow the same rule:
+`ui.input_text_model(&draft_state)`, `ui.slider_f32_model("Value", &value_state)`, and
+`ui.combo_model("mode.popup", "Mode", &mode_state, &items)`.
 For adjacent IMUI button or callback writes that receive `&mut App`, use
 `app.local_state_txn(|tx| ...)` instead of importing the raw LocalState model bridge.
 When app code needs explicit command identity, metadata, availability, keybinding, keymap, or

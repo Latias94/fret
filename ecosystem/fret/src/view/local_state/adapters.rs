@@ -1,4 +1,4 @@
-#[cfg(feature = "shadcn")]
+#[cfg(any(feature = "imui", feature = "shadcn"))]
 use std::sync::Arc;
 
 use fret_runtime::Model;
@@ -79,6 +79,48 @@ impl fret_ui_kit::imui::IntoImUiBoolModel for LocalState<bool> {
 #[cfg(feature = "imui")]
 impl fret_ui_kit::imui::IntoImUiBoolModel for &LocalState<bool> {
     fn into_imui_bool_model(self) -> Model<bool> {
+        self.clone_model()
+    }
+}
+
+#[cfg(feature = "imui")]
+impl fret_ui_kit::imui::IntoImUiTextModel for LocalState<String> {
+    fn into_imui_text_model(self) -> Model<String> {
+        self.clone_model()
+    }
+}
+
+#[cfg(feature = "imui")]
+impl fret_ui_kit::imui::IntoImUiTextModel for &LocalState<String> {
+    fn into_imui_text_model(self) -> Model<String> {
+        self.clone_model()
+    }
+}
+
+#[cfg(feature = "imui")]
+impl fret_ui_kit::imui::IntoImUiFloatModel for LocalState<f32> {
+    fn into_imui_float_model(self) -> Model<f32> {
+        self.clone_model()
+    }
+}
+
+#[cfg(feature = "imui")]
+impl fret_ui_kit::imui::IntoImUiFloatModel for &LocalState<f32> {
+    fn into_imui_float_model(self) -> Model<f32> {
+        self.clone_model()
+    }
+}
+
+#[cfg(feature = "imui")]
+impl fret_ui_kit::imui::IntoImUiOptionalTextModel for LocalState<Option<Arc<str>>> {
+    fn into_imui_optional_text_model(self) -> Model<Option<Arc<str>>> {
+        self.clone_model()
+    }
+}
+
+#[cfg(feature = "imui")]
+impl fret_ui_kit::imui::IntoImUiOptionalTextModel for &LocalState<Option<Arc<str>>> {
+    fn into_imui_optional_text_model(self) -> Model<Option<Arc<str>>> {
         self.clone_model()
     }
 }

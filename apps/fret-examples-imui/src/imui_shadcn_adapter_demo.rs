@@ -6,9 +6,8 @@
 
 use std::sync::Arc;
 
-use fret::advanced::raw::{LocalStateModelStoreExt as _, LocalStateRawModelExt as _};
 #[rustfmt::skip]
-use fret::{FretApp, advanced::prelude::*, imui::prelude::*};
+use fret::{FretApp, advanced::prelude::*, app::AppLocalStateTxnExt as _, imui::prelude::*};
 use fret_core::Px;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, Invalidation};
@@ -270,13 +269,14 @@ impl View for ImUiShadcnAdapterView {
                                     },
                                 );
                                 if increment.clicked() {
-                                    let _ = count_state
-                                        .update_in(ui.cx_mut().app.models_mut(), |v| *v += 1);
+                                    ui.cx_mut()
+                                        .app
+                                        .local_state_txn(|tx| tx.update(&count_state, |v| *v += 1));
                                 }
 
                                 let _ = ui.switch_model_with_options(
                                     "Enabled (switch)",
-                                    enabled_state.model(),
+                                    &enabled_state,
                                     kit::SwitchOptions {
                                         test_id: Some(Arc::from(TEST_ID_ENABLED)),
                                         ..Default::default()
@@ -285,7 +285,7 @@ impl View for ImUiShadcnAdapterView {
 
                                 let _ = ui.slider_f32_model_with_options(
                                     "Value",
-                                    value_state.model(),
+                                    &value_state,
                                     kit::SliderOptions {
                                         min: 0.0,
                                         max: 100.0,
@@ -298,7 +298,7 @@ impl View for ImUiShadcnAdapterView {
                                 let _ = ui.combo_model_with_options(
                                     "imui-shadcn-demo.mode.popup",
                                     "Mode",
-                                    mode_state.model(),
+                                    &mode_state,
                                     &select_items,
                                     kit::ComboModelOptions {
                                         test_id: Some(Arc::from(TEST_ID_MODE)),
@@ -307,7 +307,7 @@ impl View for ImUiShadcnAdapterView {
                                 );
 
                                 let _ = ui.input_text_model_with_options(
-                                    draft_state.model(),
+                                    &draft_state,
                                     kit::InputTextOptions {
                                         placeholder: Some(Arc::from("Type some text...")),
                                         test_id: Some(Arc::from(TEST_ID_DRAFT)),
@@ -534,10 +534,11 @@ impl View for ImUiShadcnAdapterView {
                                     .header(sort_column_id)
                                     .is_some_and(|header| header.clicked())
                                 {
-                                    let _ = inspector_sort_state
-                                        .update_in(ui.cx_mut().app.models_mut(), |sort| {
+                                    ui.cx_mut()
+                                        .app
+                                        .local_state_txn(|tx| tx.update(&inspector_sort_state, |sort| {
                                             *sort = sort.toggled();
-                                        });
+                                        }));
                                 }
                                 if compact_surface {
                                     apply_inspector_width_delta(
@@ -740,9 +741,11 @@ fn apply_inspector_width_delta(
         return;
     }
 
-    let _ = widths_state.update_in(ui.cx_mut().app.models_mut(), |widths| {
-        let width = select_width(widths);
-        *width = clamped_width_delta(*width, delta_x, min_width, max_width);
+    ui.cx_mut().app.local_state_txn(|tx| {
+        tx.update(widths_state, |widths| {
+            let width = select_width(widths);
+            *width = clamped_width_delta(*width, delta_x, min_width, max_width);
+        })
     });
 }
 
