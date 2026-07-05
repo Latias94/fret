@@ -290,6 +290,8 @@ On the explicit `fret::imui` lane, boolean model controls accept app-local state
 Text and value controls follow the same rule:
 `ui.input_text_model(&draft_state)`, `ui.slider_f32_model("Value", &value_state)`, and
 `ui.combo_model("mode.popup", "Mode", &mode_state, &items)`.
+For IMUI tab state, prefer `kit::TabBarOptions::default().selected_model(&tab_state)` over
+reopening a raw `Model<Option<Arc<str>>>` handle.
 For adjacent IMUI button or callback writes that receive `&mut App`, use
 `app.local_state_txn(|tx| ...)` instead of importing the raw LocalState model bridge.
 When app code needs explicit command identity, metadata, availability, keybinding, keymap, or

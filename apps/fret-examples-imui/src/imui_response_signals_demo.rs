@@ -11,8 +11,7 @@
 
 use std::sync::Arc;
 
-use fret::advanced::raw::{LocalStateModelStoreExt as _, LocalStateRawModelExt as _};
-use fret::{FretApp, advanced::prelude::*, imui::prelude::*};
+use fret::{FretApp, advanced::prelude::*, app::AppLocalStateTxnExt as _, imui::prelude::*};
 use fret_core::{Point, Px, Rect};
 
 struct ImUiResponseSignalsView;
@@ -138,19 +137,28 @@ impl View for ImUiResponseSignalsView {
 
             let click = ui.button("Click variants (left/right/double/long-press)");
             if click.clicked() {
-                let _ = left_clicks.update_in(ui.cx_mut().app.models_mut(), |value| *value += 1);
+                ui.cx_mut()
+                    .app
+                    .local_state_txn(|tx| tx.update(&left_clicks, |value| *value += 1));
             }
             if click.secondary_clicked() {
-                let _ =
-                    secondary_clicks.update_in(ui.cx_mut().app.models_mut(), |value| *value += 1);
+                ui.cx_mut()
+                    .app
+                    .local_state_txn(|tx| tx.update(&secondary_clicks, |value| *value += 1));
             }
             if click.double_clicked() {
-                let _ = double_clicks.update_in(ui.cx_mut().app.models_mut(), |value| *value += 1);
+                ui.cx_mut()
+                    .app
+                    .local_state_txn(|tx| tx.update(&double_clicks, |value| *value += 1));
             }
             if click.long_pressed() {
-                let _ = long_presses.update_in(ui.cx_mut().app.models_mut(), |value| *value += 1);
+                ui.cx_mut()
+                    .app
+                    .local_state_txn(|tx| tx.update(&long_presses, |value| *value += 1));
             }
-            let _ = press_holding.set_in(ui.cx_mut().app.models_mut(), click.press_holding());
+            ui.cx_mut()
+                .app
+                .local_state_txn(|tx| tx.set(&press_holding, click.press_holding()));
 
             ui.separator();
 
@@ -164,17 +172,23 @@ impl View for ImUiResponseSignalsView {
 
             let drag = ui.button("Drag surface (hold left + move)");
             if drag.drag_started() {
-                let _ = drag_starts.update_in(ui.cx_mut().app.models_mut(), |value| *value += 1);
+                ui.cx_mut()
+                    .app
+                    .local_state_txn(|tx| tx.update(&drag_starts, |value| *value += 1));
             }
             if drag.dragging() {
                 let delta = drag.drag_delta();
-                let _ = drag_offset.update_in(ui.cx_mut().app.models_mut(), |value| {
-                    value.x = Px(value.x.0 + delta.x.0);
-                    value.y = Px(value.y.0 + delta.y.0);
+                ui.cx_mut().app.local_state_txn(|tx| {
+                    tx.update(&drag_offset, |value| {
+                        value.x = Px(value.x.0 + delta.x.0);
+                        value.y = Px(value.y.0 + delta.y.0);
+                    })
                 });
             }
             if drag.drag_stopped() {
-                let _ = drag_stops.update_in(ui.cx_mut().app.models_mut(), |value| *value += 1);
+                ui.cx_mut()
+                    .app
+                    .local_state_txn(|tx| tx.update(&drag_stops, |value| *value += 1));
             }
 
             let drag_delta = drag.drag_delta();
@@ -237,28 +251,32 @@ impl View for ImUiResponseSignalsView {
                 },
             );
             if lifecycle_button.activated() {
-                let _ = lifecycle_button_activations
-                    .update_in(ui.cx_mut().app.models_mut(), |value| *value += 1);
+                ui.cx_mut().app.local_state_txn(|tx| {
+                    tx.update(&lifecycle_button_activations, |value| *value += 1)
+                });
             }
             if lifecycle_button.deactivated() {
-                let _ = lifecycle_button_deactivations
-                    .update_in(ui.cx_mut().app.models_mut(), |value| *value += 1);
+                ui.cx_mut().app.local_state_txn(|tx| {
+                    tx.update(&lifecycle_button_deactivations, |value| *value += 1)
+                });
             }
 
             let lifecycle_checkbox_resp =
-                ui.checkbox_model("Edited checkbox", lifecycle_checkbox_value.model());
+                ui.checkbox_model("Edited checkbox", &lifecycle_checkbox_value);
             if lifecycle_checkbox_resp.edited() {
-                let _ = lifecycle_checkbox_edits
-                    .update_in(ui.cx_mut().app.models_mut(), |value| *value += 1);
+                ui.cx_mut().app.local_state_txn(|tx| {
+                    tx.update(&lifecycle_checkbox_edits, |value| *value += 1)
+                });
             }
             if lifecycle_checkbox_resp.deactivated_after_edit() {
-                let _ = lifecycle_checkbox_after_edit
-                    .update_in(ui.cx_mut().app.models_mut(), |value| *value += 1);
+                ui.cx_mut().app.local_state_txn(|tx| {
+                    tx.update(&lifecycle_checkbox_after_edit, |value| *value += 1)
+                });
             }
 
             let lifecycle_slider_resp = ui.slider_f32_model_with_options(
                 "Edited slider",
-                lifecycle_slider_value.model(),
+                &lifecycle_slider_value,
                 kit::SliderOptions {
                     min: 0.0,
                     max: 100.0,
@@ -268,16 +286,18 @@ impl View for ImUiResponseSignalsView {
                 },
             );
             if lifecycle_slider_resp.edited() {
-                let _ = lifecycle_slider_edits
-                    .update_in(ui.cx_mut().app.models_mut(), |value| *value += 1);
+                ui.cx_mut()
+                    .app
+                    .local_state_txn(|tx| tx.update(&lifecycle_slider_edits, |value| *value += 1));
             }
             if lifecycle_slider_resp.deactivated_after_edit() {
-                let _ = lifecycle_slider_after_edit
-                    .update_in(ui.cx_mut().app.models_mut(), |value| *value += 1);
+                ui.cx_mut().app.local_state_txn(|tx| {
+                    tx.update(&lifecycle_slider_after_edit, |value| *value += 1)
+                });
             }
 
             let lifecycle_text_resp = ui.input_text_model_with_options(
-                lifecycle_text_value.model(),
+                &lifecycle_text_value,
                 kit::InputTextOptions {
                     placeholder: Some(Arc::from("Focus, type, and blur")),
                     test_id: Some(Arc::from("imui-resp-demo.lifecycle-text")),
@@ -285,16 +305,19 @@ impl View for ImUiResponseSignalsView {
                 },
             );
             if lifecycle_text_resp.activated() {
-                let _ = lifecycle_text_activations
-                    .update_in(ui.cx_mut().app.models_mut(), |value| *value += 1);
+                ui.cx_mut().app.local_state_txn(|tx| {
+                    tx.update(&lifecycle_text_activations, |value| *value += 1)
+                });
             }
             if lifecycle_text_resp.deactivated() {
-                let _ = lifecycle_text_deactivations
-                    .update_in(ui.cx_mut().app.models_mut(), |value| *value += 1);
+                ui.cx_mut().app.local_state_txn(|tx| {
+                    tx.update(&lifecycle_text_deactivations, |value| *value += 1)
+                });
             }
             if lifecycle_text_resp.deactivated_after_edit() {
-                let _ = lifecycle_text_after_edit
-                    .update_in(ui.cx_mut().app.models_mut(), |value| *value += 1);
+                ui.cx_mut().app.local_state_txn(|tx| {
+                    tx.update(&lifecycle_text_after_edit, |value| *value += 1)
+                });
             }
 
             let menu_lifecycle = ui.menu_item_with_options(
@@ -305,12 +328,14 @@ impl View for ImUiResponseSignalsView {
                 },
             );
             if menu_lifecycle.activated() {
-                let _ = lifecycle_menu_activations
-                    .update_in(ui.cx_mut().app.models_mut(), |value| *value += 1);
+                ui.cx_mut().app.local_state_txn(|tx| {
+                    tx.update(&lifecycle_menu_activations, |value| *value += 1)
+                });
             }
             if menu_lifecycle.deactivated() {
-                let _ = lifecycle_menu_deactivations
-                    .update_in(ui.cx_mut().app.models_mut(), |value| *value += 1);
+                ui.cx_mut().app.local_state_txn(|tx| {
+                    tx.update(&lifecycle_menu_deactivations, |value| *value += 1)
+                });
             }
 
             let combo_resp = ui.combo_with_options(
@@ -332,12 +357,14 @@ impl View for ImUiResponseSignalsView {
                 },
             );
             if combo_resp.response().activated() {
-                let _ = lifecycle_combo_activations
-                    .update_in(ui.cx_mut().app.models_mut(), |value| *value += 1);
+                ui.cx_mut().app.local_state_txn(|tx| {
+                    tx.update(&lifecycle_combo_activations, |value| *value += 1)
+                });
             }
             if combo_resp.response().deactivated() {
-                let _ = lifecycle_combo_deactivations
-                    .update_in(ui.cx_mut().app.models_mut(), |value| *value += 1);
+                ui.cx_mut().app.local_state_txn(|tx| {
+                    tx.update(&lifecycle_combo_deactivations, |value| *value += 1)
+                });
             }
 
             let lifecycle_combo_items = vec![
@@ -348,7 +375,7 @@ impl View for ImUiResponseSignalsView {
             let combo_model_resp = ui.combo_model_with_options(
                 "imui-resp-demo.lifecycle-combo-model",
                 "Lifecycle combo model",
-                lifecycle_combo_model_value.model(),
+                &lifecycle_combo_model_value,
                 &lifecycle_combo_items,
                 kit::ComboModelOptions {
                     test_id: Some(Arc::from("imui-resp-demo.lifecycle-combo-model")),
@@ -357,12 +384,14 @@ impl View for ImUiResponseSignalsView {
                 },
             );
             if combo_model_resp.edited() {
-                let _ = lifecycle_combo_model_edits
-                    .update_in(ui.cx_mut().app.models_mut(), |value| *value += 1);
+                ui.cx_mut().app.local_state_txn(|tx| {
+                    tx.update(&lifecycle_combo_model_edits, |value| *value += 1)
+                });
             }
             if combo_model_resp.deactivated_after_edit() {
-                let _ = lifecycle_combo_model_after_edit
-                    .update_in(ui.cx_mut().app.models_mut(), |value| *value += 1);
+                ui.cx_mut().app.local_state_txn(|tx| {
+                    tx.update(&lifecycle_combo_model_after_edit, |value| *value += 1)
+                });
             }
 
             let lifecycle_details = fret_ui_kit::ui::text(format!(
@@ -428,29 +457,30 @@ impl View for ImUiResponseSignalsView {
                                 },
                             );
                             if recent_menu.toggled() {
-                                let _ = trigger_submenu_toggled
-                                    .update_in(ui.cx_mut().app.models_mut(), |value| *value += 1);
+                                ui.cx_mut().app.local_state_txn(|tx| {
+                                    tx.update(&trigger_submenu_toggled, |value| *value += 1)
+                                });
                             }
                         },
                     );
                     if file_menu.opened() {
-                        let _ = trigger_menu_opened
-                            .update_in(ui.cx_mut().app.models_mut(), |value| *value += 1);
+                        ui.cx_mut().app.local_state_txn(|tx| {
+                            tx.update(&trigger_menu_opened, |value| *value += 1)
+                        });
                     }
                     if file_menu.closed() {
-                        let _ = trigger_menu_closed
-                            .update_in(ui.cx_mut().app.models_mut(), |value| *value += 1);
+                        ui.cx_mut().app.local_state_txn(|tx| {
+                            tx.update(&trigger_menu_closed, |value| *value += 1)
+                        });
                     }
                 },
             );
 
             let tab_response = ui.tab_bar_with_options(
                 "imui-resp-demo.trigger-tabs",
-                kit::TabBarOptions {
-                    selected: Some(trigger_tab_selected.model().clone()),
-                    test_id: Some(Arc::from("imui-resp-demo.trigger-tabs.root")),
-                    ..Default::default()
-                },
+                kit::TabBarOptions::default()
+                    .selected_model(&trigger_tab_selected)
+                    .test_id("imui-resp-demo.trigger-tabs.root"),
                 |tabs| {
                     tabs.begin_tab_item_with_options(
                         "scene",
@@ -483,21 +513,25 @@ impl View for ImUiResponseSignalsView {
                 },
             );
             if tab_response.selected_changed() {
-                let _ = trigger_tab_switched
-                    .update_in(ui.cx_mut().app.models_mut(), |value| *value += 1);
+                ui.cx_mut()
+                    .app
+                    .local_state_txn(|tx| tx.update(&trigger_tab_switched, |value| *value += 1));
             }
             if let Some(scene_tab) = tab_response.trigger("scene") {
                 if scene_tab.clicked() {
-                    let _ = trigger_tab_scene_clicks
-                        .update_in(ui.cx_mut().app.models_mut(), |value| *value += 1);
+                    ui.cx_mut().app.local_state_txn(|tx| {
+                        tx.update(&trigger_tab_scene_clicks, |value| *value += 1)
+                    });
                 }
                 if scene_tab.activated() {
-                    let _ = trigger_tab_scene_activations
-                        .update_in(ui.cx_mut().app.models_mut(), |value| *value += 1);
+                    ui.cx_mut().app.local_state_txn(|tx| {
+                        tx.update(&trigger_tab_scene_activations, |value| *value += 1)
+                    });
                 }
                 if scene_tab.deactivated() {
-                    let _ = trigger_tab_scene_deactivations
-                        .update_in(ui.cx_mut().app.models_mut(), |value| *value += 1);
+                    ui.cx_mut().app.local_state_txn(|tx| {
+                        tx.update(&trigger_tab_scene_deactivations, |value| *value += 1)
+                    });
                 }
             }
 
@@ -513,8 +547,9 @@ impl View for ImUiResponseSignalsView {
 
             let trigger = ui.button("Context menu (right click)");
             if trigger.context_menu_requested() {
-                let _ = last_context_menu_anchor
-                    .set_in(ui.cx_mut().app.models_mut(), trigger.context_menu_anchor());
+                ui.cx_mut().app.local_state_txn(|tx| {
+                    tx.set(&last_context_menu_anchor, trigger.context_menu_anchor())
+                });
             }
 
             ui.begin_popup_context_menu("ctx", trigger, |ui| {
@@ -526,8 +561,9 @@ impl View for ImUiResponseSignalsView {
                     },
                 );
                 if toggle.clicked() {
-                    let _ = menu_toggle
-                        .update_in(ui.cx_mut().app.models_mut(), |value| *value = !*value);
+                    ui.cx_mut()
+                        .app
+                        .local_state_txn(|tx| tx.update(&menu_toggle, |value| *value = !*value));
                 }
 
                 let open = ui.popup_open_model("ctx");
