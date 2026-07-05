@@ -1,4 +1,4 @@
-use fret::advanced::prelude::{AppWindowId, KernelApp, ViewElements, ui_app};
+use fret::app::prelude::*;
 use fret_core::{Px, TextAlign, TextOverflow, TextStyle, TextWrap};
 use fret_ui::ElementContext;
 use fret_ui::element::{
@@ -6,25 +6,32 @@ use fret_ui::element::{
 };
 use std::sync::Arc;
 
-struct TextHeavyMemoryState {
+struct TextHeavyMemoryView {
     content: Arc<str>,
 }
 
 pub fn run() -> anyhow::Result<()> {
-    ui_app("text-heavy-memory-demo", init_window, view)
+    FretApp::new("text-heavy-memory-demo")
+        .window("text_heavy_memory_demo", (980.0, 720.0))
         .setup(fret_bootstrap::install_default_i18n_backend)
-        .with_main_window("text_heavy_memory_demo", (980.0, 720.0))
+        .view::<TextHeavyMemoryView>()?
         .run()
         .map_err(anyhow::Error::from)
 }
 
-fn init_window(_app: &mut KernelApp, _window: AppWindowId) -> TextHeavyMemoryState {
-    TextHeavyMemoryState {
-        content: build_text_heavy_content(),
+impl View for TextHeavyMemoryView {
+    fn init(_app: &mut App, _window: WindowId) -> Self {
+        Self {
+            content: build_text_heavy_content(),
+        }
+    }
+
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
+        view(cx.elements(), &self.content)
     }
 }
 
-fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut TextHeavyMemoryState) -> ViewElements {
+fn view(cx: &mut ElementContext<'_, App>, content: &Arc<str>) -> Ui {
     let scroll = cx.scroll(
         ScrollProps {
             layout: LayoutStyle {
@@ -61,7 +68,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut TextHeavyMemoryState) -
                             },
                             ..Default::default()
                         },
-                        text: st.content.clone(),
+                        text: content.clone(),
                         style: Some(TextStyle {
                             size: Px(16.0),
                             ..Default::default()
@@ -77,7 +84,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut TextHeavyMemoryState) -
         },
     );
 
-    ViewElements::from_iter([scroll])
+    vec![scroll].into()
 }
 
 fn build_text_heavy_content() -> Arc<str> {

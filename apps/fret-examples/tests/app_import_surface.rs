@@ -25,11 +25,6 @@ fn low_risk_function_driver_demos_use_explicit_advanced_imports() {
             include_str!("../src/launcher_utility_window_materials_demo.rs"),
             "ui_app_with_hooks",
         ),
-        (
-            "text_heavy_memory_demo",
-            include_str!("../src/text_heavy_memory_demo.rs"),
-            "ui_app",
-        ),
     ] {
         let compact = compact(source);
         assert!(
@@ -57,39 +52,57 @@ fn low_risk_function_driver_demos_use_explicit_advanced_imports() {
 }
 
 #[test]
-fn empty_idle_demo_uses_app_view_surface() {
-    let source = include_str!("../src/empty_idle_demo.rs");
-    let compact = compact(source);
-
-    for needle in [
-        "usefret::app::prelude::*;",
-        "structEmptyIdleView;",
-        "FretApp::new(\"empty-idle-demo\")",
-        ".window(\"empty_idle_demo\",(520.0,240.0))",
-        ".setup(fret_bootstrap::install_default_i18n_backend)",
-        ".view::<EmptyIdleView>()?",
-        "fninit(_app:&mutApp,_window:WindowId)->Self",
-        "fnrender(&mutself,_cx:&mutAppUi<'_,'_>)->Ui",
-        "Vec::new().into()",
+fn baseline_memory_demos_use_app_view_surface() {
+    for (name, source, view_name, window_name, size) in [
+        (
+            "empty_idle_demo",
+            include_str!("../src/empty_idle_demo.rs"),
+            "EmptyIdleView",
+            "empty_idle_demo",
+            "(520.0,240.0)",
+        ),
+        (
+            "text_heavy_memory_demo",
+            include_str!("../src/text_heavy_memory_demo.rs"),
+            "TextHeavyMemoryView",
+            "text_heavy_memory_demo",
+            "(980.0,720.0)",
+        ),
     ] {
-        assert!(
-            compact.contains(needle),
-            "empty_idle_demo should use the app view surface; missing `{needle}`",
-        );
-    }
+        let compact = compact(source);
+        let app_name = name.replace('_', "-");
+        let needles = vec![
+            "usefret::app::prelude::*;".to_string(),
+            format!("struct{view_name}"),
+            format!("FretApp::new(\"{app_name}\")"),
+            format!(".window(\"{window_name}\",{size})"),
+            ".setup(fret_bootstrap::install_default_i18n_backend)".to_string(),
+            format!(".view::<{view_name}>()?"),
+            "fninit(_app:&mutApp,_window:WindowId)->Self".to_string(),
+            "fnrender(&mutself,".to_string(),
+            ")->Ui".to_string(),
+        ];
 
-    for forbidden in [
-        "advanced::prelude",
-        "component::prelude",
-        "ui_app",
-        "KernelApp",
-        "AppWindowId",
-        "ViewElements",
-        "ElementContext<'_,KernelApp>",
-    ] {
-        assert!(
-            !source.contains(forbidden),
-            "empty_idle_demo should not reintroduce the old function-driver surface: `{forbidden}`",
-        );
+        for needle in needles {
+            assert!(
+                compact.contains(&needle),
+                "{name} should use the app view surface; missing `{needle}`",
+            );
+        }
+
+        for forbidden in [
+            "advanced::prelude",
+            "component::prelude",
+            "ui_app",
+            "KernelApp",
+            "AppWindowId",
+            "ViewElements",
+            "ElementContext<'_,KernelApp>",
+        ] {
+            assert!(
+                !source.contains(forbidden),
+                "{name} should not reintroduce the old function-driver surface: `{forbidden}`",
+            );
+        }
     }
 }
