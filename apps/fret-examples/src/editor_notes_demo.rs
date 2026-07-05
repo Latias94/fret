@@ -1,3 +1,4 @@
+use std::any::Any;
 use std::sync::Arc;
 
 use fret::app::prelude::*;
@@ -54,6 +55,30 @@ pub(crate) mod act {
         SelectLight = "editor_notes_demo.select.light.v1",
         SelectCamera = "editor_notes_demo.select.camera.v1"
     ]);
+}
+
+fn editor_notes_host_update_model<T: Any>(
+    host: &mut dyn fret_ui::action::UiActionHost,
+    model: &Model<T>,
+    f: impl FnOnce(&mut T),
+) {
+    let _ = host.models_mut().update(model, f);
+}
+
+fn editor_notes_host_set_model<T: Any>(
+    host: &mut dyn fret_ui::action::UiActionHost,
+    model: &Model<T>,
+    value: T,
+) {
+    editor_notes_host_update_model(host, model, |slot| *slot = value);
+}
+
+fn editor_notes_host_set_text(
+    host: &mut dyn fret_ui::action::UiActionHost,
+    model: &Model<String>,
+    value: impl Into<String>,
+) {
+    editor_notes_host_set_model(host, model, value.into());
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
@@ -571,9 +596,7 @@ where
         })
         .into_element_in(
             cx,
-            move |cx, _panel_cx| {
-                vec![editor_notes_readout_text(cx, subtitle.clone())]
-            },
+            move |cx, _panel_cx| vec![editor_notes_readout_text(cx, subtitle.clone())],
             move |cx, _panel_cx| {
                 vec![
                     PropertyGroup::new("Metadata")
@@ -621,12 +644,10 @@ where
                                                         TextFieldOutcome::Committed => "Committed",
                                                         TextFieldOutcome::Canceled => "Canceled",
                                                     };
-                                                    let _ = host.models_mut().update(
+                                                    editor_notes_host_set_text(
+                                                        host,
                                                         &notes_outcome_model,
-                                                        |text: &mut String| {
-                                                            text.clear();
-                                                            text.push_str(next);
-                                                        },
+                                                        next,
                                                     );
                                                     host.request_redraw(action_cx.window);
                                                 }
@@ -673,8 +694,11 @@ where
                                         PropertyRow::new(),
                                         |cx| row_cx.label_text(cx, "Draft status"),
                                         |cx| {
-                                            editor_notes_readout_text(cx, draft_status_label.clone())
-                                                .test_id(TEST_ID_NOTES_DRAFT_STATUS)
+                                            editor_notes_readout_text(
+                                                cx,
+                                                draft_status_label.clone(),
+                                            )
+                                            .test_id(TEST_ID_NOTES_DRAFT_STATUS)
                                         },
                                         |_cx| None,
                                     ));
@@ -703,22 +727,16 @@ where
                                                                 if draft_controller
                                                                     .commit(host, action_cx)
                                                                 {
-                                                                    let _ = host.models_mut().update(
+                                                                    editor_notes_host_set_text(
+                                                                        host,
                                                                         &notes_outcome_model,
-                                                                        |text: &mut String| {
-                                                                            text.clear();
-                                                                            text.push_str(
-                                                                                "Committed",
-                                                                            );
-                                                                        },
+                                                                        "Committed",
                                                                     );
-                                                                    let _ = host.models_mut().update(
+                                                                    editor_notes_host_set_text(
+                                                                        host,
                                                                         &summary_status_model,
-                                                                        |text: &mut String| {
-                                                                            *text =
-                                                                                draft_commit_status
-                                                                                    .clone();
-                                                                        },
+                                                                        draft_commit_status
+                                                                            .clone(),
                                                                     );
                                                                     host.request_redraw(
                                                                         action_cx.window,
@@ -745,22 +763,16 @@ where
                                                                 if draft_controller
                                                                     .discard(host, action_cx)
                                                                 {
-                                                                    let _ = host.models_mut().update(
+                                                                    editor_notes_host_set_text(
+                                                                        host,
                                                                         &notes_outcome_model,
-                                                                        |text: &mut String| {
-                                                                            text.clear();
-                                                                            text.push_str(
-                                                                                "Canceled",
-                                                                            );
-                                                                        },
+                                                                        "Canceled",
                                                                     );
-                                                                    let _ = host.models_mut().update(
+                                                                    editor_notes_host_set_text(
+                                                                        host,
                                                                         &summary_status_model,
-                                                                        |text: &mut String| {
-                                                                            *text =
-                                                                                draft_discard_status
-                                                                                    .clone();
-                                                                        },
+                                                                        draft_discard_status
+                                                                            .clone(),
                                                                     );
                                                                     host.request_redraw(
                                                                         action_cx.window,
@@ -811,11 +823,10 @@ where
                                                     let summary_status_next =
                                                         summary_status_next.clone();
                                                     move |host, action_cx, _reason| {
-                                                        let _ = host.models_mut().update(
+                                                        editor_notes_host_set_text(
+                                                            host,
                                                             &summary_status_model,
-                                                            |text: &mut String| {
-                                                                *text = summary_status_next.clone();
-                                                            },
+                                                            summary_status_next.clone(),
                                                         );
                                                         host.request_redraw(action_cx.window);
                                                     }

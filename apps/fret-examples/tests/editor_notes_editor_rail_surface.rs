@@ -1,3 +1,7 @@
+fn compact(source: &str) -> String {
+    source.split_whitespace().collect()
+}
+
 #[test]
 fn editor_notes_demo_composes_shell_mounted_rails_through_workspace_frame_slots() {
     let source = include_str!("../src/editor_notes_demo.rs");
@@ -50,7 +54,7 @@ fn editor_notes_demo_composes_shell_mounted_rails_through_workspace_frame_slots(
         ".test_id(TEST_ID_SUMMARY_COMMAND)",
         ".test_id(TEST_ID_SUMMARY_STATUS)",
         "row_cx.label_text(cx, \"Draft status\")",
-        "editor_notes_readout_text(cx, draft_status_label.clone())",
+        "editor_notes_readout_text(\n                                                cx,\n                                                draft_status_label.clone(),\n                                            )",
         ".test_id(TEST_ID_NOTES_DRAFT_STATUS)",
         "row_cx.label_text(cx, \"Draft actions\")",
         "row_cx.label_text(cx, \"Summary command\")",
@@ -101,6 +105,35 @@ fn editor_notes_demo_composes_shell_mounted_rails_through_workspace_frame_slots(
             "editor notes demo should keep inspector row text on semantic roles; unexpected `{needle}`"
         );
     }
+}
+
+#[test]
+fn editor_notes_demo_model_writes_stay_behind_owner_helpers() {
+    let source = include_str!("../src/editor_notes_demo.rs");
+    let compact_source = compact(source);
+
+    for needle in [
+        "fneditor_notes_host_update_model<T:Any>(",
+        "fneditor_notes_host_set_model<T:Any>(",
+        "fneditor_notes_host_set_text(",
+        "editor_notes_host_set_text(host,&notes_outcome_model,next,);",
+        "editor_notes_host_set_text(host,&notes_outcome_model,\"Committed\",);",
+        "editor_notes_host_set_text(host,&notes_outcome_model,\"Canceled\",);",
+        "editor_notes_host_set_text(host,&summary_status_model,draft_commit_status.clone(),);",
+        "editor_notes_host_set_text(host,&summary_status_model,draft_discard_status.clone(),);",
+        "editor_notes_host_set_text(host,&summary_status_model,summary_status_next.clone(),);",
+    ] {
+        assert!(
+            compact_source.contains(needle),
+            "editor notes demo should keep shared-model writes behind explicit owner helpers; missing `{needle}`"
+        );
+    }
+
+    assert_eq!(
+        source.matches("models_mut().update(").count(),
+        1,
+        "editor notes demo should not scatter raw ModelStore updates outside the owner helper"
+    );
 }
 
 #[test]
