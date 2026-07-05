@@ -1,6 +1,8 @@
 use std::sync::Arc;
 
-use fret::advanced::prelude::*;
+use fret::advanced::prelude::{
+    AppWindowId, KernelApp, LocalState, UiAppDriver, ViewElements, ui_app_with_hooks,
+};
 use fret::advanced::raw::{LocalStateElementContextExt as _, LocalStateModelStoreExt as _};
 use fret::app::AppLocalStateExt as _;
 use fret_app::{CommandId, Effect, WindowRequest};

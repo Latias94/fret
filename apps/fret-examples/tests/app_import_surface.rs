@@ -21,6 +21,16 @@ fn low_risk_function_driver_demos_use_explicit_advanced_imports() {
             "ui_app_with_hooks",
         ),
         (
+            "launcher_utility_window_demo",
+            include_str!("../src/launcher_utility_window_demo.rs"),
+            "ui_app_with_hooks",
+        ),
+        (
+            "launcher_utility_window_materials_demo",
+            include_str!("../src/launcher_utility_window_materials_demo.rs"),
+            "ui_app_with_hooks",
+        ),
+        (
             "text_heavy_memory_demo",
             include_str!("../src/text_heavy_memory_demo.rs"),
             "ui_app",
