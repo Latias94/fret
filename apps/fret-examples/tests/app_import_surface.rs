@@ -169,3 +169,28 @@ fn app_state_demos_use_app_local_state_imports() {
         }
     }
 }
+
+#[test]
+fn hello_world_compare_demo_uses_explicit_public_surfaces() {
+    let source = include_str!("../src/hello_world_compare_demo.rs");
+    let compact = compact(source);
+
+    for needle in [
+        "usefret::app::prelude::*;",
+        "usefret::advanced::KernelApp;",
+        "usefret::advanced::driver::UiAppBuilderAdvancedExtas_;",
+        "usefret::style::{Color,ColorRef,Radius,Space,TextAlign};",
+    ] {
+        assert!(
+            compact.contains(needle),
+            "hello_world_compare_demo should name the required app/advanced/style surfaces explicitly; missing `{needle}`",
+        );
+    }
+
+    for forbidden in ["advanced::prelude::*", "component::prelude::*"] {
+        assert!(
+            !source.contains(forbidden),
+            "hello_world_compare_demo should not reintroduce broad prelude imports: `{forbidden}`",
+        );
+    }
+}

@@ -2,8 +2,11 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, OnceLock};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
-use fret::{FretApp, advanced::prelude::*, component::prelude::*};
-use fret_core::{AppWindowId, Color, Px, TextAlign};
+use fret::advanced::KernelApp;
+use fret::advanced::driver::UiAppBuilderAdvancedExt as _;
+use fret::app::prelude::*;
+use fret::style::{Color, ColorRef, Radius, Space, TextAlign};
+use fret_core::AppWindowId;
 use fret_render::{Renderer, RendererPerfFrameStore, WgpuContext};
 use fret_runtime::{
     RunnerFrameDriveDiagnosticsStore, RunnerPresentDiagnosticsStore,
@@ -11,7 +14,6 @@ use fret_runtime::{
     WindowRedrawRequestDiagnosticsStore,
 };
 use fret_ui::element::AnyElement;
-use fret_ui_kit::IntoUiElementInExt as _;
 #[cfg(target_os = "macos")]
 use objc2_metal::MTLDevice as _;
 use serde_json::json;
