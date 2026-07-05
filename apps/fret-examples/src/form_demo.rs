@@ -1,8 +1,8 @@
 use anyhow::Context as _;
 use fret::advanced;
-use fret::advanced::raw::{LocalStateModelStoreExt as _, LocalStateRawModelExt as _};
+use fret::advanced::raw::LocalStateRawModelExt as _;
 use fret::advanced::view::{AppUiRenderRootState, render_root_with_app_ui};
-use fret::app::AppLocalStateExt as _;
+use fret::app::{AppLocalStateExt as _, AppLocalStateTxnExt as _};
 use fret::app::{LocalState, TrackedStateExt as _};
 use fret_app::{App, CommandId, Effect, WindowRequest};
 use fret_core::{AppWindowId, Corners, Edges, Event, Px};
@@ -170,27 +170,23 @@ fn handle_command(
             app.push_effect(Effect::Window(WindowRequest::Close(window)));
         }
         "form_demo.reset" => {
-            let _ = state
-                .name
-                .update_in(app.models_mut(), |v: &mut String| v.clear());
-            let _ = state
-                .email
-                .update_in(app.models_mut(), |v: &mut String| v.clear());
-            let _ = state.role.set_in(app.models_mut(), None);
-            let _ = state.role_open.set_in(app.models_mut(), false);
-            let _ = state.start_date_open.set_in(app.models_mut(), false);
-            let _ = state.start_date_month.set_in(
-                app.models_mut(),
-                CalendarMonth::from_date(OffsetDateTime::now_utc().date()),
-            );
-            let _ = state.start_date.set_in(app.models_mut(), None);
-            let _ = state
-                .form_state
-                .update_in(app.models_mut(), |st: &mut FormState| st.reset());
+            app.local_state_txn(|tx| {
+                tx.update(&state.name, |v: &mut String| v.clear());
+                tx.update(&state.email, |v: &mut String| v.clear());
+                tx.set(&state.role, None);
+                tx.set(&state.role_open, false);
+                tx.set(&state.start_date_open, false);
+                tx.set(
+                    &state.start_date_month,
+                    CalendarMonth::from_date(OffsetDateTime::now_utc().date()),
+                );
+                tx.set(&state.start_date, None);
+                tx.update(&state.form_state, |st: &mut FormState| st.reset());
+                tx.set(&state.status, Arc::from("Reset"));
+            });
             state
                 .registry
                 .register_into_form_state(app, state.form_state.model());
-            let _ = state.status.set_in(app.models_mut(), Arc::from("Reset"));
             app.request_redraw(window);
         }
         "form_demo.submit" => {
@@ -200,7 +196,7 @@ fn handle_command(
             } else {
                 "Submitted (errors)"
             };
-            let _ = state.status.set_in(app.models_mut(), Arc::from(msg));
+            app.local_state_txn(|tx| tx.set(&state.status, Arc::from(msg)));
             app.request_redraw(window);
         }
         _ => {}

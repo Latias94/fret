@@ -772,8 +772,9 @@ pub mod app {
     pub use crate::view::View;
     /// Explicit helper types/traits for app helper signatures that intentionally name them.
     pub use crate::view::{
-        AppLocalStateExt, AppRenderActionsExt, AppRenderContext, AppRenderDataExt, LocalState,
-        LocalStateTxn, RenderContextAccess, TrackedStateExt, view_child, view_child_with,
+        AppLocalStateExt, AppLocalStateTxnExt, AppRenderActionsExt, AppRenderContext,
+        AppRenderDataExt, LocalState, LocalStateTxn, RenderContextAccess, TrackedStateExt,
+        view_child, view_child_with,
     };
     /// Canonical app-facing runtime handle on the default `fret` surface.
     ///
@@ -999,6 +1000,7 @@ pub mod app {
         #[cfg(feature = "shadcn")]
         pub use crate::shadcn;
         pub use crate::view::AppLocalStateExt as _;
+        pub use crate::view::AppLocalStateTxnExt as _;
         pub use crate::view::AppRenderActionsExt as _;
         pub use crate::view::AppRenderDataExt as _;
         #[cfg(feature = "state-mutation")]
@@ -4143,6 +4145,7 @@ mod authoring_surface_policy_tests {
         );
         assert!(CRATE_USAGE_GUIDE.contains("`fret_chart::ChartCanvasPanelProps`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::app::{LocalState, LocalStateTxn}`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`app.local_state_txn(|tx| ...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::commands::{...}`"));
         assert!(
             CRATE_USAGE_GUIDE.contains(
@@ -4762,6 +4765,7 @@ mod authoring_surface_policy_tests {
         assert!(!app_prelude_exports_symbol("LocalState"));
         assert!(!app_prelude_exports_symbol("LocalStateTxn"));
         assert!(!app_prelude_exports_symbol("AppLocalStateExt"));
+        assert!(!app_prelude_exports_symbol("AppLocalStateTxnExt"));
         assert!(!app_prelude_exports_symbol("CommandId"));
         assert!(!app_prelude_exports_symbol("ThemeSnapshot"));
         assert!(!app_prelude_exports_symbol("actions"));
@@ -4772,6 +4776,7 @@ mod authoring_surface_policy_tests {
         assert!(app_prelude.contains("pub use crate::view::QueryHandleReadLayoutExt as _;"));
         assert!(app_prelude.contains("pub use crate::view::TrackedStateExt as _;"));
         assert!(app_prelude.contains("pub use crate::view::AppLocalStateExt as _;"));
+        assert!(app_prelude.contains("pub use crate::view::AppLocalStateTxnExt as _;"));
         assert!(app_prelude.contains("pub use crate::view::AppRenderActionsExt as _;"));
         assert!(app_prelude.contains("pub use crate::view::AppRenderDataExt as _;"));
         assert!(
@@ -4877,6 +4882,7 @@ mod authoring_surface_policy_tests {
             "pub use crate::app::ui_assets;",
             "pub use crate::shadcn;",
             "pub use crate::view::AppLocalStateExt as _;",
+            "pub use crate::view::AppLocalStateTxnExt as _;",
             "pub use crate::view::AppRenderActionsExt as _;",
             "pub use crate::view::AppRenderDataExt as _;",
             "pub use crate::view::MutationHandleReadLayoutExt as _;",
@@ -5059,10 +5065,10 @@ mod authoring_surface_policy_tests {
         assert!(LIB_RS.contains("pub use crate::AppRenderCx;"));
         assert!(LIB_RS.contains("pub use fret_core::{Color, Corners, Edges, FontWeight"));
         assert!(LIB_RS.contains(
-            "AppLocalStateExt, AppRenderActionsExt, AppRenderContext, AppRenderDataExt, LocalState,"
+            "AppLocalStateExt, AppLocalStateTxnExt, AppRenderActionsExt, AppRenderContext,"
         ));
         assert!(LIB_RS.contains(
-            "LocalStateTxn, RenderContextAccess, TrackedStateExt, view_child, view_child_with,"
+            "AppRenderDataExt, LocalState, LocalStateTxn, RenderContextAccess, TrackedStateExt,"
         ));
         assert!(!app_prelude_exports_symbol("view_child"));
         assert!(!app_prelude_exports_symbol("view_child_with"));

@@ -1,7 +1,6 @@
 use anyhow::Context as _;
-use fret::advanced::raw::LocalStateModelStoreExt as _;
 use fret::advanced::view::{AppUiRenderRootState, render_root_with_app_ui};
-use fret::app::{LocalState, TrackedStateExt as _};
+use fret::app::{AppLocalStateTxnExt as _, LocalState, TrackedStateExt as _};
 use fret_app::{App, CommandId, Effect, WindowRequest};
 use fret_core::{AppWindowId, Corners, Edges, Event, Px};
 use fret_launch::{
@@ -162,17 +161,17 @@ fn handle_command(
                 return;
             };
             let today = OffsetDateTime::now_utc().date();
-            let _ = locals.selected.set_in(app.models_mut(), Some(today));
-            let _ = locals
-                .month
-                .set_in(app.models_mut(), CalendarMonth::from_date(today));
+            app.local_state_txn(|tx| {
+                tx.set(&locals.selected, Some(today));
+                tx.set(&locals.month, CalendarMonth::from_date(today));
+            });
             app.request_redraw(window);
         }
         "date_picker_demo.clear" => {
             let Some(locals) = state.locals.as_ref() else {
                 return;
             };
-            let _ = locals.selected.set_in(app.models_mut(), None);
+            app.local_state_txn(|tx| tx.set(&locals.selected, None));
             app.request_redraw(window);
         }
         _ => {}

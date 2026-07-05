@@ -2,8 +2,7 @@ use std::sync::Arc;
 
 use fret::advanced::KernelApp;
 use fret::advanced::driver::{UiAppDriver, ViewElements, ui_app_with_hooks};
-use fret::advanced::raw::LocalStateModelStoreExt as _;
-use fret::app::{AppLocalStateExt as _, LocalState};
+use fret::app::{AppLocalStateExt as _, AppLocalStateTxnExt as _, LocalState};
 use fret_app::{CommandId, Effect, WindowRequest};
 use fret_core::{AppWindowId, Px};
 use fret_runtime::{
@@ -134,10 +133,7 @@ fn on_command(
             ..Default::default()
         },
     }));
-    let _ = st.status.set_in(
-        app.models_mut(),
-        Arc::from(format!("Requested: {material:?}")),
-    );
+    app.local_state_txn(|tx| tx.set(&st.status, Arc::from(format!("Requested: {material:?}"))));
     app.request_redraw(window);
 }
 

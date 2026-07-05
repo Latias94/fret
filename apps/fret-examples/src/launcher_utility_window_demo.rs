@@ -3,8 +3,9 @@ use std::time::Duration;
 
 use fret::advanced::KernelApp;
 use fret::advanced::driver::{UiAppDriver, ViewElements, ui_app_with_hooks};
-use fret::advanced::raw::LocalStateModelStoreExt as _;
-use fret::app::{AppLocalStateExt as _, AppRenderDataExt as _, LocalState};
+use fret::app::{
+    AppLocalStateExt as _, AppLocalStateTxnExt as _, AppRenderDataExt as _, LocalState,
+};
 use fret_app::{CommandId, Effect, WindowRequest};
 use fret_core::{AppWindowId, MouseButton, Px, SemanticsRole};
 use fret_runtime::DefaultAction;
@@ -139,7 +140,7 @@ fn on_command(
 
             let token = app.next_timer_token();
             st.blink_timer = Some(token);
-            let _ = st.status.set_in(app.models_mut(), Arc::from("Blink: hide"));
+            app.local_state_txn(|tx| tx.set(&st.status, Arc::from("Blink: hide")));
 
             app.push_effect(Effect::Window(WindowRequest::SetVisible {
                 window,
@@ -153,8 +154,11 @@ fn on_command(
             });
         }
         CMD_TOGGLE_ALWAYS_ON_TOP => {
-            let next = !st.always_on_top.value_in_or(app.models(), false);
-            let _ = st.always_on_top.set_in(app.models_mut(), next);
+            let next = app.local_state_txn(|tx| {
+                let next = !tx.value_or(&st.always_on_top, false);
+                tx.set(&st.always_on_top, next);
+                next
+            });
 
             let z_level = if next {
                 WindowZLevel::AlwaysOnTop
@@ -168,14 +172,16 @@ fn on_command(
                     ..Default::default()
                 },
             }));
-            let _ = st.status.set_in(
-                app.models_mut(),
-                Arc::from(if next {
-                    "AlwaysOnTop: on"
-                } else {
-                    "AlwaysOnTop: off"
-                }),
-            );
+            app.local_state_txn(|tx| {
+                tx.set(
+                    &st.status,
+                    Arc::from(if next {
+                        "AlwaysOnTop: on"
+                    } else {
+                        "AlwaysOnTop: off"
+                    }),
+                )
+            });
         }
         CMD_QUIT => {
             app.push_effect(Effect::QuitApp);
@@ -204,7 +210,7 @@ fn on_event(
         window,
         visible: true,
     }));
-    let _ = st.status.set_in(app.models_mut(), Arc::from("Blink: show"));
+    app.local_state_txn(|tx| tx.set(&st.status, Arc::from("Blink: show")));
     app.request_redraw(window);
 }
 

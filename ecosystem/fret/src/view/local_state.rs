@@ -209,6 +209,25 @@ impl AppLocalStateExt for crate::app::App {
     }
 }
 
+/// App-facing transaction entry for local state writes outside render.
+///
+/// Use this when app-owned callbacks or function-driver hooks have `&mut App` but should still
+/// stay on the LocalState-first surface instead of reopening raw `ModelStore` access. Render-time
+/// action handlers should usually prefer `cx.actions().local(...)` or
+/// `cx.actions().locals_with(...)`.
+pub trait AppLocalStateTxnExt {
+    fn local_state_txn<R>(&mut self, f: impl FnOnce(&mut LocalStateTxn<'_>) -> R) -> R;
+}
+
+impl AppLocalStateTxnExt for crate::app::App {
+    fn local_state_txn<R>(&mut self, f: impl FnOnce(&mut LocalStateTxn<'_>) -> R) -> R {
+        let mut tx = LocalStateTxn {
+            models: self.models_mut(),
+        };
+        f(&mut tx)
+    }
+}
+
 /// A narrow, LocalState-focused transaction wrapper used to keep the default authoring surface
 /// free of direct `ModelStore` plumbing.
 ///

@@ -1,6 +1,5 @@
-use fret::advanced::raw::LocalStateModelStoreExt as _;
 use fret::advanced::view::{AppUiRenderRootState, render_root_with_app_ui};
-use fret::app::LocalState;
+use fret::app::{AppLocalStateTxnExt as _, LocalState};
 use fret_app::{App, CommandId, Effect, WindowRequest};
 use fret_core::{AppWindowId, Event, FontId, Px, Rect, TextStyle, TextWrap, UiServices};
 use fret_launch::{
@@ -355,7 +354,7 @@ fn handle_command(
 
     if command.as_str() == CMD_EMOJI_FONT_RESET {
         if let Some(locals) = state.locals.as_ref() {
-            let _ = locals.emoji_font_override.set_in(app.models_mut(), None);
+            app.local_state_txn(|tx| tx.set(&locals.emoji_font_override, None));
         }
     }
 }

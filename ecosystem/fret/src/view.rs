@@ -64,8 +64,9 @@ pub use data::{AppRenderData, AppRenderDataExt, AppUiData};
 pub use data::{LocalSelectorLayoutInputs, ModelSelectorInputs};
 pub use effects::AppUiEffects;
 pub use local_state::{
-    AppLocalStateExt, LocalActionCapture, LocalState, LocalStateElementContextExt,
-    LocalStateModelStoreExt, LocalStateRawModelExt, LocalStateTxn, TrackedStateExt, WatchedState,
+    AppLocalStateExt, AppLocalStateTxnExt, LocalActionCapture, LocalState,
+    LocalStateElementContextExt, LocalStateModelStoreExt, LocalStateRawModelExt, LocalStateTxn,
+    TrackedStateExt, WatchedState,
 };
 pub use pointer::{
     AppPointerRegion, CursorIcon, MouseButton, Point, PointerActionCx, PointerCancel, PointerDown,
@@ -87,12 +88,12 @@ pub use state::AppUiState;
 #[cfg(test)]
 mod tests {
     use super::{
-        AppActivateExt, AppActivateSurface, AppLocalStateExt as _, AppRenderActionsExt as _,
-        AppUiRenderRootState, LocalActionCapture, LocalState, LocalStateElementContextExt as _,
-        LocalStateModelStoreExt as _, LocalStateRawModelExt as _, LocalStateTxn, OnActivate, View,
-        ViewWindowState, action_listener, dispatch_action_listener,
-        dispatch_payload_action_listener, inbox_drain_apply, inbox_local, render_root_with_app_ui,
-        view_init_window, view_view,
+        AppActivateExt, AppActivateSurface, AppLocalStateExt as _, AppLocalStateTxnExt as _,
+        AppRenderActionsExt as _, AppUiRenderRootState, LocalActionCapture, LocalState,
+        LocalStateElementContextExt as _, LocalStateModelStoreExt as _, LocalStateRawModelExt as _,
+        LocalStateTxn, OnActivate, View, ViewWindowState, action_listener,
+        dispatch_action_listener, dispatch_payload_action_listener, inbox_drain_apply, inbox_local,
+        render_root_with_app_ui, view_init_window, view_view,
     };
     use std::any::Any;
     #[cfg(feature = "state-mutation")]
@@ -832,6 +833,18 @@ mod tests {
         let local = app.local_state(String::from("hello"));
 
         assert_eq!(local.value_in(app.models()), Some(String::from("hello")));
+    }
+
+    #[test]
+    fn app_local_state_txn_updates_locals_without_model_store_callsite() {
+        let mut app = crate::app::App::new();
+        let local = app.local_state(1u32);
+
+        let changed = app.local_state_txn(|tx| tx.update(&local, |value| *value += 1));
+        let value = app.local_state_txn(|tx| tx.value(&local));
+
+        assert!(changed);
+        assert_eq!(value, 2);
     }
 
     #[test]
@@ -1939,6 +1952,7 @@ mod tests {
         assert!(LOCAL_STATE_RS_SOURCE.contains("mod adapters;"));
         assert!(LOCAL_STATE_RS_SOURCE.contains("mod bridges;"));
         assert!(LOCAL_STATE_RS_SOURCE.contains("pub use bridges::{"));
+        assert!(view_api.contains("AppLocalStateTxnExt"));
         assert!(view_api.contains("LocalActionCapture"));
         assert!(view_api.contains("LocalStateTxn"));
         assert!(view_api.contains("LocalStateRawModelExt"));

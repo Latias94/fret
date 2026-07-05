@@ -3,9 +3,8 @@ use std::time::Duration;
 
 #[cfg(not(target_arch = "wasm32"))]
 use anyhow::Context as _;
-use fret::advanced::raw::LocalStateModelStoreExt as _;
 use fret::advanced::view::{AppUiRenderRootState, render_root_with_app_ui};
-use fret::app::LocalState;
+use fret::app::{AppLocalStateTxnExt as _, LocalState};
 use fret_app::{App, CommandId, Effect, WindowRequest};
 use fret_core::{AppWindowId, Edges, Event, Px, Rect, UiServices};
 use fret_launch::{
@@ -386,9 +385,9 @@ fn handle_command(
             };
             state.promise = Some(promise);
             if let Some(locals) = state.locals.as_ref() {
-                let _ = locals
-                    .last_action
-                    .set_in(app.models_mut(), Arc::<str>::from("promise.start"));
+                app.local_state_txn(|tx| {
+                    tx.set(&locals.last_action, Arc::<str>::from("promise.start"))
+                });
             }
         }
         "sonner.promise.success" => {
@@ -402,9 +401,9 @@ fn handle_command(
                     );
                 }
                 if let Some(locals) = state.locals.as_ref() {
-                    let _ = locals
-                        .last_action
-                        .set_in(app.models_mut(), Arc::<str>::from("promise.success"));
+                    app.local_state_txn(|tx| {
+                        tx.set(&locals.last_action, Arc::<str>::from("promise.success"))
+                    });
                 }
             } else {
                 let mut host = UiActionHostAdapter { app };
@@ -427,9 +426,9 @@ fn handle_command(
                     );
                 }
                 if let Some(locals) = state.locals.as_ref() {
-                    let _ = locals
-                        .last_action
-                        .set_in(app.models_mut(), Arc::<str>::from("promise.error"));
+                    app.local_state_txn(|tx| {
+                        tx.set(&locals.last_action, Arc::<str>::from("promise.error"))
+                    });
                 }
             } else {
                 let mut host = UiActionHostAdapter { app };
@@ -443,16 +442,16 @@ fn handle_command(
         }
         "sonner.toast.action" => {
             if let Some(locals) = state.locals.as_ref() {
-                let _ = locals
-                    .last_action
-                    .set_in(app.models_mut(), Arc::<str>::from("toast.action"));
+                app.local_state_txn(|tx| {
+                    tx.set(&locals.last_action, Arc::<str>::from("toast.action"))
+                });
             }
         }
         "sonner.toast.cancel" => {
             if let Some(locals) = state.locals.as_ref() {
-                let _ = locals
-                    .last_action
-                    .set_in(app.models_mut(), Arc::<str>::from("toast.cancel"));
+                app.local_state_txn(|tx| {
+                    tx.set(&locals.last_action, Arc::<str>::from("toast.cancel"))
+                });
             }
         }
         _ => {}

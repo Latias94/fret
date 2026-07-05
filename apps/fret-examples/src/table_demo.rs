@@ -1,7 +1,6 @@
 use anyhow::Context as _;
-use fret::advanced::raw::LocalStateModelStoreExt as _;
-use fret::app::AppLocalStateExt as _;
 use fret::app::LocalState;
+use fret::app::{AppLocalStateExt as _, AppLocalStateTxnExt as _};
 use fret_app::{App, CommandId, Effect, WindowRequest};
 use fret_core::{AppWindowId, Corners, Edges, Event, Px};
 use fret_launch::{
@@ -205,51 +204,43 @@ fn handle_command(
             return;
         }
         CMD_GROUP_CLEAR => {
-            state
-                .table_state
-                .update_in(app.models_mut(), clear_grouping);
+            app.local_state_txn(|tx| tx.update(&state.table_state, clear_grouping));
             app.request_redraw(window);
             return;
         }
         CMD_GROUP_SET_ROLE => {
-            state
-                .table_state
-                .update_in(app.models_mut(), |st| set_grouping(st, "role"));
+            app.local_state_txn(|tx| tx.update(&state.table_state, |st| set_grouping(st, "role")));
             app.request_redraw(window);
             return;
         }
         CMD_GROUP_SET_NAME => {
-            state
-                .table_state
-                .update_in(app.models_mut(), |st| set_grouping(st, "name"));
+            app.local_state_txn(|tx| tx.update(&state.table_state, |st| set_grouping(st, "name")));
             app.request_redraw(window);
             return;
         }
         CMD_GROUP_TOGGLE_ID => {
-            state
-                .table_state
-                .update_in(app.models_mut(), |st| toggle_grouping(st, "id"));
+            app.local_state_txn(|tx| tx.update(&state.table_state, |st| toggle_grouping(st, "id")));
             app.request_redraw(window);
             return;
         }
         CMD_GROUP_TOGGLE_NAME => {
-            state
-                .table_state
-                .update_in(app.models_mut(), |st| toggle_grouping(st, "name"));
+            app.local_state_txn(|tx| {
+                tx.update(&state.table_state, |st| toggle_grouping(st, "name"))
+            });
             app.request_redraw(window);
             return;
         }
         CMD_GROUP_TOGGLE_ROLE => {
-            state
-                .table_state
-                .update_in(app.models_mut(), |st| toggle_grouping(st, "role"));
+            app.local_state_txn(|tx| {
+                tx.update(&state.table_state, |st| toggle_grouping(st, "role"))
+            });
             app.request_redraw(window);
             return;
         }
         CMD_GROUP_TOGGLE_SCORE => {
-            state
-                .table_state
-                .update_in(app.models_mut(), |st| toggle_grouping(st, "score"));
+            app.local_state_txn(|tx| {
+                tx.update(&state.table_state, |st| toggle_grouping(st, "score"))
+            });
             app.request_redraw(window);
             return;
         }

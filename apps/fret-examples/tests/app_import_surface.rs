@@ -59,12 +59,12 @@ fn low_risk_function_driver_demos_use_explicit_advanced_imports() {
         (
             "launcher_utility_window_demo",
             include_str!("../src/launcher_utility_window_demo.rs"),
-            "usefret::app::{AppLocalStateExtas_,AppRenderDataExtas_,LocalState};",
+            "usefret::app::{AppLocalStateExtas_,AppLocalStateTxnExtas_,AppRenderDataExtas_,LocalState,};",
         ),
         (
             "launcher_utility_window_materials_demo",
             include_str!("../src/launcher_utility_window_materials_demo.rs"),
-            "usefret::app::{AppLocalStateExtas_,LocalState};",
+            "usefret::app::{AppLocalStateExtas_,AppLocalStateTxnExtas_,LocalState};",
         ),
     ] {
         let compact = compact(source);
@@ -78,8 +78,12 @@ fn low_risk_function_driver_demos_use_explicit_advanced_imports() {
             "{name} should not import app local state from the advanced prelude",
         );
         assert!(
-            compact.contains("usefret::advanced::raw::LocalStateModelStoreExtas_;"),
-            "{name} should keep the command-handler ModelStore bridge explicit while it still uses function-driver hooks",
+            compact.contains("AppLocalStateTxnExtas_"),
+            "{name} should use app-facing local-state transactions for function-driver hooks",
+        );
+        assert!(
+            !source.contains("LocalStateModelStoreExt"),
+            "{name} should not reintroduce the raw ModelStore bridge for app-owned local state writes",
         );
         assert!(
             !source.contains("LocalStateElementContextExt"),
@@ -155,12 +159,12 @@ fn app_state_demos_use_app_local_state_imports() {
         (
             "date_picker_demo",
             include_str!("../src/date_picker_demo.rs"),
-            "usefret::app::{LocalState,TrackedStateExtas_};",
+            "usefret::app::{AppLocalStateTxnExtas_,LocalState,TrackedStateExtas_};",
         ),
         (
             "emoji_conformance_demo",
             include_str!("../src/emoji_conformance_demo.rs"),
-            "usefret::app::LocalState;",
+            "usefret::app::{AppLocalStateTxnExtas_,LocalState};",
         ),
         (
             "form_demo",
@@ -170,12 +174,12 @@ fn app_state_demos_use_app_local_state_imports() {
         (
             "ime_smoke_demo",
             include_str!("../src/ime_smoke_demo.rs"),
-            "usefret::app::LocalState;",
+            "usefret::app::{AppLocalStateTxnExtas_,LocalState};",
         ),
         (
             "sonner_demo",
             include_str!("../src/sonner_demo.rs"),
-            "usefret::app::LocalState;",
+            "usefret::app::{AppLocalStateTxnExtas_,LocalState};",
         ),
         (
             "table_demo",
@@ -198,6 +202,7 @@ fn app_state_demos_use_app_local_state_imports() {
             "usefret::advanced::prelude::LocalState;",
             "usefret::advanced::prelude::TrackedStateExtas_;",
             "usefret::advanced::prelude::{LocalState,TrackedStateExtas_};",
+            "LocalStateModelStoreExt",
         ] {
             assert!(
                 !compact.contains(forbidden),

@@ -1,8 +1,7 @@
 use anyhow::Context as _;
-use fret::advanced::raw::LocalStateModelStoreExt as _;
 use fret::advanced::view::{AppUiRenderRootState, render_root_with_app_ui};
-use fret::app::LocalState;
 use fret::app::RenderContextAccess as _;
+use fret::app::{AppLocalStateTxnExt as _, LocalState};
 use fret_app::{App, CommandId, Effect};
 use fret_core::{AppWindowId, Event, Px, Rect, UiServices};
 use fret_launch::{
@@ -229,7 +228,7 @@ fn handle_event(
             )),
         };
         if let Some(locals) = state.locals.as_ref() {
-            let _ = locals.last_ime.set_in(app.models_mut(), msg);
+            app.local_state_txn(|tx| tx.set(&locals.last_ime, msg));
         }
     }
 

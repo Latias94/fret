@@ -276,6 +276,9 @@ When app code needs explicit theme snapshot value types in extracted helper sign
 When app code needs explicit local state-handle or transaction types in validators or helper
 signatures, import `fret::app::{LocalState, LocalStateTxn}` instead of expecting them from
 `fret::app::prelude::*`.
+When app-owned callbacks or function-driver hooks have `&mut App` and need to read/write
+`LocalState`, use `app.local_state_txn(|tx| ...)` rather than importing raw `ModelStore` bridge
+helpers.
 When app code needs explicit command identity, metadata, availability, keybinding, keymap, or
 shortcut-display nouns, import them from `fret::commands::{...}` instead of importing `fret_app`,
 `fret_runtime`, `fret_core`, or `fret_ui` from default app/tutorial code.
