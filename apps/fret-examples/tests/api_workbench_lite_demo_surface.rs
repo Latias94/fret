@@ -63,9 +63,8 @@ fn api_workbench_lite_demo_uses_app_local_state_and_explicit_shadcn_imports() {
     let compact = compact(source);
 
     for needle in [
-        "usefret::advanced::raw::LocalStateModelStoreExtas_;",
-        "usefret::app::LocalState;",
         "usefret::app::prelude::*;",
+        "usefret::app::{LocalState,LocalStateTxn};",
         "usefret_ui_shadcn::facadeasshadcn;",
         "structWorkbenchLocals{method:LocalState<Option<Arc<str>>>,",
         "FretApp::new(\"api-workbench-lite\")",
@@ -84,6 +83,9 @@ fn api_workbench_lite_demo_uses_app_local_state_and_explicit_shadcn_imports() {
         "KernelApp",
         "AppWindowId",
         "ViewElements",
+        "LocalStateModelStoreExt",
+        "LocalStateRawModelExt",
+        "LocalStateElementContextExt",
     ] {
         assert!(
             !source.contains(forbidden),
