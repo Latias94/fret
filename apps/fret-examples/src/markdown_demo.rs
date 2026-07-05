@@ -10,6 +10,7 @@ use std::time::Duration;
 
 use anyhow::Context as _;
 use fret::advanced::raw::{LocalStateElementContextExt as _, LocalStateModelStoreExt as _};
+use fret::app::ui_assets;
 use fret::query::{QueryError, QueryKey, QueryPolicy, QueryStatus};
 use fret::{FretApp, advanced::prelude::*, component::prelude::*};
 use fret_core::{ImageColorSpace, Point, Px, SvgFit};
@@ -19,7 +20,6 @@ use fret_ui::element::{
     SvgIconProps,
 };
 use fret_ui::{Invalidation, Theme, ThemeConfig};
-use fret_ui_assets::ui::use_rgba8_image_state_in;
 use fret_ui_kit::IntoUiElementInExt as _;
 use fret_ui_kit::declarative::QueryHandleWatchExt as _;
 use fret_ui_kit::declarative::text as decl_text;
@@ -538,7 +538,7 @@ $$
                                 height,
                                 rgba,
                             } => {
-                                let (_key, image, _status) = use_rgba8_image_state_in(
+                                let (_key, image, _status) = ui_assets::rgba8_image_state(
                                     cx,
                                     *width,
                                     *height,
@@ -560,7 +560,7 @@ $$
 
             let inner = match info.src.as_ref() {
                 "fret-demo://checkerboard" => {
-                    let (_key, image, _status) = use_rgba8_image_state_in(
+                    let (_key, image, _status) = ui_assets::rgba8_image_state(
                         cx,
                         96,
                         96,

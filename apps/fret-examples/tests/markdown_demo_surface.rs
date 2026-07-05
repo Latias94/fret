@@ -8,6 +8,7 @@ fn markdown_demo_chrome_text_uses_shared_roles() {
     let source = compact(source);
 
     for needle in [
+        "usefret::app::ui_assets;",
         "usefret_ui_kit::declarative::textasdecl_text;",
         "fnmarkdown_demo_readout_text<H:fret_ui::UiHost>(",
         "fnmarkdown_demo_title_text<H:fret_ui::UiHost>(",
@@ -25,6 +26,8 @@ fn markdown_demo_chrome_text_uses_shared_roles() {
         "letforeground=theme.color_token(\"muted-foreground\");",
         "vec![markdown_demo_image_placeholder_text(cx,text.clone(),foreground,)]",
         "markdown_demo_image_placeholder_text(cx,text,foreground)",
+        "ui_assets::rgba8_image_state(cx,*width,*height,rgba.as_ref(),ImageColorSpace::Srgb,)",
+        "ui_assets::rgba8_image_state(cx,96,96,checker_rgba.as_ref(),ImageColorSpace::Srgb,)",
     ] {
         assert!(
             source.contains(needle),
@@ -42,6 +45,7 @@ fn markdown_demo_chrome_text_uses_shared_roles() {
         "TextProps{",
         "wrap:fret_core::TextWrap::Word",
         "overflow:fret_core::TextOverflow::Clip",
+        "usefret_ui_assets::ui::use_rgba8_image_state_in;",
     ] {
         assert!(
             !source.contains(needle),

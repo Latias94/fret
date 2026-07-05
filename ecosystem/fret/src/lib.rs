@@ -868,12 +868,29 @@ pub mod app {
     #[cfg(feature = "ui-assets")]
     pub mod ui_assets {
         pub use fret_ui_assets::app::{configure_caches, configure_caches_with_budgets};
-        pub use fret_ui_assets::image_asset_cache::ImageAssetStats;
+        pub use fret_ui_assets::image_asset_cache::{ImageAssetKey, ImageAssetStats};
         pub use fret_ui_assets::image_asset_state::ImageLoadingStatus;
         pub use fret_ui_assets::image_source::{ImageSource, ImageSourceOptions, ImageSourceState};
         pub use fret_ui_assets::svg_asset_cache::SvgAssetStats;
         pub use fret_ui_assets::ui::SvgAssetSourceState;
         pub use fret_ui_assets::ui_assets::{UiAssets, UiAssetsBudgets};
+
+        pub fn rgba8_image_state<'a, Cx>(
+            cx: &mut Cx,
+            width: u32,
+            height: u32,
+            rgba: &[u8],
+            color_space: fret_core::ImageColorSpace,
+        ) -> (
+            ImageAssetKey,
+            Option<fret_core::ImageId>,
+            ImageLoadingStatus,
+        )
+        where
+            Cx: crate::app::AppRenderContext<'a>,
+        {
+            fret_ui_assets::ui::use_rgba8_image_state_in(cx, width, height, rgba, color_space)
+        }
 
         pub fn image_source_state<'a, Cx>(cx: &mut Cx, source: &ImageSource) -> ImageSourceState
         where
@@ -4854,12 +4871,19 @@ mod authoring_surface_policy_tests {
     #[test]
     fn app_ui_assets_facade_keeps_asset_state_off_raw_element_context() {
         assert!(LIB_RS.contains("pub mod ui_assets {"));
+        assert!(LIB_RS.contains(
+            "pub use fret_ui_assets::image_asset_cache::{ImageAssetKey, ImageAssetStats};"
+        ));
+        assert!(LIB_RS.contains("pub fn rgba8_image_state<'a, Cx>("));
         assert!(LIB_RS.contains("pub fn image_source_state<'a, Cx>("));
         assert!(LIB_RS.contains("pub fn image_source_state_from_asset_request<'a, Cx>("));
         assert!(LIB_RS.contains("pub fn svg_source_state_from_asset_request<'a, Cx>("));
         assert!(LIB_RS.contains("pub fn image_stats<'a, Cx>("));
         assert!(LIB_RS.contains("pub fn svg_stats<'a, Cx>("));
         assert!(LIB_RS.contains("Cx: crate::app::AppRenderContext<'a>"));
+        assert!(LIB_RS.contains(
+            "fret_ui_assets::ui::use_rgba8_image_state_in(cx, width, height, rgba, color_space)"
+        ));
         assert!(LIB_RS.contains("fret_ui_assets::ui::use_image_source_state_in(cx, source)"));
         assert!(LIB_RS.contains(
             "fret_ui_assets::ui::use_image_source_state_from_asset_request_in(cx, request)"
