@@ -690,6 +690,37 @@ fn custom_effect_v2_lut_web_model_writes_stay_behind_owner_helper() {
 }
 
 #[test]
+fn custom_effect_v2_glass_chrome_web_model_writes_stay_behind_owner_helper() {
+    let source = include_str!("../src/custom_effect_v2_glass_chrome_web_demo.rs");
+    assert_custom_effect_v2_web_model_writes_stay_behind_owner_helper(
+        CustomEffectV2WebModelOwnerContract {
+            label: "custom_effect_v2_glass_chrome_web_demo",
+            source,
+            model_store_alias: "type CustomEffectV2GlassChromeWebModelStore = fret_runtime::ModelStore;",
+            owner_struct: "struct CustomEffectV2GlassChromeWebModelOwner<'a> {",
+            state_struct: "pub struct CustomEffectV2GlassChromeWebWindowState",
+            reset_controls_sig: "fn reset_controls(&mut self, controls: &DemoControls) -> bool",
+            call_markers: &[
+                "CustomEffectV2GlassChromeWebModelOwner::new(host.models_mut()).reset_controls(&reset_controls);",
+                "CustomEffectV2GlassChromeWebModelOwner::new(app.models_mut()).toggle_surface(&state.show);",
+                "CustomEffectV2GlassChromeWebModelOwner::new(app.models_mut()).reset_controls(&state.controls);",
+            ],
+            reset_markers: &[
+                "self.set_model(&controls.enabled, true)",
+                "self.set_model(&controls.mode, Some(Arc::from(\"backdrop\")))",
+                "self.set_model(&controls.quality, Some(Arc::from(\"high\")))",
+                "self.set_model(&controls.sampling, Some(Arc::from(\"linear\")))",
+                "self.set_model(&controls.uv_span, vec![1.0])",
+                "self.set_model(&controls.strength, vec![0.95])",
+                "self.set_model(&controls.shininess, vec![36.0])",
+                "self.set_model(&controls.mix01, vec![1.0])",
+                "self.set_model(&controls.debug_input, false)",
+            ],
+        },
+    );
+}
+
+#[test]
 fn custom_effect_v2_web_templates_use_shared_text_roles() {
     assert_custom_effect_v2_template_overlay_text_roles(
         include_str!("../src/custom_effect_v2_identity_web_demo.rs"),

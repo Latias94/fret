@@ -575,12 +575,19 @@ SELECTED_GROUPED_STATE_POLICIES = [
             'let theme = cx.theme().snapshot();',
             'fn view_settings(',
             '-> CustomEffectV2GlassChromeWebViewSettings {',
-            'fn reset_in(&self, models: &mut fret_runtime::ModelStore) {',
+            'type CustomEffectV2GlassChromeWebModelStore = fret_runtime::ModelStore;',
+            "struct CustomEffectV2GlassChromeWebModelOwner<'a> {",
+            'fn set_model<T: std::any::Any>(&mut self, model: &Model<T>, value: T) -> bool {',
+            'fn reset_controls(&mut self, controls: &DemoControls) -> bool {',
             'cx.data().selector_model_paint(',
             '&controls.enabled,',
             '&controls.debug_input,',
-            'reset_controls.reset_in(host.models_mut());',
-            'state.controls.reset_in(app.models_mut());',
+            'CustomEffectV2GlassChromeWebModelOwner::new(host.models_mut())',
+            '.reset_controls(&reset_controls);',
+            'CustomEffectV2GlassChromeWebModelOwner::new(app.models_mut())',
+            '.toggle_surface(&state.show);',
+            'CustomEffectV2GlassChromeWebModelOwner::new(app.models_mut())',
+            '.reset_controls(&state.controls);',
             'let view_settings = Self::view_settings(cx, &controls);',
         ],
         [
@@ -593,6 +600,10 @@ SELECTED_GROUPED_STATE_POLICIES = [
             'model.paint_in(cx).read_ref(|v| v.as_ref().map(|s| s.to_string()))',
             'CustomEffectV2GlassChromeWebDriver::reset_controls(app, &state.controls);',
             'let _ = models.update(&reset_controls.enabled, |v| *v = true);',
+            'fn reset_in(&self, models: &mut fret_runtime::ModelStore) {',
+            'reset_controls.reset_in(host.models_mut());',
+            'state.controls.reset_in(app.models_mut());',
+            'models_mut().update(',
             'let enabled = controls.enabled.paint_in(cx).value_or(true);',
             'let debug_input = controls.debug_input.paint_in(cx).value_or(false);',
             'Theme::global(&*cx.app).snapshot()',
@@ -981,6 +992,21 @@ CUSTOM_EFFECT_V2_LUT_WEB_RESET_REQUIRED = [
     'self.set_model(&controls.tile_corner_radius_px, vec![18.0])',
     'self.set_model(&controls.debug_input, false)',
 ]
+CUSTOM_EFFECT_V2_GLASS_CHROME_WEB_OWNER_START = (
+    'type CustomEffectV2GlassChromeWebModelStore = fret_runtime::ModelStore;'
+)
+CUSTOM_EFFECT_V2_GLASS_CHROME_WEB_OWNER_END = 'pub struct CustomEffectV2GlassChromeWebWindowState'
+CUSTOM_EFFECT_V2_GLASS_CHROME_WEB_RESET_REQUIRED = [
+    'self.set_model(&controls.enabled, true)',
+    'self.set_model(&controls.mode, Some(Arc::from("backdrop")))',
+    'self.set_model(&controls.quality, Some(Arc::from("high")))',
+    'self.set_model(&controls.sampling, Some(Arc::from("linear")))',
+    'self.set_model(&controls.uv_span, vec![1.0])',
+    'self.set_model(&controls.strength, vec![0.95])',
+    'self.set_model(&controls.shininess, vec![36.0])',
+    'self.set_model(&controls.mix01, vec![1.0])',
+    'self.set_model(&controls.debug_input, false)',
+]
 CUSTOM_EFFECT_V2_OWNER_SLICES = {
     'custom_effect_v2_web_demo.rs': (
         CUSTOM_EFFECT_V2_WEB_OWNER_START,
@@ -996,6 +1022,11 @@ CUSTOM_EFFECT_V2_OWNER_SLICES = {
         CUSTOM_EFFECT_V2_LUT_WEB_OWNER_START,
         CUSTOM_EFFECT_V2_LUT_WEB_OWNER_END,
         CUSTOM_EFFECT_V2_LUT_WEB_RESET_REQUIRED,
+    ),
+    'custom_effect_v2_glass_chrome_web_demo.rs': (
+        CUSTOM_EFFECT_V2_GLASS_CHROME_WEB_OWNER_START,
+        CUSTOM_EFFECT_V2_GLASS_CHROME_WEB_OWNER_END,
+        CUSTOM_EFFECT_V2_GLASS_CHROME_WEB_RESET_REQUIRED,
     ),
 }
 CUSTOM_EFFECT_V2_OWNER_OUTSIDE_FORBIDDEN = [

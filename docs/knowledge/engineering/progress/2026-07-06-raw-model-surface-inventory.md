@@ -30,11 +30,11 @@ Keep raw/shared-model mechanisms for now:
     each plot family has an equivalent binding contract.
 - Custom effect demos such as `custom_effect_v2_*`. They expose effect parameter models and reset
   groups; these need a dedicated parameter/control-surface design before deletion.
-  - Follow-up: `custom_effect_v2_web_demo.rs`, `custom_effect_v2_identity_web_demo.rs`, and
-    `custom_effect_v2_lut_web_demo.rs` now keep direct reset/toggle model writes behind local owner
-    helpers. Keep model allocation in the function-driver setup path for now; apply the
-    owner-boundary pattern to the remaining V2 web variant before designing a shared parameter
-    binding.
+  - Follow-up: `custom_effect_v2_web_demo.rs`, `custom_effect_v2_identity_web_demo.rs`,
+    `custom_effect_v2_lut_web_demo.rs`, and `custom_effect_v2_glass_chrome_web_demo.rs` now keep
+    direct reset/toggle model writes behind local owner helpers. Keep model allocation in the
+    function-driver setup path for now; design a shared parameter binding only after the duplicated
+    shape proves worth exposing as a public app-facing abstraction.
 - `apps/fret-ui-gallery/src/driver/*`. These are gallery runtime drivers and not first-contact app
   authoring examples.
 - `apps/fret-ui-gallery/src/ui/snippets/ai/canvas_world_layer_spike.rs`. This is a large spike with
@@ -56,10 +56,8 @@ Keep raw/shared-model mechanisms for now:
 
 Likely next cleanup slices:
 
-- Remaining custom-effect V2 web variant (`glass-chrome`) where raw model-store writes still appear
-  outside a dedicated owner helper.
-- Custom-effect parameter binding contracts after the remaining V2 web variants have the same owner
-  boundary and duplicated parameter shapes are clearer.
+- Custom-effect parameter binding contracts after the V2 web variants have the same owner boundary
+  and duplicated parameter shapes are clearer.
 # Verification
 
 - `git status --short --branch` on latest `main`
