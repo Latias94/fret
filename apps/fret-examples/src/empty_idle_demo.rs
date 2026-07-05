@@ -1,4 +1,4 @@
-use fret::advanced::prelude::*;
+use fret::advanced::prelude::{AppWindowId, KernelApp, ViewElements, ui_app};
 use fret_ui::ElementContext;
 
 struct EmptyIdleState;
