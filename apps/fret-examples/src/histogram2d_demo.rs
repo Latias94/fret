@@ -3,20 +3,18 @@ use anyhow::Context as _;
 use fret_app::{App, Effect, WindowRequest};
 use fret_core::{AppWindowId, Event};
 use fret_launch::{FnDriver, WinitEventContext, WinitRenderContext, WinitRunnerConfig};
-use fret_plot::declarative::{Histogram2DPlotPanelProps, histogram2d_plot_panel_in};
+use fret_plot::Histogram2DPlotPanelBinding;
+use fret_plot::declarative::histogram2d_plot_panel_in;
 use fret_plot::models::Histogram2DPlotModel;
 use fret_plot::plot::axis::{AxisLabelFormatter, AxisNumberFormat};
 use fret_plot::plot::histogram2d::{Histogram2DConfig, histogram2d_counts};
-use fret_plot::state::{PlotOutput, PlotState};
 use fret_runtime::PlatformCapabilities;
 use fret_ui::{UiTree, declarative};
 
 struct Histogram2DDemoWindowState {
     ui: UiTree<App>,
     root: Option<fret_core::NodeId>,
-    plot: fret_runtime::Model<Histogram2DPlotModel>,
-    plot_state: fret_runtime::Model<PlotState>,
-    plot_output: fret_runtime::Model<PlotOutput>,
+    plot: Histogram2DPlotPanelBinding,
 }
 
 #[derive(Default)]
@@ -41,10 +39,7 @@ impl Histogram2DDemoDriver {
 
         let grid = histogram2d_counts(Histogram2DConfig::new(bounds, 256, 192), points);
         let model = Histogram2DPlotModel::new(grid.data_bounds, grid.cols, grid.rows, grid.values);
-        let plot = app.models_mut().insert(model);
-
-        let plot_state = app.models_mut().insert(PlotState::default());
-        let plot_output = app.models_mut().insert(PlotOutput::default());
+        let plot = Histogram2DPlotPanelBinding::new(app, model);
 
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
@@ -53,8 +48,6 @@ impl Histogram2DDemoDriver {
             ui,
             root: None,
             plot,
-            plot_state,
-            plot_output,
         }
     }
 }
@@ -114,14 +107,11 @@ fn render(
             declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
                 .render_root("histogram2d-demo", {
                     let plot = state.plot.clone();
-                    let plot_state = state.plot_state.clone();
-                    let plot_output = state.plot_output.clone();
                     move |cx| {
-                        let props = Histogram2DPlotPanelProps::new(plot.clone())
+                        let props = plot
+                            .panel_props()
                             .x_axis_labels(AxisLabelFormatter::number(AxisNumberFormat::Fixed(2)))
-                            .y_axis_labels(AxisLabelFormatter::number(AxisNumberFormat::Fixed(2)))
-                            .state(plot_state.clone())
-                            .output(plot_output.clone());
+                            .y_axis_labels(AxisLabelFormatter::number(AxisNumberFormat::Fixed(2)));
                         vec![histogram2d_plot_panel_in(cx, props)]
                     }
                 });

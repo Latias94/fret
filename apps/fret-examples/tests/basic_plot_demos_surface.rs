@@ -355,15 +355,17 @@ fn area_demo_uses_manual_harness_declarative_area_plot_panel() {
     let source = compact(include_str!("../src/area_demo.rs"));
 
     for needle in [
-        "usefret_plot::declarative::{AreaPlotPanelProps,area_plot_panel_in};",
+        "usefret_plot::AreaPlotPanelBinding;",
+        "usefret_plot::declarative::area_plot_panel_in;",
         "usefret_plot::models::{AreaPlotModel,AreaSeries};",
         "usefret_ui::{UiTree,declarative};",
+        "plot:AreaPlotPanelBinding",
+        "AreaPlotPanelBinding::new(app,AreaPlotModel::from_series(vec![",
         "AreaPlotModel::from_series(vec![",
         "AreaSeries::new(",
         "declarative::RenderRootContext::new(&mutstate.ui,app,services,window,bounds).render_root(\"area-demo\"",
-        "AreaPlotPanelProps::new(plot.clone())",
-        ".state(plot_state.clone())",
-        ".output(plot_output.clone())",
+        "plot.panel_props()",
+        "state.plot.output_untracked(app)",
         "vec![area_plot_panel_in(cx,props)]",
     ] {
         assert!(
@@ -378,6 +380,12 @@ fn area_demo_uses_manual_harness_declarative_area_plot_panel() {
         "AreaPlotCanvas",
         "PlotCanvas",
         "create_node_retained(",
+        "fret_runtime::Model<",
+        "AreaPlotPanelProps::new(",
+        ".state(plot_state.clone())",
+        ".output(plot_output.clone())",
+        "app.models_mut().insert(PlotState::default())",
+        "app.models_mut().insert(PlotOutput::default())",
     ] {
         assert!(
             !source.contains(legacy),
@@ -469,16 +477,18 @@ fn shaded_demo_uses_manual_harness_declarative_shaded_plot_panel() {
     let source = compact(include_str!("../src/shaded_demo.rs"));
 
     for needle in [
-        "usefret_plot::declarative::{ShadedPlotPanelProps,shaded_plot_panel_in};",
+        "usefret_plot::ShadedPlotPanelBinding;",
+        "usefret_plot::declarative::shaded_plot_panel_in;",
         "usefret_plot::models::{ShadedPlotModel,ShadedSeries};",
         "usefret_ui::{UiTree,declarative};",
+        "plot:ShadedPlotPanelBinding",
+        "ShadedPlotPanelBinding::new(app,ShadedPlotModel::from_series(vec![",
         "ShadedPlotModel::from_series(vec![",
         "ShadedSeries::new(",
         "declarative::RenderRootContext::new(&mutstate.ui,app,services,window,bounds).render_root(\"shaded-demo\"",
-        "ShadedPlotPanelProps::new(plot.clone())",
+        "plot.panel_props()",
         ".x_axis_labels(AxisLabelFormatter::time_seconds(TimeAxisFormat{",
-        ".state(plot_state.clone())",
-        ".output(plot_output.clone())",
+        "state.plot.output_untracked(app)",
         "vec![shaded_plot_panel_in(cx,props)]",
     ] {
         assert!(
@@ -493,6 +503,12 @@ fn shaded_demo_uses_manual_harness_declarative_shaded_plot_panel() {
         "ShadedPlotCanvas",
         "PlotCanvas",
         "create_node_retained(",
+        "fret_runtime::Model<",
+        "ShadedPlotPanelProps::new(",
+        ".state(plot_state.clone())",
+        ".output(plot_output.clone())",
+        "app.models_mut().insert(PlotState::default())",
+        "app.models_mut().insert(PlotOutput::default())",
     ] {
         assert!(
             !source.contains(legacy),
@@ -680,16 +696,18 @@ fn candlestick_demo_uses_manual_harness_declarative_candlestick_plot_panel() {
     let source = compact(include_str!("../src/candlestick_demo.rs"));
 
     for needle in [
-        "usefret_plot::declarative::{CandlestickPlotPanelProps,candlestick_plot_panel_in};",
+        "usefret_plot::CandlestickPlotPanelBinding;",
+        "usefret_plot::declarative::candlestick_plot_panel_in;",
         "usefret_plot::models::{CandlestickPlotModel,CandlestickSeries,OhlcPoint};",
         "usefret_ui::{UiTree,declarative};",
+        "plot:CandlestickPlotPanelBinding",
+        "CandlestickPlotPanelBinding::new(app,CandlestickPlotModel::from_series(vec![",
         "CandlestickPlotModel::from_series(vec![",
         "CandlestickSeries::new_sorted(",
         ".width(0.9)",
         "declarative::RenderRootContext::new(&mutstate.ui,app,services,window,bounds).render_root(\"candlestick-demo\"",
-        "CandlestickPlotPanelProps::new(plot.clone())",
-        ".state(plot_state.clone())",
-        ".output(plot_output.clone())",
+        "plot.panel_props()",
+        "state.plot.output_untracked(app)",
         "vec![candlestick_plot_panel_in(cx,props)]",
     ] {
         assert!(
@@ -704,6 +722,12 @@ fn candlestick_demo_uses_manual_harness_declarative_candlestick_plot_panel() {
         "CandlestickPlotCanvas",
         "PlotCanvas",
         "create_node_retained(",
+        "fret_runtime::Model<",
+        "CandlestickPlotPanelProps::new(",
+        ".state(plot_state.clone())",
+        ".output(plot_output.clone())",
+        "app.models_mut().insert(PlotState::default())",
+        "app.models_mut().insert(PlotOutput::default())",
     ] {
         assert!(
             !source.contains(legacy),
@@ -717,15 +741,17 @@ fn heatmap_demo_uses_manual_harness_declarative_heatmap_plot_panel() {
     let source = compact(include_str!("../src/heatmap_demo.rs"));
 
     for needle in [
-        "usefret_plot::declarative::{HeatmapPlotPanelProps,heatmap_plot_panel_in};",
+        "usefret_plot::HeatmapPlotPanelBinding;",
+        "usefret_plot::declarative::heatmap_plot_panel_in;",
         "usefret_plot::models::HeatmapPlotModel;",
         "usefret_ui::{UiTree,declarative};",
+        "plot:HeatmapPlotPanelBinding",
+        "HeatmapPlotPanelBinding::new(app,HeatmapPlotModel::new(data_bounds,cols,rows,values),)",
         "HeatmapPlotModel::new(data_bounds,cols,rows,values)",
         "declarative::RenderRootContext::new(&mutstate.ui,app,services,window,bounds).render_root(\"heatmap-demo\"",
-        "HeatmapPlotPanelProps::new(plot.clone())",
+        "plot.panel_props()",
         ".style(style)",
-        ".state(plot_state.clone())",
-        ".output(plot_output.clone())",
+        "state.plot.output_untracked(app)",
         "vec![heatmap_plot_panel_in(cx,props)]",
     ] {
         assert!(
@@ -740,6 +766,12 @@ fn heatmap_demo_uses_manual_harness_declarative_heatmap_plot_panel() {
         "HeatmapPlotCanvas",
         "PlotCanvas",
         "create_node_retained(",
+        "fret_runtime::Model<",
+        "HeatmapPlotPanelProps::new(",
+        ".state(plot_state.clone())",
+        ".output(plot_output.clone())",
+        "app.models_mut().insert(PlotState::default())",
+        "app.models_mut().insert(PlotOutput::default())",
     ] {
         assert!(
             !source.contains(legacy),
@@ -753,17 +785,18 @@ fn histogram2d_demo_uses_manual_harness_declarative_histogram2d_plot_panel() {
     let source = compact(include_str!("../src/histogram2d_demo.rs"));
 
     for needle in [
-        "usefret_plot::declarative::{Histogram2DPlotPanelProps,histogram2d_plot_panel_in};",
+        "usefret_plot::Histogram2DPlotPanelBinding;",
+        "usefret_plot::declarative::histogram2d_plot_panel_in;",
         "usefret_plot::models::Histogram2DPlotModel;",
         "usefret_ui::{UiTree,declarative};",
+        "plot:Histogram2DPlotPanelBinding",
         "histogram2d_counts(Histogram2DConfig::new(bounds,256,192),points)",
         "Histogram2DPlotModel::new(grid.data_bounds,grid.cols,grid.rows,grid.values)",
+        "Histogram2DPlotPanelBinding::new(app,model)",
         "declarative::RenderRootContext::new(&mutstate.ui,app,services,window,bounds).render_root(\"histogram2d-demo\"",
-        "Histogram2DPlotPanelProps::new(plot.clone())",
+        "plot.panel_props()",
         ".x_axis_labels(AxisLabelFormatter::number(AxisNumberFormat::Fixed(2)))",
         ".y_axis_labels(AxisLabelFormatter::number(AxisNumberFormat::Fixed(2)))",
-        ".state(plot_state.clone())",
-        ".output(plot_output.clone())",
         "vec![histogram2d_plot_panel_in(cx,props)]",
     ] {
         assert!(
@@ -778,6 +811,12 @@ fn histogram2d_demo_uses_manual_harness_declarative_histogram2d_plot_panel() {
         "Histogram2DPlotCanvas",
         "PlotCanvas",
         "create_node_retained(",
+        "fret_runtime::Model<",
+        "Histogram2DPlotPanelProps::new(",
+        ".state(plot_state.clone())",
+        ".output(plot_output.clone())",
+        "app.models_mut().insert(PlotState::default())",
+        "app.models_mut().insert(PlotOutput::default())",
     ] {
         assert!(
             !source.contains(legacy),

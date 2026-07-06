@@ -5,10 +5,10 @@ use fret_core::{AppWindowId, Event};
 use fret_launch::{
     FnDriver, WinitEventContext, WinitHotReloadContext, WinitRenderContext, WinitRunnerConfig,
 };
+use fret_plot::HeatmapPlotPanelBinding;
 use fret_plot::cartesian::DataRect;
-use fret_plot::declarative::{HeatmapPlotPanelProps, heatmap_plot_panel_in};
+use fret_plot::declarative::heatmap_plot_panel_in;
 use fret_plot::models::HeatmapPlotModel;
-use fret_plot::state::{PlotOutput, PlotState};
 use fret_plot::style::LinePlotStyle;
 use fret_runtime::PlatformCapabilities;
 use fret_ui::{UiTree, declarative};
@@ -16,9 +16,7 @@ use fret_ui::{UiTree, declarative};
 struct HeatmapDemoWindowState {
     ui: UiTree<App>,
     root: Option<fret_core::NodeId>,
-    plot: fret_runtime::Model<HeatmapPlotModel>,
-    plot_state: fret_runtime::Model<PlotState>,
-    plot_output: fret_runtime::Model<PlotOutput>,
+    plot: HeatmapPlotPanelBinding,
     last_logged_output_revision: u64,
 }
 
@@ -53,11 +51,10 @@ impl HeatmapDemoDriver {
             }
         }
 
-        let plot = app
-            .models_mut()
-            .insert(HeatmapPlotModel::new(data_bounds, cols, rows, values));
-        let plot_state = app.models_mut().insert(PlotState::default());
-        let plot_output = app.models_mut().insert(PlotOutput::default());
+        let plot = HeatmapPlotPanelBinding::new(
+            app,
+            HeatmapPlotModel::new(data_bounds, cols, rows, values),
+        );
 
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
@@ -66,8 +63,6 @@ impl HeatmapDemoDriver {
             ui,
             root: None,
             plot,
-            plot_state,
-            plot_output,
             last_logged_output_revision: 0,
         }
     }
@@ -121,10 +116,7 @@ fn handle_event(
                 event,
                 Event::Pointer(fret_core::PointerEvent::Up { .. }) | Event::KeyDown { .. }
             ) {
-                let output = state
-                    .plot_output
-                    .read(app, |_app, o| *o)
-                    .unwrap_or_default();
+                let output = state.plot.output_untracked(app);
                 if output.revision != state.last_logged_output_revision {
                     state.last_logged_output_revision = output.revision;
                     if let Some(query) = output.snapshot.query {
@@ -161,15 +153,10 @@ fn render(
             declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
                 .render_root("heatmap-demo", {
                     let plot = state.plot.clone();
-                    let plot_state = state.plot_state.clone();
-                    let plot_output = state.plot_output.clone();
                     move |cx| {
                         let mut style = LinePlotStyle::default();
                         style.heatmap_show_colorbar = true;
-                        let props = HeatmapPlotPanelProps::new(plot.clone())
-                            .style(style)
-                            .state(plot_state.clone())
-                            .output(plot_output.clone());
+                        let props = plot.panel_props().style(style);
                         vec![heatmap_plot_panel_in(cx, props)]
                     }
                 });

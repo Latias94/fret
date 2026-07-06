@@ -4,11 +4,13 @@ use fret_runtime::{Model, ModelHost};
 use fret_ui::{ElementContextAccess, Invalidation, UiHost};
 
 use crate::declarative::{
-    BarsPlotPanelProps, ErrorBarsPlotPanelProps, HistogramPlotPanelProps, LinePlotPanelProps,
-    StemsPlotPanelProps,
+    AreaPlotPanelProps, BarsPlotPanelProps, CandlestickPlotPanelProps, ErrorBarsPlotPanelProps,
+    HeatmapPlotPanelProps, Histogram2DPlotPanelProps, HistogramPlotPanelProps, LinePlotPanelProps,
+    ShadedPlotPanelProps, StemsPlotPanelProps,
 };
 use crate::models::{
-    BarsPlotModel, ErrorBarsPlotModel, HistogramPlotModel, LinePlotModel, StemsPlotModel,
+    AreaPlotModel, BarsPlotModel, CandlestickPlotModel, ErrorBarsPlotModel, HeatmapPlotModel,
+    Histogram2DPlotModel, HistogramPlotModel, LinePlotModel, ShadedPlotModel, StemsPlotModel,
 };
 use crate::state::{PlotOutput, PlotState};
 
@@ -183,6 +185,61 @@ define_plot_panel_binding!(
     BarsPlotPanelProps
 );
 
+define_plot_panel_binding!(
+    /// App-facing handle for an area plot panel plus its caller-owned interaction state.
+    ///
+    /// `AreaPlotPanelProps` remains the component-author surface and still exposes raw model
+    /// handles for advanced composition. This binding is the default app/cookbook surface for a
+    /// standalone area panel.
+    AreaPlotPanelBinding,
+    AreaPlotModel,
+    AreaPlotPanelProps
+);
+
+define_plot_panel_binding!(
+    /// App-facing handle for a shaded plot panel plus its caller-owned interaction state.
+    ///
+    /// `ShadedPlotPanelProps` remains the component-author surface and still exposes raw model
+    /// handles for advanced composition. This binding is the default app/cookbook surface for a
+    /// standalone shaded-band panel.
+    ShadedPlotPanelBinding,
+    ShadedPlotModel,
+    ShadedPlotPanelProps
+);
+
+define_plot_panel_binding!(
+    /// App-facing handle for a candlestick plot panel plus its caller-owned interaction state.
+    ///
+    /// `CandlestickPlotPanelProps` remains the component-author surface and still exposes raw model
+    /// handles for advanced composition. This binding is the default app/cookbook surface for a
+    /// standalone candlestick panel.
+    CandlestickPlotPanelBinding,
+    CandlestickPlotModel,
+    CandlestickPlotPanelProps
+);
+
+define_plot_panel_binding!(
+    /// App-facing handle for a heatmap plot panel plus its caller-owned interaction state.
+    ///
+    /// `HeatmapPlotPanelProps` remains the component-author surface and still exposes raw model
+    /// handles for advanced composition. This binding is the default app/cookbook surface for a
+    /// standalone heatmap panel.
+    HeatmapPlotPanelBinding,
+    HeatmapPlotModel,
+    HeatmapPlotPanelProps
+);
+
+define_plot_panel_binding!(
+    /// App-facing handle for a histogram2d plot panel plus its caller-owned interaction state.
+    ///
+    /// `Histogram2DPlotPanelProps` remains the component-author surface and still exposes raw model
+    /// handles for advanced composition. This binding is the default app/cookbook surface for a
+    /// standalone histogram2d panel.
+    Histogram2DPlotPanelBinding,
+    Histogram2DPlotModel,
+    Histogram2DPlotPanelProps
+);
+
 #[cfg(test)]
 mod tests {
     use std::sync::Arc;
@@ -191,16 +248,19 @@ mod tests {
 
     use crate::cartesian::DataPoint;
     use crate::models::{
-        BarSeries, BarsPlotModel, ErrorBar, ErrorBarsPlotModel, ErrorBarsSeries,
-        HistogramPlotModel, HistogramSeries, LinePlotModel, LineSeries, StemsPlotModel,
-        StemsSeries,
+        AreaPlotModel, AreaSeries, BarSeries, BarsPlotModel, CandlestickPlotModel,
+        CandlestickSeries, ErrorBar, ErrorBarsPlotModel, ErrorBarsSeries, HeatmapPlotModel,
+        Histogram2DPlotModel, HistogramPlotModel, HistogramSeries, LinePlotModel, LineSeries,
+        OhlcPoint, ShadedPlotModel, ShadedSeries, StemsPlotModel, StemsSeries,
     };
     use crate::series::Series;
     use crate::state::PlotOutput;
 
     use super::{
-        BarsPlotPanelBinding, ErrorBarsPlotPanelBinding, HistogramPlotPanelBinding,
-        LinePlotPanelBinding, StemsPlotPanelBinding,
+        AreaPlotPanelBinding, BarsPlotPanelBinding, CandlestickPlotPanelBinding,
+        ErrorBarsPlotPanelBinding, HeatmapPlotPanelBinding, Histogram2DPlotPanelBinding,
+        HistogramPlotPanelBinding, LinePlotPanelBinding, ShadedPlotPanelBinding,
+        StemsPlotPanelBinding,
     };
 
     #[derive(Default)]
@@ -269,6 +329,70 @@ mod tests {
                 true,
             ),
         )])
+    }
+
+    fn sample_area_model() -> AreaPlotModel {
+        AreaPlotModel::from_series(vec![AreaSeries::new(
+            "sample",
+            Series::from_points_sorted(
+                vec![DataPoint { x: 0.0, y: 1.0 }, DataPoint { x: 1.0, y: 2.0 }],
+                true,
+            ),
+        )])
+    }
+
+    fn sample_shaded_model() -> ShadedPlotModel {
+        ShadedPlotModel::from_series(vec![ShadedSeries::new(
+            "sample",
+            Series::from_points_sorted(
+                vec![DataPoint { x: 0.0, y: 2.0 }, DataPoint { x: 1.0, y: 3.0 }],
+                true,
+            ),
+            Series::from_points_sorted(
+                vec![DataPoint { x: 0.0, y: 1.0 }, DataPoint { x: 1.0, y: 2.0 }],
+                true,
+            ),
+        )])
+    }
+
+    fn sample_candlestick_model() -> CandlestickPlotModel {
+        CandlestickPlotModel::from_series(vec![CandlestickSeries::new_sorted(
+            "sample",
+            Arc::from([
+                OhlcPoint {
+                    x: 0.0,
+                    open: 1.0,
+                    high: 2.0,
+                    low: 0.5,
+                    close: 1.5,
+                },
+                OhlcPoint {
+                    x: 1.0,
+                    open: 1.5,
+                    high: 2.5,
+                    low: 1.0,
+                    close: 2.0,
+                },
+            ]),
+            true,
+        )])
+    }
+
+    fn sample_heatmap_model() -> HeatmapPlotModel {
+        HeatmapPlotModel::new(sample_grid_bounds(), 2, 2, [0.0, 0.5, 0.75, 1.0])
+    }
+
+    fn sample_histogram2d_model() -> Histogram2DPlotModel {
+        Histogram2DPlotModel::new(sample_grid_bounds(), 2, 2, [0.0, 1.0, 2.0, 3.0])
+    }
+
+    fn sample_grid_bounds() -> crate::cartesian::DataRect {
+        crate::cartesian::DataRect {
+            x_min: 0.0,
+            x_max: 1.0,
+            y_min: 0.0,
+            y_max: 1.0,
+        }
     }
 
     #[test]
@@ -454,5 +578,190 @@ mod tests {
             .expect("output model update should succeed");
 
         assert_eq!(binding.output_untracked(&host).revision, 32);
+    }
+
+    #[test]
+    fn area_plot_binding_creates_props_with_state_and_output_without_public_raw_handles() {
+        let mut host = TestHost::default();
+
+        let binding = AreaPlotPanelBinding::new(&mut host, sample_area_model());
+        let props = binding.panel_props();
+
+        assert!(props.state.is_some());
+        assert!(props.output.is_some());
+        assert!(
+            host.models()
+                .read(&props.model, |model| model.series.len())
+                .is_ok()
+        );
+    }
+
+    #[test]
+    fn area_plot_binding_reads_output_without_exposing_output_model_handle() {
+        let mut host = TestHost::default();
+
+        let binding = AreaPlotPanelBinding::new(&mut host, sample_area_model());
+        let props = binding.panel_props();
+        let output = props
+            .output
+            .expect("binding props should include output model");
+        output
+            .update(&mut host, |output, _cx| {
+                *output = PlotOutput {
+                    revision: 40,
+                    ..Default::default()
+                };
+            })
+            .expect("output model update should succeed");
+
+        assert_eq!(binding.output_untracked(&host).revision, 40);
+    }
+
+    #[test]
+    fn shaded_plot_binding_creates_props_with_state_and_output_without_public_raw_handles() {
+        let mut host = TestHost::default();
+
+        let binding = ShadedPlotPanelBinding::new(&mut host, sample_shaded_model());
+        let props = binding.panel_props();
+
+        assert!(props.state.is_some());
+        assert!(props.output.is_some());
+        assert!(
+            host.models()
+                .read(&props.model, |model| model.series.len())
+                .is_ok()
+        );
+    }
+
+    #[test]
+    fn shaded_plot_binding_reads_output_without_exposing_output_model_handle() {
+        let mut host = TestHost::default();
+
+        let binding = ShadedPlotPanelBinding::new(&mut host, sample_shaded_model());
+        let props = binding.panel_props();
+        let output = props
+            .output
+            .expect("binding props should include output model");
+        output
+            .update(&mut host, |output, _cx| {
+                *output = PlotOutput {
+                    revision: 48,
+                    ..Default::default()
+                };
+            })
+            .expect("output model update should succeed");
+
+        assert_eq!(binding.output_untracked(&host).revision, 48);
+    }
+
+    #[test]
+    fn candlestick_plot_binding_creates_props_with_state_and_output_without_public_raw_handles() {
+        let mut host = TestHost::default();
+
+        let binding = CandlestickPlotPanelBinding::new(&mut host, sample_candlestick_model());
+        let props = binding.panel_props();
+
+        assert!(props.state.is_some());
+        assert!(props.output.is_some());
+        assert!(
+            host.models()
+                .read(&props.model, |model| model.series.len())
+                .is_ok()
+        );
+    }
+
+    #[test]
+    fn candlestick_plot_binding_reads_output_without_exposing_output_model_handle() {
+        let mut host = TestHost::default();
+
+        let binding = CandlestickPlotPanelBinding::new(&mut host, sample_candlestick_model());
+        let props = binding.panel_props();
+        let output = props
+            .output
+            .expect("binding props should include output model");
+        output
+            .update(&mut host, |output, _cx| {
+                *output = PlotOutput {
+                    revision: 56,
+                    ..Default::default()
+                };
+            })
+            .expect("output model update should succeed");
+
+        assert_eq!(binding.output_untracked(&host).revision, 56);
+    }
+
+    #[test]
+    fn heatmap_plot_binding_creates_props_with_state_and_output_without_public_raw_handles() {
+        let mut host = TestHost::default();
+
+        let binding = HeatmapPlotPanelBinding::new(&mut host, sample_heatmap_model());
+        let props = binding.panel_props();
+
+        assert!(props.state.is_some());
+        assert!(props.output.is_some());
+        assert!(
+            host.models()
+                .read(&props.model, |model| model.values.len())
+                .is_ok()
+        );
+    }
+
+    #[test]
+    fn heatmap_plot_binding_reads_output_without_exposing_output_model_handle() {
+        let mut host = TestHost::default();
+
+        let binding = HeatmapPlotPanelBinding::new(&mut host, sample_heatmap_model());
+        let props = binding.panel_props();
+        let output = props
+            .output
+            .expect("binding props should include output model");
+        output
+            .update(&mut host, |output, _cx| {
+                *output = PlotOutput {
+                    revision: 64,
+                    ..Default::default()
+                };
+            })
+            .expect("output model update should succeed");
+
+        assert_eq!(binding.output_untracked(&host).revision, 64);
+    }
+
+    #[test]
+    fn histogram2d_plot_binding_creates_props_with_state_and_output_without_public_raw_handles() {
+        let mut host = TestHost::default();
+
+        let binding = Histogram2DPlotPanelBinding::new(&mut host, sample_histogram2d_model());
+        let props = binding.panel_props();
+
+        assert!(props.state.is_some());
+        assert!(props.output.is_some());
+        assert!(
+            host.models()
+                .read(&props.model, |model| model.values.len())
+                .is_ok()
+        );
+    }
+
+    #[test]
+    fn histogram2d_plot_binding_reads_output_without_exposing_output_model_handle() {
+        let mut host = TestHost::default();
+
+        let binding = Histogram2DPlotPanelBinding::new(&mut host, sample_histogram2d_model());
+        let props = binding.panel_props();
+        let output = props
+            .output
+            .expect("binding props should include output model");
+        output
+            .update(&mut host, |output, _cx| {
+                *output = PlotOutput {
+                    revision: 72,
+                    ..Default::default()
+                };
+            })
+            .expect("output model update should succeed");
+
+        assert_eq!(binding.output_untracked(&host).revision, 72);
     }
 }

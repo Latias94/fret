@@ -21,8 +21,9 @@ mod theme_tokens;
 mod binding;
 
 pub use binding::{
-    BarsPlotPanelBinding, ErrorBarsPlotPanelBinding, HistogramPlotPanelBinding,
-    LinePlotPanelBinding, StemsPlotPanelBinding,
+    AreaPlotPanelBinding, BarsPlotPanelBinding, CandlestickPlotPanelBinding,
+    ErrorBarsPlotPanelBinding, HeatmapPlotPanelBinding, Histogram2DPlotPanelBinding,
+    HistogramPlotPanelBinding, LinePlotPanelBinding, ShadedPlotPanelBinding, StemsPlotPanelBinding,
 };
 
 #[cfg(test)]

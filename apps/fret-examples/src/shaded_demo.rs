@@ -6,12 +6,12 @@ use fret_launch::{
     FnDriver, WindowCreateSpec, WinitEventContext, WinitHotReloadContext, WinitRenderContext,
     WinitRunnerConfig,
 };
+use fret_plot::ShadedPlotPanelBinding;
 use fret_plot::cartesian::DataPoint;
-use fret_plot::declarative::{ShadedPlotPanelProps, shaded_plot_panel_in};
+use fret_plot::declarative::shaded_plot_panel_in;
 use fret_plot::models::{ShadedPlotModel, ShadedSeries};
 use fret_plot::plot::axis::{AxisLabelFormatter, TimeAxisFormat, TimeAxisPresentation};
 use fret_plot::series::Series;
-use fret_plot::state::{PlotOutput, PlotState};
 use fret_plot::style::LinePlotStyle;
 use fret_runtime::PlatformCapabilities;
 use fret_ui::{UiTree, declarative};
@@ -19,9 +19,7 @@ use fret_ui::{UiTree, declarative};
 pub struct ShadedDemoWindowState {
     ui: UiTree<App>,
     root: Option<fret_core::NodeId>,
-    plot: fret_runtime::Model<ShadedPlotModel>,
-    plot_state: fret_runtime::Model<PlotState>,
-    plot_output: fret_runtime::Model<PlotOutput>,
+    plot: ShadedPlotPanelBinding,
     last_logged_output_revision: u64,
 }
 
@@ -50,22 +48,23 @@ impl ShadedDemoDriver {
             lower1.push(DataPoint { x, y: base1 - 0.12 });
         }
 
-        let plot = app.models_mut().insert(ShadedPlotModel::from_series(vec![
-            ShadedSeries::new(
-                "band A",
-                Series::from_points_sorted(upper0, true),
-                Series::from_points_sorted(lower0, true),
-            )
-            .fill_alpha(0.18),
-            ShadedSeries::new(
-                "band B",
-                Series::from_points_sorted(upper1, true),
-                Series::from_points_sorted(lower1, true),
-            )
-            .fill_alpha(0.18),
-        ]));
-        let plot_state = app.models_mut().insert(PlotState::default());
-        let plot_output = app.models_mut().insert(PlotOutput::default());
+        let plot = ShadedPlotPanelBinding::new(
+            app,
+            ShadedPlotModel::from_series(vec![
+                ShadedSeries::new(
+                    "band A",
+                    Series::from_points_sorted(upper0, true),
+                    Series::from_points_sorted(lower0, true),
+                )
+                .fill_alpha(0.18),
+                ShadedSeries::new(
+                    "band B",
+                    Series::from_points_sorted(upper1, true),
+                    Series::from_points_sorted(lower1, true),
+                )
+                .fill_alpha(0.18),
+            ]),
+        );
 
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
@@ -74,8 +73,6 @@ impl ShadedDemoDriver {
             ui,
             root: None,
             plot,
-            plot_state,
-            plot_output,
             last_logged_output_revision: 0,
         }
     }
@@ -129,10 +126,7 @@ fn handle_event(
                 event,
                 Event::Pointer(fret_core::PointerEvent::Up { .. }) | Event::KeyDown { .. }
             ) {
-                let output = state
-                    .plot_output
-                    .read(app, |_app, o| *o)
-                    .unwrap_or_default();
+                let output = state.plot.output_untracked(app);
                 if output.revision != state.last_logged_output_revision {
                     state.last_logged_output_revision = output.revision;
                     if let Some(query) = output.snapshot.query {
@@ -166,18 +160,14 @@ fn render(_driver: &mut ShadedDemoDriver, context: WinitRenderContext<'_, Shaded
             declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
                 .render_root("shaded-demo", {
                     let plot = state.plot.clone();
-                    let plot_state = state.plot_state.clone();
-                    let plot_output = state.plot_output.clone();
                     move |cx| {
                         let style = LinePlotStyle::default();
-                        let props = ShadedPlotPanelProps::new(plot.clone())
-                            .style(style)
-                            .x_axis_labels(AxisLabelFormatter::time_seconds(TimeAxisFormat {
+                        let props = plot.panel_props().style(style).x_axis_labels(
+                            AxisLabelFormatter::time_seconds(TimeAxisFormat {
                                 base_seconds: 1_700_000_000.0,
                                 presentation: TimeAxisPresentation::UnixUtc,
-                            }))
-                            .state(plot_state.clone())
-                            .output(plot_output.clone());
+                            }),
+                        );
                         vec![shaded_plot_panel_in(cx, props)]
                     }
                 });

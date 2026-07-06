@@ -5,9 +5,9 @@ use fret_core::{AppWindowId, Event};
 use fret_launch::{
     FnDriver, WinitEventContext, WinitHotReloadContext, WinitRenderContext, WinitRunnerConfig,
 };
-use fret_plot::declarative::{CandlestickPlotPanelProps, candlestick_plot_panel_in};
+use fret_plot::CandlestickPlotPanelBinding;
+use fret_plot::declarative::candlestick_plot_panel_in;
 use fret_plot::models::{CandlestickPlotModel, CandlestickSeries, OhlcPoint};
-use fret_plot::state::{PlotOutput, PlotState};
 use fret_plot::style::LinePlotStyle;
 use fret_runtime::PlatformCapabilities;
 use fret_ui::{UiTree, declarative};
@@ -16,9 +16,7 @@ use std::sync::Arc;
 struct CandlestickDemoWindowState {
     ui: UiTree<App>,
     root: Option<fret_core::NodeId>,
-    plot: fret_runtime::Model<CandlestickPlotModel>,
-    plot_state: fret_runtime::Model<PlotState>,
-    plot_output: fret_runtime::Model<PlotOutput>,
+    plot: CandlestickPlotPanelBinding,
     last_logged_output_revision: u64,
 }
 
@@ -49,13 +47,12 @@ impl CandlestickDemoDriver {
             last_close = close;
         }
 
-        let plot = app
-            .models_mut()
-            .insert(CandlestickPlotModel::from_series(vec![
+        let plot = CandlestickPlotPanelBinding::new(
+            app,
+            CandlestickPlotModel::from_series(vec![
                 CandlestickSeries::new_sorted("ohlc", Arc::from(out), true).width(0.9),
-            ]));
-        let plot_state = app.models_mut().insert(PlotState::default());
-        let plot_output = app.models_mut().insert(PlotOutput::default());
+            ]),
+        );
 
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
@@ -64,8 +61,6 @@ impl CandlestickDemoDriver {
             ui,
             root: None,
             plot,
-            plot_state,
-            plot_output,
             last_logged_output_revision: 0,
         }
     }
@@ -119,10 +114,7 @@ fn handle_event(
                 event,
                 Event::Pointer(fret_core::PointerEvent::Up { .. }) | Event::KeyDown { .. }
             ) {
-                let output = state
-                    .plot_output
-                    .read(app, |_app, o| *o)
-                    .unwrap_or_default();
+                let output = state.plot.output_untracked(app);
                 if output.revision != state.last_logged_output_revision {
                     state.last_logged_output_revision = output.revision;
                     if let Some(query) = output.snapshot.query {
@@ -159,14 +151,9 @@ fn render(
             declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
                 .render_root("candlestick-demo", {
                     let plot = state.plot.clone();
-                    let plot_state = state.plot_state.clone();
-                    let plot_output = state.plot_output.clone();
                     move |cx| {
                         let style = LinePlotStyle::default();
-                        let props = CandlestickPlotPanelProps::new(plot.clone())
-                            .style(style)
-                            .state(plot_state.clone())
-                            .output(plot_output.clone());
+                        let props = plot.panel_props().style(style);
                         vec![candlestick_plot_panel_in(cx, props)]
                     }
                 });
