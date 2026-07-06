@@ -105,8 +105,10 @@ Keep raw/shared-model mechanisms for now:
     show/enabled/mode/quality/sampling/UV/debug controls now live in a shared binding, and the four
     demos route reset/toggle through `toggle_surface_in(...)` / `reset_controls_in(...)` instead of
     naming the private `CustomEffectV2WebModelOwner`. Variant-specific parameter models still stay
-    in each demo behind `CustomEffectV2WebVariantReset`; a later params-spec slice should decide
-    whether to unify `EffectParamsV1` packing through explicit `ParamSlot` metadata.
+    in each demo behind `CustomEffectV2WebVariantReset`. Follow-up tightening also moved raw
+    `EffectParamsV1 { vec4s: ... }` literals behind explicit `CustomEffectV2ParamSlot` /
+    `CustomEffectV2ParamPack` calls, so the shader ABI ordering is named and source-gated without
+    prematurely introducing a full dynamic parameter-schema system.
   - Follow-up: those four web variants are now included in `tools/check_surface_policy.py` scan
     roots and classified as advanced/manual surfaces with explicit raw seams, owner, and retirement
     condition. The same gate now rejects direct reset/toggle writes through
@@ -194,8 +196,8 @@ Keep raw/shared-model mechanisms for now:
 
 Likely next cleanup slices:
 
-- Custom-effect parameter binding contracts after the V2 web owner-boundary gate has run long
-  enough to prove which duplicated parameter shapes deserve a public app-facing abstraction.
+- Typed custom-effect control/schema contracts if the V2 web variants need to share defaults,
+  diagnostics labels, and parameter ABI metadata across more than these four demos.
 - Plot/chart family-specific bindings for remaining first-contact demos once their output/state
   contracts are named explicitly.
 

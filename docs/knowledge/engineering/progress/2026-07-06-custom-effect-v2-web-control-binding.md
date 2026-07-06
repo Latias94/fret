@@ -30,6 +30,7 @@ common controls instead of exposing the private model owner at each demo call si
 
 # Follow-up
 
-This slice intentionally does not introduce a full `EffectParamsV1` parameter-spec abstraction.
-The next custom-effect cleanup should decide whether named `ParamSlot` metadata is worth adding for
-the remaining variant-specific scalar models and params packing.
+This slice intentionally did not introduce a full `EffectParamsV1` parameter-spec abstraction.
+A follow-up cleanup now names each web demo's shader parameter slots through
+`CustomEffectV2ParamSlot` / `CustomEffectV2ParamPack`. A broader dynamic effect-parameter schema
+should wait until it can also own runtime controls, diagnostics labels, and defaults.

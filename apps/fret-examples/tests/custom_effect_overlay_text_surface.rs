@@ -111,7 +111,19 @@ fn assert_custom_effect_v2_web_shared_control_binding_helper(source: &str) {
     let compact_source = compact(source);
 
     for needle in [
+        "usefret_core::scene::EffectParamsV1;",
         "usefret_runtime::{Model,ModelStore};",
+        "pub(crate)structCustomEffectV2ParamSlot{",
+        "pub(crate)constfnnew(vec4:usize,lane:usize)->Self",
+        "assert!(vec4<4);",
+        "assert!(lane<4);",
+        "fnwrite(self,params:&mutEffectParamsV1,value:f32)",
+        "pub(crate)structCustomEffectV2ParamPack{",
+        "params:EffectParamsV1,",
+        "EffectParamsV1::ZERO",
+        "pub(crate)fnwith_value(mutself,slot:CustomEffectV2ParamSlot,value:f32)->Self",
+        "pub(crate)fnwith_flag(self,slot:CustomEffectV2ParamSlot,value:bool)->Self",
+        "pub(crate)fnfinish(self)->EffectParamsV1",
         "structCustomEffectV2WebModelOwner<'a>{",
         "models:&'amutModelStore,",
         "fnnew(models:&'amutModelStore)->Self",
@@ -163,10 +175,13 @@ fn assert_custom_effect_v2_web_common_controls_use_binding(
     for needle in [
         "usecrate::custom_effect_v2_web_owner::{".to_string(),
         "CustomEffectV2WebControlBinding,CustomEffectV2WebVariantControls,".to_string(),
+        "CustomEffectV2ParamPack,CustomEffectV2ParamSlot,".to_string(),
         "CustomEffectV2WebVariantReset,".to_string(),
         "implCustomEffectV2WebVariantControlsforDemoControls{".to_string(),
         "fnreset_variant_controls(&self,reset:&mutCustomEffectV2WebVariantReset<'_,'_>)->bool"
             .to_string(),
+        "CustomEffectV2ParamPack::new()".to_string(),
+        ".finish()".to_string(),
         "binding:CustomEffectV2WebControlBinding,".to_string(),
         "CustomEffectV2WebControlBinding::new(app.models_mut())".to_string(),
         "binding.enabled()".to_string(),
@@ -200,6 +215,8 @@ fn assert_custom_effect_v2_web_common_controls_use_binding(
         "show:fret_runtime::Model<bool>",
         "show:Model<bool>",
         "state.show",
+        "letparams=EffectParamsV1{",
+        "vec4s:[",
         "ModelStore::update(",
         "ModelStore::update::<",
         "ModelStore::update_any(",
@@ -636,6 +653,9 @@ fn custom_effect_v2_web_common_controls_use_binding() {
         label: "custom_effect_v2_web_demo",
         source,
         variant_reset_markers: &[
+            "const PARAM_STRENGTH_PX: CustomEffectV2ParamSlot = CustomEffectV2ParamSlot::new(0, 0);",
+            "const PARAM_TINT_STRENGTH: CustomEffectV2ParamSlot = CustomEffectV2ParamSlot::new(0, 1);",
+            "const PARAM_DEBUG_INPUT: CustomEffectV2ParamSlot = CustomEffectV2ParamSlot::new(0, 2);",
             "reset.set_model(&self.strength_px, vec![14.0])",
             "reset.set_model(&self.max_sample_offset_px, vec![18.0])",
             "reset.set_model(&self.tint_strength, vec![0.8])",
@@ -643,6 +663,9 @@ fn custom_effect_v2_web_common_controls_use_binding() {
             "reset.set_model(&self.blur_downsample, vec![1.0])",
             "reset.set_model(&self.lens_corner_radius_px, vec![24.0])",
             "reset.set_model(&self.tile_corner_radius_px, vec![18.0])",
+            ".with_value(PARAM_STRENGTH_PX, view_settings.strength_px)",
+            ".with_value(PARAM_TINT_STRENGTH, view_settings.tint_strength)",
+            ".with_flag(PARAM_DEBUG_INPUT, view_settings.debug_input)",
         ],
     });
 }
@@ -653,7 +676,13 @@ fn custom_effect_v2_identity_web_common_controls_use_binding() {
     assert_custom_effect_v2_web_common_controls_use_binding(CustomEffectV2WebBindingContract {
         label: "custom_effect_v2_identity_web_demo",
         source,
-        variant_reset_markers: &["reset.set_model(&self.mix01, vec![0.65])"],
+        variant_reset_markers: &[
+            "const PARAM_MIX01: CustomEffectV2ParamSlot = CustomEffectV2ParamSlot::new(0, 0);",
+            "const PARAM_DEBUG_INPUT: CustomEffectV2ParamSlot = CustomEffectV2ParamSlot::new(0, 1);",
+            "reset.set_model(&self.mix01, vec![0.65])",
+            ".with_value(PARAM_MIX01, view_settings.mix01)",
+            ".with_flag(PARAM_DEBUG_INPUT, view_settings.debug_input)",
+        ],
     });
 }
 
@@ -664,6 +693,9 @@ fn custom_effect_v2_lut_web_common_controls_use_binding() {
         label: "custom_effect_v2_lut_web_demo",
         source,
         variant_reset_markers: &[
+            "const PARAM_INTENSITY: CustomEffectV2ParamSlot = CustomEffectV2ParamSlot::new(0, 0);",
+            "const PARAM_CONTRAST01: CustomEffectV2ParamSlot = CustomEffectV2ParamSlot::new(0, 1);",
+            "const PARAM_DEBUG_INPUT: CustomEffectV2ParamSlot = CustomEffectV2ParamSlot::new(0, 2);",
             "reset.set_model(&self.strength_px, vec![0.85])",
             "reset.set_model(&self.max_sample_offset_px, vec![0.0])",
             "reset.set_model(&self.tint_strength, vec![0.5])",
@@ -671,6 +703,9 @@ fn custom_effect_v2_lut_web_common_controls_use_binding() {
             "reset.set_model(&self.blur_downsample, vec![1.0])",
             "reset.set_model(&self.lens_corner_radius_px, vec![24.0])",
             "reset.set_model(&self.tile_corner_radius_px, vec![18.0])",
+            ".with_value(PARAM_INTENSITY, view_settings.intensity)",
+            ".with_value(PARAM_CONTRAST01, view_settings.contrast01)",
+            ".with_flag(PARAM_DEBUG_INPUT, view_settings.debug_input)",
         ],
     });
 }
@@ -682,9 +717,17 @@ fn custom_effect_v2_glass_chrome_web_common_controls_use_binding() {
         label: "custom_effect_v2_glass_chrome_web_demo",
         source,
         variant_reset_markers: &[
+            "const PARAM_STRENGTH: CustomEffectV2ParamSlot = CustomEffectV2ParamSlot::new(0, 0);",
+            "const PARAM_SHININESS: CustomEffectV2ParamSlot = CustomEffectV2ParamSlot::new(0, 1);",
+            "const PARAM_MIX01: CustomEffectV2ParamSlot = CustomEffectV2ParamSlot::new(0, 2);",
+            "const PARAM_DEBUG_INPUT: CustomEffectV2ParamSlot = CustomEffectV2ParamSlot::new(0, 3);",
             "reset.set_model(&self.strength, vec![0.95])",
             "reset.set_model(&self.shininess, vec![36.0])",
             "reset.set_model(&self.mix01, vec![1.0])",
+            ".with_value(PARAM_STRENGTH, view_settings.strength)",
+            ".with_value(PARAM_SHININESS, view_settings.shininess)",
+            ".with_value(PARAM_MIX01, view_settings.mix01)",
+            ".with_flag(PARAM_DEBUG_INPUT, view_settings.debug_input)",
         ],
     });
 }

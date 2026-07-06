@@ -12,13 +12,13 @@
 use std::sync::Arc;
 
 use crate::custom_effect_v2_web_owner::{
-    CustomEffectV2WebControlBinding, CustomEffectV2WebVariantControls,
-    CustomEffectV2WebVariantReset,
+    CustomEffectV2ParamPack, CustomEffectV2ParamSlot, CustomEffectV2WebControlBinding,
+    CustomEffectV2WebVariantControls, CustomEffectV2WebVariantReset,
 };
 use fret::advanced::view::AppRenderDataExt as _;
 use fret_app::{App, Effect};
 use fret_core::scene::{
-    CustomEffectImageInputV1, EffectChain, EffectMode, EffectParamsV1, EffectQuality, EffectStep,
+    CustomEffectImageInputV1, EffectChain, EffectMode, EffectQuality, EffectStep,
     ImageSamplingHint, Paint, UvRect,
 };
 use fret_core::{AppWindowId, Corners, Edges, ImageId, KeyCode, Px};
@@ -107,6 +107,11 @@ struct DemoControls {
     shininess: Model<Vec<f32>>,
     mix01: Model<Vec<f32>>,
 }
+
+const PARAM_STRENGTH: CustomEffectV2ParamSlot = CustomEffectV2ParamSlot::new(0, 0);
+const PARAM_SHININESS: CustomEffectV2ParamSlot = CustomEffectV2ParamSlot::new(0, 1);
+const PARAM_MIX01: CustomEffectV2ParamSlot = CustomEffectV2ParamSlot::new(0, 2);
+const PARAM_DEBUG_INPUT: CustomEffectV2ParamSlot = CustomEffectV2ParamSlot::new(0, 3);
 
 impl CustomEffectV2WebVariantControls for DemoControls {
     fn reset_variant_controls(&self, reset: &mut CustomEffectV2WebVariantReset<'_, '_>) -> bool {
@@ -376,19 +381,12 @@ impl CustomEffectV2GlassChromeWebDriver {
                 |_cx| Vec::<AnyElement>::new(),
             )
         } else if let (true, Some(effect)) = (supported, effect) {
-            let params = EffectParamsV1 {
-                vec4s: [
-                    [
-                        view_settings.strength,
-                        view_settings.shininess,
-                        view_settings.mix01,
-                        if view_settings.debug_input { 1.0 } else { 0.0 },
-                    ],
-                    [0.0; 4],
-                    [0.0; 4],
-                    [0.0; 4],
-                ],
-            };
+            let params = CustomEffectV2ParamPack::new()
+                .with_value(PARAM_STRENGTH, view_settings.strength)
+                .with_value(PARAM_SHININESS, view_settings.shininess)
+                .with_value(PARAM_MIX01, view_settings.mix01)
+                .with_flag(PARAM_DEBUG_INPUT, view_settings.debug_input)
+                .finish();
 
             let half = view_settings.uv_span * 0.5;
             let uv = UvRect {

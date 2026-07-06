@@ -288,7 +288,11 @@ CUSTOM_EFFECT_V2_WEB_ALLOWED_RAW_SEAMS = (
     "UiTree",
 )
 
-CUSTOM_EFFECT_V2_WEB_OWNER_HELPER_ALLOWED_RAW_SEAMS = ("fret_runtime", "ModelStore")
+CUSTOM_EFFECT_V2_WEB_OWNER_HELPER_ALLOWED_RAW_SEAMS = (
+    "fret_core",
+    "fret_runtime",
+    "ModelStore",
+)
 
 CUSTOM_EFFECT_V2_WEB_OWNER = "examples-custom-effect-v2-web"
 
@@ -311,6 +315,15 @@ CUSTOM_EFFECT_V2_WEB_DEMO_REQUIRED_MARKERS = (
 )
 
 CUSTOM_EFFECT_V2_WEB_OWNER_HELPER_REQUIRED_MARKERS = (
+    "use fret_core::scene::EffectParamsV1",
+    "struct CustomEffectV2ParamSlot",
+    "assert!(vec4 < 4)",
+    "assert!(lane < 4)",
+    "struct CustomEffectV2ParamPack",
+    "EffectParamsV1::ZERO",
+    "fn with_value",
+    "fn with_flag",
+    "fn finish",
     "struct CustomEffectV2WebControlBinding",
     "struct CustomEffectV2WebCommonControls",
     "struct CustomEffectV2WebModelOwner",

@@ -819,6 +819,7 @@ class SurfacePolicyTests(unittest.TestCase):
             "custom-effect v2 web shared owner helper should be classified as an internal harness",
         )
         self.assertIn("ModelStore", helper_spec.allowed_raw_seams)
+        self.assertIn("fret_core", helper_spec.allowed_raw_seams)
         self.assertTrue(
             any(
                 spec.path == "apps/fret-examples/src/simple_todo_demo/driver.rs"
@@ -980,7 +981,58 @@ class SurfacePolicyTests(unittest.TestCase):
                 root / "apps/fret-examples/src/custom_effect_v2_web_owner.rs",
                 """
                 use std::sync::Arc;
+                use fret_core::scene::EffectParamsV1;
                 use fret_runtime::{Model, ModelStore};
+
+                pub(crate) struct CustomEffectV2ParamSlot {
+                    vec4: usize,
+                    lane: usize,
+                }
+
+                impl CustomEffectV2ParamSlot {
+                    pub(crate) const fn new(vec4: usize, lane: usize) -> Self {
+                        assert!(vec4 < 4);
+                        assert!(lane < 4);
+                        Self { vec4, lane }
+                    }
+
+                    fn write(self, params: &mut EffectParamsV1, value: f32) {
+                        params.vec4s[self.vec4][self.lane] = value;
+                    }
+                }
+
+                pub(crate) struct CustomEffectV2ParamPack {
+                    params: EffectParamsV1,
+                }
+
+                impl CustomEffectV2ParamPack {
+                    pub(crate) fn new() -> Self {
+                        Self {
+                            params: EffectParamsV1::ZERO,
+                        }
+                    }
+
+                    pub(crate) fn with_value(
+                        mut self,
+                        slot: CustomEffectV2ParamSlot,
+                        value: f32,
+                    ) -> Self {
+                        slot.write(&mut self.params, value);
+                        self
+                    }
+
+                    pub(crate) fn with_flag(
+                        self,
+                        slot: CustomEffectV2ParamSlot,
+                        value: bool,
+                    ) -> Self {
+                        self.with_value(slot, if value { 1.0 } else { 0.0 })
+                    }
+
+                    pub(crate) fn finish(self) -> EffectParamsV1 {
+                        self.params
+                    }
+                }
 
                 struct CustomEffectV2WebModelOwner<'a> {
                     models: &'a mut ModelStore,
@@ -1077,7 +1129,7 @@ class SurfacePolicyTests(unittest.TestCase):
                         "internal_harness",
                         "fixture custom-effect v2 web owner helper",
                         owner="examples-custom-effect-v2-web",
-                        allowed_raw_seams=("fret_runtime", "ModelStore"),
+                        allowed_raw_seams=("fret_core", "fret_runtime", "ModelStore"),
                     )
                 ],
                 policy_recipe_surfaces=[],

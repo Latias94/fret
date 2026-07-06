@@ -119,7 +119,7 @@ pub mod custom_effect_v2_identity_web_demo;
 pub mod custom_effect_v2_lut_web_demo;
 #[cfg(target_arch = "wasm32")]
 pub mod custom_effect_v2_web_demo;
-#[cfg(target_arch = "wasm32")]
+#[cfg(any(target_arch = "wasm32", test))]
 pub(crate) mod custom_effect_v2_web_owner;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod custom_effect_v3_demo;
