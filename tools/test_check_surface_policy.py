@@ -864,7 +864,7 @@ class SurfacePolicyTests(unittest.TestCase):
         )
         self.assertNotIn("apps/fret-examples/src", POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS)
 
-    def test_custom_effect_v2_web_direct_model_updates_are_rejected(self) -> None:
+    def test_custom_effect_v2_web_legacy_owner_surface_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             write(
@@ -926,83 +926,134 @@ class SurfacePolicyTests(unittest.TestCase):
                 for violation in violations
                 if violation.rule == "advanced-surface-custom-effect-owner-boundary"
             ]
-            self.assertEqual(2, len(owner_boundary_violations))
-            for violation in owner_boundary_violations:
-                self.assertIn("ModelOwner", violation.message)
+            self.assertGreaterEqual(len(owner_boundary_violations), 1)
+            messages = "\n".join(violation.message for violation in owner_boundary_violations)
+            self.assertIn("binding", messages)
+            self.assertIn("legacy", messages)
 
-    def test_custom_effect_v2_web_owner_helper_updates_are_allowed(self) -> None:
+    def test_custom_effect_v2_web_binding_surface_is_allowed(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             write(
                 root / "apps/fret-examples/src/custom_effect_v2_web_demo.rs",
                 """
                 use crate::custom_effect_v2_web_owner::{
-                    CustomEffectV2WebControlReset,
-                    CustomEffectV2WebModelOwner,
+                    CustomEffectV2WebControlBinding,
+                    CustomEffectV2WebVariantControls,
+                    CustomEffectV2WebVariantReset,
                 };
 
                 struct DemoControls {
-                    enabled: fret_runtime::Model<bool>,
+                    strength: fret_runtime::Model<Vec<f32>>,
                 }
 
-                impl CustomEffectV2WebControlReset for DemoControls {
-                    fn reset_controls(&self, owner: &mut CustomEffectV2WebModelOwner<'_>) -> bool {
-                        owner.set_model(&self.enabled, true)
+                impl CustomEffectV2WebVariantControls for DemoControls {
+                    fn reset_variant_controls(
+                        &self,
+                        reset: &mut CustomEffectV2WebVariantReset<'_, '_>,
+                    ) -> bool {
+                        reset.set_model(&self.strength, vec![1.0])
                     }
                 }
 
-                fn ok(
-                    app: &mut fret_app::App,
-                    controls: &DemoControls,
-                    show: &fret_runtime::Model<bool>,
-                ) {
-                    CustomEffectV2WebModelOwner::new(app.models_mut()).reset_controls(controls);
-                    let _ = CustomEffectV2WebModelOwner::new(app.models_mut()).toggle_surface(show);
+                struct WindowState {
+                    binding: CustomEffectV2WebControlBinding,
+                    controls: DemoControls,
+                }
+
+                fn build(app: &mut fret_app::App) -> WindowState {
+                    WindowState {
+                        binding: CustomEffectV2WebControlBinding::new(app.models_mut()),
+                        controls: DemoControls {
+                            strength: app.models_mut().insert(vec![1.0]),
+                        },
+                    }
+                }
+
+                fn ok(app: &mut fret_app::App, state: &WindowState) {
+                    let _ = state.binding.toggle_surface_in(app.models_mut());
+                    state.binding.reset_controls_in(app.models_mut(), &state.controls);
                 }
                 """,
             )
             write(
                 root / "apps/fret-examples/src/custom_effect_v2_web_owner.rs",
                 """
+                use std::sync::Arc;
                 use fret_runtime::{Model, ModelStore};
 
-                pub(crate) trait CustomEffectV2WebControlReset {
-                    fn reset_controls(&self, owner: &mut CustomEffectV2WebModelOwner<'_>) -> bool;
-                }
-
-                pub(crate) struct CustomEffectV2WebModelOwner<'a> {
+                struct CustomEffectV2WebModelOwner<'a> {
                     models: &'a mut ModelStore,
                 }
 
                 impl<'a> CustomEffectV2WebModelOwner<'a> {
-                    pub(crate) fn new(models: &'a mut ModelStore) -> Self {
+                    fn new(models: &'a mut ModelStore) -> Self {
                         Self { models }
                     }
 
-                    pub(crate) fn set_model<T: std::any::Any>(
-                        &mut self,
-                        model: &Model<T>,
-                        value: T,
-                    ) -> bool {
+                    fn set_model<T: std::any::Any>(&mut self, model: &Model<T>, value: T) -> bool {
                         self.models.update(model, |current| {
                             *current = value;
                             true
                         }).unwrap_or(false)
                     }
+                }
 
-                    pub(crate) fn toggle_surface(&mut self, show: &Model<bool>) -> bool {
-                        self.models.update(show, |value| {
-                            *value = !*value;
-                            true
-                        }).unwrap_or(false)
+                pub(crate) struct CustomEffectV2WebControlBinding {
+                    show: Model<bool>,
+                    common: CustomEffectV2WebCommonControls,
+                }
+
+                impl CustomEffectV2WebControlBinding {
+                    pub(crate) fn new(models: &mut ModelStore) -> Self {
+                        Self {
+                            show: models.insert(true),
+                            common: CustomEffectV2WebCommonControls {
+                                enabled: models.insert(true),
+                                mode: models.insert(Some(Arc::from("backdrop"))),
+                            },
+                        }
                     }
 
-                    pub(crate) fn reset_controls<C: CustomEffectV2WebControlReset>(
-                        &mut self,
+                    pub(crate) fn toggle_surface_in(&self, models: &mut ModelStore) -> bool {
+                        CustomEffectV2WebModelOwner::new(models).set_model(&self.show, true)
+                    }
+
+                    pub(crate) fn reset_controls_in<C: CustomEffectV2WebVariantControls>(
+                        &self,
+                        models: &mut ModelStore,
                         controls: &C,
                     ) -> bool {
-                        controls.reset_controls(self)
+                        let mut owner = CustomEffectV2WebModelOwner::new(models);
+                        let mut reset = CustomEffectV2WebVariantReset { owner: &mut owner };
+                        controls.reset_variant_controls(&mut reset)
                     }
+                }
+
+                struct CustomEffectV2WebCommonControls {
+                    enabled: Model<bool>,
+                    mode: Model<Option<Arc<str>>>,
+                }
+
+                pub(crate) struct CustomEffectV2WebVariantReset<'a, 'models> {
+                    owner: &'a mut CustomEffectV2WebModelOwner<'models>,
+                }
+
+                impl<'a, 'models> CustomEffectV2WebVariantReset<'a, 'models> {
+                    pub(crate) fn set_model<T: std::any::Any>(
+                        &mut self,
+                        model: &Model<T>,
+                        value: T,
+                    ) -> bool {
+                        self.owner.set_model(model, value)
+                    }
+                }
+
+                pub(crate) trait CustomEffectV2WebVariantControls {
+                    fn reset_variant_controls(
+                        &self,
+                        reset: &mut CustomEffectV2WebVariantReset<'_, '_>,
+                    ) -> bool;
                 }
                 """,
             )

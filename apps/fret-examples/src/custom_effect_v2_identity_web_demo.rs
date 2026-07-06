@@ -15,7 +15,8 @@
 use std::sync::Arc;
 
 use crate::custom_effect_v2_web_owner::{
-    CustomEffectV2WebControlReset, CustomEffectV2WebModelOwner,
+    CustomEffectV2WebControlBinding, CustomEffectV2WebVariantControls,
+    CustomEffectV2WebVariantReset,
 };
 use fret::advanced::view::AppRenderDataExt as _;
 use fret_app::{App, Effect};
@@ -87,35 +88,19 @@ impl DemoEffectPack {
 
 #[derive(Debug, Clone)]
 struct DemoControls {
-    enabled: Model<bool>,
-    mode: Model<Option<Arc<str>>>,
-    mode_open: Model<bool>,
-    quality: Model<Option<Arc<str>>>,
-    quality_open: Model<bool>,
-    sampling: Model<Option<Arc<str>>>,
-    sampling_open: Model<bool>,
-    uv_span: Model<Vec<f32>>,
     mix01: Model<Vec<f32>>,
-    debug_input: Model<bool>,
 }
 
-impl CustomEffectV2WebControlReset for DemoControls {
-    fn reset_controls(&self, owner: &mut CustomEffectV2WebModelOwner<'_>) -> bool {
-        let mut changed = false;
-        changed = owner.set_model(&self.enabled, true) || changed;
-        changed = owner.set_model(&self.mode, Some(Arc::from("backdrop"))) || changed;
-        changed = owner.set_model(&self.quality, Some(Arc::from("high"))) || changed;
-        changed = owner.set_model(&self.sampling, Some(Arc::from("linear"))) || changed;
-        changed = owner.set_model(&self.uv_span, vec![1.0]) || changed;
-        changed = owner.set_model(&self.mix01, vec![0.65]) || changed;
-        owner.set_model(&self.debug_input, false) || changed
+impl CustomEffectV2WebVariantControls for DemoControls {
+    fn reset_variant_controls(&self, reset: &mut CustomEffectV2WebVariantReset<'_, '_>) -> bool {
+        reset.set_model(&self.mix01, vec![0.65])
     }
 }
 
 pub struct CustomEffectV2IdentityWebWindowState {
     ui: UiTree<App>,
     root: Option<fret_core::NodeId>,
-    show: fret_runtime::Model<bool>,
+    binding: CustomEffectV2WebControlBinding,
     controls: DemoControls,
 }
 
@@ -167,42 +152,34 @@ impl CustomEffectV2IdentityWebDriver {
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
 
-        let show = app.models_mut().insert(true);
+        let binding = CustomEffectV2WebControlBinding::new(app.models_mut());
 
         let controls = DemoControls {
-            enabled: app.models_mut().insert(true),
-            mode: app.models_mut().insert(Some(Arc::from("backdrop"))),
-            mode_open: app.models_mut().insert(false),
-            quality: app.models_mut().insert(Some(Arc::from("high"))),
-            quality_open: app.models_mut().insert(false),
-            sampling: app.models_mut().insert(Some(Arc::from("linear"))),
-            sampling_open: app.models_mut().insert(false),
-            uv_span: app.models_mut().insert(vec![1.0]),
             mix01: app.models_mut().insert(vec![0.65]),
-            debug_input: app.models_mut().insert(false),
         };
 
         CustomEffectV2IdentityWebWindowState {
             ui,
             root: None,
-            show,
+            binding,
             controls,
         }
     }
 
     fn view_settings(
         cx: &mut ElementContext<'_, App>,
+        binding: &CustomEffectV2WebControlBinding,
         controls: &DemoControls,
     ) -> CustomEffectV2IdentityWebViewSettings {
         cx.data().selector_model_paint(
             (
-                &controls.enabled,
-                &controls.mode,
-                &controls.quality,
-                &controls.sampling,
-                &controls.uv_span,
+                binding.enabled(),
+                binding.mode(),
+                binding.quality(),
+                binding.sampling(),
+                binding.uv_span(),
                 &controls.mix01,
-                &controls.debug_input,
+                binding.debug_input(),
             ),
             |(enabled, mode, quality, sampling, uv_span, mix01, debug_input)| {
                 CustomEffectV2IdentityWebViewSettings {
@@ -495,6 +472,7 @@ impl CustomEffectV2IdentityWebDriver {
 
     fn inspector(
         cx: &mut ElementContext<'_, App>,
+        binding: &CustomEffectV2WebControlBinding,
         controls: &DemoControls,
         view_settings: &CustomEffectV2IdentityWebViewSettings,
     ) -> impl IntoUiElement<App> + use<> {
@@ -506,9 +484,10 @@ impl CustomEffectV2IdentityWebDriver {
         let uv_span = view_settings.uv_span;
         let mix01 = view_settings.mix01;
 
+        let binding_for_reset = binding.clone();
         let controls_for_reset = controls.clone();
         let reset = on_activate_request_redraw(move |host| {
-            CustomEffectV2WebModelOwner::new(host.models_mut()).reset_controls(&controls_for_reset);
+            binding_for_reset.reset_controls_in(host.models_mut(), &controls_for_reset);
         });
 
         let mut layout = LayoutStyle::default();
@@ -558,7 +537,7 @@ impl CustomEffectV2IdentityWebDriver {
                 let mode_row = ui::v_flex(move |cx: &mut ElementContext<'_, App>| {
                     vec![
                         label_row(cx, "Effect mode", mode_value.clone()),
-                        shadcn::Select::new(controls.mode.clone(), controls.mode_open.clone())
+                        shadcn::Select::new(binding.mode().clone(), binding.mode_open().clone())
                             .value(shadcn::SelectValue::new().placeholder("Pick mode"))
                             .items([
                                 shadcn::SelectItem::new("backdrop", "Backdrop"),
@@ -574,8 +553,8 @@ impl CustomEffectV2IdentityWebDriver {
                     vec![
                         label_row(cx, "Effect quality", quality_value.clone()),
                         shadcn::Select::new(
-                            controls.quality.clone(),
-                            controls.quality_open.clone(),
+                            binding.quality().clone(),
+                            binding.quality_open().clone(),
                         )
                         .value(shadcn::SelectValue::new().placeholder("Pick quality"))
                         .items([
@@ -594,8 +573,8 @@ impl CustomEffectV2IdentityWebDriver {
                     vec![
                         label_row(cx, "Input sampling", sampling_value.clone()),
                         shadcn::Select::new(
-                            controls.sampling.clone(),
-                            controls.sampling_open.clone(),
+                            binding.sampling().clone(),
+                            binding.sampling_open().clone(),
                         )
                         .value(shadcn::SelectValue::new().placeholder("Pick sampling"))
                         .items([
@@ -612,7 +591,7 @@ impl CustomEffectV2IdentityWebDriver {
                 let uv_span_row = ui::v_flex(move |cx| {
                     vec![
                         label_row(cx, "Input UV span", format!("{uv_span:.2}")),
-                        shadcn::Slider::new(controls.uv_span.clone())
+                        shadcn::Slider::new(binding.uv_span().clone())
                             .range(0.05, 1.0)
                             .step(0.01)
                             .into_element(cx),
@@ -643,7 +622,7 @@ impl CustomEffectV2IdentityWebDriver {
                         vec![
                             ui::h_row(|cx| {
                                 [
-                                    shadcn::Switch::new(controls.enabled.clone())
+                                    shadcn::Switch::new(binding.enabled().clone())
                                         .a11y_label("Enable the effect layer")
                                         .test_id("custom-effect-v2-identity-web.enabled")
                                         .into_element(cx),
@@ -661,7 +640,7 @@ impl CustomEffectV2IdentityWebDriver {
                             shadcn::Separator::new().into_element(cx),
                             ui::h_row(|cx| {
                                 [
-                                    shadcn::Switch::new(controls.debug_input.clone())
+                                    shadcn::Switch::new(binding.debug_input().clone())
                                         .a11y_label("Show the input image")
                                         .test_id("custom-effect-v2-identity-web.debug-input")
                                         .into_element(cx),
@@ -712,10 +691,10 @@ impl CustomEffectV2IdentityWebDriver {
 
     fn render_root(
         cx: &mut ElementContext<'_, App>,
-        show: fret_runtime::Model<bool>,
+        binding: CustomEffectV2WebControlBinding,
         controls: DemoControls,
     ) -> Elements {
-        let visible = cx.data().selector_model_layout(&show, |show| show);
+        let visible = cx.data().selector_model_layout(binding.show(), |show| show);
         let theme = cx.theme().snapshot();
 
         let mut fill = LayoutStyle::default();
@@ -736,10 +715,11 @@ impl CustomEffectV2IdentityWebDriver {
         row.layout.size.height = Length::Fill;
 
         vec![cx.flex(row, move |cx| {
-            let view_settings = Self::view_settings(cx, &controls);
+            let view_settings = Self::view_settings(cx, &binding, &controls);
             let inspector_settings = view_settings.clone();
             let stage_settings = view_settings.clone();
-            let inspector = Self::inspector(cx, &controls, &inspector_settings).into_element(cx);
+            let inspector =
+                Self::inspector(cx, &binding, &controls, &inspector_settings).into_element(cx);
 
             let mut stage_layout = LayoutStyle::default();
             stage_layout.size.width = Length::Fill;
@@ -961,13 +941,15 @@ fn handle_event(
     if let fret_core::Event::KeyDown { key, .. } = event
         && *key == KeyCode::KeyV
     {
-        let _ = CustomEffectV2WebModelOwner::new(app.models_mut()).toggle_surface(&state.show);
+        let _ = state.binding.toggle_surface_in(app.models_mut());
         app.request_redraw(window);
     }
     if let fret_core::Event::KeyDown { key, .. } = event
         && *key == KeyCode::KeyR
     {
-        CustomEffectV2WebModelOwner::new(app.models_mut()).reset_controls(&state.controls);
+        state
+            .binding
+            .reset_controls_in(app.models_mut(), &state.controls);
         app.request_redraw(window);
     }
 
@@ -993,12 +975,12 @@ fn render(
         app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _| svc.is_enabled());
     state.ui.set_debug_enabled(diag_enabled);
 
-    let show = state.show.clone();
+    let binding = state.binding.clone();
     let controls = state.controls.clone();
 
     let root = declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
         .render_root("custom-effect-v2-identity-web", |cx| {
-            CustomEffectV2IdentityWebDriver::render_root(cx, show.clone(), controls.clone())
+            CustomEffectV2IdentityWebDriver::render_root(cx, binding.clone(), controls.clone())
         });
 
     state.ui.set_root(root);

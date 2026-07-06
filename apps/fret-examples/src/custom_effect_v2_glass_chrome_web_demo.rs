@@ -12,7 +12,8 @@
 use std::sync::Arc;
 
 use crate::custom_effect_v2_web_owner::{
-    CustomEffectV2WebControlReset, CustomEffectV2WebModelOwner,
+    CustomEffectV2WebControlBinding, CustomEffectV2WebVariantControls,
+    CustomEffectV2WebVariantReset,
 };
 use fret::advanced::view::AppRenderDataExt as _;
 use fret_app::{App, Effect};
@@ -102,39 +103,24 @@ impl DemoEffectPack {
 
 #[derive(Debug, Clone)]
 struct DemoControls {
-    enabled: Model<bool>,
-    mode: Model<Option<Arc<str>>>,
-    mode_open: Model<bool>,
-    quality: Model<Option<Arc<str>>>,
-    quality_open: Model<bool>,
-    sampling: Model<Option<Arc<str>>>,
-    sampling_open: Model<bool>,
-    uv_span: Model<Vec<f32>>,
     strength: Model<Vec<f32>>,
     shininess: Model<Vec<f32>>,
     mix01: Model<Vec<f32>>,
-    debug_input: Model<bool>,
 }
 
-impl CustomEffectV2WebControlReset for DemoControls {
-    fn reset_controls(&self, owner: &mut CustomEffectV2WebModelOwner<'_>) -> bool {
+impl CustomEffectV2WebVariantControls for DemoControls {
+    fn reset_variant_controls(&self, reset: &mut CustomEffectV2WebVariantReset<'_, '_>) -> bool {
         let mut changed = false;
-        changed = owner.set_model(&self.enabled, true) || changed;
-        changed = owner.set_model(&self.mode, Some(Arc::from("backdrop"))) || changed;
-        changed = owner.set_model(&self.quality, Some(Arc::from("high"))) || changed;
-        changed = owner.set_model(&self.sampling, Some(Arc::from("linear"))) || changed;
-        changed = owner.set_model(&self.uv_span, vec![1.0]) || changed;
-        changed = owner.set_model(&self.strength, vec![0.95]) || changed;
-        changed = owner.set_model(&self.shininess, vec![36.0]) || changed;
-        changed = owner.set_model(&self.mix01, vec![1.0]) || changed;
-        owner.set_model(&self.debug_input, false) || changed
+        changed = reset.set_model(&self.strength, vec![0.95]) || changed;
+        changed = reset.set_model(&self.shininess, vec![36.0]) || changed;
+        reset.set_model(&self.mix01, vec![1.0]) || changed
     }
 }
 
 pub struct CustomEffectV2GlassChromeWebWindowState {
     ui: UiTree<App>,
     root: Option<fret_core::NodeId>,
-    show: Model<bool>,
+    binding: CustomEffectV2WebControlBinding,
     controls: DemoControls,
 }
 
@@ -157,19 +143,20 @@ pub struct CustomEffectV2GlassChromeWebDriver;
 impl CustomEffectV2GlassChromeWebDriver {
     fn view_settings(
         cx: &mut ElementContext<'_, App>,
+        binding: &CustomEffectV2WebControlBinding,
         controls: &DemoControls,
     ) -> CustomEffectV2GlassChromeWebViewSettings {
         cx.data().selector_model_paint(
             (
-                &controls.enabled,
-                &controls.mode,
-                &controls.quality,
-                &controls.sampling,
-                &controls.uv_span,
+                binding.enabled(),
+                binding.mode(),
+                binding.quality(),
+                binding.sampling(),
+                binding.uv_span(),
                 &controls.strength,
                 &controls.shininess,
                 &controls.mix01,
-                &controls.debug_input,
+                binding.debug_input(),
             ),
             |(
                 enabled,
@@ -503,21 +490,22 @@ impl CustomEffectV2GlassChromeWebDriver {
 
     fn controls_panel(
         cx: &mut ElementContext<'_, App>,
+        binding: &CustomEffectV2WebControlBinding,
         controls: &DemoControls,
         view_settings: &CustomEffectV2GlassChromeWebViewSettings,
     ) -> impl IntoUiElement<App> + use<> {
-        let enabled_model = controls.enabled.clone();
-        let mode_model = controls.mode.clone();
-        let mode_open_model = controls.mode_open.clone();
-        let quality_model = controls.quality.clone();
-        let quality_open_model = controls.quality_open.clone();
-        let sampling_model = controls.sampling.clone();
-        let sampling_open_model = controls.sampling_open.clone();
-        let uv_span_model = controls.uv_span.clone();
+        let enabled_model = binding.enabled().clone();
+        let mode_model = binding.mode().clone();
+        let mode_open_model = binding.mode_open().clone();
+        let quality_model = binding.quality().clone();
+        let quality_open_model = binding.quality_open().clone();
+        let sampling_model = binding.sampling().clone();
+        let sampling_open_model = binding.sampling_open().clone();
+        let uv_span_model = binding.uv_span().clone();
         let strength_model = controls.strength.clone();
         let shininess_model = controls.shininess.clone();
         let mix01_model = controls.mix01.clone();
-        let debug_input_model = controls.debug_input.clone();
+        let debug_input_model = binding.debug_input().clone();
 
         let uv_span = view_settings.uv_span;
         let strength = view_settings.strength;
@@ -645,9 +633,10 @@ impl CustomEffectV2GlassChromeWebDriver {
         .items_center()
         .into_element(cx);
 
+        let binding_for_reset = binding.clone();
         let controls_for_reset = controls.clone();
         let reset = on_activate_request_redraw(move |host| {
-            CustomEffectV2WebModelOwner::new(host.models_mut()).reset_controls(&controls_for_reset);
+            binding_for_reset.reset_controls_in(host.models_mut(), &controls_for_reset);
         });
 
         let content =
@@ -694,10 +683,10 @@ impl CustomEffectV2GlassChromeWebDriver {
 
     fn render_root(
         cx: &mut ElementContext<'_, App>,
-        show: Model<bool>,
+        binding: CustomEffectV2WebControlBinding,
         controls: DemoControls,
     ) -> Elements {
-        let visible = cx.data().selector_model_layout(&show, |show| show);
+        let visible = cx.data().selector_model_layout(binding.show(), |show| show);
 
         let mut fill = LayoutStyle::default();
         fill.size.width = Length::Fill;
@@ -717,11 +706,11 @@ impl CustomEffectV2GlassChromeWebDriver {
         row.layout.size.height = Length::Fill;
 
         vec![cx.flex(row, move |cx| {
-            let view_settings = Self::view_settings(cx, &controls);
+            let view_settings = Self::view_settings(cx, &binding, &controls);
             let inspector_settings = view_settings.clone();
             let stage_settings = view_settings.clone();
             let inspector =
-                Self::controls_panel(cx, &controls, &inspector_settings).into_element(cx);
+                Self::controls_panel(cx, &binding, &controls, &inspector_settings).into_element(cx);
 
             let mut stage_layout = LayoutStyle::default();
             stage_layout.size.width = Length::Fill;
@@ -792,26 +781,17 @@ impl CustomEffectV2GlassChromeWebDriver {
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
 
-        let show = app.models_mut().insert(true);
+        let binding = CustomEffectV2WebControlBinding::new(app.models_mut());
         let controls = DemoControls {
-            enabled: app.models_mut().insert(true),
-            mode: app.models_mut().insert(Some(Arc::from("backdrop"))),
-            mode_open: app.models_mut().insert(false),
-            quality: app.models_mut().insert(Some(Arc::from("high"))),
-            quality_open: app.models_mut().insert(false),
-            sampling: app.models_mut().insert(Some(Arc::from("linear"))),
-            sampling_open: app.models_mut().insert(false),
-            uv_span: app.models_mut().insert(vec![1.0]),
             strength: app.models_mut().insert(vec![0.95]),
             shininess: app.models_mut().insert(vec![36.0]),
             mix01: app.models_mut().insert(vec![1.0]),
-            debug_input: app.models_mut().insert(false),
         };
 
         CustomEffectV2GlassChromeWebWindowState {
             ui,
             root: None,
-            show,
+            binding,
             controls,
         }
     }
@@ -882,13 +862,15 @@ fn handle_event(
     if let fret_core::Event::KeyDown { key, .. } = event
         && *key == KeyCode::KeyV
     {
-        let _ = CustomEffectV2WebModelOwner::new(app.models_mut()).toggle_surface(&state.show);
+        let _ = state.binding.toggle_surface_in(app.models_mut());
         app.request_redraw(window);
     }
     if let fret_core::Event::KeyDown { key, .. } = event
         && *key == KeyCode::KeyR
     {
-        CustomEffectV2WebModelOwner::new(app.models_mut()).reset_controls(&state.controls);
+        state
+            .binding
+            .reset_controls_in(app.models_mut(), &state.controls);
         app.request_redraw(window);
     }
 
@@ -910,12 +892,12 @@ fn render(
         ..
     } = context;
 
-    let show = state.show.clone();
+    let binding = state.binding.clone();
     let controls = state.controls.clone();
 
     let root = declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
         .render_root("custom-effect-v2-glass-chrome-web", |cx| {
-            CustomEffectV2GlassChromeWebDriver::render_root(cx, show.clone(), controls.clone())
+            CustomEffectV2GlassChromeWebDriver::render_root(cx, binding.clone(), controls.clone())
         });
 
     state.ui.set_root(root);

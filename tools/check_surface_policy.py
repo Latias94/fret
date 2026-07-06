@@ -299,20 +299,26 @@ CUSTOM_EFFECT_V2_WEB_RETIREMENT = (
 )
 
 CUSTOM_EFFECT_V2_WEB_DEMO_REQUIRED_MARKERS = (
-    "CustomEffectV2WebControlReset",
-    "CustomEffectV2WebModelOwner",
-    "impl CustomEffectV2WebControlReset for DemoControls",
-    "fn reset_controls(&self, owner: &mut CustomEffectV2WebModelOwner",
-    "owner.set_model",
-    "CustomEffectV2WebModelOwner::new",
+    "CustomEffectV2WebControlBinding",
+    "CustomEffectV2WebVariantControls",
+    "CustomEffectV2WebVariantReset",
+    "impl CustomEffectV2WebVariantControls for DemoControls",
+    "fn reset_variant_controls(",
+    "reset.set_model",
+    "binding: CustomEffectV2WebControlBinding",
+    ".toggle_surface_in(",
+    ".reset_controls_in(",
 )
 
 CUSTOM_EFFECT_V2_WEB_OWNER_HELPER_REQUIRED_MARKERS = (
-    "trait CustomEffectV2WebControlReset",
+    "struct CustomEffectV2WebControlBinding",
+    "struct CustomEffectV2WebCommonControls",
     "struct CustomEffectV2WebModelOwner",
+    "struct CustomEffectV2WebVariantReset",
+    "trait CustomEffectV2WebVariantControls",
     "fn set_model",
-    "fn toggle_surface",
-    "fn reset_controls<C: CustomEffectV2WebControlReset>",
+    "fn toggle_surface_in",
+    "fn reset_controls_in<C: CustomEffectV2WebVariantControls>",
     "self.models",
     ".update",
 )
@@ -331,6 +337,26 @@ CUSTOM_EFFECT_V2_WEB_DEMO_FORBIDDEN_PATTERNS: tuple[tuple[str, re.Pattern[str]],
         "legacy-local-owner",
         re.compile(r"\bstruct\s+CustomEffectV2\w*WebModelOwner\b"),
     ),
+    (
+        "shared-owner-constructor",
+        re.compile(r"\bCustomEffectV2WebModelOwner\s*::\s*new\s*\("),
+    ),
+    (
+        "shared-owner-import",
+        re.compile(r"\bCustomEffectV2WebModelOwner\b"),
+    ),
+    (
+        "legacy-reset-trait",
+        re.compile(r"\bCustomEffectV2WebControlReset\b"),
+    ),
+    (
+        "owner-set-model",
+        re.compile(r"\bowner\s*\.\s*set_model\s*\("),
+    ),
+    (
+        "standalone-show-model",
+        re.compile(r"\bshow\s*:\s*(?:fret_runtime::)?Model\s*<\s*bool\s*>"),
+    ),
 )
 
 
@@ -340,8 +366,9 @@ def _fret_examples_custom_effect_v2_web_surface(filename: str, variant: str) -> 
         "advanced_manual",
         (
             f"{filename} remains classified as an advanced examples surface because the {variant} "
-            "custom-effect v2 web proof owns manual runner/bootstrap, raw parameter models, a "
-            "local ModelStore owner, and low-level effect-layer composition"
+            "custom-effect v2 web proof owns manual runner/bootstrap, binding-backed common "
+            "parameter controls, variant-specific raw parameter models, and low-level "
+            "effect-layer composition"
         ),
         owner=CUSTOM_EFFECT_V2_WEB_OWNER,
         allowed_raw_seams=CUSTOM_EFFECT_V2_WEB_ALLOWED_RAW_SEAMS,
@@ -1061,8 +1088,8 @@ def _scan_custom_effect_v2_web_owner_boundary(
                     path=path,
                     line_no=1,
                     message=(
-                        "custom-effect v2 web surfaces must keep raw parameter writes behind a "
-                        f"shared private ModelOwner helper; missing owner markers: {', '.join(missing_markers)}"
+                        "custom-effect v2 web surfaces must keep common controls behind the "
+                        f"shared private binding helper; missing binding markers: {', '.join(missing_markers)}"
                     ),
                 )
             )
@@ -1077,7 +1104,7 @@ def _scan_custom_effect_v2_web_owner_boundary(
                         path=path,
                         line_no=1,
                         message=(
-                            "custom-effect v2 web demos must use the shared private ModelOwner "
+                            "custom-effect v2 web demos must use the shared private binding "
                             f"helper; legacy per-demo owner marker `{marker}` is not allowed"
                         ),
                     )
@@ -1096,7 +1123,7 @@ def _scan_custom_effect_v2_web_owner_boundary(
                         line_no=line_no,
                         message=(
                             "custom-effect v2 web raw model writes must go through the shared "
-                            f"private ModelOwner helper; direct `{seam}` bypasses the reset/toggle owner boundary"
+                            f"private binding helper; direct `{seam}` bypasses the reset/toggle binding boundary"
                         ),
                         source=line.strip(),
                     )
