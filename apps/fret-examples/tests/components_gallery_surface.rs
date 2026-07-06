@@ -123,6 +123,9 @@ fn components_gallery_driver_writes_stay_behind_owner_helpers() {
 
     for needle in [
         "usefret_runtime::{ModelStore,PlatformCapabilities};",
+        "structComponentsGalleryModelBundle{",
+        "fnnew(models:&mutModelStore,items:Vec<TreeItem>,tree_state:TreeState)->Self{",
+        "letmodels=ComponentsGalleryModelBundle::new(app.models_mut(),items_value,initial_state);",
         "structComponentsGalleryModelOwner<'a>{",
         "models:&'amutModelStore,",
         "fnupdate<T:Any,R>(&mutself,model:&Model<T>,f:implFnOnce(&mutT)->R)->Option<R>{",
@@ -157,6 +160,8 @@ fn components_gallery_driver_writes_stay_behind_owner_helpers() {
         "<ModelStore>::update::<",
         "<ModelStore>::update_any(",
         "<ModelStore>::update_any::<",
+        "app.models_mut().insert(",
+        "models_mut().insert(",
         "fncomponents_gallery_update_model",
         "fncomponents_gallery_set_model",
     ] {

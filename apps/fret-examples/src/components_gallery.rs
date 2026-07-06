@@ -66,6 +66,62 @@ struct ComponentsGalleryWindowState {
     awaiting_font_dialog: bool,
 }
 
+struct ComponentsGalleryModelBundle {
+    items: Model<Vec<TreeItem>>,
+    tree_state: Model<TreeState>,
+    progress: Model<f32>,
+    checkbox: Model<bool>,
+    switch: Model<bool>,
+    radio: Model<Option<Arc<str>>>,
+    select: Model<Option<Arc<str>>>,
+    select_open: Model<bool>,
+    theme_preset: Model<Option<Arc<str>>>,
+    theme_preset_open: Model<bool>,
+    dropdown_open: Model<bool>,
+    context_menu_open: Model<bool>,
+    popover_open: Model<bool>,
+    dialog_open: Model<bool>,
+    alert_dialog_open: Model<bool>,
+    sheet_open: Model<bool>,
+    cmdk_open: Model<bool>,
+    cmdk_query: Model<String>,
+    last_action: Model<Arc<str>>,
+    ui_font_override: Model<Option<Arc<str>>>,
+    ui_font_override_open: Model<bool>,
+    emoji_font_override: Model<Option<Arc<str>>>,
+    emoji_font_override_open: Model<bool>,
+}
+
+impl ComponentsGalleryModelBundle {
+    fn new(models: &mut ModelStore, items: Vec<TreeItem>, tree_state: TreeState) -> Self {
+        Self {
+            items: models.insert(items),
+            tree_state: models.insert(tree_state),
+            progress: models.insert(35.0f32),
+            checkbox: models.insert(false),
+            switch: models.insert(true),
+            radio: models.insert(Option::<Arc<str>>::Some(Arc::from("a"))),
+            select: models.insert(Option::<Arc<str>>::Some(Arc::from("apple"))),
+            select_open: models.insert(false),
+            theme_preset: models.insert(Option::<Arc<str>>::Some(Arc::from("zinc/dark"))),
+            theme_preset_open: models.insert(false),
+            dropdown_open: models.insert(false),
+            context_menu_open: models.insert(false),
+            popover_open: models.insert(false),
+            dialog_open: models.insert(false),
+            alert_dialog_open: models.insert(false),
+            sheet_open: models.insert(false),
+            cmdk_open: models.insert(false),
+            cmdk_query: models.insert(String::new()),
+            last_action: models.insert(Arc::<str>::from("<none>")),
+            ui_font_override: models.insert(None::<Arc<str>>),
+            ui_font_override_open: models.insert(false),
+            emoji_font_override: models.insert(None::<Arc<str>>),
+            emoji_font_override_open: models.insert(false),
+        }
+    }
+}
+
 impl ComponentsGalleryWindowState {
     fn selected_theme_preset(&self, app: &App) -> Option<Arc<str>> {
         app.models().get_cloned(&self.theme_preset).flatten()
@@ -287,36 +343,8 @@ impl ComponentsGalleryDriver {
 
     fn build_ui(app: &mut App, window: AppWindowId) -> ComponentsGalleryWindowState {
         let (items_value, initial_state) = Self::tree_items_for_demo();
-        let items = app.models_mut().insert(items_value);
-        let tree_state = app.models_mut().insert(initial_state);
-        let progress = app.models_mut().insert(35.0f32);
-        let checkbox = app.models_mut().insert(false);
-        let switch = app.models_mut().insert(true);
-        let radio = app
-            .models_mut()
-            .insert(Option::<Arc<str>>::Some(Arc::from("a")));
-        let select = app
-            .models_mut()
-            .insert(Option::<Arc<str>>::Some(Arc::from("apple")));
-        let select_open = app.models_mut().insert(false);
-        let theme_preset = app
-            .models_mut()
-            .insert(Option::<Arc<str>>::Some(Arc::from("zinc/dark")));
-        let theme_preset_open = app.models_mut().insert(false);
-        let dropdown_open = app.models_mut().insert(false);
-        let context_menu_open = app.models_mut().insert(false);
-        let popover_open = app.models_mut().insert(false);
-        let dialog_open = app.models_mut().insert(false);
-        let alert_dialog_open = app.models_mut().insert(false);
-        let sheet_open = app.models_mut().insert(false);
-        let cmdk_open = app.models_mut().insert(false);
-        let cmdk_query = app.models_mut().insert(String::new());
-        let last_action = app.models_mut().insert(Arc::<str>::from("<none>"));
-
-        let ui_font_override = app.models_mut().insert(None::<Arc<str>>);
-        let ui_font_override_open = app.models_mut().insert(false);
-        let emoji_font_override = app.models_mut().insert(None::<Arc<str>>);
-        let emoji_font_override_open = app.models_mut().insert(false);
+        let models =
+            ComponentsGalleryModelBundle::new(app.models_mut(), items_value, initial_state);
 
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
@@ -327,31 +355,31 @@ impl ComponentsGalleryDriver {
             ui,
             app_ui_root: AppUiRenderRootState::default(),
             root: None,
-            items,
-            tree_state,
+            items: models.items,
+            tree_state: models.tree_state,
             file_tree_scroll: VirtualListScrollHandle::new(),
-            progress,
-            checkbox,
-            switch,
-            radio,
-            select,
-            select_open,
-            theme_preset,
-            theme_preset_open,
+            progress: models.progress,
+            checkbox: models.checkbox,
+            switch: models.switch,
+            radio: models.radio,
+            select: models.select,
+            select_open: models.select_open,
+            theme_preset: models.theme_preset,
+            theme_preset_open: models.theme_preset_open,
             applied_theme_preset: Some(Arc::from("zinc/dark")),
-            dropdown_open,
-            context_menu_open,
-            popover_open,
-            dialog_open,
-            alert_dialog_open,
-            sheet_open,
-            cmdk_open,
-            cmdk_query,
-            last_action,
-            ui_font_override,
-            ui_font_override_open,
-            emoji_font_override,
-            emoji_font_override_open,
+            dropdown_open: models.dropdown_open,
+            context_menu_open: models.context_menu_open,
+            popover_open: models.popover_open,
+            dialog_open: models.dialog_open,
+            alert_dialog_open: models.alert_dialog_open,
+            sheet_open: models.sheet_open,
+            cmdk_open: models.cmdk_open,
+            cmdk_query: models.cmdk_query,
+            last_action: models.last_action,
+            ui_font_override: models.ui_font_override,
+            ui_font_override_open: models.ui_font_override_open,
+            emoji_font_override: models.emoji_font_override,
+            emoji_font_override_open: models.emoji_font_override_open,
             pending_font_dialog: None,
             awaiting_font_dialog: false,
         }

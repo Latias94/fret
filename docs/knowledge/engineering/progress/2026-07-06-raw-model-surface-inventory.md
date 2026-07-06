@@ -154,6 +154,9 @@ Keep raw/shared-model mechanisms for now:
   cleaned after the initial inventory: each keeps intentional shared models but routes writes
   through local owner helpers with source gates. Follow-up tightening upgraded
   `components_gallery.rs` from generic free helpers to `ComponentsGalleryModelOwner`,
+  and later moved its window-initialization model allocation behind
+  `ComponentsGalleryModelBundle` so production source no longer scatters direct
+  `app.models_mut().insert(...)` calls in `build_ui(...)`.
   `virtual_list_stress_demo.rs` from free helper functions to a named
   `VirtualListStressModelOwner`, and its source gate now forbids direct/generic/update-any and UFCS
   `ModelStore` bypasses in production source. The same tightening upgraded
