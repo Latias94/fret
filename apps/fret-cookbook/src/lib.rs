@@ -1988,4 +1988,38 @@ mod authoring_surface_policy_tests {
             );
         }
     }
+
+    #[test]
+    fn external_texture_import_basics_model_writes_stay_behind_owner_helper() {
+        let normalized = EXTERNAL_TEXTURE_IMPORT_EXAMPLE
+            .split_whitespace()
+            .collect::<String>();
+
+        for marker in [
+            "struct ExternalTextureImportBasicsModelOwner<'a>",
+            "fn set_target_metrics(",
+            "self.app.models_mut().update(&state.target_w, |value| {",
+            "self.app.models_mut().update(&state.target_h, |value| {",
+            "self.app.models_mut().update(&state.ingest, |value| {",
+            "ExternalTextureImportBasicsModelOwner::new(app).set_target_metrics(st, (w, h), effective);",
+        ] {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(
+                normalized.contains(&marker),
+                "external texture cookbook proof should keep driver-owned writes behind the owner helper: {marker}"
+            );
+        }
+
+        for forbidden in [
+            "let _ = app.models_mut().update(&st.target_w, |v| *v = w as f64);",
+            "let _ = app.models_mut().update(&st.target_h, |v| *v = h as f64);",
+            ".models_mut().update(&st.ingest, |v| *v = ingest_code(effective));",
+        ] {
+            let forbidden = forbidden.split_whitespace().collect::<String>();
+            assert!(
+                !normalized.contains(&forbidden),
+                "external texture cookbook proof should not hand-write record_engine_frame model updates: {forbidden}"
+            );
+        }
+    }
 }

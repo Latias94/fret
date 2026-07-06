@@ -123,6 +123,11 @@ Keep raw/shared-model mechanisms for now:
   they remain low-level external import harnesses, while the shared visibility toggle write now
   routes through the private `ExternalImportsModelOwner` helper instead of duplicated event-handler
   `models_mut().update(...)` calls.
+- `apps/fret-cookbook/examples/external_texture_import_basics.rs`. Audited and cleaned after the
+  external imports owner pass: it remains an advanced/manual interop cookbook example, while its
+  engine-frame target metric writes now route through the demo-local
+  `ExternalTextureImportBasicsModelOwner` helper instead of teaching three direct
+  `models_mut().update(...)` calls in `record_engine_frame(...)`.
 - `genui_demo.rs`. Audited and cleaned after the initial inventory: it remains an advanced GenUI
   runtime/reference surface with shared runtime models, while raw model reads/writes are routed
   through local owner helpers.

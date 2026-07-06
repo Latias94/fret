@@ -85,6 +85,51 @@ struct ExternalTextureImportBasicsState {
     ingest: Model<f64>,
 }
 
+struct ExternalTextureImportBasicsModelOwner<'a> {
+    app: &'a mut KernelApp,
+}
+
+impl<'a> ExternalTextureImportBasicsModelOwner<'a> {
+    fn new(app: &'a mut KernelApp) -> Self {
+        Self { app }
+    }
+
+    fn set_target_metrics(
+        &mut self,
+        state: &ExternalTextureImportBasicsState,
+        target_px_size: (u32, u32),
+        effective_ingest: RenderTargetIngestStrategy,
+    ) -> bool {
+        let (w, h) = target_px_size;
+        let target_w_updated = self
+            .app
+            .models_mut()
+            .update(&state.target_w, |value| {
+                *value = w as f64;
+                true
+            })
+            .unwrap_or(false);
+        let target_h_updated = self
+            .app
+            .models_mut()
+            .update(&state.target_h, |value| {
+                *value = h as f64;
+                true
+            })
+            .unwrap_or(false);
+        let ingest_updated = self
+            .app
+            .models_mut()
+            .update(&state.ingest, |value| {
+                *value = ingest_code(effective_ingest);
+                true
+            })
+            .unwrap_or(false);
+
+        target_w_updated && target_h_updated && ingest_updated
+    }
+}
+
 fn init_window(app: &mut KernelApp, _window: AppWindowId) -> ExternalTextureImportBasicsState {
     ExternalTextureImportBasicsState {
         preset: app
@@ -374,11 +419,8 @@ fn record_engine_frame(
         effective,
     );
 
-    let _ = app.models_mut().update(&st.target_w, |v| *v = w as f64);
-    let _ = app.models_mut().update(&st.target_h, |v| *v = h as f64);
-    let _ = app
-        .models_mut()
-        .update(&st.ingest, |v| *v = ingest_code(effective));
+    let _ =
+        ExternalTextureImportBasicsModelOwner::new(app).set_target_metrics(st, (w, h), effective);
 
     update
 }
