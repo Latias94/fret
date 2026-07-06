@@ -217,6 +217,7 @@ mod tests {
     #[test]
     fn plot3d_public_surface_stays_declarative_only() {
         assert!(LIB_RS.contains("pub mod declarative;"));
+        assert!(LIB_RS.contains("pub use binding::Plot3dPanelBinding;"));
         assert!(!LIB_RS.contains("pub mod retained;"));
         assert!(!LIB_RS.contains("Plot3dCanvas"));
         assert!(!CARGO_TOML.contains("unstable-retained-bridge"));

@@ -5,7 +5,7 @@ use fret_launch::{
     EngineFrameUpdate, FnDriver, ViewportRenderTarget, WinitEventContext, WinitHotReloadContext,
     WinitRenderContext, WinitRunnerConfig,
 };
-use fret_plot3d::{Plot3dModel, Plot3dPanelProps, Plot3dStyle, Plot3dViewport, plot3d_panel};
+use fret_plot3d::{Plot3dPanelBinding, Plot3dStyle, Plot3dViewport, plot3d_panel};
 use fret_render::{RenderTargetColorSpace, Renderer, WgpuContext};
 use fret_runtime::PlatformCapabilities;
 use fret_ui::{UiTree, declarative};
@@ -13,7 +13,7 @@ use fret_ui::{UiTree, declarative};
 struct Plot3dDemoWindowState {
     ui: UiTree<App>,
     root: Option<fret_core::NodeId>,
-    plot: fret_runtime::Model<Plot3dModel>,
+    plot: Plot3dPanelBinding,
     target: ViewportRenderTarget,
 }
 
@@ -22,14 +22,15 @@ struct Plot3dDemoDriver;
 
 impl Plot3dDemoDriver {
     fn build_ui(app: &mut App, window: AppWindowId) -> Plot3dDemoWindowState {
-        let plot = app.models_mut().insert(Plot3dModel {
-            viewport: Plot3dViewport {
+        let plot = Plot3dPanelBinding::new(
+            app,
+            Plot3dViewport {
                 target: RenderTargetId::default(),
                 target_px_size: (960, 540),
                 fit: fret_core::ViewportFit::Contain,
                 opacity: 1.0,
             },
-        });
+        );
 
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
@@ -52,13 +53,7 @@ impl Plot3dDemoDriver {
         context: &WgpuContext,
         renderer: &mut Renderer,
     ) -> (RenderTargetId, wgpu::TextureView) {
-        let desired_size = state
-            .plot
-            .read(app, |_app, m| m.viewport.target_px_size)
-            .unwrap_or((960, 540));
-
-        let prev_id = state.target.id();
-        let prev_size = state.target.size();
+        let desired_size = state.plot.viewport_untracked(app).target_px_size;
         let (id, view) = {
             let (id, view_ref) = state.target.ensure_size(
                 context,
@@ -70,11 +65,11 @@ impl Plot3dDemoDriver {
         };
         let new_size = state.target.size();
 
-        if prev_id != id || prev_size != new_size {
-            let _ = state.plot.update(app, |m, _cx| {
-                m.viewport.target = id;
-                m.viewport.target_px_size = new_size;
-            });
+        if state
+            .plot
+            .sync_viewport_target(app, id, new_size)
+            .unwrap_or(false)
+        {
             app.request_redraw(window);
         }
 
@@ -195,10 +190,7 @@ fn render(_driver: &mut Plot3dDemoDriver, context: WinitRenderContext<'_, Plot3d
     let root = declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
         .render_root("plot3d-demo", |cx| {
             let style = Plot3dStyle::default();
-            vec![plot3d_panel(
-                cx,
-                Plot3dPanelProps::new(state.plot.clone()).style(style),
-            )]
+            vec![plot3d_panel(cx, state.plot.panel_props().style(style))]
         });
 
     state.ui.set_root(root);

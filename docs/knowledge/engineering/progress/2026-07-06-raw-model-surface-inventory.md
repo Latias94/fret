@@ -91,6 +91,11 @@ Keep raw/shared-model mechanisms for now:
     for stress chart wiring while preserving their runner-level seam classifications. This keeps
     advanced chart exceptions in the same source-policy system as plot, workspace, and harness
     exceptions rather than relying only on ad hoc demo tests.
+  - Follow-up: `fret-plot3d` now exports `Plot3dPanelBinding` as the default app-facing surface for
+    engine-owned viewport panels. `plot3d_demo.rs` stores the binding, reads render-target size
+    through `viewport_untracked(...)`, syncs target identity/size through
+    `sync_viewport_target(...)`, and builds panel props through `panel_props()` instead of naming
+    `fret_runtime::Model<Plot3dModel>` in app code.
 - Table/data-grid demos.
   - Follow-up: `datatable_demo.rs` now uses `LocalState<shadcn::DataTableViewOutput>` and
     `app.local_state(...)` for the shadcn `DataTable` output handle. The retained table source gate

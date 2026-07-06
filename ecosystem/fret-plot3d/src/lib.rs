@@ -7,6 +7,9 @@
 
 pub mod declarative;
 
+mod binding;
+
+pub use binding::Plot3dPanelBinding;
 pub use declarative::{
     Plot3dModel, Plot3dPanelProps, Plot3dStyle, Plot3dViewport, plot3d_panel,
     plot3d_panel_with_model,
