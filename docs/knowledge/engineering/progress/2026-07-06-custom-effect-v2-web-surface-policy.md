@@ -18,18 +18,19 @@ The custom-effect v2 web variants are now covered by the unified public example 
 Each file is classified as an advanced/manual examples surface with an explicit owner, raw seam
 allowlist, and retirement condition.
 
-Follow-up on the same day: the unified source-policy gate now also enforces the local owner
-boundary. Direct reset/toggle writes through `models_mut().update(...)` or UFCS
-`ModelStore::update(...)` are rejected outside the `ModelOwner` helper, while setup-time
-`models_mut().insert(...)` remains allowed until a public custom-effect parameter/control binding
-exists.
+Follow-up on the same day: the unified source-policy gate now also enforces the shared private
+owner boundary. Direct reset/toggle writes through `models_mut().update(...)` or UFCS
+`ModelStore::update(...)` are rejected outside `custom_effect_v2_web_owner.rs`, while each demo
+keeps its variant-specific reset defaults in a local `CustomEffectV2WebControlReset` impl.
+Setup-time `models_mut().insert(...)` remains allowed until a public custom-effect
+parameter/control binding exists.
 
 # Decision
 
 Do not mechanically migrate these demos to `LocalState` yet. They are manual runner/effect-layer
-proofs with raw parameter models and a local `ModelStore` owner. The correct cleanup target is a
-public custom-effect parameter/control binding that owns parameter models, reset/toggle actions, and
-effect-layer composition without exposing the raw owner seam.
+proofs with raw parameter models and a shared private `ModelStore` owner. The correct cleanup target
+is a public custom-effect parameter/control binding that owns parameter models, reset/toggle
+actions, and effect-layer composition without exposing the raw owner seam.
 
 # Verification
 

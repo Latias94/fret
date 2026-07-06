@@ -11,6 +11,9 @@
 
 use std::sync::Arc;
 
+use crate::custom_effect_v2_web_owner::{
+    CustomEffectV2WebControlReset, CustomEffectV2WebModelOwner,
+};
 use fret::advanced::view::AppRenderDataExt as _;
 use fret_app::{App, Effect};
 use fret_core::scene::{
@@ -113,46 +116,18 @@ struct DemoControls {
     debug_input: Model<bool>,
 }
 
-type CustomEffectV2GlassChromeWebModelStore = fret_runtime::ModelStore;
-
-struct CustomEffectV2GlassChromeWebModelOwner<'a> {
-    models: &'a mut CustomEffectV2GlassChromeWebModelStore,
-}
-
-impl<'a> CustomEffectV2GlassChromeWebModelOwner<'a> {
-    fn new(models: &'a mut CustomEffectV2GlassChromeWebModelStore) -> Self {
-        Self { models }
-    }
-
-    fn set_model<T: std::any::Any>(&mut self, model: &Model<T>, value: T) -> bool {
-        self.models
-            .update(model, |current| {
-                *current = value;
-                true
-            })
-            .unwrap_or(false)
-    }
-
-    fn toggle_surface(&mut self, show: &Model<bool>) -> bool {
-        self.models
-            .update(show, |v| {
-                *v = !*v;
-                true
-            })
-            .unwrap_or(false)
-    }
-
-    fn reset_controls(&mut self, controls: &DemoControls) -> bool {
+impl CustomEffectV2WebControlReset for DemoControls {
+    fn reset_controls(&self, owner: &mut CustomEffectV2WebModelOwner<'_>) -> bool {
         let mut changed = false;
-        changed = self.set_model(&controls.enabled, true) || changed;
-        changed = self.set_model(&controls.mode, Some(Arc::from("backdrop"))) || changed;
-        changed = self.set_model(&controls.quality, Some(Arc::from("high"))) || changed;
-        changed = self.set_model(&controls.sampling, Some(Arc::from("linear"))) || changed;
-        changed = self.set_model(&controls.uv_span, vec![1.0]) || changed;
-        changed = self.set_model(&controls.strength, vec![0.95]) || changed;
-        changed = self.set_model(&controls.shininess, vec![36.0]) || changed;
-        changed = self.set_model(&controls.mix01, vec![1.0]) || changed;
-        self.set_model(&controls.debug_input, false) || changed
+        changed = owner.set_model(&self.enabled, true) || changed;
+        changed = owner.set_model(&self.mode, Some(Arc::from("backdrop"))) || changed;
+        changed = owner.set_model(&self.quality, Some(Arc::from("high"))) || changed;
+        changed = owner.set_model(&self.sampling, Some(Arc::from("linear"))) || changed;
+        changed = owner.set_model(&self.uv_span, vec![1.0]) || changed;
+        changed = owner.set_model(&self.strength, vec![0.95]) || changed;
+        changed = owner.set_model(&self.shininess, vec![36.0]) || changed;
+        changed = owner.set_model(&self.mix01, vec![1.0]) || changed;
+        owner.set_model(&self.debug_input, false) || changed
     }
 }
 
@@ -670,10 +645,9 @@ impl CustomEffectV2GlassChromeWebDriver {
         .items_center()
         .into_element(cx);
 
-        let reset_controls = controls.clone();
+        let controls_for_reset = controls.clone();
         let reset = on_activate_request_redraw(move |host| {
-            CustomEffectV2GlassChromeWebModelOwner::new(host.models_mut())
-                .reset_controls(&reset_controls);
+            CustomEffectV2WebModelOwner::new(host.models_mut()).reset_controls(&controls_for_reset);
         });
 
         let content =
@@ -908,15 +882,13 @@ fn handle_event(
     if let fret_core::Event::KeyDown { key, .. } = event
         && *key == KeyCode::KeyV
     {
-        let _ = CustomEffectV2GlassChromeWebModelOwner::new(app.models_mut())
-            .toggle_surface(&state.show);
+        let _ = CustomEffectV2WebModelOwner::new(app.models_mut()).toggle_surface(&state.show);
         app.request_redraw(window);
     }
     if let fret_core::Event::KeyDown { key, .. } = event
         && *key == KeyCode::KeyR
     {
-        CustomEffectV2GlassChromeWebModelOwner::new(app.models_mut())
-            .reset_controls(&state.controls);
+        CustomEffectV2WebModelOwner::new(app.models_mut()).reset_controls(&state.controls);
         app.request_redraw(window);
     }
 

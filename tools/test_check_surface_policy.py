@@ -806,6 +806,19 @@ class SurfacePolicyTests(unittest.TestCase):
             self.assertIsNotNone(spec, f"{path} should be classified as advanced/manual")
             self.assertIn("custom-effect parameter/control binding", spec.retirement)
             self.assertTrue(spec.allowed_raw_seams)
+        helper_spec = next(
+            (
+                spec
+                for spec in POLICY.INTERNAL_HARNESS_SURFACES
+                if spec.path == "apps/fret-examples/src/custom_effect_v2_web_owner.rs"
+            ),
+            None,
+        )
+        self.assertIsNotNone(
+            helper_spec,
+            "custom-effect v2 web shared owner helper should be classified as an internal harness",
+        )
+        self.assertIn("ModelStore", helper_spec.allowed_raw_seams)
         self.assertTrue(
             any(
                 spec.path == "apps/fret-examples/src/simple_todo_demo/driver.rs"
@@ -857,31 +870,28 @@ class SurfacePolicyTests(unittest.TestCase):
             write(
                 root / "apps/fret-examples/src/custom_effect_v2_web_demo.rs",
                 """
-                type CustomEffectV2WebModelStore = fret_runtime::ModelStore;
+                use crate::custom_effect_v2_web_owner::{
+                    CustomEffectV2WebControlReset,
+                    CustomEffectV2WebModelOwner,
+                };
 
-                struct CustomEffectV2WebModelOwner<'a> {
-                    models: &'a mut CustomEffectV2WebModelStore,
+                struct DemoControls {
+                    enabled: fret_runtime::Model<bool>,
                 }
 
-                impl<'a> CustomEffectV2WebModelOwner<'a> {
-                    fn set_model<T: std::any::Any>(
-                        &mut self,
-                        model: &fret_runtime::Model<T>,
-                        value: T,
-                    ) -> bool {
-                        true
-                    }
-
-                    fn toggle_surface(&mut self, show: &fret_runtime::Model<bool>) -> bool {
-                        true
-                    }
-
-                    fn reset_controls(&mut self) -> bool {
-                        true
+                impl CustomEffectV2WebControlReset for DemoControls {
+                    fn reset_controls(&self, owner: &mut CustomEffectV2WebModelOwner<'_>) -> bool {
+                        owner.set_model(&self.enabled, true)
                     }
                 }
 
-                fn bad(app: &mut fret_app::App, show: &fret_runtime::Model<bool>) {
+                fn bad(
+                    app: &mut fret_app::App,
+                    controls: &DemoControls,
+                    show: &fret_runtime::Model<bool>,
+                ) {
+                    CustomEffectV2WebModelOwner::new(app.models_mut()).reset_controls(controls);
+                    let _ = CustomEffectV2WebModelOwner::new(app.models_mut()).toggle_surface(show);
                     let _ = app.models_mut().update(show, |value| {
                         *value = !*value;
                         true
@@ -926,20 +936,52 @@ class SurfacePolicyTests(unittest.TestCase):
             write(
                 root / "apps/fret-examples/src/custom_effect_v2_web_demo.rs",
                 """
-                type CustomEffectV2WebModelStore = fret_runtime::ModelStore;
+                use crate::custom_effect_v2_web_owner::{
+                    CustomEffectV2WebControlReset,
+                    CustomEffectV2WebModelOwner,
+                };
 
-                struct CustomEffectV2WebModelOwner<'a> {
-                    models: &'a mut CustomEffectV2WebModelStore,
+                struct DemoControls {
+                    enabled: fret_runtime::Model<bool>,
+                }
+
+                impl CustomEffectV2WebControlReset for DemoControls {
+                    fn reset_controls(&self, owner: &mut CustomEffectV2WebModelOwner<'_>) -> bool {
+                        owner.set_model(&self.enabled, true)
+                    }
+                }
+
+                fn ok(
+                    app: &mut fret_app::App,
+                    controls: &DemoControls,
+                    show: &fret_runtime::Model<bool>,
+                ) {
+                    CustomEffectV2WebModelOwner::new(app.models_mut()).reset_controls(controls);
+                    let _ = CustomEffectV2WebModelOwner::new(app.models_mut()).toggle_surface(show);
+                }
+                """,
+            )
+            write(
+                root / "apps/fret-examples/src/custom_effect_v2_web_owner.rs",
+                """
+                use fret_runtime::{Model, ModelStore};
+
+                pub(crate) trait CustomEffectV2WebControlReset {
+                    fn reset_controls(&self, owner: &mut CustomEffectV2WebModelOwner<'_>) -> bool;
+                }
+
+                pub(crate) struct CustomEffectV2WebModelOwner<'a> {
+                    models: &'a mut ModelStore,
                 }
 
                 impl<'a> CustomEffectV2WebModelOwner<'a> {
-                    fn new(models: &'a mut CustomEffectV2WebModelStore) -> Self {
+                    pub(crate) fn new(models: &'a mut ModelStore) -> Self {
                         Self { models }
                     }
 
-                    fn set_model<T: std::any::Any>(
+                    pub(crate) fn set_model<T: std::any::Any>(
                         &mut self,
-                        model: &fret_runtime::Model<T>,
+                        model: &Model<T>,
                         value: T,
                     ) -> bool {
                         self.models.update(model, |current| {
@@ -948,20 +990,19 @@ class SurfacePolicyTests(unittest.TestCase):
                         }).unwrap_or(false)
                     }
 
-                    fn toggle_surface(&mut self, show: &fret_runtime::Model<bool>) -> bool {
+                    pub(crate) fn toggle_surface(&mut self, show: &Model<bool>) -> bool {
                         self.models.update(show, |value| {
                             *value = !*value;
                             true
                         }).unwrap_or(false)
                     }
 
-                    fn reset_controls(&mut self) -> bool {
-                        true
+                    pub(crate) fn reset_controls<C: CustomEffectV2WebControlReset>(
+                        &mut self,
+                        controls: &C,
+                    ) -> bool {
+                        controls.reset_controls(self)
                     }
-                }
-
-                fn ok(app: &mut fret_app::App, show: &fret_runtime::Model<bool>) {
-                    let _ = CustomEffectV2WebModelOwner::new(app.models_mut()).toggle_surface(show);
                 }
                 """,
             )
@@ -975,14 +1016,24 @@ class SurfacePolicyTests(unittest.TestCase):
                         "advanced_manual",
                         "fixture custom-effect v2 web surface",
                         owner="examples-custom-effect-v2-web",
-                        allowed_raw_seams=("fret_app", "fret_runtime", "ModelStore"),
+                        allowed_raw_seams=("fret_app", "fret_runtime"),
                         retirement=POLICY.CUSTOM_EFFECT_V2_WEB_RETIREMENT,
+                    )
+                ],
+                internal_harness_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/custom_effect_v2_web_owner.rs",
+                        "internal_harness",
+                        "fixture custom-effect v2 web owner helper",
+                        owner="examples-custom-effect-v2-web",
+                        allowed_raw_seams=("fret_runtime", "ModelStore"),
                     )
                 ],
                 policy_recipe_surfaces=[],
                 mechanism_root_surfaces=[],
             )
 
+            self.assertEqual([], violations)
             self.assertFalse(
                 [
                     violation

@@ -104,12 +104,53 @@ fn assert_custom_effect_v2_template_overlay_text_roles(
 struct CustomEffectV2WebModelOwnerContract<'a> {
     label: &'a str,
     source: &'a str,
-    model_store_alias: &'a str,
-    owner_struct: &'a str,
-    state_struct: &'a str,
     reset_controls_sig: &'a str,
+    legacy_owner_markers: &'a [&'a str],
     call_markers: &'a [&'a str],
     reset_markers: &'a [&'a str],
+}
+
+fn assert_custom_effect_v2_web_shared_model_owner_helper(source: &str) {
+    let compact_source = compact(source);
+
+    for needle in [
+        "usefret_runtime::{Model,ModelStore};",
+        "pub(crate)traitCustomEffectV2WebControlReset{",
+        "fnreset_controls(&self,owner:&mutCustomEffectV2WebModelOwner<'_>)->bool;",
+        "pub(crate)structCustomEffectV2WebModelOwner<'a>{",
+        "models:&'amutModelStore,",
+        "pub(crate)fnnew(models:&'amutModelStore)->Self",
+        "pub(crate)fnset_model<T:std::any::Any>(&mutself,model:&Model<T>,value:T)->bool",
+        "pub(crate)fntoggle_surface(&mutself,show:&Model<bool>)->bool",
+        "pub(crate)fnreset_controls<C:CustomEffectV2WebControlReset>(",
+        "controls:&C,",
+        "controls.reset_controls(self)",
+        "self.models.update(",
+    ] {
+        assert!(
+            compact_source.contains(needle),
+            "custom_effect_v2_web_owner helper should own raw ModelStore writes; missing `{needle}`",
+        );
+    }
+    for needle in [
+        "ModelStore::update(",
+        "ModelStore::update::<",
+        "ModelStore::update_any(",
+        "ModelStore::update_any::<",
+        "ModelStore>::update(",
+        "ModelStore>::update::<",
+        "ModelStore>::update_any(",
+        "ModelStore>::update_any::<",
+        "models_mut().update(",
+        "models_mut().update::<",
+        "models_mut().update_any(",
+        "models_mut().update_any::<",
+    ] {
+        assert!(
+            !compact_source.contains(needle),
+            "custom_effect_v2_web_owner helper should not use bypass marker `{needle}`",
+        );
+    }
 }
 
 fn assert_custom_effect_v2_web_model_writes_stay_behind_owner_helper(
@@ -118,59 +159,39 @@ fn assert_custom_effect_v2_web_model_writes_stay_behind_owner_helper(
     let compact_source = compact(contract.source);
 
     for needle in [
-        compact(contract.model_store_alias),
-        compact(contract.owner_struct),
-        "fnset_model<T:std::any::Any>(&mutself,model:&Model<T>,value:T)->bool".to_string(),
+        "usecrate::custom_effect_v2_web_owner::{".to_string(),
+        "CustomEffectV2WebControlReset,CustomEffectV2WebModelOwner,".to_string(),
         compact(contract.reset_controls_sig),
-        "fntoggle_surface(&mutself,show:&Model<bool>)->bool".to_string(),
     ] {
         assert!(
             compact_source.contains(&needle),
-            "{} should keep raw model writes behind the local owner helper; missing `{needle}`",
+            "{} should route raw model writes through the shared owner helper; missing `{needle}`",
+            contract.label
+        );
+    }
+    for needle in contract.legacy_owner_markers {
+        let needle = compact(needle);
+        assert!(
+            !compact_source.contains(&needle),
+            "{} should delete the legacy per-demo owner marker `{needle}`",
             contract.label
         );
     }
     for needle in contract.call_markers {
         assert!(
             contract.source.contains(needle) || compact_source.contains(&compact(needle)),
-            "{} should route call site through the local owner helper; missing `{needle}`",
+            "{} should route call site through the shared owner helper; missing `{needle}`",
             contract.label
         );
     }
-
-    let owner_start = contract
-        .source
-        .find(contract.model_store_alias)
-        .expect("custom effect v2 web demo should name one local model-owner boundary");
-    let owner_end = contract
-        .source
-        .find(contract.state_struct)
-        .expect("custom effect v2 web demo should define window state after the model owner");
-    let owner_source = compact(&contract.source[owner_start..owner_end]);
-    let outside_owner = compact(&format!(
-        "{}{}",
-        &contract.source[..owner_start],
-        &contract.source[owner_end..]
-    ));
-
-    assert!(
-        owner_source.contains("self.models.update("),
-        "{} owner should contain the raw model write operations",
-        contract.label
-    );
     for needle in contract.reset_markers {
         let needle = compact(needle);
         assert!(
-            owner_source.contains(&needle),
+            compact_source.contains(&needle),
             "{} reset should route `{needle}` through the owner set helper",
             contract.label
         );
     }
-    assert!(
-        !outside_owner.contains("self.models.update("),
-        "{} raw model writes should not appear outside the local owner",
-        contract.label
-    );
     for needle in [
         "ModelStore::update(",
         "ModelStore::update::<",
@@ -196,10 +217,14 @@ fn assert_custom_effect_v2_web_model_writes_stay_behind_owner_helper(
         "models_mut().update::<",
         "models_mut().update_any(",
         "models_mut().update_any::<",
+        "self.models.update(",
+        "self.models.update::<",
+        "self.models.update_any(",
+        "self.models.update_any::<",
     ] {
         assert!(
-            !outside_owner.contains(needle),
-            "{} should not contain raw ModelStore write marker `{needle}` outside the local owner",
+            !compact_source.contains(needle),
+            "{} should not contain raw ModelStore write marker `{needle}` in the demo file",
             contract.label
         );
     }
@@ -591,35 +616,43 @@ fn custom_effect_v2_web_overlay_readouts_use_shared_roles() {
 }
 
 #[test]
+fn custom_effect_v2_web_shared_model_owner_helper_is_the_only_raw_writer() {
+    assert_custom_effect_v2_web_shared_model_owner_helper(include_str!(
+        "../src/custom_effect_v2_web_owner.rs"
+    ));
+}
+
+#[test]
 fn custom_effect_v2_web_model_writes_stay_behind_owner_helper() {
     let source = include_str!("../src/custom_effect_v2_web_demo.rs");
     assert_custom_effect_v2_web_model_writes_stay_behind_owner_helper(
         CustomEffectV2WebModelOwnerContract {
             label: "custom_effect_v2_web_demo",
             source,
-            model_store_alias: "type CustomEffectV2WebModelStore = fret_runtime::ModelStore;",
-            owner_struct: "struct CustomEffectV2WebModelOwner<'a> {",
-            state_struct: "pub struct CustomEffectV2WebWindowState",
-            reset_controls_sig: "fn reset_controls(&mut self, controls: &DemoControls) -> bool",
+            reset_controls_sig: "fn reset_controls(&self, owner: &mut CustomEffectV2WebModelOwner<'_>) -> bool",
+            legacy_owner_markers: &[
+                "type CustomEffectV2WebModelStore = fret_runtime::ModelStore;",
+                "struct CustomEffectV2WebModelOwner<'a> {",
+            ],
             call_markers: &[
-                "CustomEffectV2WebModelOwner::new(host.models_mut()).reset_controls(&reset_controls);",
+                "CustomEffectV2WebModelOwner::new(host.models_mut()).reset_controls(&controls_for_reset);",
                 "CustomEffectV2WebModelOwner::new(app.models_mut()).toggle_surface(&state.show);",
                 "CustomEffectV2WebModelOwner::new(app.models_mut()).reset_controls(&state.controls);",
             ],
             reset_markers: &[
-                "self.set_model(&controls.enabled, true)",
-                "self.set_model(&controls.mode, Some(Arc::from(\"backdrop\")))",
-                "self.set_model(&controls.quality, Some(Arc::from(\"high\")))",
-                "self.set_model(&controls.sampling, Some(Arc::from(\"linear\")))",
-                "self.set_model(&controls.uv_span, vec![1.0])",
-                "self.set_model(&controls.strength_px, vec![14.0])",
-                "self.set_model(&controls.max_sample_offset_px, vec![18.0])",
-                "self.set_model(&controls.tint_strength, vec![0.8])",
-                "self.set_model(&controls.blur_radius_px, vec![12.0])",
-                "self.set_model(&controls.blur_downsample, vec![1.0])",
-                "self.set_model(&controls.lens_corner_radius_px, vec![24.0])",
-                "self.set_model(&controls.tile_corner_radius_px, vec![18.0])",
-                "self.set_model(&controls.debug_input, false)",
+                "owner.set_model(&self.enabled, true)",
+                "owner.set_model(&self.mode, Some(Arc::from(\"backdrop\")))",
+                "owner.set_model(&self.quality, Some(Arc::from(\"high\")))",
+                "owner.set_model(&self.sampling, Some(Arc::from(\"linear\")))",
+                "owner.set_model(&self.uv_span, vec![1.0])",
+                "owner.set_model(&self.strength_px, vec![14.0])",
+                "owner.set_model(&self.max_sample_offset_px, vec![18.0])",
+                "owner.set_model(&self.tint_strength, vec![0.8])",
+                "owner.set_model(&self.blur_radius_px, vec![12.0])",
+                "owner.set_model(&self.blur_downsample, vec![1.0])",
+                "owner.set_model(&self.lens_corner_radius_px, vec![24.0])",
+                "owner.set_model(&self.tile_corner_radius_px, vec![18.0])",
+                "owner.set_model(&self.debug_input, false)",
             ],
         },
     );
@@ -632,23 +665,24 @@ fn custom_effect_v2_identity_web_model_writes_stay_behind_owner_helper() {
         CustomEffectV2WebModelOwnerContract {
             label: "custom_effect_v2_identity_web_demo",
             source,
-            model_store_alias: "type CustomEffectV2IdentityWebModelStore = fret_runtime::ModelStore;",
-            owner_struct: "struct CustomEffectV2IdentityWebModelOwner<'a> {",
-            state_struct: "pub struct CustomEffectV2IdentityWebWindowState",
-            reset_controls_sig: "fn reset_controls(&mut self, controls: &DemoControls) -> bool",
+            reset_controls_sig: "fn reset_controls(&self, owner: &mut CustomEffectV2WebModelOwner<'_>) -> bool",
+            legacy_owner_markers: &[
+                "type CustomEffectV2IdentityWebModelStore = fret_runtime::ModelStore;",
+                "struct CustomEffectV2IdentityWebModelOwner<'a> {",
+            ],
             call_markers: &[
-                "CustomEffectV2IdentityWebModelOwner::new(host.models_mut()).reset_controls(&reset_controls);",
-                "CustomEffectV2IdentityWebModelOwner::new(app.models_mut()).toggle_surface(&state.show);",
-                "CustomEffectV2IdentityWebModelOwner::new(app.models_mut()).reset_controls(&state.controls);",
+                "CustomEffectV2WebModelOwner::new(host.models_mut()).reset_controls(&controls_for_reset);",
+                "CustomEffectV2WebModelOwner::new(app.models_mut()).toggle_surface(&state.show);",
+                "CustomEffectV2WebModelOwner::new(app.models_mut()).reset_controls(&state.controls);",
             ],
             reset_markers: &[
-                "self.set_model(&controls.enabled, true)",
-                "self.set_model(&controls.mode, Some(Arc::from(\"backdrop\")))",
-                "self.set_model(&controls.quality, Some(Arc::from(\"high\")))",
-                "self.set_model(&controls.sampling, Some(Arc::from(\"linear\")))",
-                "self.set_model(&controls.uv_span, vec![1.0])",
-                "self.set_model(&controls.mix01, vec![0.65])",
-                "self.set_model(&controls.debug_input, false)",
+                "owner.set_model(&self.enabled, true)",
+                "owner.set_model(&self.mode, Some(Arc::from(\"backdrop\")))",
+                "owner.set_model(&self.quality, Some(Arc::from(\"high\")))",
+                "owner.set_model(&self.sampling, Some(Arc::from(\"linear\")))",
+                "owner.set_model(&self.uv_span, vec![1.0])",
+                "owner.set_model(&self.mix01, vec![0.65])",
+                "owner.set_model(&self.debug_input, false)",
             ],
         },
     );
@@ -661,29 +695,30 @@ fn custom_effect_v2_lut_web_model_writes_stay_behind_owner_helper() {
         CustomEffectV2WebModelOwnerContract {
             label: "custom_effect_v2_lut_web_demo",
             source,
-            model_store_alias: "type CustomEffectV2LutWebModelStore = fret_runtime::ModelStore;",
-            owner_struct: "struct CustomEffectV2LutWebModelOwner<'a> {",
-            state_struct: "pub struct CustomEffectV2LutWebWindowState",
-            reset_controls_sig: "fn reset_controls(&mut self, controls: &DemoControls) -> bool",
+            reset_controls_sig: "fn reset_controls(&self, owner: &mut CustomEffectV2WebModelOwner<'_>) -> bool",
+            legacy_owner_markers: &[
+                "type CustomEffectV2LutWebModelStore = fret_runtime::ModelStore;",
+                "struct CustomEffectV2LutWebModelOwner<'a> {",
+            ],
             call_markers: &[
-                "CustomEffectV2LutWebModelOwner::new(host.models_mut()).reset_controls(&reset_controls);",
-                "CustomEffectV2LutWebModelOwner::new(app.models_mut()).toggle_surface(&state.show);",
-                "CustomEffectV2LutWebModelOwner::new(app.models_mut()).reset_controls(&state.controls);",
+                "CustomEffectV2WebModelOwner::new(host.models_mut()).reset_controls(&controls_for_reset);",
+                "CustomEffectV2WebModelOwner::new(app.models_mut()).toggle_surface(&state.show);",
+                "CustomEffectV2WebModelOwner::new(app.models_mut()).reset_controls(&state.controls);",
             ],
             reset_markers: &[
-                "self.set_model(&controls.enabled, true)",
-                "self.set_model(&controls.mode, Some(Arc::from(\"backdrop\")))",
-                "self.set_model(&controls.quality, Some(Arc::from(\"high\")))",
-                "self.set_model(&controls.sampling, Some(Arc::from(\"linear\")))",
-                "self.set_model(&controls.uv_span, vec![1.0])",
-                "self.set_model(&controls.strength_px, vec![0.85])",
-                "self.set_model(&controls.max_sample_offset_px, vec![0.0])",
-                "self.set_model(&controls.tint_strength, vec![0.5])",
-                "self.set_model(&controls.blur_radius_px, vec![0.0])",
-                "self.set_model(&controls.blur_downsample, vec![1.0])",
-                "self.set_model(&controls.lens_corner_radius_px, vec![24.0])",
-                "self.set_model(&controls.tile_corner_radius_px, vec![18.0])",
-                "self.set_model(&controls.debug_input, false)",
+                "owner.set_model(&self.enabled, true)",
+                "owner.set_model(&self.mode, Some(Arc::from(\"backdrop\")))",
+                "owner.set_model(&self.quality, Some(Arc::from(\"high\")))",
+                "owner.set_model(&self.sampling, Some(Arc::from(\"linear\")))",
+                "owner.set_model(&self.uv_span, vec![1.0])",
+                "owner.set_model(&self.strength_px, vec![0.85])",
+                "owner.set_model(&self.max_sample_offset_px, vec![0.0])",
+                "owner.set_model(&self.tint_strength, vec![0.5])",
+                "owner.set_model(&self.blur_radius_px, vec![0.0])",
+                "owner.set_model(&self.blur_downsample, vec![1.0])",
+                "owner.set_model(&self.lens_corner_radius_px, vec![24.0])",
+                "owner.set_model(&self.tile_corner_radius_px, vec![18.0])",
+                "owner.set_model(&self.debug_input, false)",
             ],
         },
     );
@@ -696,25 +731,26 @@ fn custom_effect_v2_glass_chrome_web_model_writes_stay_behind_owner_helper() {
         CustomEffectV2WebModelOwnerContract {
             label: "custom_effect_v2_glass_chrome_web_demo",
             source,
-            model_store_alias: "type CustomEffectV2GlassChromeWebModelStore = fret_runtime::ModelStore;",
-            owner_struct: "struct CustomEffectV2GlassChromeWebModelOwner<'a> {",
-            state_struct: "pub struct CustomEffectV2GlassChromeWebWindowState",
-            reset_controls_sig: "fn reset_controls(&mut self, controls: &DemoControls) -> bool",
+            reset_controls_sig: "fn reset_controls(&self, owner: &mut CustomEffectV2WebModelOwner<'_>) -> bool",
+            legacy_owner_markers: &[
+                "type CustomEffectV2GlassChromeWebModelStore = fret_runtime::ModelStore;",
+                "struct CustomEffectV2GlassChromeWebModelOwner<'a> {",
+            ],
             call_markers: &[
-                "CustomEffectV2GlassChromeWebModelOwner::new(host.models_mut()).reset_controls(&reset_controls);",
-                "CustomEffectV2GlassChromeWebModelOwner::new(app.models_mut()).toggle_surface(&state.show);",
-                "CustomEffectV2GlassChromeWebModelOwner::new(app.models_mut()).reset_controls(&state.controls);",
+                "CustomEffectV2WebModelOwner::new(host.models_mut()).reset_controls(&controls_for_reset);",
+                "CustomEffectV2WebModelOwner::new(app.models_mut()).toggle_surface(&state.show);",
+                "CustomEffectV2WebModelOwner::new(app.models_mut()).reset_controls(&state.controls);",
             ],
             reset_markers: &[
-                "self.set_model(&controls.enabled, true)",
-                "self.set_model(&controls.mode, Some(Arc::from(\"backdrop\")))",
-                "self.set_model(&controls.quality, Some(Arc::from(\"high\")))",
-                "self.set_model(&controls.sampling, Some(Arc::from(\"linear\")))",
-                "self.set_model(&controls.uv_span, vec![1.0])",
-                "self.set_model(&controls.strength, vec![0.95])",
-                "self.set_model(&controls.shininess, vec![36.0])",
-                "self.set_model(&controls.mix01, vec![1.0])",
-                "self.set_model(&controls.debug_input, false)",
+                "owner.set_model(&self.enabled, true)",
+                "owner.set_model(&self.mode, Some(Arc::from(\"backdrop\")))",
+                "owner.set_model(&self.quality, Some(Arc::from(\"high\")))",
+                "owner.set_model(&self.sampling, Some(Arc::from(\"linear\")))",
+                "owner.set_model(&self.uv_span, vec![1.0])",
+                "owner.set_model(&self.strength, vec![0.95])",
+                "owner.set_model(&self.shininess, vec![36.0])",
+                "owner.set_model(&self.mix01, vec![1.0])",
+                "owner.set_model(&self.debug_input, false)",
             ],
         },
     );

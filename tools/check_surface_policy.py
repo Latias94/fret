@@ -285,9 +285,10 @@ CUSTOM_EFFECT_V2_WEB_ALLOWED_RAW_SEAMS = (
     "AnyElement",
     "ElementContext",
     "FnDriver",
-    "ModelStore",
     "UiTree",
 )
+
+CUSTOM_EFFECT_V2_WEB_OWNER_HELPER_ALLOWED_RAW_SEAMS = ("fret_runtime", "ModelStore")
 
 CUSTOM_EFFECT_V2_WEB_OWNER = "examples-custom-effect-v2-web"
 
@@ -297,11 +298,23 @@ CUSTOM_EFFECT_V2_WEB_RETIREMENT = (
     "raw ModelStore owner seam."
 )
 
-CUSTOM_EFFECT_V2_WEB_OWNER_REQUIRED_MARKERS = (
-    "ModelOwner",
+CUSTOM_EFFECT_V2_WEB_DEMO_REQUIRED_MARKERS = (
+    "CustomEffectV2WebControlReset",
+    "CustomEffectV2WebModelOwner",
+    "impl CustomEffectV2WebControlReset for DemoControls",
+    "fn reset_controls(&self, owner: &mut CustomEffectV2WebModelOwner",
+    "owner.set_model",
+    "CustomEffectV2WebModelOwner::new",
+)
+
+CUSTOM_EFFECT_V2_WEB_OWNER_HELPER_REQUIRED_MARKERS = (
+    "trait CustomEffectV2WebControlReset",
+    "struct CustomEffectV2WebModelOwner",
     "fn set_model",
     "fn toggle_surface",
-    "fn reset_controls",
+    "fn reset_controls<C: CustomEffectV2WebControlReset>",
+    "self.models",
+    ".update",
 )
 
 CUSTOM_EFFECT_V2_WEB_DIRECT_RAW_WRITE_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
@@ -309,8 +322,15 @@ CUSTOM_EFFECT_V2_WEB_DIRECT_RAW_WRITE_PATTERNS: tuple[tuple[str, re.Pattern[str]
     ("ModelStore::update", re.compile(r"\bModelStore\s*::\s*update\s*\(")),
 )
 
-CUSTOM_EFFECT_V2_WEB_OWNER_IMPL_RE = re.compile(
-    r"^\s*impl(?:\s*<[^>]*>)?\s+\w*ModelOwner(?:\s*<[^>]*>)?\s*\{"
+CUSTOM_EFFECT_V2_WEB_DEMO_FORBIDDEN_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
+    (
+        "legacy-modelstore-alias",
+        re.compile(r"\btype\s+CustomEffectV2\w*WebModelStore\s*="),
+    ),
+    (
+        "legacy-local-owner",
+        re.compile(r"\bstruct\s+CustomEffectV2\w*WebModelOwner\b"),
+    ),
 )
 
 
@@ -418,6 +438,13 @@ COMPARISON_SURFACES: tuple[SurfacePath, ...] = (
 
 
 INTERNAL_HARNESS_SURFACES: tuple[SurfacePath, ...] = (
+    SurfacePath(
+        "apps/fret-examples/src/custom_effect_v2_web_owner.rs",
+        "internal_harness",
+        "shared private owner helper for custom-effect v2 web demo raw ModelStore writes",
+        owner=CUSTOM_EFFECT_V2_WEB_OWNER,
+        allowed_raw_seams=CUSTOM_EFFECT_V2_WEB_OWNER_HELPER_ALLOWED_RAW_SEAMS,
+    ),
     _fret_examples_internal_harness(
         "lib.rs",
         "the examples crate root owns shared native/web harness helpers, launch glue, and theme "
@@ -1006,26 +1033,6 @@ def _is_rust_source_line_ignorable(line: str) -> bool:
     return stripped.startswith("//") or stripped.startswith("///") or stripped.startswith("//!")
 
 
-def _custom_effect_v2_web_owner_impl_lines(text: str) -> set[int]:
-    owner_lines: set[int] = set()
-    in_owner_impl = False
-    brace_depth = 0
-    for line_no, line in enumerate(text.splitlines(), start=1):
-        if not in_owner_impl and CUSTOM_EFFECT_V2_WEB_OWNER_IMPL_RE.search(line):
-            in_owner_impl = True
-            brace_depth = 0
-
-        if not in_owner_impl:
-            continue
-
-        owner_lines.add(line_no)
-        brace_depth += line.count("{") - line.count("}")
-        if brace_depth <= 0:
-            in_owner_impl = False
-
-    return owner_lines
-
-
 def _scan_custom_effect_v2_web_owner_boundary(
     root: Path, spec: SurfacePath
 ) -> list[SurfaceViolation]:
@@ -1035,9 +1042,13 @@ def _scan_custom_effect_v2_web_owner_boundary(
     violations: list[SurfaceViolation] = []
     for path in _iter_source_files(root / spec.path):
         text = _read_text(path)
+        if path.name == "custom_effect_v2_web_owner.rs":
+            required_markers = CUSTOM_EFFECT_V2_WEB_OWNER_HELPER_REQUIRED_MARKERS
+        else:
+            required_markers = CUSTOM_EFFECT_V2_WEB_DEMO_REQUIRED_MARKERS
         missing_markers = [
             marker
-            for marker in CUSTOM_EFFECT_V2_WEB_OWNER_REQUIRED_MARKERS
+            for marker in required_markers
             if marker not in text
         ]
         if missing_markers:
@@ -1048,16 +1059,29 @@ def _scan_custom_effect_v2_web_owner_boundary(
                     line_no=1,
                     message=(
                         "custom-effect v2 web surfaces must keep raw parameter writes behind a "
-                        f"local ModelOwner helper; missing owner markers: {', '.join(missing_markers)}"
+                        f"shared private ModelOwner helper; missing owner markers: {', '.join(missing_markers)}"
                     ),
                 )
             )
 
-        owner_impl_lines = _custom_effect_v2_web_owner_impl_lines(text)
+        if path.name != "custom_effect_v2_web_owner.rs":
+            for marker, pattern in CUSTOM_EFFECT_V2_WEB_DEMO_FORBIDDEN_PATTERNS:
+                if not pattern.search(text):
+                    continue
+                violations.append(
+                    SurfaceViolation(
+                        rule="advanced-surface-custom-effect-owner-boundary",
+                        path=path,
+                        line_no=1,
+                        message=(
+                            "custom-effect v2 web demos must use the shared private ModelOwner "
+                            f"helper; legacy per-demo owner marker `{marker}` is not allowed"
+                        ),
+                    )
+                )
+
         for line_no, line in _code_lines_for_scan(path, text):
             if path.suffix == ".rs" and _is_rust_source_line_ignorable(line):
-                continue
-            if line_no in owner_impl_lines:
                 continue
             for seam, pattern in CUSTOM_EFFECT_V2_WEB_DIRECT_RAW_WRITE_PATTERNS:
                 if not pattern.search(line):
@@ -1068,8 +1092,8 @@ def _scan_custom_effect_v2_web_owner_boundary(
                         path=path,
                         line_no=line_no,
                         message=(
-                            "custom-effect v2 web raw model writes must go through the local "
-                            f"ModelOwner helper; direct `{seam}` bypasses the reset/toggle owner boundary"
+                            "custom-effect v2 web raw model writes must go through the shared "
+                            f"private ModelOwner helper; direct `{seam}` bypasses the reset/toggle owner boundary"
                         ),
                         source=line.strip(),
                     )

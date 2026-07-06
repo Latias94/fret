@@ -241,11 +241,12 @@ Audit judgment:
 - Those `custom_effect_v2_*` web demos do not currently use
   `fret::advanced::view::render_root_with_app_ui(...)` or `LocalState::from_model(...)`.
 - Their current closure point is narrower and intentional: grouped `selector_model_paint(...)`
-  reads for derived inspector settings plus local `ModelOwner` helper methods for repeated writes,
-  instead of ad hoc repeated `models.update(...)` blocks.
+  reads for derived inspector settings plus a shared private `ModelOwner` helper for repeated
+  writes, instead of ad hoc repeated `models.update(...)` blocks.
 - `tools/check_surface_policy.py` now source-gates that owner boundary: direct reset/toggle writes
-  through `models_mut().update(...)` or UFCS `ModelStore::update(...)` are rejected outside the
-  owner helper, while setup-time model allocation stays in the manual driver path.
+  through `models_mut().update(...)` or UFCS `ModelStore::update(...)` are rejected outside
+  `custom_effect_v2_web_owner.rs`, while setup-time model allocation stays in the manual driver
+  path and variant-specific reset defaults stay in each demo.
 
 ### B2) Window/runtime interop harnesses
 
@@ -301,10 +302,11 @@ Current status:
 - closed for the current in-tree `custom_effect_v2_*` web examples.
 - the family now converges on one shared grouped selector helper for explicit `Model<T>` bags
   rather than four copies of raw dependency/revision scaffolding.
-- the family also converges on bag-owned reset helpers instead of repeating the same
-  `models.update(...)` sequences in both event handlers and button callbacks.
-- the unified surface-policy gate now protects that local owner boundary with negative fixtures for
-  direct `models_mut().update(...)` and UFCS `ModelStore::update(...)` bypasses.
+- the family also converges on one shared private owner helper plus demo-local reset trait impls,
+  instead of repeating the same `models.update(...)` sequences in both event handlers and button
+  callbacks.
+- the unified surface-policy gate now protects that shared owner boundary with negative fixtures
+  for direct `models_mut().update(...)` and UFCS `ModelStore::update(...)` bypasses.
 - this keeps the right boundary intact: these demos are still low-level WebGPU/web harnesses, but
   their inspector-derived reads and repeated control writes no longer need bespoke boilerplate at
   every callsite.

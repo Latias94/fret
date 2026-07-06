@@ -13,15 +13,17 @@ The custom-effect v2 web examples now have an owner-boundary regression gate in
 
 The gate applies only to surfaces owned by `examples-custom-effect-v2-web`. It keeps the current
 advanced/manual quarantine honest by rejecting direct reset/toggle writes through
-`models_mut().update(...)` or UFCS `ModelStore::update(...)` outside the local `ModelOwner` helper.
+`models_mut().update(...)` or UFCS `ModelStore::update(...)` outside the shared private
+`custom_effect_v2_web_owner.rs` owner helper.
 
 # Decision
 
 Do not publish a custom-effect parameter/control binding yet. The web effect demos still need raw
 setup-time parameter allocation and low-level effect-layer composition. The clean boundary for the
 current architecture is narrower: setup may allocate raw models in the manual driver path, but
-runtime reset/toggle writes must pass through the local owner helper until a real public binding can
-own that model graph.
+runtime reset/toggle writes must pass through the shared private owner helper until a real public
+binding can own that model graph. Variant-specific defaults stay in each demo through
+`CustomEffectV2WebControlReset`.
 
 # Evidence
 

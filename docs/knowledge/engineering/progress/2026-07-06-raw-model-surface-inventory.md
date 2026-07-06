@@ -95,15 +95,17 @@ Keep raw/shared-model mechanisms for now:
   groups; these need a dedicated parameter/control-surface design before deletion.
   - Follow-up: `custom_effect_v2_web_demo.rs`, `custom_effect_v2_identity_web_demo.rs`,
     `custom_effect_v2_lut_web_demo.rs`, and `custom_effect_v2_glass_chrome_web_demo.rs` now keep
-    direct reset/toggle model writes behind local owner helpers. Keep model allocation in the
-    function-driver setup path for now; design a shared parameter binding only after the duplicated
-    shape proves worth exposing as a public app-facing abstraction.
+    direct reset/toggle model writes behind the shared private `custom_effect_v2_web_owner.rs`
+    helper. Variant-specific reset defaults stay in each demo through
+    `CustomEffectV2WebControlReset`. Keep model allocation in the function-driver setup path for
+    now; design a shared parameter binding only after the duplicated shape proves worth exposing as
+    a public app-facing abstraction.
   - Follow-up: those four web variants are now included in `tools/check_surface_policy.py` scan
     roots and classified as advanced/manual surfaces with explicit raw seams, owner, and retirement
     condition. The same gate now rejects direct reset/toggle writes through
-    `models_mut().update(...)` or UFCS `ModelStore::update(...)` outside the local `ModelOwner`
-    helper. Treat `tools/gate_examples_source_tree_policy.py` as a broader drift report until its
-    existing baseline failures are resolved.
+    `models_mut().update(...)` or UFCS `ModelStore::update(...)` outside the shared private
+    `ModelOwner` helper. Treat `tools/gate_examples_source_tree_policy.py` as a broader drift
+    report until its existing baseline failures are resolved.
 - `apps/fret-ui-gallery/src/driver/*`. These are gallery runtime drivers and not first-contact app
   authoring examples.
 - `apps/fret-ui-gallery/src/ui/snippets/ai/canvas_world_layer_spike.rs`. This is a large spike with
