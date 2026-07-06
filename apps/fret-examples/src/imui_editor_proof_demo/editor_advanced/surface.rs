@@ -16,6 +16,7 @@ use fret_ui_editor::controls::{
 };
 use fret_ui_kit::IntoUiElement as _;
 
+use super::super::editor_model_owner::EditorProofModelOwner;
 use super::super::editor_state::{
     editor_demo_exposure_model, editor_demo_iterations_model, editor_demo_position_models,
     editor_demo_position_outcome_model, editor_demo_rotation_models, editor_demo_scale_models,
@@ -24,7 +25,6 @@ use super::super::editor_state::{
 use super::super::proof_helpers::{
     editor_fixed_decimals_presentation, editor_position_presentation, editor_string_model_readout,
     editor_transform_presentations, proof_empty_state_text, proof_optional_outcome_readout,
-    transform_edit_axis_outcome_label, vec_edit_axis_outcome_label,
 };
 
 #[derive(Clone)]
@@ -349,7 +349,7 @@ fn reset_f64_action(
     value: f64,
 ) -> Arc<dyn Fn(&mut dyn UiActionHost, ActionCx) + 'static> {
     Arc::new(move |host, action_cx| {
-        update_f64_model(host, &model, value);
+        EditorProofModelOwner::new(host.models_mut()).set_f64(&model, value);
         host.request_redraw(action_cx.window);
     })
 }
@@ -359,7 +359,7 @@ fn reset_i32_action(
     value: i32,
 ) -> Arc<dyn Fn(&mut dyn UiActionHost, ActionCx) + 'static> {
     Arc::new(move |host, action_cx| {
-        let _ = host.models_mut().update(&model, |v| *v = value);
+        EditorProofModelOwner::new(host.models_mut()).set_i32(&model, value);
         host.request_redraw(action_cx.window);
     })
 }
@@ -370,9 +370,10 @@ fn reset_position_action(
     z: Model<f64>,
 ) -> Arc<dyn Fn(&mut dyn UiActionHost, ActionCx) + 'static> {
     Arc::new(move |host, action_cx| {
-        update_f64_model(host, &x, 0.0);
-        update_f64_model(host, &y, 0.0);
-        update_f64_model(host, &z, 0.0);
+        let mut owner = EditorProofModelOwner::new(host.models_mut());
+        owner.set_f64(&x, 0.0);
+        owner.set_f64(&y, 0.0);
+        owner.set_f64(&z, 0.0);
         host.request_redraw(action_cx.window);
     })
 }
@@ -383,21 +384,18 @@ fn reset_transform_action(
     scale: (Model<f64>, Model<f64>, Model<f64>),
 ) -> Arc<dyn Fn(&mut dyn UiActionHost, ActionCx) + 'static> {
     Arc::new(move |host, action_cx| {
-        update_f64_model(host, &position.0, 0.0);
-        update_f64_model(host, &position.1, 0.0);
-        update_f64_model(host, &position.2, 0.0);
-        update_f64_model(host, &rotation.0, 0.0);
-        update_f64_model(host, &rotation.1, 0.0);
-        update_f64_model(host, &rotation.2, 0.0);
-        update_f64_model(host, &scale.0, 1.0);
-        update_f64_model(host, &scale.1, 1.0);
-        update_f64_model(host, &scale.2, 1.0);
+        let mut owner = EditorProofModelOwner::new(host.models_mut());
+        owner.set_f64(&position.0, 0.0);
+        owner.set_f64(&position.1, 0.0);
+        owner.set_f64(&position.2, 0.0);
+        owner.set_f64(&rotation.0, 0.0);
+        owner.set_f64(&rotation.1, 0.0);
+        owner.set_f64(&rotation.2, 0.0);
+        owner.set_f64(&scale.0, 1.0);
+        owner.set_f64(&scale.1, 1.0);
+        owner.set_f64(&scale.2, 1.0);
         host.request_redraw(action_cx.window);
     })
-}
-
-fn update_f64_model(host: &mut dyn UiActionHost, model: &Model<f64>, value: f64) {
-    let _ = host.models_mut().update(model, |v| *v = value);
 }
 
 fn record_vec_axis_outcome(
@@ -406,11 +404,7 @@ fn record_vec_axis_outcome(
     outcome_model: &Model<String>,
     outcome: VecEditAxisOutcome,
 ) {
-    let next = vec_edit_axis_outcome_label(outcome);
-    let _ = host.models_mut().update(outcome_model, |value| {
-        value.clear();
-        value.push_str(&next);
-    });
+    EditorProofModelOwner::new(host.models_mut()).record_vec_axis_outcome(outcome_model, outcome);
     host.request_redraw(action_cx.window);
 }
 
@@ -420,10 +414,7 @@ fn record_transform_axis_outcome(
     outcome_model: &Model<String>,
     outcome: TransformEditAxisOutcome,
 ) {
-    let next = transform_edit_axis_outcome_label(outcome);
-    let _ = host.models_mut().update(outcome_model, |value| {
-        value.clear();
-        value.push_str(&next);
-    });
+    EditorProofModelOwner::new(host.models_mut())
+        .record_transform_axis_outcome(outcome_model, outcome);
     host.request_redraw(action_cx.window);
 }

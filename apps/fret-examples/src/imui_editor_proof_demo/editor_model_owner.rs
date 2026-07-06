@@ -1,9 +1,14 @@
 use std::any::Any;
 
 use fret_runtime::{Model, ModelStore};
-use fret_ui_editor::controls::TextFieldOutcome;
+use fret_ui_editor::controls::{
+    DragValueOutcome, TextFieldOutcome, TransformEditAxisOutcome, VecEditAxisOutcome,
+};
 
-use super::proof_helpers::edit_session_outcome_label;
+use super::proof_helpers::{
+    compact_edit_session_outcome_label, edit_session_outcome_label,
+    transform_edit_axis_outcome_label, vec_edit_axis_outcome_label,
+};
 
 pub(super) struct EditorProofModelOwner<'a> {
     models: &'a mut ModelStore,
@@ -24,6 +29,14 @@ impl<'a> EditorProofModelOwner<'a> {
             value.push_str(next_value);
         })
         .is_some()
+    }
+
+    pub(super) fn set_f64(&mut self, model: &Model<f64>, value: f64) {
+        let _ = self.update(model, |slot| *slot = value);
+    }
+
+    pub(super) fn set_i32(&mut self, model: &Model<i32>, value: i32) {
+        let _ = self.update(model, |slot| *slot = value);
     }
 
     pub(super) fn record_asset_ref_action(
@@ -53,6 +66,30 @@ impl<'a> EditorProofModelOwner<'a> {
         outcome: TextFieldOutcome,
     ) {
         let _ = self.replace_string(outcome_model, edit_session_outcome_label(outcome));
+    }
+
+    pub(super) fn record_drag_value_outcome(
+        &mut self,
+        outcome_model: &Model<String>,
+        outcome: DragValueOutcome,
+    ) {
+        let _ = self.replace_string(outcome_model, compact_edit_session_outcome_label(outcome));
+    }
+
+    pub(super) fn record_vec_axis_outcome(
+        &mut self,
+        outcome_model: &Model<String>,
+        outcome: VecEditAxisOutcome,
+    ) {
+        let _ = self.replace_string(outcome_model, &vec_edit_axis_outcome_label(outcome));
+    }
+
+    pub(super) fn record_transform_axis_outcome(
+        &mut self,
+        outcome_model: &Model<String>,
+        outcome: TransformEditAxisOutcome,
+    ) {
+        let _ = self.replace_string(outcome_model, &transform_edit_axis_outcome_label(outcome));
     }
 }
 
@@ -121,5 +158,23 @@ mod tests {
         EditorProofModelOwner::new(&mut models)
             .record_text_field_outcome(&outcome, EditSessionOutcome::Canceled);
         assert_eq!(models.read(&outcome, Clone::clone).unwrap(), "Canceled");
+    }
+
+    #[test]
+    fn editor_proof_model_owner_records_numeric_resets_and_drag_outcomes() {
+        let mut models = ModelStore::default();
+        let f64_value = models.insert(0.25);
+        let i32_value = models.insert(2);
+        let outcome = models.insert(String::new());
+
+        EditorProofModelOwner::new(&mut models).set_f64(&f64_value, 0.75);
+        EditorProofModelOwner::new(&mut models).set_i32(&i32_value, 8);
+
+        assert_eq!(models.get_copied(&f64_value), Some(0.75));
+        assert_eq!(models.get_copied(&i32_value), Some(8));
+
+        EditorProofModelOwner::new(&mut models)
+            .record_drag_value_outcome(&outcome, EditSessionOutcome::Committed);
+        assert_eq!(models.read(&outcome, Clone::clone).unwrap(), "Commit");
     }
 }

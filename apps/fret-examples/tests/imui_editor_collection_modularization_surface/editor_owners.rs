@@ -189,12 +189,15 @@ pub(super) fn assert_editor_owner_split(
         "TransformEdit::from_presentations(",
         "DragValue::new(",
         "NumericInput::from_presentation(",
-        "vec_edit_axis_outcome_label(outcome)",
-        "transform_edit_axis_outcome_label(outcome)",
         "\"imui-editor-proof.editor.advanced.no-matches\"",
         "fn advanced_unit_interval_validate(",
         "fn record_vec_axis_outcome(",
         "fn record_transform_axis_outcome(",
+        "use super::super::editor_model_owner::EditorProofModelOwner;",
+        "EditorProofModelOwner::new(host.models_mut()).set_f64(",
+        "EditorProofModelOwner::new(host.models_mut()).set_i32(",
+        ".record_vec_axis_outcome(outcome_model, outcome);",
+        ".record_transform_axis_outcome(outcome_model, outcome);",
     ] {
         assert!(
             editor_advanced_surface_source.contains(needle),
@@ -263,6 +266,9 @@ pub(super) fn assert_editor_owner_split(
         "\"imui-editor-proof.editor.group.material\"",
         "DragValue::from_presentation(",
         "record_drag_value_outcome(host, action_cx, &outcome_model, outcome);",
+        "use super::super::editor_model_owner::EditorProofModelOwner;",
+        "EditorProofModelOwner::new(host.models_mut()).set_f64(&model, value);",
+        ".record_drag_value_outcome(outcome_model, outcome);",
         "Slider::from_presentation(",
         "ColorEdit::new(models.base_color.clone())",
         "asset_ref::push_material_rows(",
@@ -275,6 +281,22 @@ pub(super) fn assert_editor_owner_split(
             editor_material_surface_source.contains(needle),
             "the demo-local editor material surface owner should own material search gating and rows; missing `{needle}`"
         );
+    }
+
+    for (owner, source) in [
+        ("editor advanced surface", editor_advanced_surface_source),
+        ("editor material surface", editor_material_surface_source),
+    ] {
+        for unexpected in [
+            "host.models_mut().update",
+            "models_mut().update",
+            "update_f64_model(",
+        ] {
+            assert!(
+                !source.contains(unexpected),
+                "the demo-local {owner} should route model writes through EditorProofModelOwner; unexpected `{unexpected}`"
+            );
+        }
     }
 
     for needle in [
@@ -347,7 +369,15 @@ pub(super) fn assert_editor_owner_split(
         "pub(super) fn record_asset_ref_action(",
         "pub(super) fn record_text_assist_accept(",
         "pub(super) fn record_text_field_outcome(",
+        "pub(super) fn set_f64(",
+        "pub(super) fn set_i32(",
+        "pub(super) fn record_drag_value_outcome(",
+        "pub(super) fn record_vec_axis_outcome(",
+        "pub(super) fn record_transform_axis_outcome(",
         "edit_session_outcome_label(outcome)",
+        "compact_edit_session_outcome_label(outcome)",
+        "vec_edit_axis_outcome_label(outcome)",
+        "transform_edit_axis_outcome_label(outcome)",
     ] {
         assert!(
             editor_model_owner_source.contains(needle),
@@ -358,6 +388,7 @@ pub(super) fn assert_editor_owner_split(
     for needle in [
         "editor_proof_model_owner_records_asset_ref_actions",
         "editor_proof_model_owner_records_text_assist_and_outcomes",
+        "editor_proof_model_owner_records_numeric_resets_and_drag_outcomes",
     ] {
         assert!(
             compact_editor_model_owner_source.contains(needle),

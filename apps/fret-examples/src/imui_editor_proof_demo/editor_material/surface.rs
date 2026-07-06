@@ -18,15 +18,15 @@ use fret_ui_editor::controls::{
 use fret_ui_kit::IntoUiElement as _;
 
 use super::super::asset_ref;
+use super::super::editor_model_owner::EditorProofModelOwner;
 use super::super::editor_state::{
     editor_demo_alpha_clip_model, editor_demo_base_color_model, editor_demo_cast_shadows_model,
     editor_demo_drag_value_outcome_model, editor_demo_metallic_model, editor_demo_roughness_model,
     editor_demo_shading_model, editor_demo_value_model, editor_material_shading_items,
 };
 use super::super::proof_helpers::{
-    compact_edit_session_outcome_label, editor_fixed_decimals_presentation,
-    editor_percent_presentation, editor_string_model_readout, proof_empty_state_text,
-    proof_optional_outcome_readout,
+    editor_fixed_decimals_presentation, editor_percent_presentation, editor_string_model_readout,
+    proof_empty_state_text, proof_optional_outcome_readout,
 };
 
 #[derive(Clone)]
@@ -389,7 +389,7 @@ fn reset_f64_action(
     value: f64,
 ) -> Arc<dyn Fn(&mut dyn UiActionHost, ActionCx) + 'static> {
     Arc::new(move |host, action_cx| {
-        let _ = host.models_mut().update(&model, |v| *v = value);
+        EditorProofModelOwner::new(host.models_mut()).set_f64(&model, value);
         host.request_redraw(action_cx.window);
     })
 }
@@ -400,10 +400,6 @@ fn record_drag_value_outcome(
     outcome_model: &Model<String>,
     outcome: DragValueOutcome,
 ) {
-    let next = compact_edit_session_outcome_label(outcome);
-    let _ = host.models_mut().update(outcome_model, |value| {
-        value.clear();
-        value.push_str(next);
-    });
+    EditorProofModelOwner::new(host.models_mut()).record_drag_value_outcome(outcome_model, outcome);
     host.request_redraw(action_cx.window);
 }

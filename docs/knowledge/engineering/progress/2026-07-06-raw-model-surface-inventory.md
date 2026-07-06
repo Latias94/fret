@@ -119,10 +119,13 @@ Keep raw/shared-model mechanisms for now:
   graphs; migrate only with editor-state public contracts, not by mechanical LocalState rewrites.
   Follow-up cleanup started with `collection/`: app-side command, context-menu, asset-grid, and
   rename-start writes now route through `ProofCollectionModelOwner`, and the legacy
-  `proof_collection_begin_inline_rename_in_app(...)` free helper was deleted. Remaining IMUI proof
-  work still includes collection `UiActionHostExt::update_model(...)` paths plus
-  `editor_material/surface.rs` and `editor_advanced/surface.rs`. A second cleanup routed
-  `asset_ref.rs` and `editor_text_assist.rs` shared string writes through `EditorProofModelOwner`.
+  `proof_collection_begin_inline_rename_in_app(...)` free helper was deleted. A second cleanup
+  routed `asset_ref.rs` and `editor_text_assist.rs` shared string writes through
+  `EditorProofModelOwner`. A final editor-surface cleanup routed Material/Advanced numeric reset
+  and edit-outcome writes through `EditorProofModelOwner`, leaving no direct
+  `models_mut().update(...)` / UFCS `ModelStore::update(...)` hits under
+  `imui_editor_proof_demo/*`. Remaining follow-up work is collection
+  `UiActionHostExt::update_model(...)` host-facing action paths.
 - `workspace_shell_demo/*`. Audited after the initial inventory: it is application-level workspace
   shell state, so the shared model graph remains. The follow-up cleanup routes writes through
   demo-local owner helpers instead of scattering raw `models_mut().update(...)` calls. Follow-up
