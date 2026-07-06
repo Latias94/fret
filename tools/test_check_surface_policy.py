@@ -830,6 +830,7 @@ class SurfacePolicyTests(unittest.TestCase):
                 for spec in POLICY.ADVANCED_MANUAL_SURFACES
             )
         )
+
         self.assertTrue(
             any(
                 spec.path == "apps/fret-examples/src/simple_todo_demo.rs"
@@ -849,6 +850,146 @@ class SurfacePolicyTests(unittest.TestCase):
             )
         )
         self.assertNotIn("apps/fret-examples/src", POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS)
+
+    def test_custom_effect_v2_web_direct_model_updates_are_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-examples/src/custom_effect_v2_web_demo.rs",
+                """
+                type CustomEffectV2WebModelStore = fret_runtime::ModelStore;
+
+                struct CustomEffectV2WebModelOwner<'a> {
+                    models: &'a mut CustomEffectV2WebModelStore,
+                }
+
+                impl<'a> CustomEffectV2WebModelOwner<'a> {
+                    fn set_model<T: std::any::Any>(
+                        &mut self,
+                        model: &fret_runtime::Model<T>,
+                        value: T,
+                    ) -> bool {
+                        true
+                    }
+
+                    fn toggle_surface(&mut self, show: &fret_runtime::Model<bool>) -> bool {
+                        true
+                    }
+
+                    fn reset_controls(&mut self) -> bool {
+                        true
+                    }
+                }
+
+                fn bad(app: &mut fret_app::App, show: &fret_runtime::Model<bool>) {
+                    let _ = app.models_mut().update(show, |value| {
+                        *value = !*value;
+                        true
+                    });
+                    let _ = fret_runtime::ModelStore::update(app.models_mut(), show, |value| {
+                        *value = !*value;
+                        true
+                    });
+                }
+                """,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/custom_effect_v2_web_demo.rs",
+                        "advanced_manual",
+                        "fixture custom-effect v2 web surface",
+                        owner="examples-custom-effect-v2-web",
+                        allowed_raw_seams=("fret_app", "fret_runtime", "ModelStore"),
+                        retirement=POLICY.CUSTOM_EFFECT_V2_WEB_RETIREMENT,
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            owner_boundary_violations = [
+                violation
+                for violation in violations
+                if violation.rule == "advanced-surface-custom-effect-owner-boundary"
+            ]
+            self.assertEqual(2, len(owner_boundary_violations))
+            for violation in owner_boundary_violations:
+                self.assertIn("ModelOwner", violation.message)
+
+    def test_custom_effect_v2_web_owner_helper_updates_are_allowed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-examples/src/custom_effect_v2_web_demo.rs",
+                """
+                type CustomEffectV2WebModelStore = fret_runtime::ModelStore;
+
+                struct CustomEffectV2WebModelOwner<'a> {
+                    models: &'a mut CustomEffectV2WebModelStore,
+                }
+
+                impl<'a> CustomEffectV2WebModelOwner<'a> {
+                    fn new(models: &'a mut CustomEffectV2WebModelStore) -> Self {
+                        Self { models }
+                    }
+
+                    fn set_model<T: std::any::Any>(
+                        &mut self,
+                        model: &fret_runtime::Model<T>,
+                        value: T,
+                    ) -> bool {
+                        self.models.update(model, |current| {
+                            *current = value;
+                            true
+                        }).unwrap_or(false)
+                    }
+
+                    fn toggle_surface(&mut self, show: &fret_runtime::Model<bool>) -> bool {
+                        self.models.update(show, |value| {
+                            *value = !*value;
+                            true
+                        }).unwrap_or(false)
+                    }
+
+                    fn reset_controls(&mut self) -> bool {
+                        true
+                    }
+                }
+
+                fn ok(app: &mut fret_app::App, show: &fret_runtime::Model<bool>) {
+                    let _ = CustomEffectV2WebModelOwner::new(app.models_mut()).toggle_surface(show);
+                }
+                """,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/custom_effect_v2_web_demo.rs",
+                        "advanced_manual",
+                        "fixture custom-effect v2 web surface",
+                        owner="examples-custom-effect-v2-web",
+                        allowed_raw_seams=("fret_app", "fret_runtime", "ModelStore"),
+                        retirement=POLICY.CUSTOM_EFFECT_V2_WEB_RETIREMENT,
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            self.assertFalse(
+                [
+                    violation
+                    for violation in violations
+                    if violation.rule == "advanced-surface-custom-effect-owner-boundary"
+                ]
+            )
 
     def test_migrated_cookbook_examples_are_default_clean(self) -> None:
         migrated = {

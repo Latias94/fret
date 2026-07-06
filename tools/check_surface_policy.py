@@ -289,10 +289,28 @@ CUSTOM_EFFECT_V2_WEB_ALLOWED_RAW_SEAMS = (
     "UiTree",
 )
 
+CUSTOM_EFFECT_V2_WEB_OWNER = "examples-custom-effect-v2-web"
+
 CUSTOM_EFFECT_V2_WEB_RETIREMENT = (
     "Remove this quarantine record after a public custom-effect parameter/control binding owns "
     "parameter models, reset/toggle actions, and effect-layer composition without exposing the "
     "raw ModelStore owner seam."
+)
+
+CUSTOM_EFFECT_V2_WEB_OWNER_REQUIRED_MARKERS = (
+    "ModelOwner",
+    "fn set_model",
+    "fn toggle_surface",
+    "fn reset_controls",
+)
+
+CUSTOM_EFFECT_V2_WEB_DIRECT_RAW_WRITE_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
+    ("models_mut().update", re.compile(r"\bmodels_mut\s*\(\s*\)\s*\.\s*update\s*\(")),
+    ("ModelStore::update", re.compile(r"\bModelStore\s*::\s*update\s*\(")),
+)
+
+CUSTOM_EFFECT_V2_WEB_OWNER_IMPL_RE = re.compile(
+    r"^\s*impl(?:\s*<[^>]*>)?\s+\w*ModelOwner(?:\s*<[^>]*>)?\s*\{"
 )
 
 
@@ -305,7 +323,7 @@ def _fret_examples_custom_effect_v2_web_surface(filename: str, variant: str) -> 
             "custom-effect v2 web proof owns manual runner/bootstrap, raw parameter models, a "
             "local ModelStore owner, and low-level effect-layer composition"
         ),
-        owner="examples-custom-effect-v2-web",
+        owner=CUSTOM_EFFECT_V2_WEB_OWNER,
         allowed_raw_seams=CUSTOM_EFFECT_V2_WEB_ALLOWED_RAW_SEAMS,
         retirement=CUSTOM_EFFECT_V2_WEB_RETIREMENT,
     )
@@ -988,6 +1006,79 @@ def _is_rust_source_line_ignorable(line: str) -> bool:
     return stripped.startswith("//") or stripped.startswith("///") or stripped.startswith("//!")
 
 
+def _custom_effect_v2_web_owner_impl_lines(text: str) -> set[int]:
+    owner_lines: set[int] = set()
+    in_owner_impl = False
+    brace_depth = 0
+    for line_no, line in enumerate(text.splitlines(), start=1):
+        if not in_owner_impl and CUSTOM_EFFECT_V2_WEB_OWNER_IMPL_RE.search(line):
+            in_owner_impl = True
+            brace_depth = 0
+
+        if not in_owner_impl:
+            continue
+
+        owner_lines.add(line_no)
+        brace_depth += line.count("{") - line.count("}")
+        if brace_depth <= 0:
+            in_owner_impl = False
+
+    return owner_lines
+
+
+def _scan_custom_effect_v2_web_owner_boundary(
+    root: Path, spec: SurfacePath
+) -> list[SurfaceViolation]:
+    if spec.owner != CUSTOM_EFFECT_V2_WEB_OWNER:
+        return []
+
+    violations: list[SurfaceViolation] = []
+    for path in _iter_source_files(root / spec.path):
+        text = _read_text(path)
+        missing_markers = [
+            marker
+            for marker in CUSTOM_EFFECT_V2_WEB_OWNER_REQUIRED_MARKERS
+            if marker not in text
+        ]
+        if missing_markers:
+            violations.append(
+                SurfaceViolation(
+                    rule="advanced-surface-custom-effect-owner-boundary",
+                    path=path,
+                    line_no=1,
+                    message=(
+                        "custom-effect v2 web surfaces must keep raw parameter writes behind a "
+                        f"local ModelOwner helper; missing owner markers: {', '.join(missing_markers)}"
+                    ),
+                )
+            )
+
+        owner_impl_lines = _custom_effect_v2_web_owner_impl_lines(text)
+        for line_no, line in _code_lines_for_scan(path, text):
+            if path.suffix == ".rs" and _is_rust_source_line_ignorable(line):
+                continue
+            if line_no in owner_impl_lines:
+                continue
+            for seam, pattern in CUSTOM_EFFECT_V2_WEB_DIRECT_RAW_WRITE_PATTERNS:
+                if not pattern.search(line):
+                    continue
+                violations.append(
+                    SurfaceViolation(
+                        rule="advanced-surface-custom-effect-owner-boundary",
+                        path=path,
+                        line_no=line_no,
+                        message=(
+                            "custom-effect v2 web raw model writes must go through the local "
+                            f"ModelOwner helper; direct `{seam}` bypasses the reset/toggle owner boundary"
+                        ),
+                        source=line.strip(),
+                    )
+                )
+                break
+
+    return violations
+
+
 def _scan_default_authoring_surface(root: Path, spec: SurfacePath) -> list[SurfaceViolation]:
     violations: list[SurfaceViolation] = []
     for path in _iter_source_files(root / spec.path):
@@ -1042,6 +1133,7 @@ def _scan_classified_raw_surface(root: Path, spec: SurfacePath) -> list[SurfaceV
                         source=line.strip(),
                     )
                 )
+    violations.extend(_scan_custom_effect_v2_web_owner_boundary(root, spec))
     for seam in sorted(allowed_raw_seams - used_raw_seams):
         violations.append(
             SurfaceViolation(

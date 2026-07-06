@@ -18,6 +18,12 @@ The custom-effect v2 web variants are now covered by the unified public example 
 Each file is classified as an advanced/manual examples surface with an explicit owner, raw seam
 allowlist, and retirement condition.
 
+Follow-up on the same day: the unified source-policy gate now also enforces the local owner
+boundary. Direct reset/toggle writes through `models_mut().update(...)` or UFCS
+`ModelStore::update(...)` are rejected outside the `ModelOwner` helper, while setup-time
+`models_mut().insert(...)` remains allowed until a public custom-effect parameter/control binding
+exists.
+
 # Decision
 
 Do not mechanically migrate these demos to `LocalState` yet. They are manual runner/effect-layer
@@ -27,6 +33,7 @@ effect-layer composition without exposing the raw owner seam.
 
 # Verification
 
+- `python3 -m unittest tools.test_check_surface_policy.SurfacePolicyTests.test_custom_effect_v2_web_direct_model_updates_are_rejected tools.test_check_surface_policy.SurfacePolicyTests.test_custom_effect_v2_web_owner_helper_updates_are_allowed`
 - `python3 -m unittest tools.test_check_surface_policy.SurfacePolicyTests.test_fret_examples_public_scan_roots_stay_precise`
 - `python3 -m unittest tools.test_check_surface_policy`
 - `python3 tools/check_surface_policy.py`
@@ -34,5 +41,5 @@ effect-layer composition without exposing the raw owner seam.
 # Next
 
 `tools/gate_examples_source_tree_policy.py` still has an existing failing baseline and should be
-treated as a drift report until it is repaired. Once repaired, add negative fixtures for raw writes
-outside the owner helper, including UFCS-style `ModelStore` update calls.
+treated as a broader drift report until it is repaired. The owner-helper regression now lives in
+`tools/check_surface_policy.py`, including the UFCS-style `ModelStore::update(...)` case.

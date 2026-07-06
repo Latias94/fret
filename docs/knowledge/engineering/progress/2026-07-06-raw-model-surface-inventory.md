@@ -100,8 +100,10 @@ Keep raw/shared-model mechanisms for now:
     shape proves worth exposing as a public app-facing abstraction.
   - Follow-up: those four web variants are now included in `tools/check_surface_policy.py` scan
     roots and classified as advanced/manual surfaces with explicit raw seams, owner, and retirement
-    condition. Treat `tools/gate_examples_source_tree_policy.py` as a narrower owner-helper drift
-    report until its existing baseline failures are resolved.
+    condition. The same gate now rejects direct reset/toggle writes through
+    `models_mut().update(...)` or UFCS `ModelStore::update(...)` outside the local `ModelOwner`
+    helper. Treat `tools/gate_examples_source_tree_policy.py` as a broader drift report until its
+    existing baseline failures are resolved.
 - `apps/fret-ui-gallery/src/driver/*`. These are gallery runtime drivers and not first-contact app
   authoring examples.
 - `apps/fret-ui-gallery/src/ui/snippets/ai/canvas_world_layer_spike.rs`. This is a large spike with
@@ -123,8 +125,8 @@ Keep raw/shared-model mechanisms for now:
 
 Likely next cleanup slices:
 
-- Custom-effect parameter binding contracts after the V2 web variants have the same owner boundary
-  and duplicated parameter shapes are clearer.
+- Custom-effect parameter binding contracts after the V2 web owner-boundary gate has run long
+  enough to prove which duplicated parameter shapes deserve a public app-facing abstraction.
 - Plot/chart family-specific bindings for remaining first-contact demos once their output/state
   contracts are named explicitly.
 
