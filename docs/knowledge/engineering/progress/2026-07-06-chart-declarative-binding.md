@@ -8,8 +8,8 @@ tags: fret,ui-framework,public-surface,chart,binding,raw-model
 
 # Summary
 
-`chart_declarative_demo` now stores a `ChartCanvasPanelBinding` instead of exposing a raw
-`Model<ChartEngine>` in the app view.
+`chart_declarative_demo` and the manual-harness `chart_demo` now store a
+`ChartCanvasPanelBinding` instead of exposing a raw `Model<ChartEngine>` in app-facing state.
 
 The new binding is intentionally narrow:
 
@@ -18,7 +18,9 @@ The new binding is intentionally narrow:
 - `observe_engine_paint(cx)` preserves the app-view paint dependency without teaching raw model
   reads;
 - `from_model(...)` is available only as an advanced bridge for callers that already coordinate a
-  shared chart engine.
+  shared chart engine;
+- the manual `chart_demo` keeps its `FnDriver` shell but no longer teaches `ChartCanvasPanelProps`
+  engine wiring.
 
 # Decision
 
@@ -31,6 +33,7 @@ surface, not a replacement for advanced chart coordination.
 
 - `cargo nextest run -p fret-chart chart_canvas_binding_creates_props_with_engine_without_public_raw_handle --no-fail-fast`
 - `cargo nextest run -p fret-examples --test basic_chart_demos_surface chart_declarative_demo_uses_app_view_imports --no-fail-fast`
+- `cargo nextest run -p fret-examples --test basic_chart_demos_surface chart_demo_uses_manual_harness_chart_binding --no-fail-fast`
 
 # Next
 

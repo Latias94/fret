@@ -44,9 +44,47 @@ fn chart_declarative_demo_uses_app_view_imports() {
 }
 
 #[test]
+fn chart_demo_uses_manual_harness_chart_binding() {
+    let source = compact(include_str!("../src/chart_demo.rs"));
+
+    for needle in [
+        "usefret_chart::{ChartCanvasPanelBinding,chart_canvas_panel};",
+        "chart:ChartCanvasPanelBinding",
+        "ChartCanvasPanelBinding::new(app,spec,engine)",
+        "fret_ui::declarative::render_root(",
+        "chart.observe_engine_paint(cx);",
+        "chart.panel_props()",
+        "vec![chart_canvas_panel(cx,props)]",
+    ] {
+        assert!(
+            source.contains(needle),
+            "chart_demo should keep the manual harness while using the app-facing chart binding; missing `{needle}`"
+        );
+    }
+
+    for legacy in [
+        "usefret_runtime::{Model,PlatformCapabilities};",
+        "engine:Model<ChartEngine>",
+        "spec:ChartSpec",
+        "app.models_mut().insert(engine)",
+        "ChartCanvasPanelProps::new(spec)",
+        "props.engine=Some(engine);",
+        "cx.observe_model(&engine",
+        "usefret_chart::retained::ChartCanvas;",
+        "ChartCanvas::new(",
+        "ChartCanvas::create_node(",
+        "create_node_retained(",
+    ] {
+        assert!(
+            !source.contains(legacy),
+            "chart_demo should not teach raw chart model/props wiring; unexpected `{legacy}`"
+        );
+    }
+}
+
+#[test]
 fn basic_chart_demos_use_declarative_canvas_panel() {
     for (name, source) in [
-        ("chart_demo", include_str!("../src/chart_demo.rs")),
         (
             "category_line_demo",
             include_str!("../src/category_line_demo.rs"),

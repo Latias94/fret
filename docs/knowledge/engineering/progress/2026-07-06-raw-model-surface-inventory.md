@@ -60,10 +60,11 @@ Keep raw/shared-model mechanisms for now:
     `LinkedPlotGroup::push_binding(...)` instead of hand-wiring `LinkedPlotMember { state, output }`.
     `inf_lines_demo.rs` now uses `LinePlotPanelBinding::new_with_state(...)` for multi-axis
     reference-line overlays and reads query output through `output_untracked(...)`.
-  - Follow-up: `chart_declarative_demo.rs` now uses `ChartCanvasPanelBinding`, so the default
-    FretApp chart example no longer imports `fret_runtime::Model` or wires
-    `ChartCanvasPanelProps::engine` directly. Keep explicit raw chart panel props in stress,
-    linked, multi-grid, and output-model demos until those advanced contracts are named.
+  - Follow-up: `chart_declarative_demo.rs` and the manual-harness `chart_demo.rs` now use
+    `ChartCanvasPanelBinding`, so the default chart examples no longer import
+    `fret_runtime::Model` or wire `ChartCanvasPanelProps::engine` directly. Keep explicit raw chart
+    panel props in stress, linked, multi-grid, and output-model demos until those advanced
+    contracts are named.
 - Custom effect demos such as `custom_effect_v2_*`. They expose effect parameter models and reset
   groups; these need a dedicated parameter/control-surface design before deletion.
   - Follow-up: `custom_effect_v2_web_demo.rs`, `custom_effect_v2_identity_web_demo.rs`,
