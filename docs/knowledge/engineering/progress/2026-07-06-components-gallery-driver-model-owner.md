@@ -32,6 +32,22 @@ shared model graph.
   command/hot-reload/event/tree-key handlers.
 - Add a source gate that fails if raw `models_mut().update(...)` regrows outside the owner helper.
 
+# Tightening Follow-Up
+
+Branch `refactor/examples-components-gallery-owner-tightening` upgrades the first cleanup from
+generic free helpers to a named `ComponentsGalleryModelOwner`.
+
+- Deleted `components_gallery_update_model(...)` and `components_gallery_set_model(...)`.
+- Kept semantic helpers for last-action updates, command-palette open, and transient-surface close;
+  they now delegate to `ComponentsGalleryModelOwner`.
+- Tree keyboard handling, progress commands, and font-reset commands now route generic writes
+  through `ComponentsGalleryModelOwner::update(...)` / `set(...)`.
+- Tightened the source gate so production source forbids direct/generic/update-any and UFCS
+  `ModelStore` bypasses, plus the deleted legacy helper names.
+- `tools/check_surface_policy.py` now lists `ModelStore` as an explicit allowed raw seam for the
+  components-gallery advanced surface only.
+- Added `components_gallery_model_owner_preserves_generic_updates` for owner behavior.
+
 # Verification
 
 - `cargo check -p fret-examples --lib --tests`

@@ -114,27 +114,55 @@ fn components_gallery_overlay_text_uses_text_roles() {
 #[test]
 fn components_gallery_driver_writes_stay_behind_owner_helpers() {
     let source = include_str!("../src/components_gallery.rs");
+    let production_source = source
+        .split("#[cfg(test)]")
+        .next()
+        .expect("components gallery should have production source before tests");
     let compact_source = compact(source);
+    let compact_production = compact(production_source);
 
     for needle in [
-        "fncomponents_gallery_update_model<T:Any>(",
-        "fncomponents_gallery_set_model<T:Any>(",
+        "usefret_runtime::{ModelStore,PlatformCapabilities};",
+        "structComponentsGalleryModelOwner<'a>{",
+        "models:&'amutModelStore,",
+        "fnupdate<T:Any,R>(&mutself,model:&Model<T>,f:implFnOnce(&mutT)->R)->Option<R>{",
+        "fnset<T:Any>(&mutself,model:&Model<T>,value:T)->bool{",
+        "fnset_last_action(",
+        "fnopen_command_palette(",
+        "fnclose_transient_surfaces(",
         "fncomponents_gallery_set_last_action(",
         "fncomponents_gallery_open_command_palette(",
         "fncomponents_gallery_close_transient_surfaces(",
         "components_gallery_close_transient_surfaces(app,state);",
         "components_gallery_open_command_palette(app,state);",
         "components_gallery_set_last_action(app,state,\"context_menu.action\");",
+        "ComponentsGalleryModelOwner::new(app.models_mut()).update(&state.progress,",
     ] {
         assert!(
             compact_source.contains(needle),
-            "components gallery should keep driver/event model writes behind explicit owner helpers; missing `{needle}`"
+            "components gallery should keep driver/event model writes behind a named owner helper; missing `{needle}`"
         );
     }
 
-    assert_eq!(
-        source.matches("models_mut().update(").count(),
-        1,
-        "components gallery should not scatter raw ModelStore updates outside the owner helper"
-    );
+    for forbidden in [
+        "models_mut().update(",
+        "models_mut().update::<",
+        "models_mut().update_any(",
+        "models_mut().update_any::<",
+        "ModelStore::update(",
+        "ModelStore::update::<",
+        "ModelStore::update_any(",
+        "ModelStore::update_any::<",
+        "<ModelStore>::update(",
+        "<ModelStore>::update::<",
+        "<ModelStore>::update_any(",
+        "<ModelStore>::update_any::<",
+        "fncomponents_gallery_update_model",
+        "fncomponents_gallery_set_model",
+    ] {
+        assert!(
+            !compact_production.contains(forbidden),
+            "components gallery production code should not bypass the owner helper with `{forbidden}`"
+        );
+    }
 }

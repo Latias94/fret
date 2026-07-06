@@ -124,6 +124,7 @@ Keep raw/shared-model mechanisms for now:
 - `components_gallery.rs`, `virtual_list_stress_demo.rs`, and `editor_notes_demo.rs`. Audited and
   cleaned after the initial inventory: each keeps intentional shared models but routes writes
   through local owner helpers with source gates. Follow-up tightening upgraded
+  `components_gallery.rs` from generic free helpers to `ComponentsGalleryModelOwner`,
   `virtual_list_stress_demo.rs` from free helper functions to a named
   `VirtualListStressModelOwner`, and its source gate now forbids direct/generic/update-any and UFCS
   `ModelStore` bypasses in production source. The same tightening upgraded

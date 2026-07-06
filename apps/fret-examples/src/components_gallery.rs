@@ -13,7 +13,7 @@ use fret_launch::{
     WinitHotReloadContext, WinitRenderContext, WinitRunnerConfig, WinitWindowContext,
 };
 use fret_markdown as markdown;
-use fret_runtime::PlatformCapabilities;
+use fret_runtime::{ModelStore, PlatformCapabilities};
 use fret_ui::declarative;
 use fret_ui::element::{
     ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
@@ -96,16 +96,53 @@ impl ComponentsGalleryWindowState {
     }
 }
 
-fn components_gallery_update_model<T: Any>(
-    app: &mut App,
-    model: &Model<T>,
-    f: impl FnOnce(&mut T),
-) {
-    let _ = app.models_mut().update(model, f);
+struct ComponentsGalleryModelOwner<'a> {
+    models: &'a mut ModelStore,
 }
 
-fn components_gallery_set_model<T: Any>(app: &mut App, model: &Model<T>, value: T) {
-    components_gallery_update_model(app, model, |slot| *slot = value);
+impl<'a> ComponentsGalleryModelOwner<'a> {
+    fn new(models: &'a mut ModelStore) -> Self {
+        Self { models }
+    }
+
+    fn update<T: Any, R>(&mut self, model: &Model<T>, f: impl FnOnce(&mut T) -> R) -> Option<R> {
+        self.models.update(model, f).ok()
+    }
+
+    fn set<T: Any>(&mut self, model: &Model<T>, value: T) -> bool {
+        self.update(model, |slot| *slot = value).is_some()
+    }
+
+    fn set_last_action(
+        &mut self,
+        state: &ComponentsGalleryWindowState,
+        action: impl Into<Arc<str>>,
+    ) -> bool {
+        self.set(&state.last_action, action.into())
+    }
+
+    fn open_command_palette(&mut self, state: &ComponentsGalleryWindowState) {
+        let _ = self.set(&state.cmdk_open, true);
+        let _ = self.update(&state.cmdk_query, |query| query.clear());
+    }
+
+    fn close_transient_surfaces(&mut self, state: &ComponentsGalleryWindowState) {
+        for model in [
+            &state.select_open,
+            &state.theme_preset_open,
+            &state.dropdown_open,
+            &state.context_menu_open,
+            &state.popover_open,
+            &state.dialog_open,
+            &state.alert_dialog_open,
+            &state.sheet_open,
+            &state.cmdk_open,
+            &state.ui_font_override_open,
+            &state.emoji_font_override_open,
+        ] {
+            let _ = self.set(model, false);
+        }
+    }
 }
 
 fn components_gallery_set_last_action(
@@ -113,33 +150,18 @@ fn components_gallery_set_last_action(
     state: &ComponentsGalleryWindowState,
     action: impl Into<Arc<str>>,
 ) {
-    components_gallery_set_model(app, &state.last_action, action.into());
+    let _ = ComponentsGalleryModelOwner::new(app.models_mut()).set_last_action(state, action);
 }
 
 fn components_gallery_open_command_palette(app: &mut App, state: &ComponentsGalleryWindowState) {
-    components_gallery_set_model(app, &state.cmdk_open, true);
-    components_gallery_update_model(app, &state.cmdk_query, |query| query.clear());
+    ComponentsGalleryModelOwner::new(app.models_mut()).open_command_palette(state);
 }
 
 fn components_gallery_close_transient_surfaces(
     app: &mut App,
     state: &ComponentsGalleryWindowState,
 ) {
-    for model in [
-        &state.select_open,
-        &state.theme_preset_open,
-        &state.dropdown_open,
-        &state.context_menu_open,
-        &state.popover_open,
-        &state.dialog_open,
-        &state.alert_dialog_open,
-        &state.sheet_open,
-        &state.cmdk_open,
-        &state.ui_font_override_open,
-        &state.emoji_font_override_open,
-    ] {
-        components_gallery_set_model(app, model, false);
-    }
+    ComponentsGalleryModelOwner::new(app.models_mut()).close_transient_surfaces(state);
 }
 
 #[derive(Debug, Clone, Default)]
@@ -1530,13 +1552,17 @@ impl ComponentsGalleryDriver {
             KeyCode::ArrowUp => {
                 let next = selected_index.saturating_sub(1);
                 let id = entries[next].id;
-                components_gallery_update_model(app, &state, |s| s.selected = Some(id));
+                let _ = ComponentsGalleryModelOwner::new(app.models_mut()).update(&state, |s| {
+                    s.selected = Some(id);
+                });
                 true
             }
             KeyCode::ArrowDown => {
                 let next = (selected_index + 1).min(entries.len().saturating_sub(1));
                 let id = entries[next].id;
-                components_gallery_update_model(app, &state, |s| s.selected = Some(id));
+                let _ = ComponentsGalleryModelOwner::new(app.models_mut()).update(&state, |s| {
+                    s.selected = Some(id);
+                });
                 true
             }
             KeyCode::ArrowLeft => {
@@ -1544,13 +1570,17 @@ impl ComponentsGalleryDriver {
                     return true;
                 };
                 if tree_state_value.expanded.contains(&cur.id) {
-                    components_gallery_update_model(app, &state, |s| {
-                        s.expanded.remove(&cur.id);
-                    });
+                    let _ =
+                        ComponentsGalleryModelOwner::new(app.models_mut()).update(&state, |s| {
+                            s.expanded.remove(&cur.id);
+                        });
                     return true;
                 }
                 if let Some(parent) = cur.parent {
-                    components_gallery_update_model(app, &state, |s| s.selected = Some(parent));
+                    let _ =
+                        ComponentsGalleryModelOwner::new(app.models_mut()).update(&state, |s| {
+                            s.selected = Some(parent);
+                        });
                     return true;
                 }
                 true
@@ -1560,18 +1590,22 @@ impl ComponentsGalleryDriver {
                     return true;
                 };
                 if cur.has_children && !tree_state_value.expanded.contains(&cur.id) {
-                    components_gallery_update_model(app, &state, |s| {
-                        s.expanded.insert(cur.id);
-                    });
+                    let _ =
+                        ComponentsGalleryModelOwner::new(app.models_mut()).update(&state, |s| {
+                            s.expanded.insert(cur.id);
+                        });
                     return true;
                 }
                 if cur.has_children {
                     if let Some(next) = entries.get(selected_index + 1)
                         && next.depth > cur.depth
                     {
-                        components_gallery_update_model(app, &state, |s| {
-                            s.selected = Some(next.id);
-                        });
+                        let _ = ComponentsGalleryModelOwner::new(app.models_mut()).update(
+                            &state,
+                            |s| {
+                                s.selected = Some(next.id);
+                            },
+                        );
                     }
                     return true;
                 }
@@ -1579,12 +1613,16 @@ impl ComponentsGalleryDriver {
             }
             KeyCode::Home => {
                 let id = entries[0].id;
-                components_gallery_update_model(app, &state, |s| s.selected = Some(id));
+                let _ = ComponentsGalleryModelOwner::new(app.models_mut()).update(&state, |s| {
+                    s.selected = Some(id);
+                });
                 true
             }
             KeyCode::End => {
                 let id = entries[entries.len().saturating_sub(1)].id;
-                components_gallery_update_model(app, &state, |s| s.selected = Some(id));
+                let _ = ComponentsGalleryModelOwner::new(app.models_mut()).update(&state, |s| {
+                    s.selected = Some(id);
+                });
                 true
             }
             _ => false,
@@ -1702,15 +1740,19 @@ fn handle_command(
     }
 
     if command.as_str() == "gallery.progress.inc" {
-        components_gallery_update_model(app, &state.progress, |v| *v = (*v + 10.0).min(100.0));
+        let _ = ComponentsGalleryModelOwner::new(app.models_mut()).update(&state.progress, |v| {
+            *v = (*v + 10.0).min(100.0);
+        });
     }
 
     if command.as_str() == "gallery.progress.dec" {
-        components_gallery_update_model(app, &state.progress, |v| *v = (*v - 10.0).max(0.0));
+        let _ = ComponentsGalleryModelOwner::new(app.models_mut()).update(&state.progress, |v| {
+            *v = (*v - 10.0).max(0.0);
+        });
     }
 
     if command.as_str() == "gallery.progress.reset" {
-        components_gallery_set_model(app, &state.progress, 35.0);
+        let _ = ComponentsGalleryModelOwner::new(app.models_mut()).set(&state.progress, 35.0);
     }
 
     match command.as_str() {
@@ -1750,11 +1792,13 @@ fn handle_command(
     }
 
     if command.as_str() == "gallery.text_smoke.emoji_font.reset" {
-        components_gallery_set_model(app, &state.emoji_font_override, None);
+        let _ = ComponentsGalleryModelOwner::new(app.models_mut())
+            .set(&state.emoji_font_override, None);
     }
 
     if command.as_str() == "gallery.text_smoke.ui_font.reset" {
-        components_gallery_set_model(app, &state.ui_font_override, None);
+        let _ =
+            ComponentsGalleryModelOwner::new(app.models_mut()).set(&state.ui_font_override, None);
     }
 
     if command.as_str() == "gallery.text_smoke.fonts.load" {
@@ -2275,5 +2319,35 @@ mod tests {
                 .expect("components gallery local font requests should resolve via runtime assets");
             assert_eq!(resolved.locator, request.locator);
         }
+    }
+
+    #[test]
+    fn components_gallery_model_owner_preserves_generic_updates() {
+        let mut models = ModelStore::default();
+        let progress = models.insert(35.0_f32);
+        let query = models.insert("Search".to_string());
+
+        assert!(
+            ComponentsGalleryModelOwner::new(&mut models)
+                .update(&progress, |value| {
+                    *value = (*value + 10.0).min(100.0);
+                    true
+                })
+                .unwrap_or(false)
+        );
+        assert_eq!(models.get_copied(&progress), Some(45.0));
+
+        assert!(ComponentsGalleryModelOwner::new(&mut models).set(&progress, 35.0));
+        assert_eq!(models.get_copied(&progress), Some(35.0));
+
+        assert!(
+            ComponentsGalleryModelOwner::new(&mut models)
+                .update(&query, |value| {
+                    value.clear();
+                    true
+                })
+                .unwrap_or(false)
+        );
+        assert_eq!(models.read(&query, Clone::clone).ok().as_deref(), Some(""));
     }
 }
