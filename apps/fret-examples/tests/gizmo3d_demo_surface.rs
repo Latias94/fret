@@ -159,6 +159,23 @@ fn gizmo3d_demo_routes_undo_redo_mutations_through_binding() {
 }
 
 #[test]
+fn gizmo3d_demo_routes_render_cursor_scale_through_binding() {
+    let source = compact(include_str!("../src/gizmo3d_demo.rs"));
+
+    let needle = "state.demo.sync_cursor_scale_from_viewport(app,target_px_per_screen_px);";
+    assert!(
+        source.contains(needle),
+        "gizmo3d_demo render cursor-scale sync should route through binding; missing `{needle}`"
+    );
+
+    let legacy = "let_=state.demo.update(app,|m,_cx|{apply_gizmo_cursor_units_per_screen_px(m,target_px_per_screen_px);});";
+    assert!(
+        !source.contains(legacy),
+        "gizmo3d_demo should not keep direct render-path cursor-scale model writes; unexpected `{legacy}`"
+    );
+}
+
+#[test]
 fn gizmo3d_demo_routes_visual_keyboard_mutations_through_binding() {
     let source = compact(include_str!("../src/gizmo3d_demo.rs"));
 

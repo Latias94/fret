@@ -2043,6 +2043,12 @@ impl Gizmo3dDemoModelBinding {
         .is_ok()
     }
 
+    fn sync_cursor_scale_from_viewport(&self, app: &mut App, target_px_per_screen_px: f32) {
+        let _ = self.update(app, |model, _cx| {
+            apply_gizmo_cursor_units_per_screen_px(model, target_px_per_screen_px);
+        });
+    }
+
     fn cancel_active_or_in_progress(&self, app: &mut App) -> bool {
         self.update(app, |model, _cx| {
             model.cancel_active_viewport_tool_interaction()
@@ -4386,9 +4392,9 @@ fn render(
         .target_px_per_screen_px()
         .unwrap_or_else(|| viewport_px.0.max(1) as f32 / draw_rect.size.width.0.max(1.0));
 
-    let _ = state.demo.update(app, |m, _cx| {
-        apply_gizmo_cursor_units_per_screen_px(m, target_px_per_screen_px);
-    });
+    state
+        .demo
+        .sync_cursor_scale_from_viewport(app, target_px_per_screen_px);
 
     let (camera, view_gizmo, gizmo_cfg, hud_state) = state
         .demo
