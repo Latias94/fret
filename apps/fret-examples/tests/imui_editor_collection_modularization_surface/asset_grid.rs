@@ -171,19 +171,16 @@ pub(super) fn assert_asset_grid_owner_split(
         "fn proof_collection_inline_rename_apply_commit(",
         "fn proof_collection_inline_rename_apply_cancel(",
         "proof_collection_commit_rename(",
-        "proof_collection_rename_commit_status(",
-        "proof_collection_rename_invalid_status(",
-        "proof_collection_rename_cancel_status(",
-        "host.update_model(&models.assets",
-        "host.update_model(&models.rename_status",
-        "host.update_model(&models.rename_session",
-        "host.update_model(&models.rename_focus_pending",
+        "use super::super::super::model_owner::ProofCollectionModelOwner;",
+        "ProofCollectionModelOwner::new(host.models_mut()).apply_inline_rename_commit(",
+        "ProofCollectionModelOwner::new(host.models_mut()).reject_inline_rename(",
+        "ProofCollectionModelOwner::new(host.models_mut()).cancel_inline_rename(",
         "proof_collection_restore_focus_after_inline_rename(",
         "host.request_redraw(action_cx.window);",
     ] {
         assert!(
             asset_grid_inline_rename_actions_source.contains(needle),
-            "the demo-local collection asset-grid inline-rename actions owner should keep outcome model writes explicit; missing `{needle}`"
+            "the demo-local collection asset-grid inline-rename actions owner should route outcome writes through ProofCollectionModelOwner; missing `{needle}`"
         );
     }
     for needle in [
@@ -194,10 +191,14 @@ pub(super) fn assert_asset_grid_owner_split(
         "ui.text_wrapped(",
         "proof_collection_inline_rename_focus_state(",
         "proof_collection_sync_inline_rename_focus(",
+        "host.update_model(",
+        "proof_collection_rename_commit_status(",
+        "proof_collection_rename_invalid_status(",
+        "proof_collection_rename_cancel_status(",
     ] {
         assert!(
             !asset_grid_inline_rename_actions_source.contains(needle),
-            "the demo-local collection asset-grid inline-rename actions owner should not take TextField rendering or focus timer sync; unexpected `{needle}`"
+            "the demo-local collection asset-grid inline-rename actions owner should not take TextField rendering, focus timer sync, or raw model writes; unexpected `{needle}`"
         );
     }
 

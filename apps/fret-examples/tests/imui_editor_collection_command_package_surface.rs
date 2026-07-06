@@ -474,12 +474,14 @@ fn imui_editor_proof_demo_keeps_collection_command_package_app_owned_and_explici
         "pub(super) struct ProofCollectionInlineRenameOutcomeModels",
         "pub(super) fn proof_collection_inline_rename_apply_outcome(",
         "proof_collection_commit_rename(",
-        "host.update_model(&models.rename_status",
+        "ProofCollectionModelOwner::new(host.models_mut()).apply_inline_rename_commit(",
+        "ProofCollectionModelOwner::new(host.models_mut()).reject_inline_rename(",
+        "ProofCollectionModelOwner::new(host.models_mut()).cancel_inline_rename(",
         "proof_collection_restore_focus_after_inline_rename(",
     ] {
         assert!(
             asset_grid_inline_rename_actions_source.contains(needle),
-            "collection asset-grid inline-rename actions owner should keep outcome model writes explicit; missing `{needle}`"
+            "collection asset-grid inline-rename actions owner should route outcome model writes through ProofCollectionModelOwner; missing `{needle}`"
         );
     }
     assert!(

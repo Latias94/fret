@@ -9,9 +9,11 @@ use fret_ui::GlobalElementId;
 use super::ProofCollectionAsset;
 use super::readouts::{
     proof_collection_delete_status, proof_collection_duplicate_status,
-    proof_collection_rename_ready_status, proof_collection_select_all_status,
+    proof_collection_rename_cancel_status, proof_collection_rename_commit_status,
+    proof_collection_rename_invalid_status, proof_collection_rename_ready_status,
+    proof_collection_select_all_status,
 };
-use super::rename::ProofCollectionRenameSession;
+use super::rename::{ProofCollectionRenameCommit, ProofCollectionRenameSession};
 use super::selection::{
     ProofCollectionDeleteResult, ProofCollectionDuplicateResult, ProofCollectionKeyboardState,
 };
@@ -114,6 +116,54 @@ impl<'a> ProofCollectionModelOwner<'a> {
             rename_status_model,
             proof_collection_rename_ready_status(session.original_label.as_ref()),
         );
+    }
+
+    pub(super) fn apply_inline_rename_commit(
+        &mut self,
+        assets_model: &Model<Vec<ProofCollectionAsset>>,
+        rename_session_model: &Model<Option<ProofCollectionRenameSession>>,
+        rename_focus_pending_model: &Model<bool>,
+        rename_status_model: &Model<String>,
+        commit: ProofCollectionRenameCommit,
+    ) {
+        let _ = self.set(assets_model, commit.renamed_assets);
+        let _ = self.replace_string(
+            rename_status_model,
+            proof_collection_rename_commit_status(
+                commit.previous_label.as_ref(),
+                commit.next_label.as_ref(),
+            ),
+        );
+        let _ = self.set(rename_session_model, None);
+        let _ = self.set(rename_focus_pending_model, false);
+    }
+
+    pub(super) fn reject_inline_rename(
+        &mut self,
+        rename_focus_pending_model: &Model<bool>,
+        rename_status_model: &Model<String>,
+        session: &ProofCollectionRenameSession,
+    ) {
+        let _ = self.replace_string(
+            rename_status_model,
+            proof_collection_rename_invalid_status(session.original_label.as_ref()),
+        );
+        let _ = self.set(rename_focus_pending_model, true);
+    }
+
+    pub(super) fn cancel_inline_rename(
+        &mut self,
+        rename_session_model: &Model<Option<ProofCollectionRenameSession>>,
+        rename_focus_pending_model: &Model<bool>,
+        rename_status_model: &Model<String>,
+        session: &ProofCollectionRenameSession,
+    ) {
+        let _ = self.replace_string(
+            rename_status_model,
+            proof_collection_rename_cancel_status(session.original_label.as_ref()),
+        );
+        let _ = self.set(rename_session_model, None);
+        let _ = self.set(rename_focus_pending_model, false);
     }
 
     pub(super) fn publish_active_focus_target(
@@ -378,5 +428,76 @@ mod tests {
 
         ProofCollectionModelOwner::new(&mut models).clear_context_menu_anchor(&context_menu_anchor);
         assert_eq!(models.get_copied(&context_menu_anchor), Some(None));
+    }
+
+    #[test]
+    fn proof_collection_model_owner_applies_inline_rename_outcomes() {
+        let mut models = ModelStore::default();
+        let assets = models.insert(vec![asset("stone", "Stone")]);
+        let rename_session = models.insert(None::<ProofCollectionRenameSession>);
+        let rename_focus_pending = models.insert(true);
+        let rename_status = models.insert(String::from("Idle"));
+
+        let session = ProofCollectionRenameSession {
+            target_id: Arc::from("stone"),
+            original_label: Arc::from("Stone"),
+        };
+        let commit = ProofCollectionRenameCommit {
+            target_id: Arc::from("stone"),
+            previous_label: Arc::from("Stone"),
+            next_label: Arc::from("Polished Stone"),
+            renamed_assets: vec![asset("stone", "Polished Stone")],
+        };
+
+        ProofCollectionModelOwner::new(&mut models).apply_inline_rename_commit(
+            &assets,
+            &rename_session,
+            &rename_focus_pending,
+            &rename_status,
+            commit,
+        );
+
+        assert_eq!(
+            models
+                .read(&assets, |state| state
+                    .iter()
+                    .map(|asset| asset.label.clone())
+                    .collect::<Vec<_>>())
+                .unwrap(),
+            vec![Arc::<str>::from("Polished Stone")]
+        );
+        assert_eq!(models.read(&rename_session, Clone::clone).unwrap(), None);
+        assert_eq!(models.get_copied(&rename_focus_pending), Some(false));
+        assert_eq!(
+            models.read(&rename_status, Clone::clone).unwrap(),
+            "Renamed Stone -> Polished Stone."
+        );
+
+        ProofCollectionModelOwner::new(&mut models).reject_inline_rename(
+            &rename_focus_pending,
+            &rename_status,
+            &session,
+        );
+
+        assert_eq!(models.get_copied(&rename_focus_pending), Some(true));
+        assert_eq!(
+            models.read(&rename_status, Clone::clone).unwrap(),
+            "Rename for Stone still needs a non-empty label."
+        );
+
+        let _ = models.update(&rename_session, |state| *state = Some(session.clone()));
+        ProofCollectionModelOwner::new(&mut models).cancel_inline_rename(
+            &rename_session,
+            &rename_focus_pending,
+            &rename_status,
+            &session,
+        );
+
+        assert_eq!(models.read(&rename_session, Clone::clone).unwrap(), None);
+        assert_eq!(models.get_copied(&rename_focus_pending), Some(false));
+        assert_eq!(
+            models.read(&rename_status, Clone::clone).unwrap(),
+            "Rename canceled for Stone."
+        );
     }
 }
