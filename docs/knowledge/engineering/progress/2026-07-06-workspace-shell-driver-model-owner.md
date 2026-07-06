@@ -34,6 +34,23 @@ overlay handlers. Driver writes now go through demo-local owner helpers:
 - Add a source gate that allows only the two generic owner helpers to call
   `models_mut().update(...)`.
 
+# Tightening Follow-Up
+
+Branch `refactor/examples-workspace-shell-owner-tightening` upgrades the first cleanup from generic
+free helpers to a named `WorkspaceShellModelOwner`.
+
+- Deleted `workspace_shell_update_model(...)`, `workspace_shell_host_update_model(...)`,
+  `workspace_shell_set_model(...)`, and `workspace_shell_host_set_model(...)`.
+- Kept semantic helpers for window layout and dirty-close prompt operations; they now delegate to
+  `WorkspaceShellModelOwner`.
+- Added `WorkspaceShellModelOwner::toggle_tabstrip_two_row_pinned(...)` for the tabstrip command
+  path.
+- Tightened the source gate so production source forbids direct/generic/update-any and UFCS
+  `ModelStore` bypasses, plus the deleted legacy helper names.
+- `tools/check_surface_policy.py` now lists `ModelStore` as an explicit allowed raw seam for the
+  workspace-shell advanced surface only.
+- Added `workspace_shell_model_owner_preserves_prompt_and_toggle_updates` for owner behavior.
+
 # Verification
 
 - `cargo check -p fret-examples --lib --tests`

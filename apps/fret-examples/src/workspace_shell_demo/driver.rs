@@ -10,8 +10,9 @@ use fret_launch::{
     WinitWindowContext,
 };
 use fret_runtime::{
-    CommandDispatchDecisionV1, CommandDispatchSourceV1, CommandScope, PlatformCapabilities,
-    WindowCommandDispatchDiagnosticsStore, WindowPendingCommandDispatchSourceService,
+    CommandDispatchDecisionV1, CommandDispatchSourceV1, CommandScope, ModelStore,
+    PlatformCapabilities, WindowCommandDispatchDiagnosticsStore,
+    WindowPendingCommandDispatchSourceService,
 };
 use fret_ui::declarative;
 use fret_ui::element::{
@@ -119,32 +120,52 @@ struct WorkspaceShellPaneProofState {
     prompt_open: bool,
 }
 
-fn workspace_shell_update_model<T: Any, R>(
-    app: &mut App,
-    model: &Model<T>,
-    f: impl FnOnce(&mut T) -> R,
-) -> Option<R> {
-    app.models_mut().update(model, f).ok()
+struct WorkspaceShellModelOwner<'a> {
+    models: &'a mut ModelStore,
 }
 
-fn workspace_shell_host_update_model<T: Any>(
-    host: &mut dyn fret_ui::action::UiActionHost,
-    model: &Model<T>,
-    f: impl FnOnce(&mut T),
-) {
-    let _ = host.models_mut().update(model, f);
-}
+impl<'a> WorkspaceShellModelOwner<'a> {
+    fn new(models: &'a mut ModelStore) -> Self {
+        Self { models }
+    }
 
-fn workspace_shell_set_model<T: Any>(app: &mut App, model: &Model<T>, value: T) {
-    let _ = workspace_shell_update_model(app, model, |slot| *slot = value);
-}
+    fn update<T: Any, R>(&mut self, model: &Model<T>, f: impl FnOnce(&mut T) -> R) -> Option<R> {
+        self.models.update(model, f).ok()
+    }
 
-fn workspace_shell_host_set_model<T: Any>(
-    host: &mut dyn fret_ui::action::UiActionHost,
-    model: &Model<T>,
-    value: T,
-) {
-    workspace_shell_host_update_model(host, model, |slot| *slot = value);
+    fn set<T: Any>(&mut self, model: &Model<T>, value: T) -> bool {
+        self.update(model, |slot| *slot = value).is_some()
+    }
+
+    fn update_window_layout<R>(
+        &mut self,
+        state: &WorkspaceShellWindowState,
+        f: impl FnOnce(&mut WorkspaceWindowLayout) -> R,
+    ) -> Option<R> {
+        self.update(&state.window_layout, f)
+    }
+
+    fn open_dirty_close_prompt(
+        &mut self,
+        state: &WorkspaceShellWindowState,
+        prompt: WorkspaceShellDirtyClosePrompt,
+    ) {
+        let _ = self.set(&state.dirty_close_prompt, Some(prompt));
+        let _ = self.set(&state.dirty_close_prompt_open, true);
+    }
+
+    fn clear_dirty_close_prompt(&mut self, state: &WorkspaceShellWindowState) {
+        let _ = self.set(&state.dirty_close_prompt, None);
+        let _ = self.set(&state.dirty_close_prompt_open, false);
+    }
+
+    fn toggle_tabstrip_two_row_pinned(&mut self, model: &Model<bool>) -> bool {
+        self.update(model, |value| {
+            *value = !*value;
+            true
+        })
+        .unwrap_or(false)
+    }
 }
 
 fn workspace_shell_update_window_layout<R>(
@@ -152,7 +173,7 @@ fn workspace_shell_update_window_layout<R>(
     state: &WorkspaceShellWindowState,
     f: impl FnOnce(&mut WorkspaceWindowLayout) -> R,
 ) -> Option<R> {
-    workspace_shell_update_model(app, &state.window_layout, f)
+    WorkspaceShellModelOwner::new(app.models_mut()).update_window_layout(state, f)
 }
 
 fn workspace_shell_open_dirty_close_prompt(
@@ -160,13 +181,11 @@ fn workspace_shell_open_dirty_close_prompt(
     state: &WorkspaceShellWindowState,
     prompt: WorkspaceShellDirtyClosePrompt,
 ) {
-    workspace_shell_set_model(app, &state.dirty_close_prompt, Some(prompt));
-    workspace_shell_set_model(app, &state.dirty_close_prompt_open, true);
+    WorkspaceShellModelOwner::new(app.models_mut()).open_dirty_close_prompt(state, prompt);
 }
 
 fn workspace_shell_clear_dirty_close_prompt(app: &mut App, state: &WorkspaceShellWindowState) {
-    workspace_shell_set_model(app, &state.dirty_close_prompt, None);
-    workspace_shell_set_model(app, &state.dirty_close_prompt_open, false);
+    WorkspaceShellModelOwner::new(app.models_mut()).clear_dirty_close_prompt(state);
 }
 
 fn workspace_shell_host_clear_dirty_close_prompt(
@@ -174,8 +193,9 @@ fn workspace_shell_host_clear_dirty_close_prompt(
     prompt_model: &Model<Option<WorkspaceShellDirtyClosePrompt>>,
     open_model: &Model<bool>,
 ) {
-    workspace_shell_host_set_model(host, prompt_model, None);
-    workspace_shell_host_set_model(host, open_model, false);
+    let mut owner = WorkspaceShellModelOwner::new(host.models_mut());
+    let _ = owner.set(prompt_model, None);
+    let _ = owner.set(open_model, false);
 }
 
 fn workspace_shell_command_button<'a, Cx>(
@@ -1575,7 +1595,8 @@ fn handle_command(
     }
 
     if command.as_str() == CMD_WORKSPACE_SHELL_DEMO_TOGGLE_TABSTRIP_TWO_ROW_PINNED {
-        let _ = workspace_shell_update_model(app, &state.tabstrip_two_row_pinned, |v| *v = !*v);
+        let _ = WorkspaceShellModelOwner::new(app.models_mut())
+            .toggle_tabstrip_two_row_pinned(&state.tabstrip_two_row_pinned);
         app.request_redraw(window);
         return;
     }
@@ -1887,4 +1908,25 @@ pub fn run() -> anyhow::Result<()> {
         configure_fn_driver_hooks,
     )
     .context("run workspace_shell_demo app")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn workspace_shell_model_owner_preserves_prompt_and_toggle_updates() {
+        let mut models = ModelStore::default();
+        let prompt_open = models.insert(true);
+        let tabstrip_two_row_pinned = models.insert(false);
+
+        assert!(WorkspaceShellModelOwner::new(&mut models).set(&prompt_open, false));
+        assert_eq!(models.get_copied(&prompt_open), Some(false));
+
+        assert!(
+            WorkspaceShellModelOwner::new(&mut models)
+                .toggle_tabstrip_two_row_pinned(&tabstrip_two_row_pinned)
+        );
+        assert_eq!(models.get_copied(&tabstrip_two_row_pinned), Some(true));
+    }
 }

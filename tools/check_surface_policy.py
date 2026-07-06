@@ -554,6 +554,7 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
             "AnyElement",
             "ElementContext",
             "FnDriver",
+            "ModelStore",
             "UiTree",
         ),
         retirement=(
