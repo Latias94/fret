@@ -57,3 +57,41 @@ fn canvas_datagrid_stress_demo_uses_local_state_grid_output() {
         );
     }
 }
+
+#[test]
+fn canvas_datagrid_stress_demo_bundles_stress_controls() {
+    let source = include_str!("../src/canvas_datagrid_stress_demo.rs");
+    let source = compact(source);
+
+    for needle in [
+        "structCanvasDataGridStressControls{",
+        "variable_sizes:Model<bool>,",
+        "clamp_rows:Model<bool>,",
+        "revision:Model<u64>,",
+        "fnnew(app:&mutApp)->Self{",
+        "letcontrols=CanvasDataGridStressControls::new(app);",
+        "controls:CanvasDataGridStressControls,",
+        "letcontrols=state.controls.layout_snapshot(cx);",
+        "letmutaxis=shadcn::DataGridCanvasAxis::new(Arc::clone(&rows),controls.revision,Px(24.0),)",
+        "letmutaxis=shadcn::DataGridCanvasAxis::new(Arc::clone(&cols),controls.revision,Px(120.0),)",
+    ] {
+        assert!(
+            source.contains(needle),
+            "canvas datagrid stress demo should route retained stress control models through a controls bundle; missing `{needle}`"
+        );
+    }
+
+    for forbidden in [
+        "CanvasDataGridStressWindowState{ui:UiTree<App>,rows:Arc<Vec<u64>>,cols:Arc<Vec<u64>>,cell_texts:Arc<Vec<Arc<str>>>,variable_sizes:Model<bool>,",
+        "clamp_rows:Model<bool>,revision:Model<u64>,grid_output:",
+        "letvariable_sizes=app.models_mut().insert(",
+        "letclamp_rows=app.models_mut().insert(",
+        "letrevision=app.models_mut().insert(1u64);",
+        "(&state.variable_sizes,&state.clamp_rows,&state.revision)",
+    ] {
+        assert!(
+            !source.contains(forbidden),
+            "canvas datagrid stress demo should not scatter stress control models outside CanvasDataGridStressControls; unexpected `{forbidden}`"
+        );
+    }
+}

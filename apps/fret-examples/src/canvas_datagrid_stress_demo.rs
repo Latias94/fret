@@ -61,9 +61,7 @@ pub struct CanvasDataGridStressWindowState {
     rows: Arc<Vec<u64>>,
     cols: Arc<Vec<u64>>,
     cell_texts: Arc<Vec<Arc<str>>>,
-    variable_sizes: Model<bool>,
-    clamp_rows: Model<bool>,
-    revision: Model<u64>,
+    controls: CanvasDataGridStressControls,
     grid_output: LocalState<shadcn::DataGridCanvasOutput>,
     grid_hist: VecDeque<shadcn::DataGridCanvasOutput>,
     grid_hist_window: usize,
@@ -71,6 +69,49 @@ pub struct CanvasDataGridStressWindowState {
     exit_after_frames: Option<u64>,
     auto_scroll: bool,
     last_renderer_report: Option<Instant>,
+}
+
+struct CanvasDataGridStressControls {
+    variable_sizes: Model<bool>,
+    clamp_rows: Model<bool>,
+    revision: Model<u64>,
+}
+
+struct CanvasDataGridStressControlsSnapshot {
+    variable_sizes: bool,
+    clamp_rows: bool,
+    revision: u64,
+}
+
+impl CanvasDataGridStressControls {
+    fn new(app: &mut App) -> Self {
+        Self {
+            variable_sizes: app
+                .models_mut()
+                .insert(parse_env_bool("FRET_CANVAS_GRID_VARIABLE")),
+            clamp_rows: app
+                .models_mut()
+                .insert(parse_env_bool("FRET_CANVAS_GRID_CLAMP_ROWS")),
+            revision: app.models_mut().insert(1u64),
+        }
+    }
+
+    fn layout_snapshot(
+        &self,
+        cx: &mut ElementContext<'_, App>,
+    ) -> CanvasDataGridStressControlsSnapshot {
+        let (variable_sizes, clamp_rows, revision): (bool, bool, u64) =
+            cx.data().selector_model_layout(
+                (&self.variable_sizes, &self.clamp_rows, &self.revision),
+                |(variable_sizes, clamp_rows, revision)| (variable_sizes, clamp_rows, revision),
+            );
+
+        CanvasDataGridStressControlsSnapshot {
+            variable_sizes,
+            clamp_rows,
+            revision,
+        }
+    }
 }
 
 #[derive(Default)]
@@ -90,13 +131,7 @@ impl CanvasDataGridStressDriver {
                 .collect(),
         );
 
-        let variable_sizes = app
-            .models_mut()
-            .insert(parse_env_bool("FRET_CANVAS_GRID_VARIABLE"));
-        let clamp_rows = app
-            .models_mut()
-            .insert(parse_env_bool("FRET_CANVAS_GRID_CLAMP_ROWS"));
-        let revision = app.models_mut().insert(1u64);
+        let controls = CanvasDataGridStressControls::new(app);
         let grid_output = app.local_state(shadcn::DataGridCanvasOutput::default());
         let grid_hist_window = parse_env_usize("FRET_CANVAS_GRID_STATS_WINDOW").unwrap_or(120);
 
@@ -111,9 +146,7 @@ impl CanvasDataGridStressDriver {
             rows,
             cols,
             cell_texts,
-            variable_sizes,
-            clamp_rows,
-            revision,
+            controls,
             grid_output,
             grid_hist: VecDeque::new(),
             grid_hist_window,
@@ -329,11 +362,7 @@ fn render(
 
     let root = declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
         .render_root("canvas-datagrid-stress", |cx| {
-            let (variable, clamp_rows, revision): (bool, bool, u64) =
-                cx.data().selector_model_layout(
-                    (&state.variable_sizes, &state.clamp_rows, &state.revision),
-                    |(variable, clamp_rows, revision)| (variable, clamp_rows, revision),
-                );
+            let controls = state.controls.layout_snapshot(cx);
             let grid = state.grid_output.layout_value(cx);
 
             let theme = cx.theme().snapshot();
@@ -350,8 +379,8 @@ fn render(
                 grid.visible_rows,
                 grid.visible_cols,
                 grid.visible_cells,
-                variable,
-                clamp_rows,
+                controls.variable_sizes,
+                controls.clamp_rows,
                 state.frame,
             ));
 
@@ -360,14 +389,17 @@ fn render(
             grid_slot.flex.basis = Length::Px(Px(0.0));
 
             let rows_axis = {
-                let mut axis =
-                    shadcn::DataGridCanvasAxis::new(Arc::clone(&rows), revision, Px(24.0))
-                    .gap(Px(0.0))
-                    .reset_measurements_on_revision_change(true);
-                if clamp_rows {
+                let mut axis = shadcn::DataGridCanvasAxis::new(
+                    Arc::clone(&rows),
+                    controls.revision,
+                    Px(24.0),
+                )
+                .gap(Px(0.0))
+                .reset_measurements_on_revision_change(true);
+                if controls.clamp_rows {
                     axis = axis.max(Px(72.0));
                 }
-                if variable {
+                if controls.variable_sizes {
                     axis = axis.size_override(|row_key| {
                         let h = if row_key % 17 == 0 {
                             Px(96.0)
@@ -385,11 +417,14 @@ fn render(
             };
 
             let cols_axis = {
-                let mut axis =
-                    shadcn::DataGridCanvasAxis::new(Arc::clone(&cols), revision, Px(120.0))
-                    .gap(Px(0.0))
-                    .reset_measurements_on_revision_change(true);
-                if variable {
+                let mut axis = shadcn::DataGridCanvasAxis::new(
+                    Arc::clone(&cols),
+                    controls.revision,
+                    Px(120.0),
+                )
+                .gap(Px(0.0))
+                .reset_measurements_on_revision_change(true);
+                if controls.variable_sizes {
                     axis = axis.size_override(|col_key| {
                         let w = if col_key % 9 == 0 {
                             Px(260.0)

@@ -100,7 +100,10 @@ Keep raw/shared-model mechanisms for now:
   - Follow-up: `DataGridCanvas::output_model(...)` now accepts the dedicated
     `IntoDataGridCanvasOutputModel` bridge, and `fret::app::LocalState<DataGridCanvasOutput>`
     implements it. `canvas_datagrid_stress_demo.rs` uses `LocalState` for grid telemetry output
-    while preserving raw stress-control models for variable sizing, clamping, and revision state.
+    while preserving retained stress-control models for variable sizing, clamping, and revision
+    state. A later tightening moved those retained stress controls behind
+    `CanvasDataGridStressControls`, so the window state no longer exposes three separate raw model
+    fields and render reads them through a single layout snapshot.
   - Follow-up: `table_stress_demo.rs` remains a retained table/perf harness, but keyboard command
     writes for sorting, role/global filters, clearing filters, and `items_revision` now route
     through the demo-local `TableStressModelOwner` helper. Its source-surface test forbids direct
