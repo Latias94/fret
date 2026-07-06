@@ -179,11 +179,14 @@ fn drag_demo_uses_manual_harness_declarative_line_plot_panel() {
     let source = compact(include_str!("../src/drag_demo.rs"));
 
     for needle in [
-        "usefret_plot::declarative::{LinePlotPanelProps,line_plot_panel_in};",
+        "usefret_plot::LinePlotPanelBinding;",
+        "usefret_plot::declarative::line_plot_panel_in;",
+        "plot:LinePlotPanelBinding",
+        "LinePlotPanelBinding::new_with_state(app,model,state)",
         "declarative::RenderRootContext::new(&mutstate.ui,app,services,window,bounds)",
-        "LinePlotPanelProps::new(plot.clone())",
-        ".state(plot_state.clone())",
-        ".output(plot_output.clone())",
+        "state.plot.output_untracked(app)",
+        "state.plot.update_state(app,|s|{",
+        "plot.panel_props().style(style)",
         "vec![line_plot_panel_in(cx,props)]",
         "PlotDragOutput::LineX",
         "PlotDragOutput::LineY",
@@ -202,6 +205,13 @@ fn drag_demo_uses_manual_harness_declarative_line_plot_panel() {
         "LinePlotCanvas",
         "PlotCanvas",
         "create_node_retained(",
+        "fret_runtime::Model<",
+        "PlotOutput",
+        "LinePlotPanelProps::new(plot.clone())",
+        ".state(plot_state.clone())",
+        ".output(plot_output.clone())",
+        "state.plot_state.update(app",
+        "app.models_mut().insert(PlotOutput::default())",
     ] {
         assert!(
             !source.contains(legacy),

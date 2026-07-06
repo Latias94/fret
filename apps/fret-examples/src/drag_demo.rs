@@ -6,12 +6,13 @@ use fret_launch::{
     FnDriver, WindowCreateSpec, WinitEventContext, WinitHotReloadContext, WinitRenderContext,
     WinitRunnerConfig,
 };
+use fret_plot::LinePlotPanelBinding;
 use fret_plot::cartesian::DataRect;
-use fret_plot::declarative::{LinePlotPanelProps, line_plot_panel_in};
+use fret_plot::declarative::line_plot_panel_in;
 use fret_plot::models::{LinePlotModel, LineSeries, YAxis};
 use fret_plot::series::Series;
 use fret_plot::state::{
-    DragLineX, DragLineY, DragPoint, DragRect, PlotDragOutput, PlotOutput, PlotOverlays, PlotState,
+    DragLineX, DragLineY, DragPoint, DragRect, PlotDragOutput, PlotOverlays, PlotState,
 };
 use fret_plot::style::{LinePlotStyle, SeriesTooltipMode};
 use fret_runtime::PlatformCapabilities;
@@ -20,9 +21,7 @@ use fret_ui::{UiTree, declarative};
 pub struct DragDemoWindowState {
     ui: UiTree<App>,
     root: Option<fret_core::NodeId>,
-    plot: fret_runtime::Model<LinePlotModel>,
-    plot_state: fret_runtime::Model<PlotState>,
-    plot_output: fret_runtime::Model<PlotOutput>,
+    plot: LinePlotPanelBinding,
     last_applied_output_revision: u64,
 }
 
@@ -68,12 +67,10 @@ impl DragDemoDriver {
             series0.push(fret_plot::cartesian::DataPoint { x, y });
         }
 
-        let plot = app
-            .models_mut()
-            .insert(LinePlotModel::from_series(vec![LineSeries::new(
-                "signal",
-                Series::from_points_sorted(series0, true),
-            )]));
+        let model = LinePlotModel::from_series(vec![LineSeries::new(
+            "signal",
+            Series::from_points_sorted(series0, true),
+        )]);
 
         let mut state = PlotState::default();
         state.overlays = PlotOverlays {
@@ -117,8 +114,7 @@ impl DragDemoDriver {
             ..Default::default()
         };
 
-        let plot_state = app.models_mut().insert(state);
-        let plot_output = app.models_mut().insert(PlotOutput::default());
+        let plot = LinePlotPanelBinding::new_with_state(app, model, state);
 
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
@@ -127,8 +123,6 @@ impl DragDemoDriver {
             ui,
             root: None,
             plot,
-            plot_state,
-            plot_output,
             last_applied_output_revision: 0,
         }
     }
@@ -185,15 +179,12 @@ fn handle_event(
                     | Event::Pointer(fret_core::PointerEvent::Move { .. })
                     | Event::Pointer(fret_core::PointerEvent::Up { .. })
             ) {
-                let output = state
-                    .plot_output
-                    .read(app, |_app, o| *o)
-                    .unwrap_or_default();
+                let output = state.plot.output_untracked(app);
 
                 if output.revision != state.last_applied_output_revision {
                     state.last_applied_output_revision = output.revision;
                     if let Some(drag) = output.snapshot.drag {
-                        let _ = state.plot_state.update(app, |s, _cx| {
+                        let _ = state.plot.update_state(app, |s| {
                             DragDemoDriver::apply_drag(s, drag);
                         });
                     }
@@ -215,18 +206,13 @@ fn render(_driver: &mut DragDemoDriver, context: WinitRenderContext<'_, DragDemo
     } = context;
 
     let plot = state.plot.clone();
-    let plot_state = state.plot_state.clone();
-    let plot_output = state.plot_output.clone();
     let root = declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
         .render_root("drag-demo", move |cx| {
             let style = LinePlotStyle {
                 series_tooltip: SeriesTooltipMode::NearestAtCursor,
                 ..Default::default()
             };
-            let props = LinePlotPanelProps::new(plot.clone())
-                .style(style)
-                .state(plot_state.clone())
-                .output(plot_output.clone());
+            let props = plot.panel_props().style(style);
             vec![line_plot_panel_in(cx, props)]
         });
 
