@@ -6,26 +6,20 @@ use fret_launch::{
     FnDriver, WinitEventContext, WinitHotReloadContext, WinitRenderContext, WinitRunnerConfig,
 };
 use fret_plot::cartesian::DataPoint;
-use fret_plot::declarative::{
-    AreaPlotPanelProps, LinePlotPanelProps, area_plot_panel_in, line_plot_panel_in,
-};
-use fret_plot::linking::{LinkedPlotGroup, LinkedPlotMember, PlotLinkPolicy};
+use fret_plot::declarative::{area_plot_panel_in, line_plot_panel_in};
+use fret_plot::linking::{LinkedPlotGroup, PlotLinkPolicy};
 use fret_plot::models::{AreaPlotModel, AreaSeries, LinePlotModel, LineSeries};
 use fret_plot::series::Series;
-use fret_plot::state::{PlotOutput, PlotState};
 use fret_plot::style::LinePlotStyle;
+use fret_plot::{AreaPlotPanelBinding, LinePlotPanelBinding};
 use fret_runtime::PlatformCapabilities;
 use fret_ui::{FixedSplit, UiTree, declarative};
 
 struct LinkedCursorDemoWindowState {
     ui: UiTree<App>,
     root: Option<fret_core::NodeId>,
-    top_plot: fret_runtime::Model<LinePlotModel>,
-    bottom_plot: fret_runtime::Model<AreaPlotModel>,
-    top_state: fret_runtime::Model<PlotState>,
-    top_output: fret_runtime::Model<PlotOutput>,
-    bottom_state: fret_runtime::Model<PlotState>,
-    bottom_output: fret_runtime::Model<PlotOutput>,
+    top_plot: LinePlotPanelBinding,
+    bottom_plot: AreaPlotPanelBinding,
     linked: LinkedPlotGroup,
 }
 
@@ -57,87 +51,80 @@ impl LinkedCursorDemoDriver {
             });
         }
 
-        let top_plot = app.models_mut().insert(LinePlotModel::from_series(vec![
-            LineSeries::new("signal A", Series::from_points_sorted(series0, true))
+        let top_plot = LinePlotPanelBinding::new(
+            app,
+            LinePlotModel::from_series(vec![
+                LineSeries::new("signal A", Series::from_points_sorted(series0, true))
+                    .color(Color {
+                        r: 1.0,
+                        g: 0.2,
+                        b: 0.2,
+                        a: 1.0,
+                    })
+                    .stroke_width(Px(2.5)),
+                LineSeries::new(
+                    "signal B",
+                    Series::from_points_sorted(series1.clone(), true),
+                )
                 .color(Color {
-                    r: 1.0,
-                    g: 0.2,
-                    b: 0.2,
-                    a: 1.0,
-                })
-                .stroke_width(Px(2.5)),
-            LineSeries::new(
-                "signal B",
-                Series::from_points_sorted(series1.clone(), true),
-            )
-            .color(Color {
-                r: 0.2,
-                g: 0.9,
-                b: 0.4,
-                a: 1.0,
-            })
-            .stroke_width(Px(2.0)),
-            LineSeries::new(
-                "signal C",
-                Series::from_points_sorted(series2.clone(), true),
-            )
-            .color(Color {
-                r: 0.25,
-                g: 0.55,
-                b: 1.0,
-                a: 1.0,
-            })
-            .stroke_width(Px(2.0)),
-        ]));
-
-        let bottom_plot = app.models_mut().insert(AreaPlotModel::from_series(vec![
-            AreaSeries::new("area B", Series::from_points_sorted(series1, true))
-                .fill(Color {
                     r: 0.2,
                     g: 0.9,
                     b: 0.4,
                     a: 1.0,
                 })
-                .stroke(Color {
-                    r: 0.2,
-                    g: 0.9,
-                    b: 0.4,
-                    a: 1.0,
-                })
-                .stroke_width(Px(2.0))
-                .fill_alpha(0.18),
-            AreaSeries::new("area C", Series::from_points_sorted(series2, true))
-                .fill(Color {
+                .stroke_width(Px(2.0)),
+                LineSeries::new(
+                    "signal C",
+                    Series::from_points_sorted(series2.clone(), true),
+                )
+                .color(Color {
                     r: 0.25,
                     g: 0.55,
                     b: 1.0,
                     a: 1.0,
                 })
-                .stroke(Color {
-                    r: 0.25,
-                    g: 0.55,
-                    b: 1.0,
-                    a: 1.0,
-                })
-                .stroke_width(Px(2.0))
-                .fill_alpha(0.18),
-        ]));
+                .stroke_width(Px(2.0)),
+            ]),
+        );
 
-        let top_state = app.models_mut().insert(PlotState::default());
-        let top_output = app.models_mut().insert(PlotOutput::default());
-        let bottom_state = app.models_mut().insert(PlotState::default());
-        let bottom_output = app.models_mut().insert(PlotOutput::default());
+        let bottom_plot = AreaPlotPanelBinding::new(
+            app,
+            AreaPlotModel::from_series(vec![
+                AreaSeries::new("area B", Series::from_points_sorted(series1, true))
+                    .fill(Color {
+                        r: 0.2,
+                        g: 0.9,
+                        b: 0.4,
+                        a: 1.0,
+                    })
+                    .stroke(Color {
+                        r: 0.2,
+                        g: 0.9,
+                        b: 0.4,
+                        a: 1.0,
+                    })
+                    .stroke_width(Px(2.0))
+                    .fill_alpha(0.18),
+                AreaSeries::new("area C", Series::from_points_sorted(series2, true))
+                    .fill(Color {
+                        r: 0.25,
+                        g: 0.55,
+                        b: 1.0,
+                        a: 1.0,
+                    })
+                    .stroke(Color {
+                        r: 0.25,
+                        g: 0.55,
+                        b: 1.0,
+                        a: 1.0,
+                    })
+                    .stroke_width(Px(2.0))
+                    .fill_alpha(0.18),
+            ]),
+        );
 
         let mut linked = LinkedPlotGroup::new(PlotLinkPolicy::default());
-        linked
-            .push(LinkedPlotMember {
-                state: top_state.clone(),
-                output: top_output.clone(),
-            })
-            .push(LinkedPlotMember {
-                state: bottom_state.clone(),
-                output: bottom_output.clone(),
-            });
+        linked.push_binding(&top_plot).push_binding(&bottom_plot);
 
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
@@ -147,10 +134,6 @@ impl LinkedCursorDemoDriver {
             root: None,
             top_plot,
             bottom_plot,
-            top_state,
-            top_output,
-            bottom_state,
-            bottom_output,
             linked,
         }
     }
@@ -225,14 +208,9 @@ fn render(
             declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
                 .render_root("linked-cursor-demo-top", {
                     let top_plot = state.top_plot.clone();
-                    let top_state = state.top_state.clone();
-                    let top_output = state.top_output.clone();
                     move |cx| {
                         let top_style = LinePlotStyle::default();
-                        let props = LinePlotPanelProps::new(top_plot)
-                            .style(top_style)
-                            .state(top_state)
-                            .output(top_output);
+                        let props = top_plot.panel_props().style(top_style);
                         vec![line_plot_panel_in(cx, props)]
                     }
                 });
@@ -240,14 +218,9 @@ fn render(
             declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
                 .render_root("linked-cursor-demo-bottom", {
                     let bottom_plot = state.bottom_plot.clone();
-                    let bottom_state = state.bottom_state.clone();
-                    let bottom_output = state.bottom_output.clone();
                     move |cx| {
                         let bottom_style = LinePlotStyle::default();
-                        let props = AreaPlotPanelProps::new(bottom_plot.clone())
-                            .style(bottom_style)
-                            .state(bottom_state.clone())
-                            .output(bottom_output.clone());
+                        let props = bottom_plot.panel_props().style(bottom_style);
                         vec![area_plot_panel_in(cx, props)]
                     }
                 });

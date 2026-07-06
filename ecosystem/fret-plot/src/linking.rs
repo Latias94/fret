@@ -26,6 +26,10 @@ pub struct LinkedPlotMember {
     pub output: Model<PlotOutput>,
 }
 
+pub trait LinkedPlotBinding {
+    fn linked_plot_member(&self) -> LinkedPlotMember;
+}
+
 #[derive(Debug, Clone, Copy)]
 struct LinkedPlotMemberMemory {
     last_output_revision: u64,
@@ -68,6 +72,10 @@ impl LinkedPlotGroup {
             ignore_next_output_revision: false,
         });
         self
+    }
+
+    pub fn push_binding(&mut self, binding: &impl LinkedPlotBinding) -> &mut Self {
+        self.push(binding.linked_plot_member())
     }
 
     pub fn is_empty(&self) -> bool {

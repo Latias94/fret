@@ -21,6 +21,8 @@ without making app examples store raw runtime model handles:
 `plot_image_demo` now demonstrates dynamic overlay mutation through
 `LinePlotPanelBinding::update_state`. `drag_demo` now demonstrates event-time output observation plus
 state feedback through `LinePlotPanelBinding::output_untracked(...)` and `update_state(...)`.
+`linked_cursor_demo` now demonstrates binding-backed plot coordination through
+`LinkedPlotGroup::push_binding(...)`.
 
 # Decision
 
@@ -36,9 +38,9 @@ component-specific state operations. `LinePlotPanelProps::state(...)`, `output(.
 - `cargo nextest run -p fret-examples --test basic_plot_demos_surface tags_demo_uses_default_declarative_line_plot_panel --no-fail-fast`
 - `cargo nextest run -p fret-examples --test basic_plot_demos_surface plot_image_demo_uses_default_declarative_line_plot_panel --no-fail-fast`
 - `cargo nextest run -p fret-examples --test basic_plot_demos_surface drag_demo_uses_manual_harness_declarative_line_plot_panel --no-fail-fast`
+- `cargo nextest run -p fret-examples --test basic_plot_demos_surface linked_cursor_demo_uses_manual_harness_declarative_top_line_plot_panel --no-fail-fast`
 
 # Next
 
-Migrate `linked_cursor_demo` through a coordinator-facing helper such as
-`LinkedPlotGroup::push_binding(...)` so public examples no longer construct `LinkedPlotMember` by
-naming raw plot models.
+Consider making `LinkedPlotMember` fields private after all in-tree advanced callers use
+`push_binding(...)` or another explicitly named coordinator bridge.

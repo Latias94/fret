@@ -8,7 +8,7 @@ use crate::declarative::{
     HeatmapPlotPanelProps, Histogram2DPlotPanelProps, HistogramPlotPanelProps, LinePlotPanelProps,
     ShadedPlotPanelProps, StemsPlotPanelProps,
 };
-use crate::linking::LinkedPlotMember;
+use crate::linking::{LinkedPlotBinding, LinkedPlotMember};
 use crate::models::{
     AreaPlotModel, BarsPlotModel, CandlestickPlotModel, ErrorBarsPlotModel, HeatmapPlotModel,
     Histogram2DPlotModel, HistogramPlotModel, LinePlotModel, ShadedPlotModel, StemsPlotModel,
@@ -193,6 +193,12 @@ macro_rules! define_plot_panel_binding {
                         output,
                     },
                 }
+            }
+        }
+
+        impl LinkedPlotBinding for $binding {
+            fn linked_plot_member(&self) -> LinkedPlotMember {
+                self.core.linked_member()
             }
         }
     };
@@ -545,7 +551,7 @@ mod tests {
 
         let binding = LinePlotPanelBinding::new(&mut host, sample_line_model());
         let mut group = LinkedPlotGroup::new(PlotLinkPolicy::default());
-        group.push(binding.linked_member());
+        group.push_binding(&binding);
 
         assert_eq!(group.len(), 1);
     }
