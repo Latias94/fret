@@ -1,6 +1,6 @@
 //! App-facing plot bindings that hide raw runtime model plumbing from examples.
 
-use fret_runtime::{Model, ModelHost, ModelUpdateError};
+use fret_runtime::{Model, ModelCx, ModelHost, ModelUpdateError};
 use fret_ui::{ElementContextAccess, Invalidation, UiHost};
 
 use crate::declarative::{
@@ -61,6 +61,22 @@ impl<M: 'static> PlotPanelBindingCore<M> {
         self.output
             .read_ref(host, |output| *output)
             .unwrap_or_default()
+    }
+
+    fn read_model_untracked<R>(
+        &self,
+        host: &impl ModelHost,
+        f: impl FnOnce(&M) -> R,
+    ) -> Result<R, ModelUpdateError> {
+        self.model.read_ref(host, f)
+    }
+
+    fn update_model<H: ModelHost, R>(
+        &self,
+        host: &mut H,
+        f: impl FnOnce(&mut M, &mut ModelCx<'_, H>) -> R,
+    ) -> Result<R, ModelUpdateError> {
+        self.model.update(host, f)
     }
 
     fn read_state_untracked<R>(
@@ -143,6 +159,31 @@ macro_rules! define_plot_panel_binding {
             /// observe interaction output outside a render/layout context.
             pub fn output_untracked(&self, host: &impl ModelHost) -> PlotOutput {
                 self.core.output_untracked(host)
+            }
+
+            /// Read the controlled plot model without exposing the raw model handle.
+            ///
+            /// This is intended for diagnostics, stress harnesses, and advanced model inspection
+            /// that should still keep application code on the binding surface.
+            pub fn read_model_untracked<R>(
+                &self,
+                host: &impl ModelHost,
+                f: impl FnOnce(&$model) -> R,
+            ) -> Result<R, ModelUpdateError> {
+                self.core.read_model_untracked(host, f)
+            }
+
+            /// Mutate the controlled plot model without exposing the raw model handle.
+            ///
+            /// Use this for advanced plot behaviors that own the plot model lifecycle, such as
+            /// stress harnesses that deliberately alter data bounds to force path rebuilds.
+            #[track_caller]
+            pub fn update_model<H: ModelHost, R>(
+                &self,
+                host: &mut H,
+                f: impl FnOnce(&mut $model, &mut ModelCx<'_, H>) -> R,
+            ) -> Result<R, ModelUpdateError> {
+                self.core.update_model(host, f)
             }
 
             /// Read caller-owned plot state without registering a UI invalidation dependency.
@@ -506,6 +547,23 @@ mod tests {
             .expect("output model update should succeed");
 
         assert_eq!(binding.output_untracked(&host).revision, 42);
+    }
+
+    #[test]
+    fn line_plot_binding_updates_model_without_exposing_model_handle() {
+        let mut host = TestHost::default();
+
+        let binding = LinePlotPanelBinding::new(&mut host, sample_line_model());
+        let len = binding.update_model(&mut host, |model, _cx| {
+            model.data_bounds.x_min = -1.0;
+            model.series.len()
+        });
+
+        assert_eq!(len, Ok(1));
+        assert_eq!(
+            binding.read_model_untracked(&host, |model| model.data_bounds.x_min),
+            Ok(-1.0)
+        );
     }
 
     #[test]

@@ -11,22 +11,27 @@ tags: fret,ui-framework,public-surface,plot,stress,raw-model,owner
 `plot_stress_demo` remains a maintainer/perf harness rather than a default app-facing plot example.
 It deliberately mutates `LinePlotModel::data_bounds` from the driver loop to force path rebuilds.
 
-The raw model handles are now centralized behind `PlotStressModelOwner`:
+The original cleanup centralized raw model handles behind `PlotStressModelOwner`:
 
 - `plot_model()` hands the render path the model handle needed by `LinePlotPanelProps`;
 - `animate_enabled(...)` and `toggle_animate(...)` own the animation toggle model;
 - `shift_plot_bounds_for_animation(...)` owns the stress-only plot-model mutation.
 
+A later cleanup moved the stress plot itself behind `LinePlotPanelBinding` after the binding gained
+`read_model_untracked(...)` and `update_model(...)`. `PlotStressModelOwner` now keeps the animation
+toggle plus the binding-backed plot mutation, so the demo no longer stores `Model<LinePlotModel>` or
+builds `LinePlotPanelProps` manually.
+
 # Decision
 
-Do not migrate `plot_stress_demo` to `LinePlotPanelBinding`. The binding surface owns normal
-interaction state/output, while this stress harness intentionally measures driver-owned model
-mutation and renderer perf. The correct cleanup is a named local owner, not hiding the stress
-semantics behind cookbook APIs.
+The earlier decision not to migrate to `LinePlotPanelBinding` was valid while the binding could not
+express driver-owned plot model mutation. With `LinePlotPanelBinding::update_model(...)`, the stress
+semantics stay explicit without exposing the raw model handle to the demo.
 
 # Verification
 
 - `cargo check -p fret-examples --lib --tests`
+- `cargo nextest run -p fret-plot line_plot_binding_updates_model_without_exposing_model_handle --no-fail-fast`
 - `cargo nextest run -p fret-examples --test basic_plot_demos_surface plot_stress_demo_uses_manual_harness_declarative_line_plot_panel --no-fail-fast`
 - `python3 tools/examples_source_tree_policy/gate.py`
 

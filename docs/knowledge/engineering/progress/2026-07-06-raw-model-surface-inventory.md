@@ -49,8 +49,10 @@ Keep raw/shared-model mechanisms for now:
     declarative props option layered on top of the default app-facing binding rather than a reason
     to expose raw state/output models.
   - Follow-up: `plot_stress_demo.rs` remains a maintainer/perf harness because it mutates plot
-    bounds from the driver loop, but its raw plot/animation models now live behind
-    `PlotStressModelOwner` instead of scattered `app.models()` reads and writes.
+    bounds from the driver loop, but its stress plot now lives behind `LinePlotPanelBinding` and
+    the bounds mutation routes through `LinePlotPanelBinding::update_model(...)`. The animation
+    toggle remains behind `PlotStressModelOwner`, and the demo no longer stores
+    `Model<LinePlotModel>` or builds `LinePlotPanelProps` manually.
   - Follow-up: `tags_demo.rs` and `plot_image_demo.rs` now use `LinePlotPanelBinding` for advanced
     state-owned overlays. The binding surface accepts initial `PlotState`, exposes closure-based
     state reads/writes, and keeps raw `Model<PlotState>` / `Model<PlotOutput>` hidden from the app

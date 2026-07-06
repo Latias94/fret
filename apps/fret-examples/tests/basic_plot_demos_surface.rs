@@ -225,17 +225,21 @@ fn plot_stress_demo_uses_manual_harness_declarative_line_plot_panel() {
     let source = compact(include_str!("../src/plot_stress_demo.rs"));
 
     for needle in [
-        "usefret_plot::declarative::{LinePlotPanelProps,line_plot_panel_in};",
+        "usefret_plot::LinePlotPanelBinding;",
+        "usefret_plot::declarative::line_plot_panel_in;",
         "usefret_plot::models::{LinePlotModel,LineSeries};",
         "structPlotStressModelOwner{",
+        "plot:LinePlotPanelBinding",
+        "fnplot_binding(&self)->LinePlotPanelBinding",
         "fnanimate_enabled(&self,app:&App)->bool",
         "fntoggle_animate(&self,app:&mutApp)",
         "fnshift_plot_bounds_for_animation(&self,app:&mutApp,frame:u64)",
-        "state.models.plot_model()",
+        "self.plot.update_model(app,|model,_cx|",
+        "state.models.plot_binding()",
         "LinePlotModel::from_series_with_bounds(",
         "LineSeries::new(label,data)",
         "declarative::RenderRootContext::new(&mutstate.ui,app,services,window,bounds)",
-        "LinePlotPanelProps::new(plot.clone())",
+        "plot.panel_props().style(style)",
         ".style(style)",
         "vec![line_plot_panel_in(cx,props)]",
     ] {
@@ -246,6 +250,11 @@ fn plot_stress_demo_uses_manual_harness_declarative_line_plot_panel() {
     }
 
     for legacy in [
+        "usefret_plot::declarative::{LinePlotPanelProps,line_plot_panel_in};",
+        "plot:Model<LinePlotModel>",
+        "fnplot_model(&self)->Model<LinePlotModel>",
+        "app.models_mut().insert(PlotStressDriver::build_plot_model(points,series))",
+        "LinePlotPanelProps::new(plot.clone())",
         "usefret_plot::retained",
         "fret_plot::retained::",
         "LinePlotCanvas",

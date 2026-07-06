@@ -5,8 +5,9 @@ use fret_launch::{
     FnDriver, WindowCreateSpec, WinitEventContext, WinitHotReloadContext, WinitRenderContext,
     WinitRunnerConfig, WinitWindowContext,
 };
+use fret_plot::LinePlotPanelBinding;
 use fret_plot::cartesian::{DataPoint, DataRect};
-use fret_plot::declarative::{LinePlotPanelProps, line_plot_panel_in};
+use fret_plot::declarative::line_plot_panel_in;
 use fret_plot::models::{LinePlotModel, LineSeries};
 use fret_plot::series::Series;
 use fret_plot::style::LinePlotStyle;
@@ -45,21 +46,22 @@ pub struct PlotStressWindowState {
 }
 
 struct PlotStressModelOwner {
-    plot: Model<LinePlotModel>,
+    plot: LinePlotPanelBinding,
     animate: Model<bool>,
 }
 
 impl PlotStressModelOwner {
     fn new(app: &mut App, points: usize, series: usize) -> Self {
         Self {
-            plot: app
-                .models_mut()
-                .insert(PlotStressDriver::build_plot_model(points, series)),
+            plot: LinePlotPanelBinding::new(
+                app,
+                PlotStressDriver::build_plot_model(points, series),
+            ),
             animate: app.models_mut().insert(true),
         }
     }
 
-    fn plot_model(&self) -> Model<LinePlotModel> {
+    fn plot_binding(&self) -> LinePlotPanelBinding {
         self.plot.clone()
     }
 
@@ -72,7 +74,7 @@ impl PlotStressModelOwner {
     }
 
     fn shift_plot_bounds_for_animation(&self, app: &mut App, frame: u64) {
-        let _ = self.plot.update(app, |model, _cx| {
+        let _ = self.plot.update_model(app, |model, _cx| {
             let span = (model.data_bounds.x_max - model.data_bounds.x_min).max(1e-6);
             let shift = span * 0.05;
             let phase = ((frame / 120) % 2) == 1;
@@ -374,11 +376,11 @@ fn render(driver: &mut PlotStressDriver, context: WinitRenderContext<'_, PlotStr
         state.last_report = Some(Instant::now());
     }
 
-    let plot = state.models.plot_model();
+    let plot = state.models.plot_binding();
     let root = declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
         .render_root("plot-stress-demo", move |cx| {
             let style = LinePlotStyle::default();
-            let props = LinePlotPanelProps::new(plot.clone()).style(style);
+            let props = plot.panel_props().style(style);
             vec![line_plot_panel_in(cx, props)]
         });
 

@@ -521,7 +521,8 @@ INTERNAL_HARNESS_SURFACES: tuple[SurfacePath, ...] = (
     ),
     _fret_examples_internal_harness(
         "plot_stress_demo.rs",
-        "the plot stress harness owns manual driver state and retained stress-model plumbing",
+        "the plot stress harness owns manual driver state and env-driven perf controls, while "
+        "plot model mutation and panel wiring route through LinePlotPanelBinding",
         (
             "fret_app",
             "fret_core",
