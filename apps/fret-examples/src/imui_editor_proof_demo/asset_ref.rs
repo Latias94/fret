@@ -11,6 +11,8 @@ use fret_ui_editor::controls::{
 };
 use fret_ui_kit::IntoUiElement as _;
 
+use super::editor_model_owner::EditorProofModelOwner;
+
 pub(super) const DEFAULT_ASSET: &str = "textures/default/basecolor.ktx2";
 const CHOSEN_ASSET: &str = "textures/props/brushed-metal-albedo.ktx2";
 
@@ -149,16 +151,12 @@ fn record_action(
     action_label: &'static str,
     next_asset: Option<&'static str>,
 ) {
-    if let Some(next_asset) = next_asset {
-        let _ = host.models_mut().update(asset_slot_model, |value| {
-            value.clear();
-            value.push_str(next_asset);
-        });
-    }
-    let _ = host.models_mut().update(action_model, |value| {
-        value.clear();
-        value.push_str(action_label);
-    });
+    EditorProofModelOwner::new(host.models_mut()).record_asset_ref_action(
+        asset_slot_model,
+        action_model,
+        action_label,
+        next_asset,
+    );
 }
 
 #[cfg(test)]

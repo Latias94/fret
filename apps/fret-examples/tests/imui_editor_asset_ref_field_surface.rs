@@ -5,6 +5,7 @@ fn imui_editor_proof_demo_mounts_asset_ref_field_as_ui_shell() {
     let material_router_source = include_str!("../src/imui_editor_proof_demo/editor_material.rs");
     let material_source = include_str!("../src/imui_editor_proof_demo/editor_material/surface.rs");
     let owner_source = include_str!("../src/imui_editor_proof_demo/asset_ref.rs");
+    let model_owner_source = include_str!("../src/imui_editor_proof_demo/editor_model_owner.rs");
     let compact_owner_source: String = owner_source.split_whitespace().collect();
 
     for needle in ["mod asset_ref;", "render_editor_inspector_surface("] {
@@ -68,6 +69,8 @@ fn imui_editor_proof_demo_mounts_asset_ref_field_as_ui_shell() {
         "OnAssetRefFieldAction",
         "fn asset_ref_value(path: &str) -> Option<AssetRefFieldValue>",
         "fn record_action(",
+        "use super::editor_model_owner::EditorProofModelOwner;",
+        "EditorProofModelOwner::new(host.models_mut()).record_asset_ref_action(",
         "AssetRefField::new(asset_value)",
         "imui-editor-proof.editor.material.base-texture",
         "imui-editor-proof.editor.material.base-texture.value",
@@ -79,6 +82,23 @@ fn imui_editor_proof_demo_mounts_asset_ref_field_as_ui_shell() {
         assert!(
             owner_source.contains(needle),
             "imui_editor_proof_demo asset-ref owner should keep the proof surface visible; missing `{needle}`"
+        );
+    }
+    for needle in [
+        "pub(super) struct EditorProofModelOwner<'a>",
+        "pub(super) fn record_asset_ref_action(",
+        "fn replace_string(",
+    ] {
+        assert!(
+            model_owner_source.contains(needle),
+            "imui_editor_proof_demo editor model owner should own asset-ref action writes; missing `{needle}`"
+        );
+    }
+
+    for unexpected in ["host.models_mut().update", "models_mut().update"] {
+        assert!(
+            !owner_source.contains(unexpected),
+            "AssetRefField proof should route model writes through EditorProofModelOwner; unexpected `{unexpected}`"
         );
     }
 

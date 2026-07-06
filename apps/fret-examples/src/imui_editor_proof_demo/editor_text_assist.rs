@@ -11,8 +11,8 @@ use fret_ui_editor::controls::{
 use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::headless::text_assist::{TextAssistItem, TextAssistMatch};
 
+use super::editor_model_owner::EditorProofModelOwner;
 use super::editor_state::named_demo_state;
-use super::proof_helpers::edit_session_outcome_label;
 
 pub(super) fn editor_demo_name_assist_items(
     cx: &mut ElementContext<'_, KernelApp>,
@@ -61,11 +61,8 @@ fn record_editor_text_assist_accept(
     accepted_label_model: &Model<String>,
     active: TextAssistMatch,
 ) {
-    let next_query = active.label.as_ref().to_string();
-    let _ = host.models_mut().update(accepted_label_model, |value| {
-        value.clear();
-        value.push_str(&next_query);
-    });
+    EditorProofModelOwner::new(host.models_mut())
+        .record_text_assist_accept(accepted_label_model, active.label.as_ref());
 }
 
 pub(super) fn record_text_field_outcome(
@@ -74,11 +71,7 @@ pub(super) fn record_text_field_outcome(
     outcome_model: &Model<String>,
     outcome: TextFieldOutcome,
 ) {
-    let next = edit_session_outcome_label(outcome);
-    let _ = host.models_mut().update(outcome_model, |text| {
-        text.clear();
-        text.push_str(next);
-    });
+    EditorProofModelOwner::new(host.models_mut()).record_text_field_outcome(outcome_model, outcome);
     host.request_redraw(action_cx.window);
 }
 

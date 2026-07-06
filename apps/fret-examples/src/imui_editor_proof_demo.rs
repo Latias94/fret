@@ -44,6 +44,7 @@ mod editor_advanced;
 mod editor_gradient;
 mod editor_inspector;
 mod editor_material;
+mod editor_model_owner;
 mod editor_object;
 mod editor_state;
 mod editor_text_assist;

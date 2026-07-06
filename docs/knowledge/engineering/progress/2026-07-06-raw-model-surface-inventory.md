@@ -121,8 +121,8 @@ Keep raw/shared-model mechanisms for now:
   rename-start writes now route through `ProofCollectionModelOwner`, and the legacy
   `proof_collection_begin_inline_rename_in_app(...)` free helper was deleted. Remaining IMUI proof
   work still includes collection `UiActionHostExt::update_model(...)` paths plus
-  `asset_ref.rs`, `editor_text_assist.rs`, `editor_material/surface.rs`, and
-  `editor_advanced/surface.rs`.
+  `editor_material/surface.rs` and `editor_advanced/surface.rs`. A second cleanup routed
+  `asset_ref.rs` and `editor_text_assist.rs` shared string writes through `EditorProofModelOwner`.
 - `workspace_shell_demo/*`. Audited after the initial inventory: it is application-level workspace
   shell state, so the shared model graph remains. The follow-up cleanup routes writes through
   demo-local owner helpers instead of scattering raw `models_mut().update(...)` calls. Follow-up

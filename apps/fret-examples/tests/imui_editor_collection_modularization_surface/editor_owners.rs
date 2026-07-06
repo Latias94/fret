@@ -5,6 +5,7 @@ pub(super) fn assert_editor_owner_split(
     editor_advanced_router_source: &str,
     editor_advanced_surface_source: &str,
     editor_gradient_source: &str,
+    editor_model_owner_source: &str,
     editor_material_router_source: &str,
     editor_material_surface_source: &str,
     editor_state_source: &str,
@@ -22,6 +23,8 @@ pub(super) fn assert_editor_owner_split(
         editor_object_surface_source.split_whitespace().collect();
     let compact_editor_text_assist_source: String =
         editor_text_assist_source.split_whitespace().collect();
+    let compact_editor_model_owner_source: String =
+        editor_model_owner_source.split_whitespace().collect();
 
     for (owner, compact_source, source) in [
         (
@@ -309,17 +312,56 @@ pub(super) fn assert_editor_owner_split(
         "pub(super) fn editor_demo_search_assist_items(",
         "fn record_editor_text_assist_accept(",
         "pub(super) fn record_text_field_outcome(",
+        "use super::editor_model_owner::EditorProofModelOwner;",
         "pub(super) fn render_editor_name_assist_surface(",
         "TextAssistItem::new(\"cube\", \"Cube\")",
         "TextAssistItem::new(\"validation\", \"Validation\")",
         "TextAssistField::new(",
         "TextAssistFieldSurface::AnchoredOverlay",
         "record_editor_text_assist_accept(host, &accepted_label_model, active)",
-        "let next = edit_session_outcome_label(outcome);",
+        "EditorProofModelOwner::new(host.models_mut())",
+        ".record_text_assist_accept(accepted_label_model, active.label.as_ref());",
+        ".record_text_field_outcome(outcome_model, outcome);",
     ] {
         assert!(
             editor_text_assist_source.contains(needle),
             "the demo-local editor text-assist owner should own assist fixtures and text-field outcome writes; missing `{needle}`"
+        );
+    }
+
+    for unexpected in [
+        "host.models_mut().update",
+        "models_mut().update",
+        "let next = edit_session_outcome_label(outcome);",
+    ] {
+        assert!(
+            !editor_text_assist_source.contains(unexpected),
+            "the demo-local editor text-assist owner should route model writes through EditorProofModelOwner; unexpected `{unexpected}`"
+        );
+    }
+
+    for needle in [
+        "pub(super) struct EditorProofModelOwner<'a>",
+        "models: &'a mut ModelStore",
+        "fn replace_string(",
+        "pub(super) fn record_asset_ref_action(",
+        "pub(super) fn record_text_assist_accept(",
+        "pub(super) fn record_text_field_outcome(",
+        "edit_session_outcome_label(outcome)",
+    ] {
+        assert!(
+            editor_model_owner_source.contains(needle),
+            "the demo-local editor model owner should own shared string model writes; missing `{needle}`"
+        );
+    }
+
+    for needle in [
+        "editor_proof_model_owner_records_asset_ref_actions",
+        "editor_proof_model_owner_records_text_assist_and_outcomes",
+    ] {
+        assert!(
+            compact_editor_model_owner_source.contains(needle),
+            "the demo-local editor model owner should keep focused mutation tests; missing `{needle}`"
         );
     }
 }

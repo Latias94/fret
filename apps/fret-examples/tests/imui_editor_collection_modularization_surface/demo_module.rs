@@ -5,6 +5,7 @@ pub(super) fn assert_demo_module_routing(demo_source: &str) {
         "mod editor_advanced;",
         "mod editor_gradient;",
         "mod editor_inspector;",
+        "mod editor_model_owner;",
         "mod editor_material;",
         "mod editor_object;",
         "mod editor_state;",
