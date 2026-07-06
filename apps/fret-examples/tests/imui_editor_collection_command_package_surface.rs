@@ -786,6 +786,8 @@ fn imui_editor_proof_demo_keeps_collection_command_package_app_owned_and_explici
         "up.down_hit_pressable_target.is_some()",
         "up.position_window.unwrap_or(up.position)",
         "*state = Some(position);",
+        "ProofCollectionModelOwner::new(host.models_mut())",
+        ".publish_context_menu_anchor(context_menu_anchor_model, position);",
     ] {
         assert!(
             !browser_input_box_select_runtime_source.contains(needle),
@@ -800,8 +802,8 @@ fn imui_editor_proof_demo_keeps_collection_command_package_app_owned_and_explici
         "Some(up.position_window.unwrap_or(up.position))",
         "pub(super) fn publish_collection_browser_scope_context_menu_anchor(",
         "host.request_focus(acx.target);",
-        "host.update_model(context_menu_anchor_model",
-        "*state = Some(position);",
+        "ProofCollectionModelOwner::new(host.models_mut())",
+        ".publish_context_menu_anchor(context_menu_anchor_model, position);",
         "host.notify(acx);",
         "#[cfg(test)]",
         "mod tests;",
@@ -873,8 +875,8 @@ fn imui_editor_proof_demo_keeps_collection_command_package_app_owned_and_explici
         "pub(super) fn proof_collection_browser_scope_context_menu_anchor_from_up(",
         "pub(super) fn publish_collection_browser_scope_context_menu_anchor(",
         "host.request_focus(acx.target);",
-        "host.update_model(context_menu_anchor_model",
-        "*state = Some(position);",
+        "ProofCollectionModelOwner::new(host.models_mut())",
+        ".publish_context_menu_anchor(context_menu_anchor_model, position);",
         "host.notify(acx);",
     ] {
         assert!(
@@ -886,8 +888,8 @@ fn imui_editor_proof_demo_keeps_collection_command_package_app_owned_and_explici
         "pub(super) fn proof_collection_browser_scope_context_menu_anchor_from_up(",
         "pub(super) fn publish_collection_browser_scope_context_menu_anchor(",
         "host.request_focus(acx.target);",
-        "host.update_model(context_menu_anchor_model",
-        "*state = Some(position);",
+        "ProofCollectionModelOwner::new(host.models_mut())",
+        ".publish_context_menu_anchor(context_menu_anchor_model, position);",
         "host.notify(acx);",
     ] {
         assert!(
@@ -919,7 +921,8 @@ fn imui_editor_proof_demo_keeps_collection_command_package_app_owned_and_explici
         "wheel.position_local",
         "wheel.delta",
         "wheel.modifiers",
-        "host.update_model(&collection_zoom_model",
+        "ProofCollectionModelOwner::new(host.models_mut())",
+        ".set_zoom_extent(&collection_zoom_model, update.next_tile_extent);",
         "collection_scroll_handle.set_offset(update.next_scroll_offset);",
         "host.notify(acx);",
     ] {

@@ -2,7 +2,7 @@ use std::any::Any;
 use std::sync::Arc;
 
 use fret::imui::kit::ImUiMultiSelectState;
-use fret_core::Point;
+use fret_core::{Point, Px};
 use fret_runtime::{Model, ModelStore};
 use fret_ui::GlobalElementId;
 
@@ -172,6 +172,26 @@ impl<'a> ProofCollectionModelOwner<'a> {
         focus_target: GlobalElementId,
     ) {
         let _ = self.set(active_focus_target_model, Some(focus_target));
+    }
+
+    pub(super) fn publish_context_menu_anchor(
+        &mut self,
+        context_menu_anchor_model: &Model<Option<Point>>,
+        anchor: Point,
+    ) {
+        let _ = self.set(context_menu_anchor_model, Some(anchor));
+    }
+
+    pub(super) fn set_zoom_extent(&mut self, zoom_model: &Model<Px>, extent: Px) {
+        let _ = self.set(zoom_model, extent);
+    }
+
+    pub(super) fn take_inline_rename_focus_pending(
+        &mut self,
+        rename_focus_pending_model: &Model<bool>,
+    ) -> bool {
+        self.update(rename_focus_pending_model, std::mem::take)
+            .unwrap_or(false)
     }
 
     pub(super) fn activate_asset(
@@ -366,6 +386,7 @@ mod tests {
         let keyboard = models.insert(ProofCollectionKeyboardState::default());
         let selection = models.insert(ImUiMultiSelectState::default());
         let context_menu_anchor = models.insert(None::<Point>);
+        let zoom = models.insert(Px(96.0));
 
         let session = ProofCollectionRenameSession {
             target_id: Arc::from("stone"),
@@ -393,6 +414,9 @@ mod tests {
 
         ProofCollectionModelOwner::new(&mut models)
             .publish_active_focus_target(&active_focus_target, GlobalElementId(42));
+        ProofCollectionModelOwner::new(&mut models)
+            .publish_context_menu_anchor(&context_menu_anchor, Point::new(Px(4.0), Px(8.0)));
+        ProofCollectionModelOwner::new(&mut models).set_zoom_extent(&zoom, Px(128.0));
         ProofCollectionModelOwner::new(&mut models).activate_asset(&keyboard, Arc::from("stone"));
         ProofCollectionModelOwner::new(&mut models).apply_context_menu(
             &selection,
@@ -410,6 +434,19 @@ mod tests {
             Some(Some(GlobalElementId(42)))
         );
         assert_eq!(
+            models.get_copied(&context_menu_anchor),
+            Some(Some(Point::new(Px(12.0), Px(24.0))))
+        );
+        assert_eq!(models.get_copied(&zoom), Some(Px(128.0)));
+        assert!(
+            ProofCollectionModelOwner::new(&mut models)
+                .take_inline_rename_focus_pending(&rename_focus_pending)
+        );
+        assert!(
+            !ProofCollectionModelOwner::new(&mut models)
+                .take_inline_rename_focus_pending(&rename_focus_pending)
+        );
+        assert_eq!(
             models
                 .read(&selection, |state| state.selected().to_vec())
                 .unwrap(),
@@ -421,11 +458,6 @@ mod tests {
                 .unwrap(),
             Some(Arc::<str>::from("stone"))
         );
-        assert_eq!(
-            models.get_copied(&context_menu_anchor),
-            Some(Some(Point::new(Px(12.0), Px(24.0))))
-        );
-
         ProofCollectionModelOwner::new(&mut models).clear_context_menu_anchor(&context_menu_anchor);
         assert_eq!(models.get_copied(&context_menu_anchor), Some(None));
     }

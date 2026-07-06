@@ -1,6 +1,8 @@
 use fret_core::{MouseButton, Point};
 use fret_runtime::Model;
-use fret_ui::action::{ActionCx, PointerUpCx, UiActionHostExt as _, UiPointerActionHost};
+use fret_ui::action::{ActionCx, PointerUpCx, UiPointerActionHost};
+
+use super::super::super::model_owner::ProofCollectionModelOwner;
 
 pub(super) fn proof_collection_browser_scope_context_menu_anchor_from_up(
     up: &PointerUpCx,
@@ -27,9 +29,8 @@ pub(super) fn publish_collection_browser_scope_context_menu_anchor(
     };
 
     host.request_focus(acx.target);
-    let _ = host.update_model(context_menu_anchor_model, |state| {
-        *state = Some(position);
-    });
+    ProofCollectionModelOwner::new(host.models_mut())
+        .publish_context_menu_anchor(context_menu_anchor_model, position);
     host.notify(acx);
     true
 }

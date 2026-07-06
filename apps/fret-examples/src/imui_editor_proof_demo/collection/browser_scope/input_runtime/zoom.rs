@@ -3,11 +3,11 @@ use std::sync::Arc;
 use fret_core::Px;
 use fret_runtime::Model;
 use fret_ui::ElementContext;
-use fret_ui::action::UiActionHostExt as _;
 use fret_ui::scroll::ScrollHandle;
 
 use super::super::super::KernelApp;
 use super::super::super::geometry::{ProofCollectionLayoutMetrics, proof_collection_zoom_request};
+use super::super::super::model_owner::ProofCollectionModelOwner;
 
 pub(super) fn install_collection_browser_scope_zoom_runtime(
     cx: &mut ElementContext<'_, KernelApp>,
@@ -28,9 +28,8 @@ pub(super) fn install_collection_browser_scope_zoom_runtime(
             return false;
         };
 
-        let _ = host.update_model(&collection_zoom_model, |state| {
-            *state = update.next_tile_extent;
-        });
+        ProofCollectionModelOwner::new(host.models_mut())
+            .set_zoom_extent(&collection_zoom_model, update.next_tile_extent);
         collection_scroll_handle.set_offset(update.next_scroll_offset);
         host.notify(acx);
         true

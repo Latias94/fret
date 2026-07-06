@@ -2,8 +2,10 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use fret_runtime::{Model, TimerToken};
-use fret_ui::action::{UiActionHostExt as _, UiFocusActionHost};
+use fret_ui::action::UiFocusActionHost;
 use fret_ui::{ElementContext, GlobalElementId, UiHost};
+
+use super::super::model_owner::ProofCollectionModelOwner;
 
 #[derive(Debug, Default)]
 pub(in super::super) struct ProofCollectionInlineRenameFocusState {
@@ -65,11 +67,8 @@ pub(in super::super) fn proof_collection_sync_inline_rename_focus<H: UiHost>(
                 state.timer = None;
             }
 
-            let pending = host
-                .update_model(&pending_focus_model_for_timer, |value| {
-                    std::mem::take(value)
-                })
-                .unwrap_or(false);
+            let pending = ProofCollectionModelOwner::new(host.models_mut())
+                .take_inline_rename_focus_pending(&pending_focus_model_for_timer);
             if !pending {
                 return false;
             }
