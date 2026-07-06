@@ -29,6 +29,20 @@ helpers:
 - Add source gates so raw `models_mut().update(...)` and `models_mut().read(...)` do not regrow
   outside owner helpers.
 
+# Tightening Follow-Up
+
+Branch `refactor/examples-genui-owner-tightening` upgrades the first cleanup from app/host free
+helpers to a named `GenUiModelOwner`.
+
+- Deleted `genui_update_model(...)`, `genui_host_update_model(...)`, and
+  `genui_host_read_model(...)`.
+- Added owner-owned `update(...)` and `read(...)` methods.
+- Runtime reset and executor handlers now create a local owner from `app.models_mut()` or
+  `host.models_mut()` and route shared GenUI model access through it.
+- Tightened the source gate so production source forbids direct/generic read/update, update-any,
+  UFCS `ModelStore` bypasses, and the deleted legacy helper names.
+- Added `genui_model_owner_preserves_runtime_state_read_write` for owner behavior.
+
 # Verification
 
 - `cargo check -p fret-examples --lib --tests`

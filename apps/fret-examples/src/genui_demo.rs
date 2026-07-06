@@ -31,7 +31,7 @@ use fret_genui_core::spec_fixer::{SpecFixups, auto_fix_spec};
 use fret_genui_core::validate::ValidationMode;
 use fret_genui_shadcn::catalog::shadcn_catalog_v1;
 use fret_genui_shadcn::resolver::ShadcnResolver;
-use fret_runtime::Model;
+use fret_runtime::{Model, ModelStore};
 use fret_ui::action::UiActionHost;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
@@ -83,24 +83,22 @@ fn genui_paragraph_text<H: UiHost>(
     decl_text::text_compact_paragraph(cx, text)
 }
 
-fn genui_update_model<T: Any>(app: &mut KernelApp, model: &Model<T>, f: impl FnOnce(&mut T)) {
-    let _ = app.models_mut().update(model, f);
+struct GenUiModelOwner<'a> {
+    models: &'a mut ModelStore,
 }
 
-fn genui_host_update_model<T: Any>(
-    host: &mut dyn UiActionHost,
-    model: &Model<T>,
-    f: impl FnOnce(&mut T),
-) {
-    let _ = host.models_mut().update(model, f);
-}
+impl<'a> GenUiModelOwner<'a> {
+    fn new(models: &'a mut ModelStore) -> Self {
+        Self { models }
+    }
 
-fn genui_host_read_model<T: Any, R>(
-    host: &mut dyn UiActionHost,
-    model: &Model<T>,
-    f: impl FnOnce(&T) -> R,
-) -> Option<R> {
-    host.models_mut().read(model, f).ok()
+    fn update<T: Any, R>(&mut self, model: &Model<T>, f: impl FnOnce(&mut T) -> R) -> Option<R> {
+        self.models.update(model, f).ok()
+    }
+
+    fn read<T: Any, R>(&mut self, model: &Model<T>, f: impl FnOnce(&T) -> R) -> Option<R> {
+        self.models.read(model, f).ok()
+    }
 }
 
 pub fn run() -> anyhow::Result<()> {
@@ -476,12 +474,14 @@ struct GenUiState {
 
 impl GenUiState {
     fn clear_action_queue(&self, app: &mut KernelApp) {
-        genui_update_model(app, &self.action_queue, |q| q.invocations.clear());
+        let mut owner = GenUiModelOwner::new(app.models_mut());
+        let _ = owner.update(&self.action_queue, |q| q.invocations.clear());
     }
 
     fn reset_runtime_models(&self, app: &mut KernelApp, seed: Value) {
-        genui_update_model(app, &self.genui_state, |v| *v = seed);
-        genui_update_model(app, &self.validation_state, |v| {
+        let mut owner = GenUiModelOwner::new(app.models_mut());
+        let _ = owner.update(&self.genui_state, |v| *v = seed);
+        let _ = owner.update(&self.validation_state, |v| {
             *v = ValidationStateV1::default()
         });
         self.clear_action_queue(app);
@@ -636,17 +636,19 @@ impl GenUiView {
                             return true;
                         }
 
-                        let enabled = genui_host_read_model(host, &state_model_for_confirm, |v| {
-                            json_pointer::get_opt(v, "/enabled")
-                                .and_then(|v| v.as_bool())
-                                .unwrap_or(true)
-                        })
-                        .unwrap_or(true);
+                        let mut owner = GenUiModelOwner::new(host.models_mut());
+                        let enabled = owner
+                            .read(&state_model_for_confirm, |v| {
+                                json_pointer::get_opt(v, "/enabled")
+                                    .and_then(|v| v.as_bool())
+                                    .unwrap_or(true)
+                            })
+                            .unwrap_or(true);
                         if enabled {
                             return true;
                         }
 
-                        genui_host_update_model(host, &state_model_for_confirm, |v| {
+                        let _ = owner.update(&state_model_for_confirm, |v| {
                             let _ = json_pointer::set(
                                 v,
                                 "/lastResult",
@@ -662,8 +664,8 @@ impl GenUiView {
                     executor.register_handler(
                         "formSubmit",
                         Arc::new(move |host, state, _inv| {
-                            let current = genui_host_read_model(host, state, Clone::clone)
-                                .unwrap_or(Value::Null);
+                            let mut owner = GenUiModelOwner::new(host.models_mut());
+                            let current = owner.read(state, Clone::clone).unwrap_or(Value::Null);
                             let out = validate_all(&current, &validation_registry);
                             let ok = out.is_ok();
 
@@ -689,8 +691,8 @@ impl GenUiView {
                                     .collect::<Vec<_>>(),
                             );
 
-                            genui_host_update_model(host, &validation_model, |v| *v = out);
-                            genui_host_update_model(host, &state_model_for_submit, |v| {
+                            let _ = owner.update(&validation_model, |v| *v = out);
+                            let _ = owner.update(&state_model_for_submit, |v| {
                                 let _ = json_pointer::set(
                                     v,
                                     "/validation/issues",
@@ -1548,4 +1550,43 @@ fn summarize_fixups(enabled: bool, fixups: &SpecFixups) -> Option<Arc<str>> {
         ));
     }
     Some(Arc::<str>::from(lines.join("\n")))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn genui_model_owner_preserves_runtime_state_read_write() {
+        let mut models = ModelStore::default();
+        let state = models.insert(serde_json::json!({ "enabled": true }));
+
+        assert_eq!(
+            GenUiModelOwner::new(&mut models).read(&state, |value| {
+                value
+                    .get("enabled")
+                    .and_then(|value| value.as_bool())
+                    .unwrap_or(false)
+            }),
+            Some(true)
+        );
+
+        assert!(
+            GenUiModelOwner::new(&mut models)
+                .update(&state, |value| {
+                    value["enabled"] = Value::Bool(false);
+                    true
+                })
+                .unwrap_or(false)
+        );
+        assert_eq!(
+            GenUiModelOwner::new(&mut models).read(&state, |value| {
+                value
+                    .get("enabled")
+                    .and_then(|value| value.as_bool())
+                    .unwrap_or(true)
+            }),
+            Some(false)
+        );
+    }
 }

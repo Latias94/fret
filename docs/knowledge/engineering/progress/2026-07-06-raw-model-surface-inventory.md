@@ -159,7 +159,8 @@ Keep raw/shared-model mechanisms for now:
   `models_mut().update(...)` calls outside source-test marker strings.
 - `genui_demo.rs`. Audited and cleaned after the initial inventory: it remains an advanced GenUI
   runtime/reference surface with shared runtime models, while raw model reads/writes are routed
-  through local owner helpers.
+  through local owner helpers. Follow-up tightening upgraded app/host free helpers to
+  `GenUiModelOwner` and forbids direct read/update bypasses in production source.
 - `api_workbench_lite_demo.rs`. Audited and cleaned after the initial inventory: it remains a
   first-contact LocalState/query/mutation app example, while the necessary mutation/query
   `ModelStore` access is routed through a local `ApiWorkbenchModelOwner` and source-gated.

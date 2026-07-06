@@ -61,7 +61,7 @@ fn genui_demo_uses_explicit_public_surfaces() {
         "usefret::app::prelude::*;",
         "usefret::style::{ColorRef,Space,ThemeSnapshot};",
         "usefret::AppComponentCx;",
-        "usefret_runtime::Model;",
+        "usefret_runtime::{Model,ModelStore};",
         "usefret_ui::action::UiActionHost;",
         "usefret_ui_kit::IntoUiElement;",
     ] {
@@ -87,33 +87,60 @@ fn genui_demo_uses_explicit_public_surfaces() {
 #[test]
 fn genui_demo_model_writes_stay_behind_owner_helpers() {
     let source = include_str!("../src/genui_demo.rs");
+    let production_source = source
+        .split("#[cfg(test)]")
+        .next()
+        .expect("GenUI demo should have production source before tests");
     let compact_source = compact(source);
+    let compact_production = compact(production_source);
 
     for needle in [
-        "fngenui_update_model<T:Any>(",
-        "fngenui_host_update_model<T:Any>(",
-        "fngenui_host_read_model<T:Any,R>(",
+        "usefret_runtime::{Model,ModelStore};",
+        "structGenUiModelOwner<'a>{",
+        "models:&'amutModelStore,",
+        "fnupdate<T:Any,R>(&mutself,model:&Model<T>,f:implFnOnce(&mutT)->R)->Option<R>{",
+        "fnread<T:Any,R>(&mutself,model:&Model<T>,f:implFnOnce(&T)->R)->Option<R>{",
         "fnreset_runtime_models(&self,app:&mutKernelApp,seed:Value)",
         "state.reset_runtime_models(app,seed);",
-        "genui_host_read_model(host,&state_model_for_confirm,",
-        "genui_host_update_model(host,&state_model_for_confirm,",
-        "genui_host_update_model(host,&validation_model,|v|*v=out);",
-        "genui_host_update_model(host,&state_model_for_submit,",
+        "letmutowner=GenUiModelOwner::new(app.models_mut());",
+        "letmutowner=GenUiModelOwner::new(host.models_mut());",
+        "owner.read(&state_model_for_confirm,",
+        "owner.update(&state_model_for_confirm,",
+        "owner.update(&validation_model,|v|*v=out);",
+        "owner.update(&state_model_for_submit,",
     ] {
         assert!(
             compact_source.contains(needle),
-            "GenUI demo should keep shared runtime-model access behind explicit owner helpers; missing `{needle}`"
+            "GenUI demo should keep shared runtime-model access behind a named owner helper; missing `{needle}`"
         );
     }
 
-    assert_eq!(
-        source.matches("models_mut().update(").count(),
-        2,
-        "GenUI demo should not scatter raw ModelStore updates outside app/host owner helpers"
-    );
-    assert_eq!(
-        source.matches("models_mut().read(").count(),
-        1,
-        "GenUI demo should not scatter raw ModelStore reads outside the host owner helper"
-    );
+    for forbidden in [
+        "models_mut().update(",
+        "models_mut().update::<",
+        "models_mut().read(",
+        "models_mut().read::<",
+        "models_mut().update_any(",
+        "models_mut().update_any::<",
+        "ModelStore::update(",
+        "ModelStore::update::<",
+        "ModelStore::read(",
+        "ModelStore::read::<",
+        "ModelStore::update_any(",
+        "ModelStore::update_any::<",
+        "<ModelStore>::update(",
+        "<ModelStore>::update::<",
+        "<ModelStore>::read(",
+        "<ModelStore>::read::<",
+        "<ModelStore>::update_any(",
+        "<ModelStore>::update_any::<",
+        "fngenui_update_model",
+        "fngenui_host_update_model",
+        "fngenui_host_read_model",
+    ] {
+        assert!(
+            !compact_production.contains(forbidden),
+            "GenUI production code should not bypass the owner helper with `{forbidden}`"
+        );
+    }
 }
