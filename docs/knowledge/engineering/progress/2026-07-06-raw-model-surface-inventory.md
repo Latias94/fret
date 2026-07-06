@@ -132,6 +132,11 @@ Keep raw/shared-model mechanisms for now:
   remains a Tier A embedded viewport interop demo, while its startup `last_input` readout write now
   routes through the demo-local `EmbeddedViewportDemoModelOwner` helper. Its source-surface test now
   forbids direct `models_mut().update(...)` calls in the demo source.
+- `docking_arbitration_demo.rs`. Audited and cleaned after the table stress owner pass: it remains
+  an advanced docking/overlay arbitration harness, while drop-mask control, synthetic pointer debug,
+  and viewport-input diagnostic writes now route through the demo-local
+  `DockingArbitrationModelOwner` helper. Its source-surface test now forbids direct/generic/update-any
+  and UFCS `ModelStore` bypasses in production demo source.
 - `apps/fret-cookbook/examples/external_texture_import_basics.rs`. Audited and cleaned after the
   external imports owner pass: it remains an advanced/manual interop cookbook example, while its
   engine-frame target metric writes now route through the demo-local

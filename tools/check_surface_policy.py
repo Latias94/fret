@@ -466,6 +466,7 @@ INTERNAL_HARNESS_SURFACES: tuple[SurfacePath, ...] = (
             "AnyElement",
             "ElementContext",
             "FnDriver",
+            "ModelStore",
             "UiTree",
         ),
         owner="examples-docking-arbitration",

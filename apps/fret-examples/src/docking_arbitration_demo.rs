@@ -17,7 +17,7 @@ use fret_launch::{
     WindowCreateSpec, WinitCommandContext, WinitEventContext, WinitHotReloadContext,
     WinitRenderContext, WinitRunnerConfig, WinitWindowContext,
 };
-use fret_runtime::PlatformCapabilities;
+use fret_runtime::{ModelStore, PlatformCapabilities};
 use fret_ui::declarative;
 use fret_ui::element::{
     AnyElement, ContainerProps, InsetEdge, LayoutStyle, Length, PositionStyle, SemanticsProps,
@@ -1337,6 +1337,51 @@ impl DockingArbitrationPanelModelsService {
     }
 }
 
+struct DockingArbitrationModelOwner<'a> {
+    models: &'a mut ModelStore,
+}
+
+impl<'a> DockingArbitrationModelOwner<'a> {
+    fn new(models: &'a mut ModelStore) -> Self {
+        Self { models }
+    }
+
+    fn toggle_drop_mask_disallow_left_edge(&mut self, model: &Model<bool>) -> bool {
+        self.models
+            .update(model, |value| {
+                *value = !*value;
+                *value
+            })
+            .unwrap_or(false)
+    }
+
+    fn set_last_viewport_input(
+        &mut self,
+        model: &Model<Arc<str>>,
+        input: impl Into<Arc<str>>,
+    ) -> bool {
+        self.set_arc_str_model(model, input)
+    }
+
+    fn set_synth_pointer_debug(
+        &mut self,
+        model: &Model<Arc<str>>,
+        debug: impl Into<Arc<str>>,
+    ) -> bool {
+        self.set_arc_str_model(model, debug)
+    }
+
+    fn set_arc_str_model(&mut self, model: &Model<Arc<str>>, input: impl Into<Arc<str>>) -> bool {
+        let input = input.into();
+        self.models
+            .update(model, |value| {
+                *value = input;
+                true
+            })
+            .unwrap_or(false)
+    }
+}
+
 #[derive(Debug, Clone, Default)]
 struct DockingArbitrationUiDebugSnapshot {
     captured: String,
@@ -1727,14 +1772,9 @@ fn render_controls_panel(
 	                                                .test_id("dock-arb-toggle-drop-mask-left-edge")
 	                                                .on_activate(Arc::new(
 	                                                    move |host, _action_cx, _reason| {
-	                                                        let mut next = false;
-	                                                        let _ = host.models_mut().update(
-	                                                            &drop_mask_disallow_left_edge,
-	                                                            |v| {
-	                                                                *v = !*v;
-	                                                                next = *v;
-	                                                            },
-	                                                        );
+	                                                        let next =
+	                                                            DockingArbitrationModelOwner::new(host.models_mut())
+	                                                                .toggle_drop_mask_disallow_left_edge(&drop_mask_disallow_left_edge);
 	                                                        disallow_left_flag
 	                                                            .store(next, Ordering::Relaxed);
 	                                                    },
@@ -2097,9 +2137,8 @@ impl DockingArbitrationDriver {
             )
             .into_boxed_str(),
         );
-        let _ = app
-            .models_mut()
-            .update(&models.synth_pointer_debug, |v| *v = msg);
+        let _ = DockingArbitrationModelOwner::new(app.models_mut())
+            .set_synth_pointer_debug(&models.synth_pointer_debug, msg);
         app.request_redraw(window);
     }
 
@@ -3153,10 +3192,11 @@ fn viewport_input(driver: &mut DockingArbitrationDriver, app: &mut App, event: V
                 event.window,
             )
             .into_boxed_str(),
-        );
+    );
     app.with_global_mut(ViewportDebugService::default, |svc, app| {
         if let Some(model) = svc.last_event.get(&event.window).cloned() {
-            let _ = app.models_mut().update(&model, |v| *v = msg.clone());
+            let _ = DockingArbitrationModelOwner::new(app.models_mut())
+                .set_last_viewport_input(&model, msg.clone());
             app.request_redraw(event.window);
         }
     });
@@ -3773,4 +3813,51 @@ pub fn run() -> anyhow::Result<()> {
 fn diag_enabled_env() -> bool {
     std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty())
         || std::env::var_os("FRET_DIAG_DIR").is_some_and(|v| !v.is_empty())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn docking_arbitration_model_owner_preserves_diagnostic_state_transitions() {
+        let mut models = ModelStore::default();
+        let drop_mask = models.insert(false);
+        let last_viewport_input = models.insert(Arc::<str>::from("<none>"));
+        let synth_pointer_debug = models.insert(Arc::<str>::from("<none>"));
+
+        assert!(
+            DockingArbitrationModelOwner::new(&mut models)
+                .toggle_drop_mask_disallow_left_edge(&drop_mask)
+        );
+        assert_eq!(models.get_copied(&drop_mask), Some(true));
+
+        assert!(
+            !DockingArbitrationModelOwner::new(&mut models)
+                .toggle_drop_mask_disallow_left_edge(&drop_mask)
+        );
+        assert_eq!(models.get_copied(&drop_mask), Some(false));
+
+        assert!(
+            DockingArbitrationModelOwner::new(&mut models)
+                .set_last_viewport_input(&last_viewport_input, Arc::<str>::from("Viewport event"))
+        );
+        assert_eq!(
+            models
+                .get_cloned(&last_viewport_input)
+                .map(|value| value.to_string()),
+            Some("Viewport event".to_string())
+        );
+
+        assert!(
+            DockingArbitrationModelOwner::new(&mut models)
+                .set_synth_pointer_debug(&synth_pointer_debug, Arc::<str>::from("Synthetic drag"))
+        );
+        assert_eq!(
+            models
+                .get_cloned(&synth_pointer_debug)
+                .map(|value| value.to_string()),
+            Some("Synthetic drag".to_string())
+        );
+    }
 }
