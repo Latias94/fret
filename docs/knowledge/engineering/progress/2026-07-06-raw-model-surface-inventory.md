@@ -95,7 +95,9 @@ Keep raw/shared-model mechanisms for now:
     engine-owned viewport panels. `plot3d_demo.rs` stores the binding, reads render-target size
     through `viewport_untracked(...)`, syncs target identity/size through
     `sync_viewport_target(...)`, and builds panel props through `panel_props()` instead of naming
-    `fret_runtime::Model<Plot3dModel>` in app code.
+    `fret_runtime::Model<Plot3dModel>` in app code. `gizmo3d_demo.rs` now uses the same binding for
+    its Plot3D panel and view-gizmo viewport snapshot; the remaining raw model pressure in that
+    demo is the larger gizmo/editor state model and should be handled by a dedicated owner pass.
 - Table/data-grid demos.
   - Follow-up: `datatable_demo.rs` now uses `LocalState<shadcn::DataTableViewOutput>` and
     `app.local_state(...)` for the shadcn `DataTable` output handle. The retained table source gate

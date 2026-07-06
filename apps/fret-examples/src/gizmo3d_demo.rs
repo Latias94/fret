@@ -24,7 +24,7 @@ use fret_launch::{
     install_viewport_overlay_3d_immediate, record_viewport_overlay_3d,
     upload_viewport_overlay_3d_immediate,
 };
-use fret_plot3d::{Plot3dModel, Plot3dPanelProps, Plot3dStyle, Plot3dViewport, plot3d_panel};
+use fret_plot3d::{Plot3dPanelBinding, Plot3dStyle, Plot3dViewport, plot3d_panel};
 use fret_render::viewport_overlay::{
     Overlay3dCpuBuilder, Overlay3dUniforms, Overlay3dVertex, ViewportOverlay3dContext,
     push_thick_line_quad, push_triangle,
@@ -1978,7 +1978,7 @@ struct Gizmo3dDemoService {
 struct Gizmo3dDemoWindowState {
     ui: UiTree<App>,
     root: Option<fret_core::NodeId>,
-    plot: fret_runtime::Model<Plot3dModel>,
+    plot: Plot3dPanelBinding,
     demo: fret_runtime::Model<Gizmo3dDemoModel>,
     overlay: OverlayTextCache,
     view_gizmo_labels: ViewGizmoLabelCache,
@@ -2034,14 +2034,15 @@ impl Gizmo3dDemoDriver {
     }
 
     fn build_ui(app: &mut App, window: AppWindowId) -> Gizmo3dDemoWindowState {
-        let plot = app.models_mut().insert(Plot3dModel {
-            viewport: Plot3dViewport {
+        let plot = Plot3dPanelBinding::new(
+            app,
+            Plot3dViewport {
                 target: RenderTargetId::default(),
                 target_px_size: (960, 540),
                 fit: ViewportFit::Contain,
                 opacity: 1.0,
             },
-        });
+        );
 
         let demo = app.models_mut().insert(Gizmo3dDemoModel::default());
         let theme = Theme::global(&*app).clone();
@@ -2101,13 +2102,8 @@ impl Gizmo3dDemoDriver {
         wgpu::TextureView,
         (u32, u32),
     ) {
-        let desired_size = state
-            .plot
-            .read(app, |_app, m| m.viewport.target_px_size)
-            .unwrap_or((960, 540));
+        let desired_size = state.plot.viewport_untracked(app).target_px_size;
 
-        let prev_id = state.target.id();
-        let prev_size = state.target.size();
         let (id, color_view, depth_view) = {
             let (id, color_view_ref, depth_view_ref) = state.target.ensure_size(
                 context,
@@ -2120,11 +2116,11 @@ impl Gizmo3dDemoDriver {
         };
         let size = state.target.size();
 
-        if prev_id != id || prev_size != size {
-            let _ = state.plot.update(app, |m, _cx| {
-                m.viewport.target = id;
-                m.viewport.target_px_size = size;
-            });
+        if state
+            .plot
+            .sync_viewport_target(app, id, size)
+            .unwrap_or(false)
+        {
             let _ = state.demo.update(app, |m, _cx| {
                 m.viewport_target = id;
                 m.viewport_px = size;
@@ -4194,10 +4190,7 @@ fn render(
     let root = declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
         .render_root("gizmo3d-demo", |cx| {
             let style = Plot3dStyle::default();
-            vec![plot3d_panel(
-                cx,
-                Plot3dPanelProps::new(state.plot.clone()).style(style),
-            )]
+            vec![plot3d_panel(cx, state.plot.panel_props().style(style))]
         });
 
     state.ui.set_root(root);
@@ -4311,10 +4304,7 @@ fn render(
     }
 
     // View gizmo labels (X/Y/Z + P/O).
-    let viewport = state
-        .plot
-        .read(app, |_app, m| m.viewport)
-        .unwrap_or_default();
+    let viewport = state.plot.viewport_untracked(app);
     let viewport_px = viewport.target_px_size;
 
     let mapping = viewport.mapping(bounds);
