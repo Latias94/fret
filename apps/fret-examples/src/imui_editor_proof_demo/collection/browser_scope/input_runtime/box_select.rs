@@ -4,15 +4,16 @@ use std::sync::Arc;
 
 use fret::imui::kit::ImUiMultiSelectState;
 use fret_core::MouseButton;
-use fret_runtime::Model;
+use fret_runtime::{Model, ModelStore};
 use fret_ui::ElementContext;
-use fret_ui::action::{ActionCx, PointerUpCx, UiActionHostExt as _, UiPointerActionHost};
+use fret_ui::action::{ActionCx, PointerCancelCx, PointerMoveCx, PointerUpCx, UiPointerActionHost};
 
 use super::super::super::KernelApp;
 use super::super::super::box_select::{
     ProofCollectionBoxSelectSession, ProofCollectionBoxSelectState, ProofCollectionRenderedItem,
     proof_collection_box_select_selection,
 };
+use super::super::super::model_owner::ProofCollectionModelOwner;
 use super::super::super::selection::ProofCollectionKeyboardState;
 
 mod session;
@@ -37,6 +38,67 @@ pub(super) struct ProofCollectionBrowserScopeBoxSelectRuntimeModels {
 pub(super) struct ProofCollectionBrowserScopeBoxSelectRuntimeState {
     pub(super) collection_keys: Vec<Arc<str>>,
     pub(super) rendered_items: Rc<RefCell<Vec<ProofCollectionRenderedItem>>>,
+}
+
+struct ProofCollectionBrowserScopeBoxSelectModelOwner<'a> {
+    models: &'a mut ModelStore,
+}
+
+impl<'a> ProofCollectionBrowserScopeBoxSelectModelOwner<'a> {
+    fn new(models: &'a mut ModelStore) -> Self {
+        Self { models }
+    }
+
+    fn update<R>(
+        &mut self,
+        model: &Model<ProofCollectionBoxSelectState>,
+        f: impl FnOnce(&mut ProofCollectionBoxSelectState) -> R,
+    ) -> Option<R> {
+        self.models.update(model, f).ok()
+    }
+
+    fn begin_session(
+        &mut self,
+        model: &Model<ProofCollectionBoxSelectState>,
+        session: ProofCollectionBoxSelectSession,
+    ) {
+        let _ = self.update(model, |state| {
+            state.session = Some(session);
+        });
+    }
+
+    fn session_for_move(
+        &mut self,
+        model: &Model<ProofCollectionBoxSelectState>,
+        mv: &PointerMoveCx,
+    ) -> Option<ProofCollectionBoxSelectSession> {
+        self.update(model, |state| {
+            proof_collection_browser_scope_box_select_session_for_move(state, mv)
+        })
+        .flatten()
+    }
+
+    fn session_for_up(
+        &mut self,
+        model: &Model<ProofCollectionBoxSelectState>,
+        up: &PointerUpCx,
+    ) -> Option<ProofCollectionBoxSelectSession> {
+        self.update(model, |state| {
+            proof_collection_browser_scope_box_select_session_for_up(state, up)
+        })
+        .flatten()
+    }
+
+    fn cancel_pointer(
+        &mut self,
+        model: &Model<ProofCollectionBoxSelectState>,
+        cancel: &PointerCancelCx,
+    ) -> bool {
+        self.update(model, |state| {
+            proof_collection_browser_scope_box_select_cancel_pointer(state, cancel)
+        })
+        .unwrap_or(false)
+    }
 }
 
 pub(super) fn install_collection_browser_scope_box_select_runtime(
@@ -76,20 +138,16 @@ pub(super) fn install_collection_browser_scope_box_select_runtime(
             .unwrap_or_default();
         let session =
             proof_collection_browser_scope_box_select_session_from_down(&down, baseline_selected);
-        let _ = host.update_model(&box_select_model_for_down, |state| {
-            state.session = Some(session);
-        });
+        ProofCollectionBrowserScopeBoxSelectModelOwner::new(host.models_mut())
+            .begin_session(&box_select_model_for_down, session);
         host.capture_pointer();
         host.notify(acx);
         true
     }));
 
     cx.pointer_region_on_pointer_move(Arc::new(move |host, acx, mv| {
-        let session = host
-            .update_model(&box_select_model_for_move, |state| {
-                proof_collection_browser_scope_box_select_session_for_move(state, &mv)
-            })
-            .flatten();
+        let session = ProofCollectionBrowserScopeBoxSelectModelOwner::new(host.models_mut())
+            .session_for_move(&box_select_model_for_move, &mv);
 
         let Some(session) = session else {
             return false;
@@ -113,11 +171,8 @@ pub(super) fn install_collection_browser_scope_box_select_runtime(
             return true;
         }
 
-        let session = host
-            .update_model(&box_select_model_for_up, |state| {
-                proof_collection_browser_scope_box_select_session_for_up(state, &up)
-            })
-            .flatten();
+        let session = ProofCollectionBrowserScopeBoxSelectModelOwner::new(host.models_mut())
+            .session_for_up(&box_select_model_for_up, &up);
 
         let Some(session) = session else {
             return false;
@@ -134,12 +189,12 @@ pub(super) fn install_collection_browser_scope_box_select_runtime(
                 &session,
             );
         } else if !session.append_mode {
-            let _ = host.update_model(&selection_model_for_up, |state| {
-                state.clear();
-            });
-            let _ = host.update_model(&keyboard_model_for_clear, |state| {
-                state.active_id = None;
-            });
+            ProofCollectionModelOwner::new(host.models_mut()).apply_navigation(
+                &selection_model_for_up,
+                &keyboard_model_for_clear,
+                ImUiMultiSelectState::default(),
+                ProofCollectionKeyboardState::default(),
+            );
         }
 
         host.notify(acx);
@@ -147,11 +202,8 @@ pub(super) fn install_collection_browser_scope_box_select_runtime(
     }));
 
     cx.pointer_region_on_pointer_cancel(Arc::new(move |host, _acx, cancel| {
-        let cleared = host
-            .update_model(&box_select_model_for_cancel, |state| {
-                proof_collection_browser_scope_box_select_cancel_pointer(state, &cancel)
-            })
-            .unwrap_or(false);
+        let cleared = ProofCollectionBrowserScopeBoxSelectModelOwner::new(host.models_mut())
+            .cancel_pointer(&box_select_model_for_cancel, &cancel);
         if cleared {
             host.release_pointer_capture();
         }
@@ -173,10 +225,13 @@ fn publish_collection_browser_scope_box_select_threshold_selection(
 
     let next_selection =
         proof_collection_box_select_selection(collection_keys, &rendered_items.borrow(), session);
-    let _ = host.update_model(selection_model, |state| {
-        *state = next_selection.clone();
-    });
-    let _ = host.update_model(keyboard_model, |state| {
-        state.active_id = next_selection.first_selected().cloned();
-    });
+    let next_keyboard = ProofCollectionKeyboardState {
+        active_id: next_selection.first_selected().cloned(),
+    };
+    ProofCollectionModelOwner::new(host.models_mut()).apply_navigation(
+        selection_model,
+        keyboard_model,
+        next_selection,
+        next_keyboard,
+    );
 }

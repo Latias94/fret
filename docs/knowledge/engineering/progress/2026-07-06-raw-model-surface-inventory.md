@@ -130,8 +130,11 @@ Keep raw/shared-model mechanisms for now:
   invalid, and cancel writes through `ProofCollectionModelOwner`, leaving focus restoration/redraw
   scheduling at the action boundary. Browser-scope context-menu anchor publication, zoom extent,
   and inline-rename pending-focus consumption now also route through `ProofCollectionModelOwner`.
-  Remaining follow-up work is collection `UiActionHostExt::update_model(...)` host-facing paths in
-  box-select runtime state.
+  Box-select runtime session state now routes through a runtime-local box-select model owner, and
+  threshold/clear selection publication routes through `ProofCollectionModelOwner::apply_navigation(...)`.
+  There are currently no `UiActionHostExt::update_model(...)`, direct `models_mut().update(...)`,
+  UFCS `ModelStore::update(...)`, or `update_any(...)` production hits under
+  `imui_editor_proof_demo/*`.
 - `workspace_shell_demo/*`. Audited after the initial inventory: it is application-level workspace
   shell state, so the shared model graph remains. The follow-up cleanup routes writes through
   demo-local owner helpers instead of scattering raw `models_mut().update(...)` calls. Follow-up
