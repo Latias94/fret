@@ -8,7 +8,7 @@ use fret::app::AppComponentCx;
 use fret::app::prelude::*;
 use fret_core::{Px, ViewportFit};
 use fret_render::{RenderTargetColorSpace, Renderer, WgpuContext};
-use fret_runtime::{FrameId, TickId};
+use fret_runtime::{FrameId, ModelStore, TickId};
 use fret_ui::{ElementContext, ThemeSnapshot, UiHost};
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::declarative::UiElementTestIdExt as _;
@@ -50,6 +50,30 @@ fn selected_target_px_size(value: Option<&str>) -> ((u32, u32), &'static str) {
     }
 }
 
+struct EmbeddedViewportDemoModelOwner<'a> {
+    models: &'a mut ModelStore,
+}
+
+impl<'a> EmbeddedViewportDemoModelOwner<'a> {
+    fn new(models: &'a mut ModelStore) -> Self {
+        Self { models }
+    }
+
+    fn set_last_input(
+        &mut self,
+        models: &embedded::EmbeddedViewportModels,
+        input: impl Into<Arc<str>>,
+    ) -> bool {
+        let input = input.into();
+        self.models
+            .update(&models.last_input, |value| {
+                *value = input;
+                true
+            })
+            .unwrap_or(false)
+    }
+}
+
 struct EmbeddedViewportDemoView {
     embedded: embedded::EmbeddedViewportSurface,
 }
@@ -57,9 +81,10 @@ struct EmbeddedViewportDemoView {
 impl View for EmbeddedViewportDemoView {
     fn init(app: &mut App, window: WindowId) -> Self {
         let models = embedded::ensure_models(app, window);
-        let _ = app.models_mut().update(&models.last_input, |v| {
-            *v = Arc::<str>::from("Click inside the viewport panel to see input forwarding.");
-        });
+        let _ = EmbeddedViewportDemoModelOwner::new(app.models_mut()).set_last_input(
+            &models,
+            "Click inside the viewport panel to see input forwarding.",
+        );
 
         Self {
             embedded: embedded::EmbeddedViewportSurface::new(

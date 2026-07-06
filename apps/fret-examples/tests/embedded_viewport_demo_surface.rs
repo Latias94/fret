@@ -84,3 +84,33 @@ fn embedded_viewport_demo_uses_app_view_imports_with_explicit_interop_hooks() {
         );
     }
 }
+
+#[test]
+fn embedded_viewport_demo_model_writes_stay_behind_owner_helper() {
+    let source = include_str!("../src/embedded_viewport_demo.rs");
+    let compact = compact(source);
+
+    for needle in [
+        "usefret_runtime::{FrameId,ModelStore,TickId};",
+        "structEmbeddedViewportDemoModelOwner<'a>{",
+        "models:&'amutModelStore,",
+        "fnset_last_input(&mutself,models:&embedded::EmbeddedViewportModels,input:implInto<Arc<str>>,)->bool{",
+        "self.models.update(&models.last_input,|value|{*value=input;true}).unwrap_or(false)",
+        "EmbeddedViewportDemoModelOwner::new(app.models_mut()).set_last_input(&models,\"Clickinsidetheviewportpaneltoseeinputforwarding.\",);",
+    ] {
+        assert!(
+            compact.contains(needle),
+            "embedded viewport demo should route model writes through its owner helper; missing `{needle}`"
+        );
+    }
+
+    assert_eq!(
+        compact.matches("models_mut().update(").count(),
+        0,
+        "embedded viewport demo should not scatter direct model store writes outside the owner helper"
+    );
+    assert!(
+        !compact.contains("ModelStore::update("),
+        "embedded viewport demo should not bypass the owner helper with UFCS ModelStore writes"
+    );
+}

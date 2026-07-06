@@ -123,6 +123,10 @@ Keep raw/shared-model mechanisms for now:
   they remain low-level external import harnesses, while the shared visibility toggle write now
   routes through the private `ExternalImportsModelOwner` helper instead of duplicated event-handler
   `models_mut().update(...)` calls.
+- `embedded_viewport_demo.rs`. Audited and cleaned after the cookbook utility-window owner pass: it
+  remains a Tier A embedded viewport interop demo, while its startup `last_input` readout write now
+  routes through the demo-local `EmbeddedViewportDemoModelOwner` helper. Its source-surface test now
+  forbids direct `models_mut().update(...)` calls in the demo source.
 - `apps/fret-cookbook/examples/external_texture_import_basics.rs`. Audited and cleaned after the
   external imports owner pass: it remains an advanced/manual interop cookbook example, while its
   engine-frame target metric writes now route through the demo-local
