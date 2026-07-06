@@ -29,6 +29,8 @@ construction stays an advanced escape hatch.
 
 # Next
 
-The next public-surface cleanup should return to code seams. The strongest current candidate is a
-multi-grid chart binding for `echarts_multi_grid_demo.rs`, while linked and stress chart demos need
-separate contracts before migration.
+The chart cleanup that followed this doc has landed: `echarts_multi_grid_demo.rs` uses
+`ChartCanvasMultiGridBinding`, `chart_multi_axis_demo.rs` uses linked chart bindings, and
+`chart_stress_demo.rs` uses `ChartCanvasPanelBinding` for stress-harness engine access. The next
+public-surface cleanup should scan for remaining app-facing raw model seams and add a narrow owner
+or binding only when it preserves the demo's real contract.

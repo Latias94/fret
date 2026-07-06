@@ -30,6 +30,7 @@ Keep raw/shared-model mechanisms for now:
     `LinePlotPanelBinding::output_untracked(...)`, so the manual harness no longer exposes the
     line plot's raw state/output models. Keep explicit raw `LinePlotPanelProps` in
     advanced/linked/overlay plot demos until each plot family has an equivalent binding contract.
+    Later plot cleanups named those line-plot contracts through binding state/output/link APIs.
   - Follow-up: `histogram_demo.rs` now uses `HistogramPlotPanelBinding`; `fret-plot` shares the
     state/output machinery through a private binding core instead of copying per-family output
     reads. Keep explicit raw histogram props in component tests and advanced composition paths.
@@ -44,7 +45,8 @@ Keep raw/shared-model mechanisms for now:
   - Follow-up: `area_demo.rs`, `shaded_demo.rs`, `candlestick_demo.rs`, `heatmap_demo.rs`, and
     `histogram2d_demo.rs` now use family-specific panel bindings. Keep raw line/area props in
     `drag_demo`, `inf_lines_demo`, `tags_demo`, `plot_image_demo`, and `linked_cursor_demo` until
-    their overlay/state/linkage contracts are explicitly named.
+    their overlay/state/linkage contracts are explicitly named. Those contracts are now named
+    through the line plot binding state/output/link APIs described below.
   - Follow-up: `stairs_demo.rs` now uses `LinePlotPanelBinding`; step mode stays a normal
     declarative props option layered on top of the default app-facing binding rather than a reason
     to expose raw state/output models.

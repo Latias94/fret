@@ -24,10 +24,10 @@ declarative rendering, and exposes `output_untracked(...)` where event logging n
 Treat single-panel cookbook demos as app-facing surfaces. Raw `*PlotPanelProps::new(Model<_>)`
 remains the component-author and advanced-composition surface, not the default authoring pattern.
 
-Do not mechanically migrate demos that mutate plot state, install overlays, or link multiple panels
-(`drag_demo`, `inf_lines_demo`, `tags_demo`, `plot_image_demo`, `stairs_demo`,
-`linked_cursor_demo`). Those need named overlay/linkage/state contracts before their raw props can
-be hidden without losing important advanced behavior.
+Do not mechanically migrate demos that mutate plot state, install overlays, or link multiple
+panels. This doc was written before the advanced line binding surface landed; those cases later
+gained named APIs on `LinePlotPanelBinding` for initial state, state mutation, output reads, linked
+members, and controlled model mutation without exposing raw runtime handles to app examples.
 
 # Verification
 
@@ -36,5 +36,6 @@ be hidden without losing important advanced behavior.
 
 # Next
 
-Design named contracts for advanced plot overlays and linked panels before removing raw prop records
-from the remaining advanced plot demos.
+The named contracts for advanced plot overlays, linked panels, and stress mutation later landed on
+`LinePlotPanelBinding`. Future plot cleanup should keep raw props in component tests and true custom
+composition paths, while app examples should prefer a family-specific binding first.

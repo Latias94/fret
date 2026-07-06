@@ -38,6 +38,10 @@ model plumbing.
 
 # Next
 
-Linked chart demos still need a dedicated contract for shared output, brush, axis-pointer, and
-domain-window models. Stress chart demos should stay on their perf harness path until engine stats
-and progressive rendering diagnostics have a public harness contract.
+Linked chart demos now use `ChartCanvasLinkedGroupBinding`, `ChartCanvasLinkedPanelBinding`, and
+`ChartCanvasLinkedStateBinding` for shared output, brush, axis-pointer, and domain-window models.
+Stress chart demos now use `ChartCanvasPanelBinding::read_engine(...)` / `update_engine(...)` for
+engine stats and perf-harness mutation.
+
+Keep `ChartCanvasMultiGridBinding` separate because its multi-panel plus overlay topology should
+not allocate a default output model that every panel races to publish.

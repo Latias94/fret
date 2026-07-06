@@ -32,6 +32,7 @@ plumbing inside `fret-plot`.
 
 # Next
 
-Evaluate remaining plot demos by family and audience. `stems_demo`, `error_bars_demo`, and bar
-variants can follow this pattern when they are intended as app-facing examples; linked/overlay demos
-should continue to use raw props until their coordination contracts are named.
+This pattern later extended to the other app-facing plot families. Advanced line plot examples now
+use `LinePlotPanelBinding::new_with_state(...)`, `update_state(...)`, `output_untracked(...)`,
+`linked_member()`, and `update_model(...)` for overlay, linked-cursor, drag, and stress behavior
+without exposing raw runtime model handles to app examples.

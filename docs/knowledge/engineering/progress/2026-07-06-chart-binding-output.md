@@ -24,8 +24,14 @@ The app-facing contract mirrors the plot bindings:
 Keep binding-owned output limited to the default single-chart app/cookbook surface. Multi-grid
 charts use `ChartCanvasMultiGridBinding`, which deliberately does not allocate a default output
 model because multiple grid panels plus one overlay panel would race to publish a single current
-output. Linked charts, explicit output sharing, and stress harnesses should continue to use raw
-`ChartCanvasPanelProps` until their coordination contracts are named.
+output.
+
+Linked charts now use `ChartCanvasLinkedGroupBinding`, `ChartCanvasLinkedPanelBinding`, and
+`ChartCanvasLinkedStateBinding` for shared output, brush, axis-pointer, and domain-window
+coordination. Stress harnesses now use `ChartCanvasPanelBinding::read_engine(...)` /
+`update_engine(...)` for engine stats and mutation without exposing raw engine handles. Keep raw
+`ChartCanvasPanelProps` for component tests, true custom composition, and explicit output sharing
+that has not yet earned a named binding.
 
 # Verification
 
@@ -34,8 +40,9 @@ output. Linked charts, explicit output sharing, and stress harnesses should cont
 
 # Next
 
-`echarts_demo.rs` now uses `ChartCanvasPanelBinding` for adapter smoke charts, and
+`echarts_demo.rs` uses `ChartCanvasPanelBinding` for adapter smoke charts,
 `echarts_multi_grid_demo.rs` uses `ChartCanvasMultiGridBinding` for shared-engine grid views plus
-overlay-only panels. Name explicit contracts before migrating linked or stress demos; those
-surfaces still use raw `ChartCanvasPanelProps` intentionally because they exercise shared output,
-linkage state, or perf harness state.
+overlay-only panels, `chart_multi_axis_demo.rs` uses linked chart bindings, and
+`chart_stress_demo.rs` uses `ChartCanvasPanelBinding` for perf-harness engine access. Future chart
+examples should prefer a narrow binding before allowing raw chart engine/output models in
+app-facing source.

@@ -42,9 +42,9 @@ output, brush, axis-pointer, and domain-window model wiring directly.
 
 # Next Action
 
-Keep `chart_stress_demo.rs` as the remaining chart perf harness until a stress-specific owner or
-stats binding is worth naming. For non-stress chart examples, prefer adding a narrow binding before
-allowing raw chart model handles in app-facing source.
+`chart_stress_demo.rs` now uses `ChartCanvasPanelBinding` plus `read_engine(...)` /
+`update_engine(...)` for stress-harness engine access. Future chart examples should prefer adding a
+narrow binding before allowing raw chart model handles in app-facing source.
 
 # Citations
 

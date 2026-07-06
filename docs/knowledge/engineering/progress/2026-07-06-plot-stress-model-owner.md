@@ -37,5 +37,6 @@ semantics stay explicit without exposing the raw model handle to the demo.
 
 # Next
 
-Continue with true advanced plot contract design for overlay and linked-panel demos:
-`drag_demo`, `inf_lines_demo`, `tags_demo`, `plot_image_demo`, and `linked_cursor_demo`.
+The advanced overlay and linked-panel examples later moved onto the same binding family through
+initial state, state mutation, output reads, and linked-member APIs. Continue looking for raw model
+seams where app examples still expose framework choreography instead of a component-specific owner.

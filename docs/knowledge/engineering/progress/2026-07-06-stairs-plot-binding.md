@@ -28,8 +28,8 @@ owned plot state, overlays, or linked panels.
 
 # Next
 
-Evaluate remaining line-plot raw examples by contract shape:
-
-- `drag_demo`, `inf_lines_demo`, `tags_demo`, and `plot_image_demo` need explicit overlay/state
-  owner contracts before raw props can be removed cleanly.
-- `linked_cursor_demo` needs a linked-panel contract rather than a single-panel binding.
+The line-plot examples that were raw at this point later moved onto explicit
+`LinePlotPanelBinding` contracts:
+initial overlay state, event-time output reads, state mutation, linked members, and controlled model
+mutation. Keep raw line plot props for component-author tests and true custom composition rather
+than default example authoring.
