@@ -34,3 +34,37 @@ fn gizmo3d_demo_uses_app_facing_plot3d_binding() {
         );
     }
 }
+
+#[test]
+fn gizmo3d_demo_hides_demo_model_handle_behind_binding() {
+    let source = compact(include_str!("../src/gizmo3d_demo.rs"));
+
+    for needle in [
+        "structGizmo3dDemoModelBinding{",
+        "model:fret_runtime::Model<Gizmo3dDemoModel>,",
+        "per_window:HashMap<AppWindowId,Gizmo3dDemoModelBinding>,",
+        "demo:Gizmo3dDemoModelBinding,",
+        "letdemo=Gizmo3dDemoModelBinding::new(app);",
+        "demo.apply_viewport_theme(app);",
+        "svc.per_window.insert(window,demo.clone());",
+        "state.demo.sync_viewport_target(app,id,size)",
+    ] {
+        assert!(
+            source.contains(needle),
+            "gizmo3d_demo should keep the shared demo model handle behind Gizmo3dDemoModelBinding; missing `{needle}`"
+        );
+    }
+
+    for legacy in [
+        "per_window:HashMap<AppWindowId,fret_runtime::Model<Gizmo3dDemoModel>>",
+        "demo:fret_runtime::Model<Gizmo3dDemoModel>,",
+        "letdemo=app.models_mut().insert(Gizmo3dDemoModel::default());",
+        "let_=demo.update(app,|m,_cx|{apply_viewport_gizmo_theme(&theme,m);});",
+        "let_=state.demo.update(app,|m,_cx|{m.viewport_target=id;m.viewport_px=size;});",
+    ] {
+        assert!(
+            !source.contains(legacy),
+            "gizmo3d_demo should not expose the raw Gizmo3dDemoModel handle outside the binding; unexpected `{legacy}`"
+        );
+    }
+}

@@ -31,7 +31,8 @@ use fret_render::viewport_overlay::{
 };
 use fret_render::{RenderTargetColorSpace, Renderer, WgpuContext};
 use fret_runtime::{
-    PlatformCapabilities, WindowCommandAvailability, WindowCommandAvailabilityService,
+    ModelCx, ModelHost, ModelUpdateError, PlatformCapabilities, WindowCommandAvailability,
+    WindowCommandAvailabilityService,
 };
 use fret_ui::{Theme, ThemeConfig, UiTree, declarative};
 use fret_ui_kit::viewport_tooling::{
@@ -1972,14 +1973,72 @@ fn apply_viewport_gizmo_theme(theme: &Theme, model: &mut Gizmo3dDemoModel) {
 
 #[derive(Default)]
 struct Gizmo3dDemoService {
-    per_window: HashMap<AppWindowId, fret_runtime::Model<Gizmo3dDemoModel>>,
+    per_window: HashMap<AppWindowId, Gizmo3dDemoModelBinding>,
+}
+
+#[derive(Clone)]
+struct Gizmo3dDemoModelBinding {
+    model: fret_runtime::Model<Gizmo3dDemoModel>,
+}
+
+impl Gizmo3dDemoModelBinding {
+    fn new(app: &mut App) -> Self {
+        Self {
+            model: app.models_mut().insert(Gizmo3dDemoModel::default()),
+        }
+    }
+
+    fn apply_viewport_theme(&self, app: &mut App) {
+        let theme = Theme::global(&*app).clone();
+        let _ = self.update(app, |model, _cx| {
+            apply_viewport_gizmo_theme(&theme, model);
+        });
+    }
+
+    fn sync_viewport_target(
+        &self,
+        app: &mut App,
+        target: RenderTargetId,
+        viewport_px: (u32, u32),
+    ) -> bool {
+        let changed = self
+            .read(app, |_app, model| {
+                model.viewport_target != target || model.viewport_px != viewport_px
+            })
+            .unwrap_or(true);
+        if !changed {
+            return false;
+        }
+
+        self.update(app, |model, _cx| {
+            model.viewport_target = target;
+            model.viewport_px = viewport_px;
+        })
+        .is_ok()
+    }
+
+    fn read<H: ModelHost, R>(
+        &self,
+        host: &mut H,
+        f: impl FnOnce(&mut H, &Gizmo3dDemoModel) -> R,
+    ) -> Result<R, ModelUpdateError> {
+        self.model.read(host, f)
+    }
+
+    fn update<H: ModelHost, R>(
+        &self,
+        host: &mut H,
+        f: impl FnOnce(&mut Gizmo3dDemoModel, &mut ModelCx<'_, H>) -> R,
+    ) -> Result<R, ModelUpdateError> {
+        self.model.update(host, f)
+    }
 }
 
 struct Gizmo3dDemoWindowState {
     ui: UiTree<App>,
     root: Option<fret_core::NodeId>,
     plot: Plot3dPanelBinding,
-    demo: fret_runtime::Model<Gizmo3dDemoModel>,
+    demo: Gizmo3dDemoModelBinding,
     overlay: OverlayTextCache,
     view_gizmo_labels: ViewGizmoLabelCache,
     hud: GizmoHudCache,
@@ -2044,11 +2103,8 @@ impl Gizmo3dDemoDriver {
             },
         );
 
-        let demo = app.models_mut().insert(Gizmo3dDemoModel::default());
-        let theme = Theme::global(&*app).clone();
-        let _ = demo.update(app, |m, _cx| {
-            apply_viewport_gizmo_theme(&theme, m);
-        });
+        let demo = Gizmo3dDemoModelBinding::new(app);
+        demo.apply_viewport_theme(app);
 
         app.with_global_mut(Gizmo3dDemoService::default, |svc, _app| {
             svc.per_window.insert(window, demo.clone());
@@ -2116,15 +2172,12 @@ impl Gizmo3dDemoDriver {
         };
         let size = state.target.size();
 
-        if state
+        let plot_target_changed = state
             .plot
             .sync_viewport_target(app, id, size)
-            .unwrap_or(false)
-        {
-            let _ = state.demo.update(app, |m, _cx| {
-                m.viewport_target = id;
-                m.viewport_px = size;
-            });
+            .unwrap_or(false);
+        let demo_target_changed = state.demo.sync_viewport_target(app, id, size);
+        if plot_target_changed || demo_target_changed {
             app.request_redraw(window);
         }
 
