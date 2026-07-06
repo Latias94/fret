@@ -391,15 +391,17 @@ fn stems_demo_uses_manual_harness_declarative_stems_plot_panel() {
     let source = compact(include_str!("../src/stems_demo.rs"));
 
     for needle in [
-        "usefret_plot::declarative::{StemsPlotPanelProps,stems_plot_panel_in};",
+        "usefret_plot::StemsPlotPanelBinding;",
+        "usefret_plot::declarative::stems_plot_panel_in;",
         "usefret_plot::models::{StemsPlotModel,StemsSeries};",
         "usefret_ui::{UiTree,declarative};",
+        "plot:StemsPlotPanelBinding",
         "StemsPlotModel::from_series(",
         "StemsSeries::new(",
+        "StemsPlotPanelBinding::new(app,StemsPlotModel::from_series(series))",
         "declarative::RenderRootContext::new(&mutstate.ui,app,services,window,bounds).render_root(\"stems-demo\"",
-        "StemsPlotPanelProps::new(plot.clone())",
-        ".state(plot_state.clone())",
-        ".output(plot_output.clone())",
+        "plot.panel_props()",
+        "state.plot.output_untracked(app)",
         "vec![stems_plot_panel_in(cx,props)]",
     ] {
         assert!(
@@ -414,6 +416,9 @@ fn stems_demo_uses_manual_harness_declarative_stems_plot_panel() {
         "StemsPlotCanvas",
         "PlotCanvas",
         "create_node_retained(",
+        "fret_runtime::Model<",
+        "app.models_mut().insert(PlotState::default())",
+        "app.models_mut().insert(PlotOutput::default())",
     ] {
         assert!(
             !source.contains(legacy),

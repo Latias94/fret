@@ -22,7 +22,7 @@ component-specific public surface.
 
 Keep raw/shared-model mechanisms for now:
 
-- Plot/chart demos such as `stems_demo`, `chart_multi_axis_demo`.
+- Plot/chart demos such as `chart_multi_axis_demo`.
   They allocate model graphs that are consumed by plot/chart component APIs rather than ordinary
   view-local app state.
   - Follow-up: `plot_declarative_demo.rs` now uses `LinePlotPanelBinding` as the app-facing tracer
@@ -33,6 +33,8 @@ Keep raw/shared-model mechanisms for now:
   - Follow-up: `histogram_demo.rs` now uses `HistogramPlotPanelBinding`; `fret-plot` shares the
     state/output machinery through a private binding core instead of copying per-family output
     reads. Keep explicit raw histogram props in component tests and advanced composition paths.
+  - Follow-up: `stems_demo.rs` now uses `StemsPlotPanelBinding`, following the same private binding
+    core. Keep explicit raw stems props in component tests and advanced composition paths.
   - Follow-up: `chart_declarative_demo.rs` now uses `ChartCanvasPanelBinding`, so the default
     FretApp chart example no longer imports `fret_runtime::Model` or wires
     `ChartCanvasPanelProps::engine` directly. Keep explicit raw chart panel props in stress,

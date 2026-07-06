@@ -3,8 +3,8 @@
 use fret_runtime::{Model, ModelHost};
 use fret_ui::{ElementContextAccess, Invalidation, UiHost};
 
-use crate::declarative::{HistogramPlotPanelProps, LinePlotPanelProps};
-use crate::models::{HistogramPlotModel, LinePlotModel};
+use crate::declarative::{HistogramPlotPanelProps, LinePlotPanelProps, StemsPlotPanelProps};
+use crate::models::{HistogramPlotModel, LinePlotModel, StemsPlotModel};
 use crate::state::{PlotOutput, PlotState};
 
 #[derive(Clone)]
@@ -193,6 +193,77 @@ impl HistogramPlotPanelBinding {
     }
 }
 
+/// App-facing handle for a stems plot panel plus its caller-owned interaction state.
+///
+/// `StemsPlotPanelProps` remains the component-author surface and still exposes raw model handles
+/// for advanced composition. This binding is the default app/cookbook surface for a standalone
+/// stems panel.
+#[derive(Clone)]
+pub struct StemsPlotPanelBinding {
+    core: PlotPanelBindingCore<StemsPlotModel>,
+}
+
+impl StemsPlotPanelBinding {
+    /// Insert the plot model, interaction state, and output channel into a model host.
+    #[track_caller]
+    pub fn new(host: &mut impl ModelHost, model: StemsPlotModel) -> Self {
+        Self {
+            core: PlotPanelBindingCore::new(host, model),
+        }
+    }
+
+    /// Build declarative panel props wired to this binding's model, state, and output channel.
+    pub fn panel_props(&self) -> StemsPlotPanelProps {
+        StemsPlotPanelProps::new(self.core.model.clone())
+            .state(self.core.state.clone())
+            .output(self.core.output.clone())
+    }
+
+    /// Read the latest plot output through a layout invalidation tracked read.
+    pub fn output_layout<'a, H, Cx>(&self, cx: &mut Cx) -> PlotOutput
+    where
+        H: UiHost + 'a,
+        Cx: ElementContextAccess<'a, H>,
+    {
+        self.core.output_layout(cx)
+    }
+
+    /// Read the latest plot output through a paint invalidation tracked read.
+    pub fn output_paint<'a, H, Cx>(&self, cx: &mut Cx) -> PlotOutput
+    where
+        H: UiHost + 'a,
+        Cx: ElementContextAccess<'a, H>,
+    {
+        self.core.output_paint(cx)
+    }
+
+    /// Read the latest plot output without registering a UI invalidation dependency.
+    ///
+    /// This is intended for event handlers, diagnostics, and logging code that needs to observe
+    /// interaction output outside a render/layout context.
+    pub fn output_untracked(&self, host: &impl ModelHost) -> PlotOutput {
+        self.core.output_untracked(host)
+    }
+
+    /// Advanced bridge for component authors that already own raw model handles.
+    ///
+    /// Prefer [`Self::new`] for app code. This method exists so advanced plot coordinators can
+    /// graduate to the binding surface without rebuilding already-shared plot models.
+    pub fn from_models(
+        model: Model<StemsPlotModel>,
+        state: Model<PlotState>,
+        output: Model<PlotOutput>,
+    ) -> Self {
+        Self {
+            core: PlotPanelBindingCore {
+                model,
+                state,
+                output,
+            },
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::sync::Arc;
@@ -200,11 +271,13 @@ mod tests {
     use fret_runtime::{ModelHost, ModelStore};
 
     use crate::cartesian::DataPoint;
-    use crate::models::{HistogramPlotModel, HistogramSeries, LinePlotModel, LineSeries};
+    use crate::models::{
+        HistogramPlotModel, HistogramSeries, LinePlotModel, LineSeries, StemsPlotModel, StemsSeries,
+    };
     use crate::series::Series;
     use crate::state::PlotOutput;
 
-    use super::{HistogramPlotPanelBinding, LinePlotPanelBinding};
+    use super::{HistogramPlotPanelBinding, LinePlotPanelBinding, StemsPlotPanelBinding};
 
     #[derive(Default)]
     struct TestHost {
@@ -235,6 +308,16 @@ mod tests {
         HistogramPlotModel::from_series(vec![HistogramSeries::new(
             "sample",
             Arc::from([0.0, 0.5, 1.0, 1.5, 2.0]),
+        )])
+    }
+
+    fn sample_stems_model() -> StemsPlotModel {
+        StemsPlotModel::from_series(vec![StemsSeries::new(
+            "sample",
+            Series::from_points_sorted(
+                vec![DataPoint { x: 0.0, y: 0.0 }, DataPoint { x: 1.0, y: 2.0 }],
+                true,
+            ),
         )])
     }
 
@@ -310,5 +393,42 @@ mod tests {
             .expect("output model update should succeed");
 
         assert_eq!(binding.output_untracked(&host).revision, 24);
+    }
+
+    #[test]
+    fn stems_plot_binding_creates_props_with_state_and_output_without_public_raw_handles() {
+        let mut host = TestHost::default();
+
+        let binding = StemsPlotPanelBinding::new(&mut host, sample_stems_model());
+        let props = binding.panel_props();
+
+        assert!(props.state.is_some());
+        assert!(props.output.is_some());
+        assert!(
+            host.models()
+                .read(&props.model, |model| model.series.len())
+                .is_ok()
+        );
+    }
+
+    #[test]
+    fn stems_plot_binding_reads_output_without_exposing_output_model_handle() {
+        let mut host = TestHost::default();
+
+        let binding = StemsPlotPanelBinding::new(&mut host, sample_stems_model());
+        let props = binding.panel_props();
+        let output = props
+            .output
+            .expect("binding props should include output model");
+        output
+            .update(&mut host, |output, _cx| {
+                *output = PlotOutput {
+                    revision: 12,
+                    ..Default::default()
+                };
+            })
+            .expect("output model update should succeed");
+
+        assert_eq!(binding.output_untracked(&host).revision, 12);
     }
 }
