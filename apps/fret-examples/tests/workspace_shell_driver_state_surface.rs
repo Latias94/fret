@@ -13,6 +13,9 @@ fn workspace_shell_driver_model_writes_stay_behind_owner_helpers() {
     let compact_production = compact(production_source);
 
     for needle in [
+        "structWorkspaceShellModelBundle{",
+        "fnnew(models:&mutModelStore,window_layout:WorkspaceWindowLayout,file_tree_items:Vec<TreeItem>,file_tree_state:TreeState,)->Self{",
+        "letmodels=WorkspaceShellModelBundle::new(app.models_mut(),window_layout,items_value,state_value,);",
         "structWorkspaceShellModelOwner<'a>{",
         "models:&'amutModelStore,",
         "fnupdate<T:Any,R>(&mutself,model:&Model<T>,f:implFnOnce(&mutT)->R)->Option<R>{",
@@ -49,6 +52,8 @@ fn workspace_shell_driver_model_writes_stay_behind_owner_helpers() {
         "<ModelStore>::update::<",
         "<ModelStore>::update_any(",
         "<ModelStore>::update_any::<",
+        "app.models_mut().insert(",
+        "models_mut().insert(",
         "fnworkspace_shell_update_model",
         "fnworkspace_shell_host_update_model",
         "fnworkspace_shell_set_model",

@@ -149,7 +149,9 @@ Keep raw/shared-model mechanisms for now:
 - `workspace_shell_demo/*`. Audited after the initial inventory: it is application-level workspace
   shell state, so the shared model graph remains. The follow-up cleanup routes writes through
   demo-local owner helpers instead of scattering raw `models_mut().update(...)` calls. Follow-up
-  tightening upgraded the driver from generic free helpers to `WorkspaceShellModelOwner`.
+  tightening upgraded the driver from generic free helpers to `WorkspaceShellModelOwner`, and later
+  moved startup model allocation behind `WorkspaceShellModelBundle` so production source no longer
+  scatters direct `app.models_mut().insert(...)` calls in `build_ui(...)`.
 - `components_gallery.rs`, `virtual_list_stress_demo.rs`, and `editor_notes_demo.rs`. Audited and
   cleaned after the initial inventory: each keeps intentional shared models but routes writes
   through local owner helpers with source gates. Follow-up tightening upgraded

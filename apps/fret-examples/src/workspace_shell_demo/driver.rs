@@ -120,6 +120,33 @@ struct WorkspaceShellPaneProofState {
     prompt_open: bool,
 }
 
+struct WorkspaceShellModelBundle {
+    window_layout: Model<WorkspaceWindowLayout>,
+    dirty_close_prompt_open: Model<bool>,
+    dirty_close_prompt: Model<Option<WorkspaceShellDirtyClosePrompt>>,
+    tabstrip_two_row_pinned: Model<bool>,
+    file_tree_items: Model<Vec<TreeItem>>,
+    file_tree_state: Model<TreeState>,
+}
+
+impl WorkspaceShellModelBundle {
+    fn new(
+        models: &mut ModelStore,
+        window_layout: WorkspaceWindowLayout,
+        file_tree_items: Vec<TreeItem>,
+        file_tree_state: TreeState,
+    ) -> Self {
+        Self {
+            window_layout: models.insert(window_layout),
+            dirty_close_prompt_open: models.insert(false),
+            dirty_close_prompt: models.insert(None),
+            tabstrip_two_row_pinned: models.insert(false),
+            file_tree_items: models.insert(file_tree_items),
+            file_tree_state: models.insert(file_tree_state),
+        }
+    }
+}
+
 struct WorkspaceShellModelOwner<'a> {
     models: &'a mut ModelStore,
 }
@@ -630,24 +657,23 @@ impl WorkspaceShellDemoDriver {
             pane.tabs.open_and_activate(Arc::from("doc-b-1"));
         }
 
-        let window_layout = app.models_mut().insert(window_layout);
-        let dirty_close_prompt_open = app.models_mut().insert(false);
-        let dirty_close_prompt = app.models_mut().insert(None);
-        let tabstrip_two_row_pinned = app.models_mut().insert(false);
-
         let (items_value, state_value) = build_file_tree_items();
-        let file_tree_items = app.models_mut().insert(items_value);
-        let file_tree_state = app.models_mut().insert(state_value);
+        let models = WorkspaceShellModelBundle::new(
+            app.models_mut(),
+            window_layout,
+            items_value,
+            state_value,
+        );
 
         WorkspaceShellWindowState {
             ui,
             view_cache_shell,
-            window_layout,
-            dirty_close_prompt_open,
-            dirty_close_prompt,
-            tabstrip_two_row_pinned,
-            file_tree_items,
-            file_tree_state,
+            window_layout: models.window_layout,
+            dirty_close_prompt_open: models.dirty_close_prompt_open,
+            dirty_close_prompt: models.dirty_close_prompt,
+            tabstrip_two_row_pinned: models.tabstrip_two_row_pinned,
+            file_tree_items: models.file_tree_items,
+            file_tree_state: models.file_tree_state,
             file_tree_scroll: VirtualListScrollHandle::new(),
         }
     }
