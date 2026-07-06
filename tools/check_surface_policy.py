@@ -560,8 +560,9 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
     ),
     _fret_examples_advanced_surface(
         "echarts_multi_grid_demo.rs",
-        "the multi-grid ECharts proof owns one shared chart engine, per-grid panel props, and an "
-        "overlay-only panel that do not belong in the default single-chart binding",
+        "the multi-grid ECharts proof still owns manual runner/bootstrap seams, while its shared "
+        "chart engine, per-grid panels, and overlay-only panel are routed through "
+        "ChartCanvasMultiGridBinding",
         (
             "fret_app",
             "fret_core",

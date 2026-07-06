@@ -1,5 +1,6 @@
 //! App-facing chart bindings that hide raw runtime model plumbing from examples.
 
+use delinea::ids::GridId;
 use delinea::{ChartEngine, ChartSpec};
 use fret_runtime::{Model, ModelHost};
 use fret_ui::{ElementContextAccess, Invalidation, UiHost};
@@ -113,6 +114,64 @@ impl ChartCanvasPanelBinding {
     }
 }
 
+/// App-facing handle for one shared chart engine rendered through multiple grid panels.
+///
+/// Unlike [`ChartCanvasPanelBinding`], this binding deliberately does not allocate a default output
+/// model. Multiple grid panels plus one overlay panel would otherwise race to publish one
+/// "current" output. Linked/aggregated chart output should get its own explicit contract.
+#[derive(Clone)]
+pub struct ChartCanvasMultiGridBinding {
+    spec: ChartSpec,
+    engine: Model<ChartEngine>,
+    grids: Vec<GridId>,
+}
+
+impl ChartCanvasMultiGridBinding {
+    /// Insert a shared chart engine into a model host and keep the grid order for panel rendering.
+    #[track_caller]
+    pub fn new(
+        host: &mut impl ModelHost,
+        spec: ChartSpec,
+        engine: ChartEngine,
+        grids: impl IntoIterator<Item = GridId>,
+    ) -> Self {
+        Self {
+            spec,
+            engine: host.models_mut().insert(engine),
+            grids: grids.into_iter().collect(),
+        }
+    }
+
+    /// Grid IDs rendered by this binding, in caller-provided order.
+    pub fn grids(&self) -> &[GridId] {
+        &self.grids
+    }
+
+    /// Build panel props for one grid viewport, wired to the shared engine model.
+    pub fn grid_panel_props(&self, grid: GridId) -> ChartCanvasPanelProps {
+        let mut props = ChartCanvasPanelProps::new(self.spec.clone()).grid_view(grid);
+        props.engine = Some(self.engine.clone());
+        props
+    }
+
+    /// Build overlay-only panel props wired to the shared engine model.
+    pub fn overlay_panel_props(&self) -> ChartCanvasPanelProps {
+        let mut props = ChartCanvasPanelProps::new(self.spec.clone()).overlay_only();
+        props.engine = Some(self.engine.clone());
+        props
+    }
+
+    /// Observe the shared chart engine as a paint dependency from an app view render pass.
+    pub fn observe_engine_paint<'a, H, Cx>(&self, cx: &mut Cx)
+    where
+        H: UiHost + 'a,
+        Cx: ElementContextAccess<'a, H>,
+    {
+        cx.elements()
+            .observe_model(&self.engine, Invalidation::Paint);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use delinea::ids::{AxisId, ChartId, DatasetId, FieldId, GridId, SeriesId};
@@ -122,7 +181,9 @@ mod tests {
     };
     use fret_runtime::{ModelHost, ModelStore};
 
-    use super::ChartCanvasPanelBinding;
+    use crate::ChartCanvasPanelMode;
+
+    use super::{ChartCanvasMultiGridBinding, ChartCanvasPanelBinding};
 
     #[derive(Default)]
     struct TestHost {
@@ -240,5 +301,29 @@ mod tests {
                 .expect("output model should be readable"),
             binding.output_untracked(&host)
         );
+    }
+
+    #[test]
+    fn chart_canvas_multi_grid_binding_creates_grid_and_overlay_props_without_output_model() {
+        let mut host = TestHost::default();
+        let mut spec = sample_spec();
+        let grid_1 = GridId::new(1);
+        let grid_2 = GridId::new(2);
+        spec.grids.push(GridSpec { id: grid_2 });
+        let engine = ChartEngine::new(spec.clone()).expect("sample spec should be valid");
+
+        let binding =
+            ChartCanvasMultiGridBinding::new(&mut host, spec.clone(), engine, [grid_1, grid_2]);
+        let grid_props = binding.grid_panel_props(grid_2);
+        let overlay_props = binding.overlay_panel_props();
+
+        assert_eq!(binding.grids(), &[grid_1, grid_2]);
+        assert_eq!(grid_props.spec.id, spec.id);
+        assert_eq!(grid_props.mode, ChartCanvasPanelMode::GridView(grid_2));
+        assert_eq!(overlay_props.mode, ChartCanvasPanelMode::Overlay);
+        assert!(grid_props.engine.is_some());
+        assert!(overlay_props.engine.is_some());
+        assert!(grid_props.output_model.is_none());
+        assert!(overlay_props.output_model.is_none());
     }
 }

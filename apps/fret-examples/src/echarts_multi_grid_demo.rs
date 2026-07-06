@@ -7,7 +7,7 @@ use fret_launch::run_app;
 use fret_launch::{
     FnDriver, WindowCreateSpec, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
 };
-use fret_runtime::{Model, PlatformCapabilities};
+use fret_runtime::PlatformCapabilities;
 use fret_ui::UiTree;
 use fret_ui::declarative;
 use fret_ui::element::{
@@ -19,14 +19,12 @@ use delinea::data::DataTable;
 use delinea::engine::ChartEngine;
 use delinea::ids::GridId;
 use delinea::spec::ChartSpec;
-use fret_chart::{ChartCanvasPanelProps, chart_canvas_panel};
+use fret_chart::{ChartCanvasMultiGridBinding, chart_canvas_panel};
 
 pub struct EchartsMultiGridDemoWindowState {
     ui: UiTree<App>,
     root: Option<fret_core::NodeId>,
-    engine: Model<ChartEngine>,
-    spec: ChartSpec,
-    grids: Vec<GridId>,
+    chart: ChartCanvasMultiGridBinding,
 }
 
 #[derive(Default)]
@@ -38,14 +36,11 @@ impl EchartsMultiGridDemoDriver {
         ui.set_window(window);
 
         let (engine, spec, grids) = Self::build_chart();
-        let engine = app.models_mut().insert(engine);
 
         EchartsMultiGridDemoWindowState {
             ui,
             root: None,
-            engine,
-            spec,
-            grids,
+            chart: ChartCanvasMultiGridBinding::new(app, spec, engine, grids),
         }
     }
 
@@ -118,20 +113,6 @@ impl EchartsMultiGridDemoDriver {
         let grids = collect_grids(&spec);
         (engine, spec, grids)
     }
-
-    fn chart_panel(
-        spec: ChartSpec,
-        engine: Model<ChartEngine>,
-        grid: GridId,
-    ) -> ChartCanvasPanelProps {
-        let mut props = ChartCanvasPanelProps::new(spec).grid_view(grid);
-        props.engine = Some(engine);
-        props.pointer_region.layout.flex.grow = 1.0;
-        props.pointer_region.layout.flex.shrink = 1.0;
-        props.pointer_region.layout.flex.basis = Length::Px(fret_core::Px(0.0));
-        props.pointer_region.layout.overflow = Overflow::Clip;
-        props
-    }
 }
 
 fn collect_grids(spec: &ChartSpec) -> Vec<GridId> {
@@ -197,12 +178,10 @@ fn render(
         scene,
     } = context;
 
-    let engine = state.engine.clone();
-    let spec = state.spec.clone();
-    let grids = state.grids.clone();
+    let chart = state.chart.clone();
     let root = declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
         .render_root("echarts-multi-grid-demo", move |cx| {
-            cx.observe_model(&engine, fret_ui::Invalidation::Paint);
+            chart.observe_engine_paint(cx);
 
             let mut stack = StackProps::default();
             stack.layout.size.width = Length::Fill;
@@ -223,26 +202,26 @@ fn render(
             column.justify = MainAlign::Start;
             column.align = CrossAlign::Stretch;
 
-            let mut overlay_props = ChartCanvasPanelProps::new(spec.clone()).overlay_only();
-            overlay_props.engine = Some(engine.clone());
+            let mut overlay_props = chart.overlay_panel_props();
             overlay_props.pointer_region.layout.position = PositionStyle::Absolute;
             overlay_props.pointer_region.layout.size.width = Length::Fill;
             overlay_props.pointer_region.layout.size.height = Length::Fill;
 
             vec![cx.stack_props(stack, |cx| {
-                let spec_for_grids = spec.clone();
-                let engine_for_grids = engine.clone();
+                let chart = chart.clone();
                 let grid_views = cx.container(grid_column_container, move |cx| {
                     vec![cx.flex(column, move |cx| {
-                        grids
+                        chart
+                            .grids()
                             .iter()
                             .copied()
                             .map(|grid| {
-                                let props = EchartsMultiGridDemoDriver::chart_panel(
-                                    spec_for_grids.clone(),
-                                    engine_for_grids.clone(),
-                                    grid,
-                                );
+                                let mut props = chart.grid_panel_props(grid);
+                                props.pointer_region.layout.flex.grow = 1.0;
+                                props.pointer_region.layout.flex.shrink = 1.0;
+                                props.pointer_region.layout.flex.basis =
+                                    Length::Px(fret_core::Px(0.0));
+                                props.pointer_region.layout.overflow = Overflow::Clip;
                                 chart_canvas_panel(cx, props)
                             })
                             .collect::<Vec<_>>()

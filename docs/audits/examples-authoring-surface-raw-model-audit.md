@@ -25,9 +25,10 @@ inventory for current decisions:
 - `docs/knowledge/engineering/progress/2026-07-06-chart-advanced-surface-policy.md`
 
 The remaining chart raw-props examples are now source-policy classified by contract. Adapter smoke
-charts have moved behind `ChartCanvasPanelBinding`; raw chart props remain for multi-grid/overlay
-composition, linked multi-axis coordination, and stress/perf harnesses. Do not use this baseline
-alone to decide whether a current chart or plot demo should keep raw model seams.
+charts have moved behind `ChartCanvasPanelBinding`, and multi-grid/overlay composition has moved
+behind `ChartCanvasMultiGridBinding`; raw chart props remain for linked multi-axis coordination,
+explicit shared output, and stress/perf harnesses. Do not use this baseline alone to decide whether
+a current chart or plot demo should keep raw model seams.
 
 ## Executive Summary
 

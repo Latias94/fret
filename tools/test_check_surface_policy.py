@@ -780,6 +780,12 @@ class SurfacePolicyTests(unittest.TestCase):
                 any(spec.path == chart_path for spec in POLICY.ADVANCED_MANUAL_SURFACES),
                 f"{chart_path} should be classified as an advanced chart surface",
             )
+        multi_grid_spec = next(
+            spec
+            for spec in POLICY.ADVANCED_MANUAL_SURFACES
+            if spec.path == "apps/fret-examples/src/echarts_multi_grid_demo.rs"
+        )
+        self.assertIn("ChartCanvasMultiGridBinding", multi_grid_spec.reason)
         self.assertTrue(
             any(
                 spec.path == "apps/fret-examples/src/simple_todo_demo/driver.rs"

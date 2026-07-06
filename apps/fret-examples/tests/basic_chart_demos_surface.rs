@@ -275,15 +275,14 @@ fn echarts_multi_grid_demo_uses_declarative_grid_panels_and_overlay() {
     let source = compact(include_str!("../src/echarts_multi_grid_demo.rs"));
 
     for needle in [
-        "usefret_chart::{ChartCanvasPanelProps,chart_canvas_panel};",
-        "engine:Model<ChartEngine>",
-        "spec:ChartSpec",
-        "Vec<GridId>",
+        "usefret_chart::{ChartCanvasMultiGridBinding,chart_canvas_panel};",
+        "chart:ChartCanvasMultiGridBinding",
+        "ChartCanvasMultiGridBinding::new(app,spec,engine,grids)",
+        "chart.observe_engine_paint(cx);",
+        "chart.overlay_panel_props()",
+        "chart.grid_panel_props(grid)",
+        "chart.grids().iter().copied()",
         "declarative::RenderRootContext::new(&mutstate.ui,app,services,window,bounds).render_root(\"echarts-multi-grid-demo\"",
-        "ChartCanvasPanelProps::new(spec).grid_view(grid)",
-        "ChartCanvasPanelProps::new(spec.clone()).overlay_only()",
-        "props.engine=Some(engine);",
-        "overlay_props.engine=Some(engine.clone());",
         "chart_canvas_panel(cx,props)",
         "chart_canvas_panel(cx,overlay_props)",
     ] {
@@ -301,6 +300,14 @@ fn echarts_multi_grid_demo_uses_declarative_grid_panels_and_overlay() {
         "ChartCanvas::new_overlay",
         "ChartCanvas::create_node",
         "create_node_retained",
+        "usefret_runtime::Model;",
+        "engine:Model<ChartEngine>",
+        "spec:ChartSpec",
+        "ChartCanvasPanelProps::new(spec).grid_view(grid)",
+        "ChartCanvasPanelProps::new(spec.clone()).overlay_only()",
+        "props.engine=Some(engine);",
+        "overlay_props.engine=Some(engine.clone());",
+        "app.models_mut().insert(engine)",
         "Rc<RefCell<ChartEngine>>",
         "std::rc::Rc<std::cell::RefCell<ChartEngine>>",
     ] {

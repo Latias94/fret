@@ -15,18 +15,20 @@ The classification is intentionally split by contract:
 
 - `echarts_demo.rs` is a comparison/adapter smoke surface, but its chart engine wiring now goes
   through `ChartCanvasPanelBinding`;
-- `echarts_multi_grid_demo.rs` is an advanced multi-grid and overlay-only chart composition proof;
+- `echarts_multi_grid_demo.rs` is an advanced manual runner surface whose shared chart engine,
+  per-grid panels, and overlay-only panel now go through `ChartCanvasMultiGridBinding`;
 - `chart_multi_axis_demo.rs` is an advanced linked-chart coordination proof with shared output,
   brush, axis-pointer, and domain-window models;
 - `chart_stress_demo.rs` is an internal perf/stress harness.
 
 # Decision
 
-Do not migrate the remaining multi-grid, linked, and stress chart demos to
-`ChartCanvasPanelBinding` until their advanced contracts are named. The source-policy gate makes
-that decision explicit: raw seams are allowed only while they are listed in each surface record, and
-the gate fails when a listed seam becomes unused. `echarts_demo.rs` proved the shrink path: once the
-adapter smoke chart model moved behind the binding, its `fret_runtime` allowed seam was removed.
+Do not migrate the remaining linked and stress chart demos to `ChartCanvasPanelBinding` until their
+advanced contracts are named. The source-policy gate makes that decision explicit: raw seams are
+allowed only while they are listed in each surface record, and the gate fails when a listed seam
+becomes unused. `echarts_demo.rs` proved the shrink path for single adapter smoke charts;
+`echarts_multi_grid_demo.rs` now proves the separate multi-grid binding path. Its remaining
+`fret_runtime` allowance is a manual runner/bootstrap seam, not chart model plumbing.
 
 # Verification
 
@@ -34,9 +36,10 @@ adapter smoke chart model moved behind the binding, its `fret_runtime` allowed s
 - `python3 -m unittest tools.test_check_surface_policy`
 - `python3 tools/check_surface_policy.py`
 - `cargo nextest run -p fret-examples --test echarts_demo_surface echarts_demo_uses_chart_binding_for_adapter_smoke --no-fail-fast`
+- `cargo nextest run -p fret-examples --test basic_chart_demos_surface echarts_multi_grid_demo_uses_declarative_grid_panels_and_overlay --no-fail-fast`
 
 # Next
 
 The next chart cleanup should be contract design, not mechanical migration: define binding surfaces
-for multi-grid, linked, or stress use cases only when they can preserve the explicit coordination
-semantics that the current raw props demonstrate.
+for linked or stress use cases only when they can preserve the explicit coordination semantics that
+the current raw props demonstrate.

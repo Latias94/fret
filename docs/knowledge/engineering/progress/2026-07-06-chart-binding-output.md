@@ -21,10 +21,11 @@ The app-facing contract mirrors the plot bindings:
 
 # Decision
 
-Keep binding-owned output limited to the default single-chart app/cookbook surface. Linked charts,
-multi-grid overlays, explicit output sharing, and stress harnesses should continue to use raw
-`ChartCanvasPanelProps` until their coordination contracts are named. This avoids hiding advanced
-synchronization semantics behind the first-contact binding.
+Keep binding-owned output limited to the default single-chart app/cookbook surface. Multi-grid
+charts use `ChartCanvasMultiGridBinding`, which deliberately does not allocate a default output
+model because multiple grid panels plus one overlay panel would race to publish a single current
+output. Linked charts, explicit output sharing, and stress harnesses should continue to use raw
+`ChartCanvasPanelProps` until their coordination contracts are named.
 
 # Verification
 
@@ -33,7 +34,8 @@ synchronization semantics behind the first-contact binding.
 
 # Next
 
-`echarts_demo.rs` now uses `ChartCanvasPanelBinding` for adapter smoke charts. Name explicit
-contracts before migrating linked, multi-grid, or stress demos; those surfaces still use raw
-`ChartCanvasPanelProps` intentionally because they exercise shared output, grid views,
-overlay-only panels, or perf harness state.
+`echarts_demo.rs` now uses `ChartCanvasPanelBinding` for adapter smoke charts, and
+`echarts_multi_grid_demo.rs` uses `ChartCanvasMultiGridBinding` for shared-engine grid views plus
+overlay-only panels. Name explicit contracts before migrating linked or stress demos; those
+surfaces still use raw `ChartCanvasPanelProps` intentionally because they exercise shared output,
+linkage state, or perf harness state.
