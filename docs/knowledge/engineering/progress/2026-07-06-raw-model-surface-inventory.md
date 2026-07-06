@@ -128,6 +128,11 @@ Keep raw/shared-model mechanisms for now:
   engine-frame target metric writes now route through the demo-local
   `ExternalTextureImportBasicsModelOwner` helper instead of teaching three direct
   `models_mut().update(...)` calls in `record_engine_frame(...)`.
+- `apps/fret-cookbook/examples/embedded_viewport_basics.rs`. Audited and cleaned after the
+  cookbook external texture pass: it remains an advanced/manual embedded viewport interop example,
+  while viewport-input diagnostic writes now route through the demo-local
+  `EmbeddedViewportBasicsModelOwner` helper instead of teaching five direct
+  `models_mut().update(...)` calls in `on_viewport_input(...)`.
 - `genui_demo.rs`. Audited and cleaned after the initial inventory: it remains an advanced GenUI
   runtime/reference surface with shared runtime models, while raw model reads/writes are routed
   through local owner helpers.

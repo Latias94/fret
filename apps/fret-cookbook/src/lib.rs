@@ -2022,4 +2022,42 @@ mod authoring_surface_policy_tests {
             );
         }
     }
+
+    #[test]
+    fn embedded_viewport_basics_model_writes_stay_behind_owner_helper() {
+        let normalized = EMBEDDED_VIEWPORT_EXAMPLE
+            .split_whitespace()
+            .collect::<String>();
+
+        for marker in [
+            "struct EmbeddedViewportBasicsModelOwner<'a>",
+            "fn record_viewport_input(",
+            "self.app.models_mut().update(&models.uv_x, |value| {",
+            "self.app.models_mut().update(&models.uv_y, |value| {",
+            "self.app.models_mut().update(&models.target_w, |value| {",
+            "self.app.models_mut().update(&models.target_h, |value| {",
+            "self.app.models_mut().update(&models.kind, |value| {",
+            "EmbeddedViewportBasicsModelOwner::new(app).record_viewport_input(&diag, &event);",
+        ] {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(
+                normalized.contains(&marker),
+                "embedded viewport cookbook proof should keep viewport input writes behind the owner helper: {marker}"
+            );
+        }
+
+        for forbidden in [
+            ".models_mut().update(&diag.uv_x, |v| *v = event.uv.0 as f64);",
+            ".models_mut().update(&diag.uv_y, |v| *v = event.uv.1 as f64);",
+            "let _ = app.models_mut().update(&diag.target_w, |v| {",
+            "let _ = app.models_mut().update(&diag.target_h, |v| {",
+            ".models_mut().update(&diag.kind, |v| *v = viewport_kind_code(event.kind));",
+        ] {
+            let forbidden = forbidden.split_whitespace().collect::<String>();
+            assert!(
+                !normalized.contains(&forbidden),
+                "embedded viewport cookbook proof should not hand-write viewport input model updates: {forbidden}"
+            );
+        }
+    }
 }

@@ -109,6 +109,65 @@ fn diag_models(app: &KernelApp, window: AppWindowId) -> Option<EmbeddedViewportB
         .and_then(|svc| svc.by_window.get(&window).cloned())
 }
 
+struct EmbeddedViewportBasicsModelOwner<'a> {
+    app: &'a mut KernelApp,
+}
+
+impl<'a> EmbeddedViewportBasicsModelOwner<'a> {
+    fn new(app: &'a mut KernelApp) -> Self {
+        Self { app }
+    }
+
+    fn record_viewport_input(
+        &mut self,
+        models: &EmbeddedViewportBasicsDiagModels,
+        event: &ViewportInputEvent,
+    ) -> bool {
+        let uv_x_updated = self
+            .app
+            .models_mut()
+            .update(&models.uv_x, |value| {
+                *value = event.uv.0 as f64;
+                true
+            })
+            .unwrap_or(false);
+        let uv_y_updated = self
+            .app
+            .models_mut()
+            .update(&models.uv_y, |value| {
+                *value = event.uv.1 as f64;
+                true
+            })
+            .unwrap_or(false);
+        let target_w_updated = self
+            .app
+            .models_mut()
+            .update(&models.target_w, |value| {
+                *value = event.geometry.target_px_size.0 as f64;
+                true
+            })
+            .unwrap_or(false);
+        let target_h_updated = self
+            .app
+            .models_mut()
+            .update(&models.target_h, |value| {
+                *value = event.geometry.target_px_size.1 as f64;
+                true
+            })
+            .unwrap_or(false);
+        let kind_updated = self
+            .app
+            .models_mut()
+            .update(&models.kind, |value| {
+                *value = viewport_kind_code(event.kind);
+                true
+            })
+            .unwrap_or(false);
+
+        uv_x_updated && uv_y_updated && target_w_updated && target_h_updated && kind_updated
+    }
+}
+
 fn viewport_kind_code(kind: ViewportInputKind) -> f64 {
     match kind {
         ViewportInputKind::PointerMove { .. } => 1.0,
@@ -132,21 +191,7 @@ fn on_viewport_input(app: &mut KernelApp, event: ViewportInputEvent) {
 
     if expected_target != RenderTargetId::default() && event.target == expected_target {
         let diag = ensure_diag_models(app, event.window);
-        let _ = app
-            .models_mut()
-            .update(&diag.uv_x, |v| *v = event.uv.0 as f64);
-        let _ = app
-            .models_mut()
-            .update(&diag.uv_y, |v| *v = event.uv.1 as f64);
-        let _ = app.models_mut().update(&diag.target_w, |v| {
-            *v = event.geometry.target_px_size.0 as f64
-        });
-        let _ = app.models_mut().update(&diag.target_h, |v| {
-            *v = event.geometry.target_px_size.1 as f64
-        });
-        let _ = app
-            .models_mut()
-            .update(&diag.kind, |v| *v = viewport_kind_code(event.kind));
+        let _ = EmbeddedViewportBasicsModelOwner::new(app).record_viewport_input(&diag, &event);
     }
 
     embedded::handle_viewport_input(app, event);
