@@ -16,8 +16,8 @@ use std::sync::Arc;
 
 use crate::custom_effect_v2_web_owner::{
     CustomEffectV2ParamPack, CustomEffectV2ParamSlot, CustomEffectV2ScalarControl,
-    CustomEffectV2ScalarSpec, CustomEffectV2WebControlBinding, CustomEffectV2WebVariantControls,
-    CustomEffectV2WebVariantReset,
+    CustomEffectV2ScalarControlFactory, CustomEffectV2ScalarSpec, CustomEffectV2WebControlBinding,
+    CustomEffectV2WebVariantControls, CustomEffectV2WebVariantReset,
 };
 use fret::advanced::view::AppRenderDataExt as _;
 use fret_app::{App, Effect};
@@ -95,6 +95,14 @@ struct DemoControls {
 const PARAM_MIX01: CustomEffectV2ParamSlot = CustomEffectV2ParamSlot::new(0, 0);
 const PARAM_DEBUG_INPUT: CustomEffectV2ParamSlot = CustomEffectV2ParamSlot::new(0, 1);
 
+impl DemoControls {
+    fn new(models: &mut impl CustomEffectV2ScalarControlFactory) -> Self {
+        Self {
+            mix01: models.scalar_control(CustomEffectV2ScalarSpec::new(0.65, 0.0, 1.0, 0.01)),
+        }
+    }
+}
+
 impl CustomEffectV2WebVariantControls for DemoControls {
     fn reset_variant_controls(&self, reset: &mut CustomEffectV2WebVariantReset<'_, '_>) -> bool {
         self.mix01.reset(reset)
@@ -157,13 +165,7 @@ impl CustomEffectV2IdentityWebDriver {
         ui.set_window(window);
 
         let binding = CustomEffectV2WebControlBinding::new(app.models_mut());
-
-        let controls = DemoControls {
-            mix01: CustomEffectV2ScalarControl::new(
-                app.models_mut(),
-                CustomEffectV2ScalarSpec::new(0.65, 0.0, 1.0, 0.01),
-            ),
-        };
+        let controls = DemoControls::new(app.models_mut());
 
         CustomEffectV2IdentityWebWindowState {
             ui,

@@ -13,8 +13,8 @@ use std::sync::Arc;
 
 use crate::custom_effect_v2_web_owner::{
     CustomEffectV2ParamPack, CustomEffectV2ParamSlot, CustomEffectV2ScalarControl,
-    CustomEffectV2ScalarSpec, CustomEffectV2WebControlBinding, CustomEffectV2WebVariantControls,
-    CustomEffectV2WebVariantReset,
+    CustomEffectV2ScalarControlFactory, CustomEffectV2ScalarSpec, CustomEffectV2WebControlBinding,
+    CustomEffectV2WebVariantControls, CustomEffectV2WebVariantReset,
 };
 use fret::advanced::view::AppRenderDataExt as _;
 use fret_app::{App, Effect};
@@ -113,6 +113,16 @@ const PARAM_STRENGTH: CustomEffectV2ParamSlot = CustomEffectV2ParamSlot::new(0, 
 const PARAM_SHININESS: CustomEffectV2ParamSlot = CustomEffectV2ParamSlot::new(0, 1);
 const PARAM_MIX01: CustomEffectV2ParamSlot = CustomEffectV2ParamSlot::new(0, 2);
 const PARAM_DEBUG_INPUT: CustomEffectV2ParamSlot = CustomEffectV2ParamSlot::new(0, 3);
+
+impl DemoControls {
+    fn new(models: &mut impl CustomEffectV2ScalarControlFactory) -> Self {
+        Self {
+            strength: models.scalar_control(CustomEffectV2ScalarSpec::new(0.95, 0.0, 2.0, 0.01)),
+            shininess: models.scalar_control(CustomEffectV2ScalarSpec::new(36.0, 1.0, 128.0, 1.0)),
+            mix01: models.scalar_control(CustomEffectV2ScalarSpec::new(1.0, 0.0, 1.0, 0.01)),
+        }
+    }
+}
 
 impl CustomEffectV2WebVariantControls for DemoControls {
     fn reset_variant_controls(&self, reset: &mut CustomEffectV2WebVariantReset<'_, '_>) -> bool {
@@ -769,20 +779,7 @@ impl CustomEffectV2GlassChromeWebDriver {
         ui.set_window(window);
 
         let binding = CustomEffectV2WebControlBinding::new(app.models_mut());
-        let controls = DemoControls {
-            strength: CustomEffectV2ScalarControl::new(
-                app.models_mut(),
-                CustomEffectV2ScalarSpec::new(0.95, 0.0, 2.0, 0.01),
-            ),
-            shininess: CustomEffectV2ScalarControl::new(
-                app.models_mut(),
-                CustomEffectV2ScalarSpec::new(36.0, 1.0, 128.0, 1.0),
-            ),
-            mix01: CustomEffectV2ScalarControl::new(
-                app.models_mut(),
-                CustomEffectV2ScalarSpec::new(1.0, 0.0, 1.0, 0.01),
-            ),
-        };
+        let controls = DemoControls::new(app.models_mut());
 
         CustomEffectV2GlassChromeWebWindowState {
             ui,

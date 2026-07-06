@@ -17,8 +17,8 @@ use std::sync::Arc;
 
 use crate::custom_effect_v2_web_owner::{
     CustomEffectV2ParamPack, CustomEffectV2ParamSlot, CustomEffectV2ScalarControl,
-    CustomEffectV2ScalarSpec, CustomEffectV2WebControlBinding, CustomEffectV2WebVariantControls,
-    CustomEffectV2WebVariantReset,
+    CustomEffectV2ScalarControlFactory, CustomEffectV2ScalarSpec, CustomEffectV2WebControlBinding,
+    CustomEffectV2WebVariantControls, CustomEffectV2WebVariantReset,
 };
 use fret::advanced::view::AppRenderDataExt as _;
 use fret_app::{App, Effect};
@@ -139,6 +139,27 @@ const PARAM_STRENGTH_PX: CustomEffectV2ParamSlot = CustomEffectV2ParamSlot::new(
 const PARAM_TINT_STRENGTH: CustomEffectV2ParamSlot = CustomEffectV2ParamSlot::new(0, 1);
 const PARAM_DEBUG_INPUT: CustomEffectV2ParamSlot = CustomEffectV2ParamSlot::new(0, 2);
 
+impl DemoControls {
+    fn new(models: &mut impl CustomEffectV2ScalarControlFactory) -> Self {
+        Self {
+            strength_px: models
+                .scalar_control(CustomEffectV2ScalarSpec::new(14.0, 0.0, 24.0, 0.25)),
+            max_sample_offset_px: models
+                .scalar_control(CustomEffectV2ScalarSpec::new(18.0, 0.0, 96.0, 0.5)),
+            tint_strength: models
+                .scalar_control(CustomEffectV2ScalarSpec::new(0.8, 0.0, 1.0, 0.01)),
+            blur_radius_px: models
+                .scalar_control(CustomEffectV2ScalarSpec::new(12.0, 0.0, 32.0, 0.5)),
+            blur_downsample: models
+                .scalar_control(CustomEffectV2ScalarSpec::new(1.0, 1.0, 4.0, 1.0)),
+            lens_corner_radius_px: models
+                .scalar_control(CustomEffectV2ScalarSpec::new(24.0, 0.0, 48.0, 0.5)),
+            tile_corner_radius_px: models
+                .scalar_control(CustomEffectV2ScalarSpec::new(18.0, 0.0, 48.0, 0.5)),
+        }
+    }
+}
+
 impl CustomEffectV2WebVariantControls for DemoControls {
     fn reset_variant_controls(&self, reset: &mut CustomEffectV2WebVariantReset<'_, '_>) -> bool {
         let mut changed = false;
@@ -214,37 +235,7 @@ impl CustomEffectV2WebDriver {
         ui.set_window(window);
 
         let binding = CustomEffectV2WebControlBinding::new(app.models_mut());
-
-        let controls = DemoControls {
-            strength_px: CustomEffectV2ScalarControl::new(
-                app.models_mut(),
-                CustomEffectV2ScalarSpec::new(14.0, 0.0, 24.0, 0.25),
-            ),
-            max_sample_offset_px: CustomEffectV2ScalarControl::new(
-                app.models_mut(),
-                CustomEffectV2ScalarSpec::new(18.0, 0.0, 96.0, 0.5),
-            ),
-            tint_strength: CustomEffectV2ScalarControl::new(
-                app.models_mut(),
-                CustomEffectV2ScalarSpec::new(0.8, 0.0, 1.0, 0.01),
-            ),
-            blur_radius_px: CustomEffectV2ScalarControl::new(
-                app.models_mut(),
-                CustomEffectV2ScalarSpec::new(12.0, 0.0, 32.0, 0.5),
-            ),
-            blur_downsample: CustomEffectV2ScalarControl::new(
-                app.models_mut(),
-                CustomEffectV2ScalarSpec::new(1.0, 1.0, 4.0, 1.0),
-            ),
-            lens_corner_radius_px: CustomEffectV2ScalarControl::new(
-                app.models_mut(),
-                CustomEffectV2ScalarSpec::new(24.0, 0.0, 48.0, 0.5),
-            ),
-            tile_corner_radius_px: CustomEffectV2ScalarControl::new(
-                app.models_mut(),
-                CustomEffectV2ScalarSpec::new(18.0, 0.0, 48.0, 0.5),
-            ),
-        };
+        let controls = DemoControls::new(app.models_mut());
 
         CustomEffectV2WebWindowState {
             ui,

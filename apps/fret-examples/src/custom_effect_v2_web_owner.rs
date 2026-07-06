@@ -119,6 +119,16 @@ impl CustomEffectV2ScalarControl {
     }
 }
 
+pub(crate) trait CustomEffectV2ScalarControlFactory {
+    fn scalar_control(&mut self, spec: CustomEffectV2ScalarSpec) -> CustomEffectV2ScalarControl;
+}
+
+impl CustomEffectV2ScalarControlFactory for ModelStore {
+    fn scalar_control(&mut self, spec: CustomEffectV2ScalarSpec) -> CustomEffectV2ScalarControl {
+        CustomEffectV2ScalarControl::new(self, spec)
+    }
+}
+
 impl IntoFloatVecModel for &CustomEffectV2ScalarControl {
     fn into_float_vec_model(self) -> Model<Vec<f32>> {
         self.model.clone()

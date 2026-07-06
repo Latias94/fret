@@ -128,7 +128,12 @@ Keep raw/shared-model mechanisms for now:
     direct scalar `models_mut().insert(vec![...])` allocation, or variant/common reset writes
     through raw `set_model(... vec![...])` calls. The scalar controls now carry
     `CustomEffectV2ScalarSpec` metadata for default/min/max/step, so clamp reads and slider
-    range/step configuration cannot drift at separate call sites.
+    range/step configuration cannot drift at separate call sites. Follow-up tightening moved
+    variant-specific scalar allocation out of each `build_ui(...)` body and into local
+    `DemoControls::new(...)` constructors. The demos call a narrow
+    `CustomEffectV2ScalarControlFactory` instead of naming `ModelStore`, so the raw allocation
+    seam stays in `custom_effect_v2_web_owner.rs` while each shader variant keeps its own semantic
+    parameter names.
   - Follow-up: those four web variants are now included in `tools/check_surface_policy.py` scan
     roots and classified as advanced/manual surfaces with explicit raw seams, owner, and retirement
     condition. The same gate now rejects direct reset/toggle writes through
