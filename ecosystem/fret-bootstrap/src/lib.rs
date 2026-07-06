@@ -18,9 +18,9 @@
 //!
 //! ## Choosing an entry path
 //!
-//! - `ui_app(...)` / `ui_app_with_hooks(...)`: recommended author-facing path for general UI apps.
-//! - `BootstrapBuilder::new_fn(...)` / `BootstrapBuilder::new_fn_with_hooks(...)`: recommended
-//!   advanced path when you need runner-level control but still want the bootstrap/defaults story.
+//! - `ui_app(...)` / `ui_app_with_hooks(...)`: default author-facing path for general UI apps.
+//! - `BootstrapBuilder::new_fn(...)` / `BootstrapBuilder::new_fn_with_hooks(...)`: advanced escape
+//!   hatch when you need runner-level control but still want the bootstrap/defaults story.
 //! - `BootstrapBuilder::new(...)`: generic/compatibility path for existing low-level drivers that
 //!   already implement `fret_launch::WinitAppDriver`, or for code that already holds a fully built
 //!   driver value.
@@ -675,7 +675,7 @@ material3-date-picker-weekday-long-sunday = 星期日
 ///
 /// Entry guidance:
 /// - prefer `ui_app(...)` / `ui_app_with_hooks(...)` for app-author-facing UI code,
-/// - prefer `BootstrapBuilder::new_fn(...)` for new advanced integrations,
+/// - use `BootstrapBuilder::new_fn(...)` for new advanced integrations,
 /// - use `BootstrapBuilder::new(...)` for generic/compatibility low-level driver integration.
 #[cfg(all(not(target_arch = "wasm32"), feature = "launch"))]
 pub struct BootstrapBuilder<D> {
@@ -2209,6 +2209,70 @@ pub fn ui_app_with_app_and_hooks<S: 'static>(
     ))
     .into_fn_driver();
     BootstrapBuilder::new(app, driver)
+}
+
+#[cfg(test)]
+mod authoring_surface_doc_tests {
+    const LIB_RS: &str = include_str!("lib.rs");
+    const README: &str = include_str!("../README.md");
+    const CRATE_USAGE_GUIDE: &str = include_str!("../../../docs/crate-usage-guide.md");
+
+    fn crate_rustdoc() -> String {
+        LIB_RS
+            .lines()
+            .filter(|line| line.starts_with("//!"))
+            .collect::<Vec<_>>()
+            .join("\n")
+    }
+
+    #[test]
+    fn rustdoc_prefers_ui_app_before_fn_driver_escape_hatch() {
+        let rustdoc = crate_rustdoc();
+        let ui_app_guidance = rustdoc
+            .find("`ui_app(...)` / `ui_app_with_hooks(...)`: default author-facing path")
+            .expect("rustdoc should name ui_app as the default author-facing path");
+        let fn_driver_guidance = rustdoc
+            .find("`BootstrapBuilder::new_fn(...)` / `BootstrapBuilder::new_fn_with_hooks(...)`: advanced escape")
+            .expect("rustdoc should still name the advanced FnDriver escape hatch");
+        let ui_app_example = rustdoc
+            .find("let builder = fret_bootstrap::ui_app(")
+            .expect("rustdoc should show the ui_app example");
+        let advanced_example = rustdoc
+            .find("let builder = BootstrapBuilder::new_fn(")
+            .expect("rustdoc should show the advanced FnDriver example");
+
+        assert!(ui_app_guidance < fn_driver_guidance);
+        assert!(ui_app_example < advanced_example);
+    }
+
+    #[test]
+    fn readme_and_usage_guide_prefer_fret_then_ui_app_before_bootstrap_escape_hatches() {
+        let app_authors = README
+            .find("App authors: `ui_app(...)` / `ui_app_with_hooks(...)`")
+            .expect("README should name ui_app as the app-author path");
+        let fn_driver = README
+            .find("Advanced low-level integration with bootstrap defaults")
+            .expect("README should still name the advanced FnDriver path");
+        let surface_map = README
+            .split_once("## Surface map")
+            .map(|(_, tail)| tail)
+            .expect("README should keep a surface map");
+        let ui_app_surface = surface_map
+            .find("- `ui_app(...)` / `ui_app_with_hooks(...)`")
+            .expect("README should map the ui_app surface");
+        let fn_driver_surface = surface_map
+            .find("- `BootstrapBuilder::new_fn(...)`")
+            .expect("README should map the advanced FnDriver surface");
+
+        assert!(app_authors < fn_driver);
+        assert!(ui_app_surface < fn_driver_surface);
+        assert!(README.contains(
+            "`BootstrapBuilder::new_fn(...)` is the advanced escape hatch once `launch` is enabled."
+        ));
+        assert!(CRATE_USAGE_GUIDE.contains(
+            "Most apps should start with `fret`; depend on `fret-bootstrap` directly only for manual assembly"
+        ));
+    }
 }
 
 #[cfg(test)]

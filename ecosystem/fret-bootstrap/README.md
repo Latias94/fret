@@ -18,7 +18,7 @@ Recommended mental model:
 
 - `fret_bootstrap::assets::*` is the backend-free planning/defaults lane.
 - `ui_app(...)` is the primary author-facing path once `ui-app-driver` is enabled.
-- `BootstrapBuilder::new_fn(...)` is the recommended advanced escape hatch once `launch` is enabled.
+- `BootstrapBuilder::new_fn(...)` is the advanced escape hatch once `launch` is enabled.
 - `BootstrapBuilder::new(...)` is for existing `WinitAppDriver` integrations or callers that
   already hold a fully built driver value.
 
