@@ -60,13 +60,13 @@ Keep raw/shared-model mechanisms for now:
     `LinkedPlotGroup::push_binding(...)` instead of hand-wiring `LinkedPlotMember { state, output }`.
     `inf_lines_demo.rs` now uses `LinePlotPanelBinding::new_with_state(...)` for multi-axis
     reference-line overlays and reads query output through `output_untracked(...)`.
-  - Follow-up: `chart_declarative_demo.rs`, the manual-harness `chart_demo.rs`, and `bars_demo.rs`
-    now use `ChartCanvasPanelBinding`. The binding owns the default chart engine/output models and
-    exposes `output_untracked(...)` for event-time tooltip logging, so these examples no longer
-    import `fret_runtime::Model` or wire `ChartCanvasPanelProps::{engine, output_model}` directly.
-    `category_line_demo.rs` and `horizontal_bars_demo.rs` are now mechanical binding follow-ups.
-    Keep explicit raw chart panel props in stress, linked, multi-grid, and intentionally shared
-    output-model demos until those advanced contracts are named.
+  - Follow-up: `chart_declarative_demo.rs`, the manual-harness `chart_demo.rs`, `bars_demo.rs`,
+    `category_line_demo.rs`, and `horizontal_bars_demo.rs` now use `ChartCanvasPanelBinding`. The
+    binding owns the default chart engine/output models and exposes `output_untracked(...)` for
+    event-time tooltip logging, so these examples no longer import `fret_runtime::Model` or wire
+    `ChartCanvasPanelProps::{engine, output_model}` directly. Keep explicit raw chart panel props
+    in stress, linked, multi-grid, adapter, and intentionally shared output-model demos until those
+    advanced contracts are named.
 - Custom effect demos such as `custom_effect_v2_*`. They expose effect parameter models and reset
   groups; these need a dedicated parameter/control-surface design before deletion.
   - Follow-up: `custom_effect_v2_web_demo.rs`, `custom_effect_v2_identity_web_demo.rs`,

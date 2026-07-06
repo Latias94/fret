@@ -97,21 +97,28 @@ fn basic_chart_demos_use_declarative_canvas_panel() {
         let source = compact(source);
 
         for needle in [
-            "usefret_chart::{ChartCanvasPanelProps,chart_canvas_panel};",
-            "engine:Model<ChartEngine>",
-            "spec:ChartSpec",
+            "usefret_chart::{ChartCanvasPanelBinding,chart_canvas_panel};",
+            "chart:ChartCanvasPanelBinding",
+            "ChartCanvasPanelBinding::new(app,spec,engine)",
             "fret_ui::declarative::render_root(",
-            "ChartCanvasPanelProps::new(spec)",
-            "props.engine=Some(engine);",
+            "chart.observe_engine_paint(cx);",
+            "chart.panel_props()",
             "vec![chart_canvas_panel(cx,props)]",
         ] {
             assert!(
                 source.contains(needle),
-                "{name} should render charts through the declarative chart panel; missing `{needle}`"
+                "{name} should render charts through the app-facing chart binding; missing `{needle}`"
             );
         }
 
         for legacy in [
+            "usefret_runtime::{Model,PlatformCapabilities};",
+            "engine:Model<ChartEngine>",
+            "spec:ChartSpec",
+            "app.models_mut().insert(engine)",
+            "ChartCanvasPanelProps::new(spec)",
+            "props.engine=Some(engine);",
+            "cx.observe_model(&engine",
             "usefret_chart::retained::ChartCanvas;",
             "ChartCanvas::new(",
             "ChartCanvas::new_shared(",

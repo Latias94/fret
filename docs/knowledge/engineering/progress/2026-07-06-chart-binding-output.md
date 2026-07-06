@@ -33,5 +33,6 @@ synchronization semantics behind the first-contact binding.
 
 # Next
 
-Move `category_line_demo.rs` and `horizontal_bars_demo.rs` to `ChartCanvasPanelBinding`; they should
-be mechanical engine/spec cleanup after the output contract has landed.
+Name explicit contracts before migrating linked, multi-grid, adapter, or stress demos. Those demos
+still use raw `ChartCanvasPanelProps` intentionally because they exercise shared output, grid views,
+overlay-only panels, lower-level adapter wiring, or perf harness state.

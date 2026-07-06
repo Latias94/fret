@@ -5,7 +5,7 @@ use fret_core::{AppWindowId, Event};
 #[cfg(not(target_arch = "wasm32"))]
 use fret_launch::run_app;
 use fret_launch::{FnDriver, WinitEventContext, WinitRenderContext, WinitRunnerConfig};
-use fret_runtime::{Model, PlatformCapabilities};
+use fret_runtime::PlatformCapabilities;
 use fret_ui::UiTree;
 
 use delinea::data::{Column, DataTable};
@@ -17,13 +17,12 @@ use delinea::{
 use delinea::{
     ChartSpec, DatasetSpec, FieldSpec, GridSpec, SeriesEncode, SeriesSpec, VisualMapSpec,
 };
-use fret_chart::{ChartCanvasPanelProps, chart_canvas_panel};
+use fret_chart::{ChartCanvasPanelBinding, chart_canvas_panel};
 
 struct HorizontalBarsDemoWindowState {
     ui: UiTree<App>,
     root: Option<fret_core::NodeId>,
-    engine: Model<ChartEngine>,
-    spec: ChartSpec,
+    chart: ChartCanvasPanelBinding,
 }
 
 #[derive(Default)]
@@ -35,13 +34,12 @@ impl HorizontalBarsDemoDriver {
         ui.set_window(window);
 
         let (engine, spec) = Self::build_chart();
-        let engine = app.models_mut().insert(engine);
+        let chart = ChartCanvasPanelBinding::new(app, spec, engine);
 
         HorizontalBarsDemoWindowState {
             ui,
             root: None,
-            engine,
-            spec,
+            chart,
         }
     }
 
@@ -272,8 +270,7 @@ fn render(
         scene,
     } = context;
 
-    let engine = state.engine.clone();
-    let spec = state.spec.clone();
+    let chart = state.chart.clone();
     let root = fret_ui::declarative::render_root(
         &mut state.ui,
         app,
@@ -282,9 +279,8 @@ fn render(
         bounds,
         "horizontal-bars-demo-root",
         move |cx| {
-            cx.observe_model(&engine, fret_ui::Invalidation::Paint);
-            let mut props = ChartCanvasPanelProps::new(spec);
-            props.engine = Some(engine);
+            chart.observe_engine_paint(cx);
+            let props = chart.panel_props();
             vec![chart_canvas_panel(cx, props)]
         },
     );

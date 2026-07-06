@@ -8,8 +8,9 @@ tags: fret,ui-framework,public-surface,chart,binding,raw-model
 
 # Summary
 
-`chart_declarative_demo`, the manual-harness `chart_demo`, and `bars_demo` now store a
-`ChartCanvasPanelBinding` instead of exposing raw chart engine/output models in app-facing state.
+`chart_declarative_demo`, the manual-harness `chart_demo`, `bars_demo`, `category_line_demo`, and
+`horizontal_bars_demo` now store a `ChartCanvasPanelBinding` instead of exposing raw chart
+engine/output models in app-facing state.
 
 The new binding is intentionally narrow:
 
@@ -39,13 +40,12 @@ single-chart app surface, not a replacement for advanced chart coordination.
 - `cargo nextest run -p fret-examples --test basic_chart_demos_surface chart_declarative_demo_uses_app_view_imports --no-fail-fast`
 - `cargo nextest run -p fret-examples --test basic_chart_demos_surface chart_demo_uses_manual_harness_chart_binding --no-fail-fast`
 - `cargo nextest run -p fret-examples --test basic_chart_demos_surface bars_demo_uses_declarative_canvas_panel --no-fail-fast`
+- `cargo nextest run -p fret-examples --test basic_chart_demos_surface basic_chart_demos_use_declarative_canvas_panel --no-fail-fast`
 
 # Next
 
-Remaining chart raw-model pressure should be split by contract:
+Remaining chart raw-model pressure should be split by advanced contract:
 
-- mechanical chart binding cleanup for `category_line_demo.rs` and `horizontal_bars_demo.rs`;
 - explicit linked or multi-grid contracts before migrating linked chart demos;
 - chart stress harnesses that intentionally stay manual and diagnostic-heavy;
-- histogram/bars/other plot-family bindings where the app-facing state/output contract differs from
-  a line plot.
+- adapter smoke tests that intentionally exercise lower-level chart props.
