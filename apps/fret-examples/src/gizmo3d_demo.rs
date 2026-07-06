@@ -2235,6 +2235,122 @@ impl Gizmo3dDemoModelBinding {
         });
     }
 
+    fn cycle_op_mask_preset(&self, app: &mut App, direction: i32) {
+        let _ = self.update(app, |model, _cx| {
+            if model.is_busy() || !model.op_mask_enabled {
+                return;
+            }
+            let n = GizmoOpMaskPreset::ALL.len() as isize;
+            model.op_mask_preset_index =
+                (model.op_mask_preset_index as isize + direction as isize).rem_euclid(n) as usize;
+            model.apply_op_mask();
+        });
+    }
+
+    fn toggle_gizmo_orientation(&self, app: &mut App) {
+        let _ = self.update(app, |model, _cx| {
+            if model.input.dragging || model.gizmo_mgr.state.active.is_some() {
+                return;
+            }
+            model.gizmo_mut().config.orientation = match model.gizmo().config.orientation {
+                GizmoOrientation::World => GizmoOrientation::Local,
+                GizmoOrientation::Local => GizmoOrientation::World,
+            };
+        });
+    }
+
+    fn toggle_gizmo_pivot_mode(&self, app: &mut App) {
+        let _ = self.update(app, |model, _cx| {
+            if model.input.dragging || model.gizmo_mgr.state.active.is_some() {
+                return;
+            }
+            model.gizmo_mut().config.pivot_mode = match model.gizmo().config.pivot_mode {
+                GizmoPivotMode::Active => GizmoPivotMode::Center,
+                GizmoPivotMode::Center => GizmoPivotMode::Active,
+            };
+        });
+    }
+
+    fn cycle_active_target(&self, app: &mut App, direction: i32) {
+        let _ = self.update(app, |model, _cx| {
+            if model.input.dragging
+                || model.gizmo_mgr.state.active.is_some()
+                || model.selection.is_empty()
+            {
+                return;
+            }
+            let Some(i) = model
+                .selection
+                .iter()
+                .position(|id| *id == model.active_target)
+            else {
+                model.active_target = model.selection[0];
+                return;
+            };
+            let n = model.selection.len() as isize;
+            let next = (i as isize + direction as isize).rem_euclid(n) as usize;
+            model.active_target = model.selection[next];
+        });
+    }
+
+    fn frame_targets(&self, app: &mut App, frame_all: bool, smooth_time_s: f32) {
+        let _ = self.update(app, |model, _cx| {
+            if model.input.dragging || model.gizmo_mgr.state.active.is_some() {
+                return;
+            }
+
+            let targets: Vec<GizmoTarget3d> = if frame_all || model.selection.is_empty() {
+                model.targets.clone()
+            } else {
+                model
+                    .targets
+                    .iter()
+                    .copied()
+                    .filter(|target| model.selection.contains(&target.id))
+                    .collect()
+            };
+
+            let Some((min, max)) = targets_world_aabb(&targets) else {
+                return;
+            };
+            let viewport_px = model.viewport_px;
+            frame_aabb(&mut model.camera, viewport_px, min, max, smooth_time_s);
+        });
+    }
+
+    fn apply_select_all_shortcut(&self, app: &mut App, clear: bool) {
+        let _ = self.update(app, |model, _cx| {
+            let is_busy = model.input.dragging
+                || model.gizmo_mgr.state.active.is_some()
+                || model.pending_selection.is_some()
+                || model.marquee.is_some();
+            if is_busy {
+                return;
+            }
+
+            if clear {
+                model.selection.clear();
+                model.marquee_preview.clear();
+            } else {
+                model.selection = model.targets.iter().map(|target| target.id).collect();
+                if !model.selection.contains(&model.active_target) {
+                    if let Some(id) = model.selection.first().copied() {
+                        model.active_target = id;
+                    }
+                }
+            }
+        });
+    }
+
+    fn apply_target_selection_shortcut(&self, app: &mut App, id: GizmoTargetId, op: SelectionOp) {
+        let _ = self.update(app, |model, _cx| {
+            if model.input.dragging || model.gizmo_mgr.state.active.is_some() {
+                return;
+            }
+            apply_click_selection_op(&mut model.selection, &mut model.active_target, Some(id), op);
+        });
+    }
+
     fn read<H: ModelHost, R>(
         &self,
         host: &mut H,
@@ -3336,14 +3452,7 @@ fn handle_event(
             repeat: false,
             ..
         } => {
-            let _ = state.demo.update(app, |m, _cx| {
-                if m.is_busy() || !m.op_mask_enabled {
-                    return;
-                }
-                let n = GizmoOpMaskPreset::ALL.len();
-                m.op_mask_preset_index = (m.op_mask_preset_index + n - 1) % n;
-                m.apply_op_mask();
-            });
+            state.demo.cycle_op_mask_preset(app, -1);
             app.request_redraw(window);
         }
         Event::KeyDown {
@@ -3351,14 +3460,7 @@ fn handle_event(
             repeat: false,
             ..
         } => {
-            let _ = state.demo.update(app, |m, _cx| {
-                if m.is_busy() || !m.op_mask_enabled {
-                    return;
-                }
-                let n = GizmoOpMaskPreset::ALL.len();
-                m.op_mask_preset_index = (m.op_mask_preset_index + 1) % n;
-                m.apply_op_mask();
-            });
+            state.demo.cycle_op_mask_preset(app, 1);
             app.request_redraw(window);
         }
         Event::KeyDown {
@@ -3366,15 +3468,7 @@ fn handle_event(
             repeat: false,
             ..
         } => {
-            let _ = state.demo.update(app, |m, _cx| {
-                if m.input.dragging || m.gizmo_mgr.state.active.is_some() {
-                    return;
-                }
-                m.gizmo_mut().config.orientation = match m.gizmo().config.orientation {
-                    GizmoOrientation::World => GizmoOrientation::Local,
-                    GizmoOrientation::Local => GizmoOrientation::World,
-                };
-            });
+            state.demo.toggle_gizmo_orientation(app);
             app.request_redraw(window);
         }
         Event::KeyDown {
@@ -3382,15 +3476,7 @@ fn handle_event(
             repeat: false,
             ..
         } => {
-            let _ = state.demo.update(app, |m, _cx| {
-                if m.input.dragging || m.gizmo_mgr.state.active.is_some() {
-                    return;
-                }
-                m.gizmo_mut().config.pivot_mode = match m.gizmo().config.pivot_mode {
-                    GizmoPivotMode::Active => GizmoPivotMode::Center,
-                    GizmoPivotMode::Center => GizmoPivotMode::Active,
-                };
-            });
+            state.demo.toggle_gizmo_pivot_mode(app);
             app.request_redraw(window);
         }
         Event::KeyDown {
@@ -3398,17 +3484,7 @@ fn handle_event(
             repeat: false,
             ..
         } => {
-            let _ = state.demo.update(app, |m, _cx| {
-                if m.input.dragging || m.gizmo_mgr.state.active.is_some() || m.selection.is_empty()
-                {
-                    return;
-                }
-                let Some(i) = m.selection.iter().position(|id| *id == m.active_target) else {
-                    m.active_target = m.selection[0];
-                    return;
-                };
-                m.active_target = m.selection[(i + 1) % m.selection.len()];
-            });
+            state.demo.cycle_active_target(app, 1);
             app.request_redraw(window);
         }
         Event::KeyDown {
@@ -3416,17 +3492,7 @@ fn handle_event(
             repeat: false,
             ..
         } => {
-            let _ = state.demo.update(app, |m, _cx| {
-                if m.input.dragging || m.gizmo_mgr.state.active.is_some() || m.selection.is_empty()
-                {
-                    return;
-                }
-                let Some(i) = m.selection.iter().position(|id| *id == m.active_target) else {
-                    m.active_target = m.selection[0];
-                    return;
-                };
-                m.active_target = m.selection[(i + m.selection.len() - 1) % m.selection.len()];
-            });
+            state.demo.cycle_active_target(app, -1);
             app.request_redraw(window);
         }
         Event::KeyDown {
@@ -3436,26 +3502,7 @@ fn handle_event(
         } => {
             let frame_all = modifiers.shift;
             let smooth_time_s = if frame_all { 0.32 } else { 0.18 };
-            let _ = state.demo.update(app, |m, _cx| {
-                if m.input.dragging || m.gizmo_mgr.state.active.is_some() {
-                    return;
-                }
-
-                let targets: Vec<GizmoTarget3d> = if frame_all || m.selection.is_empty() {
-                    m.targets.clone()
-                } else {
-                    m.targets
-                        .iter()
-                        .copied()
-                        .filter(|t| m.selection.contains(&t.id))
-                        .collect()
-                };
-
-                let Some((min, max)) = targets_world_aabb(&targets) else {
-                    return;
-                };
-                frame_aabb(&mut m.camera, m.viewport_px, min, max, smooth_time_s);
-            });
+            state.demo.frame_targets(app, frame_all, smooth_time_s);
             app.request_redraw(window);
         }
         Event::KeyDown {
@@ -3464,27 +3511,7 @@ fn handle_event(
             repeat: false,
         } if modifiers.ctrl || modifiers.meta => {
             let clear = modifiers.shift;
-            let _ = state.demo.update(app, |m, _cx| {
-                let is_busy = m.input.dragging
-                    || m.gizmo_mgr.state.active.is_some()
-                    || m.pending_selection.is_some()
-                    || m.marquee.is_some();
-                if is_busy {
-                    return;
-                }
-
-                if clear {
-                    m.selection.clear();
-                    m.marquee_preview.clear();
-                } else {
-                    m.selection = m.targets.iter().map(|t| t.id).collect();
-                    if !m.selection.contains(&m.active_target) {
-                        if let Some(id) = m.selection.first().copied() {
-                            m.active_target = id;
-                        }
-                    }
-                }
-            });
+            state.demo.apply_select_all_shortcut(app, clear);
             app.request_redraw(window);
         }
         Event::KeyDown {
@@ -3518,12 +3545,7 @@ fn handle_event(
                 _ => return,
             };
             let op = selection_op(modifiers);
-            let _ = state.demo.update(app, |m, _cx| {
-                if m.input.dragging || m.gizmo_mgr.state.active.is_some() {
-                    return;
-                }
-                apply_click_selection_op(&mut m.selection, &mut m.active_target, Some(id), op);
-            });
+            state.demo.apply_target_selection_shortcut(app, id, op);
             app.request_redraw(window);
         }
         _ => {

@@ -141,3 +141,42 @@ fn gizmo3d_demo_routes_visual_keyboard_mutations_through_binding() {
         );
     }
 }
+
+#[test]
+fn gizmo3d_demo_routes_interaction_keyboard_mutations_through_binding() {
+    let source = compact(include_str!("../src/gizmo3d_demo.rs"));
+
+    for needle in [
+        "state.demo.cycle_op_mask_preset(app,-1);",
+        "state.demo.cycle_op_mask_preset(app,1);",
+        "state.demo.toggle_gizmo_orientation(app);",
+        "state.demo.toggle_gizmo_pivot_mode(app);",
+        "state.demo.cycle_active_target(app,1);",
+        "state.demo.cycle_active_target(app,-1);",
+        "state.demo.frame_targets(app,frame_all,smooth_time_s);",
+        "state.demo.apply_select_all_shortcut(app,clear);",
+        "state.demo.apply_target_selection_shortcut(app,id,op);",
+    ] {
+        assert!(
+            source.contains(needle),
+            "gizmo3d_demo interaction keyboard mutations should route through binding methods; missing `{needle}`"
+        );
+    }
+
+    for legacy in [
+        "key:fret_core::KeyCode::BracketLeft,repeat:false,..}=>{let_=state.demo.update(app,|m,_cx|{ifm.is_busy()||!m.op_mask_enabled{return;}letn=GizmoOpMaskPreset::ALL.len();",
+        "key:fret_core::KeyCode::BracketRight,repeat:false,..}=>{let_=state.demo.update(app,|m,_cx|{ifm.is_busy()||!m.op_mask_enabled{return;}letn=GizmoOpMaskPreset::ALL.len();",
+        "key:fret_core::KeyCode::KeyL,repeat:false,..}=>{let_=state.demo.update(app,|m,_cx|{ifm.input.dragging||m.gizmo_mgr.state.active.is_some(){return;}m.gizmo_mut().config.orientation=",
+        "key:fret_core::KeyCode::KeyP,repeat:false,..}=>{let_=state.demo.update(app,|m,_cx|{ifm.input.dragging||m.gizmo_mgr.state.active.is_some(){return;}m.gizmo_mut().config.pivot_mode=",
+        "key:fret_core::KeyCode::KeyN,repeat:false,..}=>{let_=state.demo.update(app,|m,_cx|{ifm.input.dragging||m.gizmo_mgr.state.active.is_some()||m.selection.is_empty(){return;}letSome(i)=m.selection.iter().position(|id|*id==m.active_target)else{",
+        "key:fret_core::KeyCode::KeyB,repeat:false,..}=>{let_=state.demo.update(app,|m,_cx|{ifm.input.dragging||m.gizmo_mgr.state.active.is_some()||m.selection.is_empty(){return;}letSome(i)=m.selection.iter().position(|id|*id==m.active_target)else{",
+        "key:fret_core::KeyCode::KeyF,modifiers,repeat:false,}=>{letframe_all=modifiers.shift;letsmooth_time_s=ifframe_all{0.32}else{0.18};let_=state.demo.update(app,|m,_cx|{ifm.input.dragging||m.gizmo_mgr.state.active.is_some(){return;}",
+        "key:fret_core::KeyCode::KeyA,modifiers,repeat:false,}ifmodifiers.ctrl||modifiers.meta=>{letclear=modifiers.shift;let_=state.demo.update(app,|m,_cx|{letis_busy=m.input.dragging||m.gizmo_mgr.state.active.is_some()||m.pending_selection.is_some()||m.marquee.is_some();",
+        "letop=selection_op(modifiers);let_=state.demo.update(app,|m,_cx|{ifm.input.dragging||m.gizmo_mgr.state.active.is_some(){return;}apply_click_selection_op(&mutm.selection,&mutm.active_target,Some(id),op);});",
+    ] {
+        assert!(
+            !source.contains(legacy),
+            "gizmo3d_demo should not keep direct interaction keyboard model writes in event branches; unexpected `{legacy}`"
+        );
+    }
+}

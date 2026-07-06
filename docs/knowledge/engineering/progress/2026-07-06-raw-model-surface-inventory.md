@@ -102,8 +102,10 @@ Keep raw/shared-model mechanisms for now:
     leaving the existing event/render mutation closures as the next semantic-method cleanup target.
     The next pass moved the basic keyboard shortcuts (Esc, T/R/S/U, H/M/O/D) to binding methods,
     and the follow-up visual pass moved visual preset, size-policy, gizmo-size, and stroke-width
-    keyboard shortcuts to binding methods. Selection, camera, viewport-input, and render-HUD
-    mutations remain as the semantic-method cleanup areas.
+    keyboard shortcuts to binding methods. The remaining pure keyboard pass moved op-mask preset
+    cycling, orientation/pivot toggles, active-target cycling, camera frame, select-all, and digit
+    target-selection shortcuts to binding methods. Theme preset switching, viewport-input routing,
+    and render-HUD mutations remain as the semantic-method cleanup areas.
 - Table/data-grid demos.
   - Follow-up: `datatable_demo.rs` now uses `LocalState<shadcn::DataTableViewOutput>` and
     `app.local_state(...)` for the shadcn `DataTable` output handle. The retained table source gate
