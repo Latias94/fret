@@ -118,6 +118,11 @@ Keep raw/shared-model mechanisms for now:
 - `components_gallery.rs`, `virtual_list_stress_demo.rs`, and `editor_notes_demo.rs`. Audited and
   cleaned after the initial inventory: each keeps intentional shared models but routes writes
   through local owner helpers with source gates.
+- `external_texture_imports_demo.rs` and `external_texture_imports_web_demo.rs`. Audited and cleaned
+  after the wasm `ui-assets` feature fix: both remain low-level external texture/import harnesses,
+  while the shared visibility toggle write now routes through the private
+  `ExternalTextureImportsModelOwner` helper instead of duplicated event-handler
+  `models_mut().update(...)` calls.
 - `genui_demo.rs`. Audited and cleaned after the initial inventory: it remains an advanced GenUI
   runtime/reference surface with shared runtime models, while raw model reads/writes are routed
   through local owner helpers.

@@ -20,6 +20,8 @@ use fret_ui::element::{
 };
 use fret_ui::{ElementContext, Invalidation};
 
+use crate::external_texture_imports_owner::ExternalTextureImportsModelOwner;
+
 fn env_flag_default_false(name: &str) -> bool {
     let Ok(raw) = std::env::var(name) else {
         return false;
@@ -539,7 +541,7 @@ fn on_event(
     if let Event::KeyDown { key, .. } = event
         && *key == KeyCode::KeyV
     {
-        let _ = app.models_mut().update(&st.view.show, |v| *v = !*v);
+        ExternalTextureImportsModelOwner::new(app.models_mut()).toggle_surface(&st.view.show);
         app.request_redraw(window);
     }
 
