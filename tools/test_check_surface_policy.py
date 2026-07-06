@@ -748,6 +748,14 @@ class SurfacePolicyTests(unittest.TestCase):
             "apps/fret-examples/src/chart_stress_demo.rs",
             POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS,
         )
+        custom_effect_v2_web_paths = {
+            "apps/fret-examples/src/custom_effect_v2_web_demo.rs",
+            "apps/fret-examples/src/custom_effect_v2_identity_web_demo.rs",
+            "apps/fret-examples/src/custom_effect_v2_lut_web_demo.rs",
+            "apps/fret-examples/src/custom_effect_v2_glass_chrome_web_demo.rs",
+        }
+        for path in custom_effect_v2_web_paths:
+            self.assertIn(path, POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS)
         self.assertTrue(
             any(
                 spec.path == "apps/fret-examples/src/plot_stress_demo.rs"
@@ -786,6 +794,18 @@ class SurfacePolicyTests(unittest.TestCase):
             if spec.path == "apps/fret-examples/src/echarts_multi_grid_demo.rs"
         )
         self.assertIn("ChartCanvasMultiGridBinding", multi_grid_spec.reason)
+        for path in custom_effect_v2_web_paths:
+            spec = next(
+                (
+                    spec
+                    for spec in POLICY.ADVANCED_MANUAL_SURFACES
+                    if spec.path == path
+                ),
+                None,
+            )
+            self.assertIsNotNone(spec, f"{path} should be classified as advanced/manual")
+            self.assertIn("custom-effect parameter/control binding", spec.retirement)
+            self.assertTrue(spec.allowed_raw_seams)
         self.assertTrue(
             any(
                 spec.path == "apps/fret-examples/src/simple_todo_demo/driver.rs"

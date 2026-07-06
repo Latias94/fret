@@ -275,6 +275,42 @@ def _fret_examples_advanced_surface(
     )
 
 
+CUSTOM_EFFECT_V2_WEB_ALLOWED_RAW_SEAMS = (
+    "fret::advanced",
+    "fret_app",
+    "fret_core",
+    "fret_launch",
+    "fret_runtime",
+    "fret_ui",
+    "AnyElement",
+    "ElementContext",
+    "FnDriver",
+    "ModelStore",
+    "UiTree",
+)
+
+CUSTOM_EFFECT_V2_WEB_RETIREMENT = (
+    "Remove this quarantine record after a public custom-effect parameter/control binding owns "
+    "parameter models, reset/toggle actions, and effect-layer composition without exposing the "
+    "raw ModelStore owner seam."
+)
+
+
+def _fret_examples_custom_effect_v2_web_surface(filename: str, variant: str) -> SurfacePath:
+    return SurfacePath(
+        f"apps/fret-examples/src/{filename}",
+        "advanced_manual",
+        (
+            f"{filename} remains classified as an advanced examples surface because the {variant} "
+            "custom-effect v2 web proof owns manual runner/bootstrap, raw parameter models, a "
+            "local ModelStore owner, and low-level effect-layer composition"
+        ),
+        owner="examples-custom-effect-v2-web",
+        allowed_raw_seams=CUSTOM_EFFECT_V2_WEB_ALLOWED_RAW_SEAMS,
+        retirement=CUSTOM_EFFECT_V2_WEB_RETIREMENT,
+    )
+
+
 def _fret_examples_comparison_surface(
     path: str,
     reason: str,
@@ -558,6 +594,22 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
         ),
         owner="examples-gizmo3d",
     ),
+    _fret_examples_custom_effect_v2_web_surface(
+        "custom_effect_v2_web_demo.rs",
+        "glass/distortion",
+    ),
+    _fret_examples_custom_effect_v2_web_surface(
+        "custom_effect_v2_identity_web_demo.rs",
+        "identity",
+    ),
+    _fret_examples_custom_effect_v2_web_surface(
+        "custom_effect_v2_lut_web_demo.rs",
+        "LUT",
+    ),
+    _fret_examples_custom_effect_v2_web_surface(
+        "custom_effect_v2_glass_chrome_web_demo.rs",
+        "glass chrome",
+    ),
     _fret_examples_advanced_surface(
         "echarts_multi_grid_demo.rs",
         "the multi-grid ECharts proof still owns manual runner/bootstrap seams, while its shared "
@@ -799,6 +851,10 @@ PUBLIC_EXAMPLE_SCAN_ROOTS: tuple[str, ...] = (
     "apps/fret-examples/src/echarts_multi_grid_demo.rs",
     "apps/fret-examples/src/chart_multi_axis_demo.rs",
     "apps/fret-examples/src/chart_stress_demo.rs",
+    "apps/fret-examples/src/custom_effect_v2_web_demo.rs",
+    "apps/fret-examples/src/custom_effect_v2_identity_web_demo.rs",
+    "apps/fret-examples/src/custom_effect_v2_lut_web_demo.rs",
+    "apps/fret-examples/src/custom_effect_v2_glass_chrome_web_demo.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/authoring_parity",
     "apps/fret-examples/src/simple_todo_demo.rs",
     "apps/fret-examples/src/todo_demo.rs",
