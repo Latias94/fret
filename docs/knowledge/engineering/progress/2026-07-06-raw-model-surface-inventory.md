@@ -133,6 +133,11 @@ Keep raw/shared-model mechanisms for now:
   while viewport-input diagnostic writes now route through the demo-local
   `EmbeddedViewportBasicsModelOwner` helper instead of teaching five direct
   `models_mut().update(...)` calls in `on_viewport_input(...)`.
+- `apps/fret-cookbook/examples/utility_window_materials_windows.rs`. Audited and cleaned after the
+  cookbook embedded viewport pass: it remains an advanced/manual utility-window materials interop
+  example, while command status writes now route through the demo-local
+  `UtilityWindowMaterialsModelOwner` helper. `apps/fret-cookbook/examples` currently has no direct
+  `models_mut().update(...)` calls outside source-test marker strings.
 - `genui_demo.rs`. Audited and cleaned after the initial inventory: it remains an advanced GenUI
   runtime/reference surface with shared runtime models, while raw model reads/writes are routed
   through local owner helpers.

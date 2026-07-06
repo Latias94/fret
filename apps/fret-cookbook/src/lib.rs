@@ -2060,4 +2060,33 @@ mod authoring_surface_policy_tests {
             );
         }
     }
+
+    #[test]
+    fn utility_window_materials_model_writes_stay_behind_owner_helper() {
+        let normalized = UTILITY_WINDOW_MATERIALS_EXAMPLE
+            .split_whitespace()
+            .collect::<String>();
+
+        for marker in [
+            "struct UtilityWindowMaterialsModelOwner<'a>",
+            "fn set_status(",
+            "self.app.models_mut().update(&state.status, |value| {",
+            "UtilityWindowMaterialsModelOwner::new(app).set_status(st, format!(\"Requested: {material:?}\"));",
+        ] {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(
+                normalized.contains(&marker),
+                "utility window cookbook proof should keep status writes behind the owner helper: {marker}"
+            );
+        }
+
+        let forbidden =
+            "let _ = app.models_mut().update(&st.status, |v| { *v = Arc::from(format!(\"Requested: {material:?}\")); });"
+                .split_whitespace()
+                .collect::<String>();
+        assert!(
+            !normalized.contains(&forbidden),
+            "utility window cookbook proof should not hand-write status model updates: {forbidden}"
+        );
+    }
 }

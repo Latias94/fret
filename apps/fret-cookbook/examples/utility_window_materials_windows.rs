@@ -62,6 +62,27 @@ struct State {
     status: Model<Arc<str>>,
 }
 
+struct UtilityWindowMaterialsModelOwner<'a> {
+    app: &'a mut KernelApp,
+}
+
+impl<'a> UtilityWindowMaterialsModelOwner<'a> {
+    fn new(app: &'a mut KernelApp) -> Self {
+        Self { app }
+    }
+
+    fn set_status(&mut self, state: &State, status: impl Into<Arc<str>>) -> bool {
+        let status = status.into();
+        self.app
+            .models_mut()
+            .update(&state.status, |value| {
+                *value = status;
+                true
+            })
+            .unwrap_or(false)
+    }
+}
+
 fn init_window(app: &mut KernelApp, window: AppWindowId) -> State {
     State {
         window,
@@ -101,9 +122,8 @@ fn on_command(
         },
     }));
 
-    let _ = app.models_mut().update(&st.status, |v| {
-        *v = Arc::from(format!("Requested: {material:?}"));
-    });
+    let _ = UtilityWindowMaterialsModelOwner::new(app)
+        .set_status(st, format!("Requested: {material:?}"));
     app.request_redraw(window);
 }
 
