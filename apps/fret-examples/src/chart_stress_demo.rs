@@ -5,7 +5,7 @@ use fret_launch::{
     FnDriver, WindowCreateSpec, WinitEventContext, WinitHotReloadContext, WinitRenderContext,
     WinitRunnerConfig, WinitWindowContext,
 };
-use fret_runtime::{Model, PlatformCapabilities};
+use fret_runtime::PlatformCapabilities;
 use fret_ui::UiTree;
 
 use delinea::data::{Column, DataTable};
@@ -15,7 +15,7 @@ use delinea::{
     DatasetSpec, FieldSpec,
 };
 use delinea::{SeriesEncode, SeriesKind, SeriesLodSpecV1, SeriesSpec};
-use fret_chart::{ChartCanvasPanelProps, chart_canvas_panel};
+use fret_chart::{ChartCanvasPanelBinding, chart_canvas_panel};
 use std::time::{Duration, Instant};
 
 fn parse_env_usize(key: &str) -> Option<usize> {
@@ -47,8 +47,7 @@ fn parse_env_tri_bool(key: &str) -> Option<bool> {
 pub struct ChartStressWindowState {
     ui: UiTree<App>,
     root: Option<fret_core::NodeId>,
-    engine: Model<ChartEngine>,
-    spec: ChartSpec,
+    chart: ChartCanvasPanelBinding,
     frame: u64,
     max_frames: Option<u64>,
     last_driver_report: Option<Instant>,
@@ -474,13 +473,12 @@ fn create_window_state(
     ui.set_window(window);
 
     let (engine, spec) = ChartStressDriver::build_chart(driver.points, driver.scatter_lod);
-    let engine = app.models_mut().insert(engine);
+    let chart = ChartCanvasPanelBinding::new(app, spec, engine);
 
     ChartStressWindowState {
         ui,
         root: None,
-        engine,
-        spec,
+        chart,
         frame: 0,
         max_frames: driver.max_frames,
         last_driver_report: None,
@@ -575,8 +573,7 @@ fn render(driver: &mut ChartStressDriver, context: WinitRenderContext<'_, ChartS
         state.last_driver_report = Some(Instant::now());
     }
 
-    let engine = state.engine.clone();
-    let spec = state.spec.clone();
+    let chart = state.chart.clone();
     let root = fret_ui::declarative::render_root(
         &mut state.ui,
         app,
@@ -585,9 +582,8 @@ fn render(driver: &mut ChartStressDriver, context: WinitRenderContext<'_, ChartS
         bounds,
         "chart-stress-demo-root",
         move |cx| {
-            cx.observe_model(&engine, fret_ui::Invalidation::Paint);
-            let mut props = ChartCanvasPanelProps::new(spec);
-            props.engine = Some(engine);
+            chart.observe_engine_paint(cx);
+            let props = chart.panel_props();
             vec![chart_canvas_panel(cx, props)]
         },
     );
@@ -617,8 +613,8 @@ fn render(driver: &mut ChartStressDriver, context: WinitRenderContext<'_, ChartS
         };
 
         let stats = state
-            .engine
-            .read(app, |_app, engine| engine.stats().clone())
+            .chart
+            .read_engine(app, |_app, engine| engine.stats().clone())
             .unwrap_or_default();
 
         println!(

@@ -72,15 +72,19 @@ Keep raw/shared-model mechanisms for now:
     `chart_multi_axis_demo.rs` now uses `ChartCanvasLinkedGroupBinding` and
     `ChartCanvasLinkedPanelBinding` for linked engine/output/brush/axis-pointer/domain-window
     wiring, so the demo no longer stores raw `Model<ChartEngine>` / `Model<ChartCanvasOutput>`
-    handles or builds linked `ChartCanvasPanelProps` manually. Keep explicit raw chart panel props
-    in stress and intentionally shared output-model demos until those advanced contracts are named.
+    handles or builds linked `ChartCanvasPanelProps` manually. `chart_stress_demo.rs` now uses
+    `ChartCanvasPanelBinding` for its stress chart and reads engine stats through
+    `ChartCanvasPanelBinding::read_engine(...)`, so it no longer stores raw `Model<ChartEngine>` or
+    builds `ChartCanvasPanelProps` manually. Keep explicit raw chart panel props in intentionally
+    shared output-model demos until those advanced contracts are named.
   - Follow-up: `tools/check_surface_policy.py` now explicitly scans and classifies
     `echarts_demo.rs`, `echarts_multi_grid_demo.rs`, `chart_multi_axis_demo.rs`, and
     `chart_stress_demo.rs` with owners, allowed raw seams, and category-specific retirement
     conditions. The `echarts_demo.rs` record has already shrunk after the binding migration; it no
     longer allows the `fret_runtime` raw seam. The `echarts_multi_grid_demo.rs` record now points at
-    `ChartCanvasMultiGridBinding`, and the `chart_multi_axis_demo.rs` record now points at the
-    linked chart bindings while preserving their runner-level seam classifications. This keeps
+    `ChartCanvasMultiGridBinding`, the `chart_multi_axis_demo.rs` record now points at the linked
+    chart bindings, and the `chart_stress_demo.rs` record now points at `ChartCanvasPanelBinding`
+    for stress chart wiring while preserving their runner-level seam classifications. This keeps
     advanced chart exceptions in the same source-policy system as plot, workspace, and harness
     exceptions rather than relying only on ad hoc demo tests.
 - Table/data-grid demos.

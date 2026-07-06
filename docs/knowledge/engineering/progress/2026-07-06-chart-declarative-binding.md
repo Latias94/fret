@@ -22,6 +22,8 @@ The new binding is intentionally narrow:
   reads;
 - `output_untracked(...)`, `output_layout(...)`, and `output_paint(...)` keep tooltip/output reads
   on the binding surface;
+- `read_engine(...)` and `update_engine(...)` let advanced examples inspect or mutate the controlled
+  engine without storing a raw `Model<ChartEngine>`;
 - `from_model(...)` and `from_models(...)` are available only as advanced bridges for callers that
   already coordinate shared chart models;
 - the manual `chart_demo` keeps its `FnDriver` shell but no longer teaches `ChartCanvasPanelProps`
@@ -48,5 +50,6 @@ Remaining chart raw-model pressure should be split by advanced contract:
 
 - linked chart examples should use `ChartCanvasLinkedGroupBinding` and
   `ChartCanvasLinkedPanelBinding`;
-- chart stress harnesses that intentionally stay manual and diagnostic-heavy;
+- chart stress harnesses can stay manual and diagnostic-heavy while storing
+  `ChartCanvasPanelBinding`;
 - linked or stress tests that intentionally exercise lower-level chart props.

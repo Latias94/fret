@@ -188,17 +188,18 @@ fn chart_stress_demo_uses_declarative_canvas_panel() {
     let source = compact(include_str!("../src/chart_stress_demo.rs"));
 
     for needle in [
-        "usefret_chart::{ChartCanvasPanelProps,chart_canvas_panel};",
-        "engine:Model<ChartEngine>",
-        "spec:ChartSpec",
+        "usefret_chart::{ChartCanvasPanelBinding,chart_canvas_panel};",
+        "chart:ChartCanvasPanelBinding",
         "fnbuild_chart(",
         "points:usize,",
         "scatter_lod:Option<SeriesLodSpecV1>,",
         ")->(ChartEngine,ChartSpec)",
+        "letchart=ChartCanvasPanelBinding::new(app,spec,engine);",
         "fret_ui::declarative::render_root(",
-        "ChartCanvasPanelProps::new(spec)",
-        "props.engine=Some(engine);",
+        "chart.observe_engine_paint(cx);",
+        "letprops=chart.panel_props();",
         "vec![chart_canvas_panel(cx,props)]",
+        ".read_engine(app,|_app,engine|engine.stats().clone())",
         "chart_stress_demo:points={}avg_declarative_render={:.1}usstage_runs(data/layout/visual/marks)={}/{}/{}/{}emitted(points/marks)={}/{}",
     ] {
         assert!(
@@ -208,6 +209,14 @@ fn chart_stress_demo_uses_declarative_canvas_panel() {
     }
 
     for legacy in [
+        "usefret_chart::{ChartCanvasPanelProps,chart_canvas_panel};",
+        "usefret_runtime::{Model,PlatformCapabilities};",
+        "engine:Model<ChartEngine>",
+        "spec:ChartSpec",
+        "app.models_mut().insert(engine)",
+        "ChartCanvasPanelProps::new(spec)",
+        "props.engine=Some(engine);",
+        "cx.observe_model(&engine",
         "usefret_chart::retained::ChartCanvas;",
         "structChartStressCanvas",
         "impl<H:fret_ui::UiHost>Widget<H>forChartStressCanvas",

@@ -92,6 +92,25 @@ impl ChartCanvasPanelBinding {
             .unwrap_or_default()
     }
 
+    /// Read the controlled chart engine through the host's normal model read path.
+    pub fn read_engine<H: ModelHost, R>(
+        &self,
+        host: &mut H,
+        f: impl FnOnce(&mut H, &ChartEngine) -> R,
+    ) -> Result<R, ModelUpdateError> {
+        self.engine.read(host, f)
+    }
+
+    /// Mutate the controlled chart engine through the host's normal model update path.
+    #[track_caller]
+    pub fn update_engine<H: ModelHost, R>(
+        &self,
+        host: &mut H,
+        f: impl FnOnce(&mut ChartEngine, &mut ModelCx<'_, H>) -> R,
+    ) -> Result<R, ModelUpdateError> {
+        self.engine.update(host, f)
+    }
+
     /// Advanced bridge for component authors that already own a controlled engine model.
     ///
     /// Prefer [`Self::new`] for app code. This method exists so advanced chart coordinators can
@@ -477,6 +496,12 @@ mod tests {
                 .read(&output, |output| output.clone())
                 .expect("output model should be readable"),
             binding.output_untracked(&host)
+        );
+        assert_eq!(
+            binding
+                .read_engine(&mut host, |_host, engine| engine.id())
+                .expect("binding engine should be readable"),
+            spec.id
         );
     }
 

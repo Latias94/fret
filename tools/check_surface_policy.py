@@ -535,8 +535,8 @@ INTERNAL_HARNESS_SURFACES: tuple[SurfacePath, ...] = (
     ),
     _fret_examples_internal_harness(
         "chart_stress_demo.rs",
-        "the chart stress harness owns manual driver state, env-driven perf controls, and chart "
-        "engine statistics directly",
+        "the chart stress harness owns manual driver state and env-driven perf controls, while "
+        "chart engine statistics and panel wiring route through ChartCanvasPanelBinding",
         (
             "fret_app",
             "fret_core",
