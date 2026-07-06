@@ -172,9 +172,11 @@ Keep raw/shared-model mechanisms for now:
   `ComponentsGalleryModelBundle` so production source no longer scatters direct
   `app.models_mut().insert(...)` calls in `build_ui(...)`.
   `virtual_list_stress_demo.rs` from free helper functions to a named
-  `VirtualListStressModelOwner`, and its source gate now forbids direct/generic/update-any and UFCS
-  `ModelStore` bypasses in production source. The same tightening upgraded
-  `editor_notes_demo.rs` from free host helper functions to `EditorNotesModelOwner`.
+  `VirtualListStressModelOwner`; a later tightening replaced that owner with
+  `VirtualListStressControls`, so startup allocation, command writes, and render snapshot reads
+  now sit behind one demo-local binding. Its source gate forbids direct/generic/update-any and UFCS
+  `ModelStore` bypasses in production source. The same tightening upgraded `editor_notes_demo.rs`
+  from free host helper functions to `EditorNotesModelOwner`.
 - `external_texture_imports_demo.rs`, `external_texture_imports_web_demo.rs`, and the platform
   `external_video_imports_*` demos. Audited and cleaned after the wasm `ui-assets` feature fix:
   they remain low-level external import harnesses, while the shared visibility toggle write now

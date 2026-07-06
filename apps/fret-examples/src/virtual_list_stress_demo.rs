@@ -35,34 +35,68 @@ fn virtual_list_stress_row_label_text<H: fret_ui::UiHost>(
     decl_text::text_list_row_label(cx, text)
 }
 
-struct VirtualListStressModelOwner<'a> {
-    models: &'a mut ModelStore,
+struct VirtualListStressControls {
+    tall_rows_enabled: Model<bool>,
+    reversed: Model<bool>,
+    items_revision: Model<u64>,
 }
 
-impl<'a> VirtualListStressModelOwner<'a> {
-    fn new(models: &'a mut ModelStore) -> Self {
-        Self { models }
+struct VirtualListStressSnapshot {
+    tall_rows_enabled: bool,
+    reversed: bool,
+    items_revision: u64,
+}
+
+impl VirtualListStressControls {
+    fn new(models: &mut ModelStore) -> Self {
+        Self {
+            tall_rows_enabled: models.insert(false),
+            reversed: models.insert(false),
+            items_revision: models.insert(0u64),
+        }
     }
 
-    fn toggle_rows_enabled(&mut self, model: &Model<bool>) -> bool {
-        self.toggle_bool(model)
+    fn toggle_rows_enabled(&self, models: &mut ModelStore) -> bool {
+        Self::toggle_bool(models, &self.tall_rows_enabled)
     }
 
-    fn toggle_reversed(&mut self, model: &Model<bool>) -> bool {
-        self.toggle_bool(model)
+    fn toggle_reversed_and_bump_revision(&self, models: &mut ModelStore) -> bool {
+        let toggled = Self::toggle_bool(models, &self.reversed);
+        let bumped = self.bump_items_revision(models);
+        toggled || bumped
     }
 
-    fn bump_items_revision(&mut self, model: &Model<u64>) -> bool {
-        self.models
-            .update(model, |value| {
+    fn layout_snapshot(&self, cx: &mut ElementContext<'_, App>) -> VirtualListStressSnapshot {
+        let (tall_rows_enabled, reversed, items_revision): (bool, bool, u64) =
+            cx.data().selector_model_layout(
+                (
+                    &self.tall_rows_enabled,
+                    &self.reversed,
+                    &self.items_revision,
+                ),
+                |(tall_rows_enabled, reversed, items_revision)| {
+                    (tall_rows_enabled, reversed, items_revision)
+                },
+            );
+
+        VirtualListStressSnapshot {
+            tall_rows_enabled,
+            reversed,
+            items_revision,
+        }
+    }
+
+    fn bump_items_revision(&self, models: &mut ModelStore) -> bool {
+        models
+            .update(&self.items_revision, |value| {
                 *value = value.wrapping_add(1);
                 true
             })
             .unwrap_or(false)
     }
 
-    fn toggle_bool(&mut self, model: &Model<bool>) -> bool {
-        self.models
+    fn toggle_bool(models: &mut ModelStore, model: &Model<bool>) -> bool {
+        models
             .update(model, |value| {
                 *value = !*value;
                 true
@@ -99,9 +133,7 @@ fn parse_env_bool(key: &str) -> bool {
 pub struct VirtualListStressWindowState {
     ui: UiTree<App>,
     scroll_handle: VirtualListScrollHandle,
-    tall_rows_enabled: fret_app::Model<bool>,
-    reversed: fret_app::Model<bool>,
-    items_revision: fret_app::Model<u64>,
+    controls: VirtualListStressControls,
     frame: u64,
     exit_after_frames: Option<u64>,
     auto_scroll: bool,
@@ -113,9 +145,7 @@ pub struct VirtualListStressDriver;
 
 impl VirtualListStressDriver {
     fn build_ui(app: &mut App, window: AppWindowId) -> VirtualListStressWindowState {
-        let tall_rows_enabled = app.models_mut().insert(false);
-        let reversed = app.models_mut().insert(false);
-        let items_revision = app.models_mut().insert(0u64);
+        let controls = VirtualListStressControls::new(app.models_mut());
         let exit_after_frames = parse_env_u64("FRET_VLIST_STRESS_EXIT_AFTER_FRAMES");
         let auto_scroll = parse_env_bool("FRET_VLIST_STRESS_AUTO_SCROLL");
 
@@ -125,9 +155,7 @@ impl VirtualListStressDriver {
         VirtualListStressWindowState {
             ui,
             scroll_handle: VirtualListScrollHandle::new(),
-            tall_rows_enabled,
-            reversed,
-            items_revision,
+            controls,
             frame: 0,
             exit_after_frames,
             auto_scroll,
@@ -307,15 +335,13 @@ fn handle_event(
                 return;
             }
             fret_core::KeyCode::Space => {
-                let _ = VirtualListStressModelOwner::new(app.models_mut())
-                    .toggle_rows_enabled(&state.tall_rows_enabled);
+                let _ = state.controls.toggle_rows_enabled(app.models_mut());
                 app.request_redraw(window);
             }
             fret_core::KeyCode::KeyR => {
-                let _ = VirtualListStressModelOwner::new(app.models_mut())
-                    .toggle_reversed(&state.reversed);
-                let _ = VirtualListStressModelOwner::new(app.models_mut())
-                    .bump_items_revision(&state.items_revision);
+                let _ = state
+                    .controls
+                    .toggle_reversed_and_bump_revision(app.models_mut());
                 app.request_redraw(window);
             }
             fret_core::KeyCode::Home => {
@@ -362,14 +388,9 @@ fn render(
 
     let root = declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
             .render_root("virtual-list-stress", |cx| {
-                let (tall_rows_enabled, reversed, items_revision): (bool, bool, u64) = cx
-                    .data()
-                    .selector_model_layout(
-                        (&state.tall_rows_enabled, &state.reversed, &state.items_revision),
-                        |(tall_rows_enabled, reversed, items_revision)| {
-                            (tall_rows_enabled, reversed, items_revision)
-                        },
-                    );
+                let controls = state.controls.layout_snapshot(cx);
+                let tall_rows_enabled = controls.tall_rows_enabled;
+                let reversed = controls.reversed;
 
                 let theme = cx.theme_snapshot();
                 let padding = theme.metric_token("metric.padding.md");
@@ -391,7 +412,7 @@ fn render(
                 list_slot.overflow = Overflow::Clip;
 
                 let mut options = VirtualListOptions::new(Px(18.0), 10);
-                options.items_revision = items_revision;
+                options.items_revision = controls.items_revision;
                 options.gap = Px(2.0);
 
                 vec![cx.container(
@@ -592,19 +613,22 @@ mod tests {
     use super::*;
 
     #[test]
-    fn virtual_list_stress_model_owner_preserves_command_state_transitions() {
+    fn virtual_list_stress_controls_preserve_command_state_transitions() {
         let mut models = ModelStore::default();
-        let tall_rows = models.insert(false);
-        let reversed = models.insert(false);
-        let revision = models.insert(u64::MAX);
+        let controls = VirtualListStressControls::new(&mut models);
 
-        assert!(VirtualListStressModelOwner::new(&mut models).toggle_rows_enabled(&tall_rows));
-        assert_eq!(models.get_copied(&tall_rows), Some(true));
+        assert!(controls.toggle_rows_enabled(&mut models));
+        assert_eq!(models.get_copied(&controls.tall_rows_enabled), Some(true));
 
-        assert!(VirtualListStressModelOwner::new(&mut models).toggle_reversed(&reversed));
-        assert_eq!(models.get_copied(&reversed), Some(true));
+        assert!(controls.toggle_reversed_and_bump_revision(&mut models));
+        assert_eq!(models.get_copied(&controls.reversed), Some(true));
+        assert_eq!(models.get_copied(&controls.items_revision), Some(1));
 
-        assert!(VirtualListStressModelOwner::new(&mut models).bump_items_revision(&revision));
-        assert_eq!(models.get_copied(&revision), Some(0));
+        models
+            .update(&controls.items_revision, |revision| *revision = u64::MAX)
+            .expect("items_revision model should exist");
+        assert!(controls.toggle_reversed_and_bump_revision(&mut models));
+        assert_eq!(models.get_copied(&controls.reversed), Some(false));
+        assert_eq!(models.get_copied(&controls.items_revision), Some(0));
     }
 }

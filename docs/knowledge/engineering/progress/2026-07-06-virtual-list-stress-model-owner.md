@@ -38,10 +38,24 @@ functions to a named `VirtualListStressModelOwner`.
 - Added `virtual_list_stress_model_owner_preserves_command_state_transitions` for owner behavior:
   row-height toggle, reverse toggle, and wrapping item-revision bump.
 
+# Controls Binding Follow-Up
+
+Branch `refactor/virtual-list-stress-controls` replaces the owner helper with
+`VirtualListStressControls`.
+
+- Model allocation moved behind `VirtualListStressControls::new(...)`.
+- `VirtualListStressWindowState` stores one `controls` field instead of separate
+  `Model<bool>` / `Model<u64>` fields.
+- Command handling calls `toggle_rows_enabled(...)` and
+  `toggle_reversed_and_bump_revision(...)` on the controls binding instead of passing model handles
+  through the event path.
+- Render reads the three control values through `layout_snapshot(...)`, keeping retained runtime
+  model choreography inside the demo-local binding.
+
 # Verification
 
 - `cargo check -p fret-examples --lib --tests`
-- `cargo nextest run -p fret-examples --test virtual_list_stress_demo_surface virtual_list_stress_demo_keeps_fixed_row_text_on_roles virtual_list_stress_demo_model_writes_stay_behind_owner_helpers --no-fail-fast`
+- `cargo nextest run -p fret-examples --test virtual_list_stress_demo_surface virtual_list_stress_demo_keeps_fixed_row_text_on_roles virtual_list_stress_demo_model_state_stays_behind_controls_binding --no-fail-fast`
 - `cargo nextest run -p fret-examples --test app_import_surface examples_src_keeps_local_state_raw_bridges_out app_state_demos_use_app_local_state_imports --no-fail-fast`
 - `cargo fmt --all --check`
 - `python3 tools/check_layering.py`

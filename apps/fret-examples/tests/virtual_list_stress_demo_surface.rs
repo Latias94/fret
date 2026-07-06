@@ -35,7 +35,7 @@ fn virtual_list_stress_demo_keeps_fixed_row_text_on_roles() {
 }
 
 #[test]
-fn virtual_list_stress_demo_model_writes_stay_behind_owner_helpers() {
+fn virtual_list_stress_demo_model_state_stays_behind_controls_binding() {
     let source = include_str!("../src/virtual_list_stress_demo.rs");
     let production_source = source
         .split("#[cfg(test)]")
@@ -46,22 +46,34 @@ fn virtual_list_stress_demo_model_writes_stay_behind_owner_helpers() {
 
     for needle in [
         "usefret_runtime::{ModelStore,PlatformCapabilities};",
-        "structVirtualListStressModelOwner<'a>{",
-        "models:&'amutModelStore,",
-        "fntoggle_rows_enabled(&mutself,model:&Model<bool>)->bool{",
-        "fntoggle_reversed(&mutself,model:&Model<bool>)->bool{",
-        "fnbump_items_revision(&mutself,model:&Model<u64>)->bool{",
-        "VirtualListStressModelOwner::new(app.models_mut()).toggle_rows_enabled(&state.tall_rows_enabled);",
-        "VirtualListStressModelOwner::new(app.models_mut()).toggle_reversed(&state.reversed);",
-        "VirtualListStressModelOwner::new(app.models_mut()).bump_items_revision(&state.items_revision);",
+        "structVirtualListStressControls{",
+        "tall_rows_enabled:Model<bool>,",
+        "reversed:Model<bool>,",
+        "items_revision:Model<u64>,",
+        "fnnew(models:&mutModelStore)->Self{",
+        "fntoggle_rows_enabled(&self,models:&mutModelStore)->bool{",
+        "fntoggle_reversed_and_bump_revision(&self,models:&mutModelStore)->bool{",
+        "fnlayout_snapshot(&self,cx:&mutElementContext<'_,App>)->VirtualListStressSnapshot{",
+        "letcontrols=VirtualListStressControls::new(app.models_mut());",
+        "controls:VirtualListStressControls,",
+        "state.controls.toggle_rows_enabled(app.models_mut());",
+        "state.controls.toggle_reversed_and_bump_revision(app.models_mut());",
+        "letcontrols=state.controls.layout_snapshot(cx);",
     ] {
         assert!(
             compact_source.contains(needle),
-            "virtual-list stress demo should keep shared-model writes behind a named owner helper; missing `{needle}`"
+            "virtual-list stress demo should keep shared-model state behind a named controls binding; missing `{needle}`"
         );
     }
 
     for forbidden in [
+        "VirtualListStressModelOwner",
+        "tall_rows_enabled:fret_app::Model<bool>",
+        "reversed:fret_app::Model<bool>",
+        "items_revision:fret_app::Model<u64>",
+        "&state.tall_rows_enabled",
+        "&state.reversed",
+        "&state.items_revision",
         "models_mut().update(",
         "models_mut().update::<",
         "models_mut().update_any(",
