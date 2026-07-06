@@ -131,24 +131,36 @@ fn bars_demo_uses_declarative_canvas_panel() {
     let source = compact(include_str!("../src/bars_demo.rs"));
 
     for needle in [
-        "usefret_chart::{ChartCanvasOutput,ChartCanvasPanelProps,chart_canvas_panel};",
+        "usefret_chart::{ChartCanvasPanelBinding,chart_canvas_panel};",
         "usefret_ui::{UiTree,declarative};",
         "ChartEngine",
         "ChartSpec",
+        "chart:ChartCanvasPanelBinding",
         "SeriesKind::Bar",
-        "ChartCanvasOutput::default()",
+        "ChartCanvasPanelBinding::new(app,spec,engine)",
+        "state.chart.output_untracked(app)",
         "declarative::render_root(",
-        "ChartCanvasPanelProps::new(spec).output_model(output)",
-        "props.engine=Some(engine);",
+        "chart.observe_engine_paint(cx);",
+        "chart.panel_props()",
         "vec![chart_canvas_panel(cx,props)]",
     ] {
         assert!(
             source.contains(needle),
-            "bars_demo should render charts through the declarative chart panel; missing `{needle}`"
+            "bars_demo should render charts through the app-facing chart binding; missing `{needle}`"
         );
     }
 
     for legacy in [
+        "usefret_chart::{ChartCanvasOutput,ChartCanvasPanelProps,chart_canvas_panel};",
+        "usefret_runtime::{Model,PlatformCapabilities};",
+        "engine:Model<ChartEngine>",
+        "spec:ChartSpec",
+        "output:Model<ChartCanvasOutput>",
+        "ChartCanvasOutput::default()",
+        "ChartCanvasPanelProps::new(spec)",
+        ".output_model(output)",
+        "props.engine=Some(engine);",
+        "cx.observe_model(&engine",
         "usefret_plot::retained::",
         "fret_plot::retained::",
         "BarsPlotCanvas",

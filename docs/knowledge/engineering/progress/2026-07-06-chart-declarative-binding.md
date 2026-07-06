@@ -8,38 +8,44 @@ tags: fret,ui-framework,public-surface,chart,binding,raw-model
 
 # Summary
 
-`chart_declarative_demo` and the manual-harness `chart_demo` now store a
-`ChartCanvasPanelBinding` instead of exposing a raw `Model<ChartEngine>` in app-facing state.
+`chart_declarative_demo`, the manual-harness `chart_demo`, and `bars_demo` now store a
+`ChartCanvasPanelBinding` instead of exposing raw chart engine/output models in app-facing state.
 
 The new binding is intentionally narrow:
 
-- `ChartCanvasPanelBinding::new(host, spec, engine)` inserts the controlled chart engine model;
-- `panel_props()` builds `ChartCanvasPanelProps` with the internal engine model attached;
+- `ChartCanvasPanelBinding::new(host, spec, engine)` inserts the controlled chart engine model and
+  a default chart output model;
+- `panel_props()` builds `ChartCanvasPanelProps` with the internal engine and output models
+  attached;
 - `observe_engine_paint(cx)` preserves the app-view paint dependency without teaching raw model
   reads;
-- `from_model(...)` is available only as an advanced bridge for callers that already coordinate a
-  shared chart engine;
+- `output_untracked(...)`, `output_layout(...)`, and `output_paint(...)` keep tooltip/output reads
+  on the binding surface;
+- `from_model(...)` and `from_models(...)` are available only as advanced bridges for callers that
+  already coordinate shared chart models;
 - the manual `chart_demo` keeps its `FnDriver` shell but no longer teaches `ChartCanvasPanelProps`
   engine wiring.
 
 # Decision
 
 Do not hide `ChartCanvasPanelProps` from component authors or linked-chart demos. The prop record is
-still the right low-level composition surface for output models, linked brushes, axis pointers,
-domain windows, grid views, and overlay-only panels. The binding is the default single-chart app
-surface, not a replacement for advanced chart coordination.
+still the right low-level composition surface for linked brushes, axis pointers, domain windows,
+grid views, overlay-only panels, and intentionally shared output models. The binding is the default
+single-chart app surface, not a replacement for advanced chart coordination.
 
 # Verification
 
-- `cargo nextest run -p fret-chart chart_canvas_binding_creates_props_with_engine_without_public_raw_handle --no-fail-fast`
+- `cargo nextest run -p fret-chart chart_canvas_binding_creates_props_with_engine_and_output_without_public_raw_handle --no-fail-fast`
 - `cargo nextest run -p fret-examples --test basic_chart_demos_surface chart_declarative_demo_uses_app_view_imports --no-fail-fast`
 - `cargo nextest run -p fret-examples --test basic_chart_demos_surface chart_demo_uses_manual_harness_chart_binding --no-fail-fast`
+- `cargo nextest run -p fret-examples --test basic_chart_demos_surface bars_demo_uses_declarative_canvas_panel --no-fail-fast`
 
 # Next
 
 Remaining chart raw-model pressure should be split by contract:
 
-- chart output/linking bindings for linked or multi-grid demos;
+- mechanical chart binding cleanup for `category_line_demo.rs` and `horizontal_bars_demo.rs`;
+- explicit linked or multi-grid contracts before migrating linked chart demos;
 - chart stress harnesses that intentionally stay manual and diagnostic-heavy;
 - histogram/bars/other plot-family bindings where the app-facing state/output contract differs from
   a line plot.

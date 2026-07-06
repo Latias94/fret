@@ -4,7 +4,7 @@ use delinea::{ChartEngine, ChartSpec};
 use fret_runtime::{Model, ModelHost};
 use fret_ui::{ElementContextAccess, Invalidation, UiHost};
 
-use crate::ChartCanvasPanelProps;
+use crate::{ChartCanvasOutput, ChartCanvasPanelProps};
 
 /// App-facing handle for a chart canvas panel plus its controlled engine model.
 ///
@@ -15,22 +15,27 @@ use crate::ChartCanvasPanelProps;
 pub struct ChartCanvasPanelBinding {
     spec: ChartSpec,
     engine: Model<ChartEngine>,
+    output: Option<Model<ChartCanvasOutput>>,
 }
 
 impl ChartCanvasPanelBinding {
-    /// Insert a chart engine into a model host and keep the matching panel spec.
+    /// Insert a chart engine and output channel into a model host and keep the matching panel spec.
     #[track_caller]
     pub fn new(host: &mut impl ModelHost, spec: ChartSpec, engine: ChartEngine) -> Self {
         Self {
             spec,
             engine: host.models_mut().insert(engine),
+            output: Some(host.models_mut().insert(ChartCanvasOutput::default())),
         }
     }
 
-    /// Build declarative panel props wired to this binding's controlled engine.
+    /// Build declarative panel props wired to this binding's controlled engine and output channel.
     pub fn panel_props(&self) -> ChartCanvasPanelProps {
         let mut props = ChartCanvasPanelProps::new(self.spec.clone());
         props.engine = Some(self.engine.clone());
+        if let Some(output) = self.output.as_ref() {
+            props = props.output_model(output.clone());
+        }
         props
     }
 
@@ -44,12 +49,67 @@ impl ChartCanvasPanelBinding {
             .observe_model(&self.engine, Invalidation::Paint);
     }
 
+    /// Read the latest chart output through a layout invalidation tracked read.
+    pub fn output_layout<'a, H, Cx>(&self, cx: &mut Cx) -> ChartCanvasOutput
+    where
+        H: UiHost + 'a,
+        Cx: ElementContextAccess<'a, H>,
+    {
+        self.output
+            .as_ref()
+            .and_then(|output| cx.elements().get_model_cloned(output, Invalidation::Layout))
+            .unwrap_or_default()
+    }
+
+    /// Read the latest chart output through a paint invalidation tracked read.
+    pub fn output_paint<'a, H, Cx>(&self, cx: &mut Cx) -> ChartCanvasOutput
+    where
+        H: UiHost + 'a,
+        Cx: ElementContextAccess<'a, H>,
+    {
+        self.output
+            .as_ref()
+            .and_then(|output| cx.elements().get_model_cloned(output, Invalidation::Paint))
+            .unwrap_or_default()
+    }
+
+    /// Read the latest chart output without registering a UI invalidation dependency.
+    ///
+    /// This is intended for event handlers, diagnostics, and logging code that needs to observe
+    /// chart output outside a render/layout context.
+    pub fn output_untracked(&self, host: &impl ModelHost) -> ChartCanvasOutput {
+        self.output
+            .as_ref()
+            .and_then(|output| output.read_ref(host, Clone::clone).ok())
+            .unwrap_or_default()
+    }
+
     /// Advanced bridge for component authors that already own a controlled engine model.
     ///
     /// Prefer [`Self::new`] for app code. This method exists so advanced chart coordinators can
     /// graduate to the binding surface without rebuilding already-shared chart engines.
     pub fn from_model(spec: ChartSpec, engine: Model<ChartEngine>) -> Self {
-        Self { spec, engine }
+        Self {
+            spec,
+            engine,
+            output: None,
+        }
+    }
+
+    /// Advanced bridge for component authors that already own controlled engine and output models.
+    ///
+    /// Prefer [`Self::new`] for ordinary app code. This method keeps advanced coordinators on the
+    /// binding surface when they already share output with linking, diagnostics, or overlays.
+    pub fn from_models(
+        spec: ChartSpec,
+        engine: Model<ChartEngine>,
+        output: Model<ChartCanvasOutput>,
+    ) -> Self {
+        Self {
+            spec,
+            engine,
+            output: Some(output),
+        }
     }
 }
 
@@ -153,7 +213,7 @@ mod tests {
     }
 
     #[test]
-    fn chart_canvas_binding_creates_props_with_engine_without_public_raw_handle() {
+    fn chart_canvas_binding_creates_props_with_engine_and_output_without_public_raw_handle() {
         let mut host = TestHost::default();
         let spec = sample_spec();
         let engine = ChartEngine::new(spec.clone()).expect("sample spec should be valid");
@@ -163,6 +223,9 @@ mod tests {
         let engine = props
             .engine
             .expect("binding props should include controlled engine model");
+        let output = props
+            .output_model
+            .expect("binding props should include controlled output model");
 
         assert_eq!(props.spec.id, spec.id);
         assert_eq!(
@@ -170,6 +233,12 @@ mod tests {
                 .read(&engine, |engine| engine.id())
                 .expect("engine model should be readable"),
             spec.id
+        );
+        assert_eq!(
+            host.models()
+                .read(&output, |output| output.clone())
+                .expect("output model should be readable"),
+            binding.output_untracked(&host)
         );
     }
 }

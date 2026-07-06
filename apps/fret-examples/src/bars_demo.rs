@@ -7,7 +7,7 @@ use delinea::{
     FieldSpec, GridSpec, SeriesEncode, SeriesKind, SeriesSpec,
 };
 use fret_app::{App, Effect, WindowRequest};
-use fret_chart::{ChartCanvasOutput, ChartCanvasPanelProps, chart_canvas_panel};
+use fret_chart::{ChartCanvasPanelBinding, chart_canvas_panel};
 use fret_core::{AppWindowId, Event};
 #[cfg(not(target_arch = "wasm32"))]
 use fret_launch::run_app;
@@ -15,15 +15,13 @@ use fret_launch::{
     FnDriver, FnDriverHooks, WinitEventContext, WinitHotReloadContext, WinitRenderContext,
     WinitRunnerConfig,
 };
-use fret_runtime::{Model, PlatformCapabilities};
+use fret_runtime::PlatformCapabilities;
 use fret_ui::{UiTree, declarative};
 
 pub struct BarsDemoWindowState {
     ui: UiTree<App>,
     root: Option<fret_core::NodeId>,
-    engine: Model<ChartEngine>,
-    spec: ChartSpec,
-    output: Model<ChartCanvasOutput>,
+    chart: ChartCanvasPanelBinding,
     last_logged_output_revision: u64,
 }
 
@@ -137,15 +135,12 @@ impl BarsDemoDriver {
         ui.set_window(window);
 
         let (engine, spec) = Self::build_chart();
-        let engine = app.models_mut().insert(engine);
-        let output = app.models_mut().insert(ChartCanvasOutput::default());
+        let chart = ChartCanvasPanelBinding::new(app, spec, engine);
 
         BarsDemoWindowState {
             ui,
             root: None,
-            engine,
-            spec,
-            output,
+            chart,
             last_logged_output_revision: 0,
         }
     }
@@ -203,10 +198,7 @@ fn handle_event(
                 event,
                 Event::Pointer(fret_core::PointerEvent::Up { .. }) | Event::KeyDown { .. }
             ) {
-                let output = state
-                    .output
-                    .read(app, |_app, o| o.clone())
-                    .unwrap_or_default();
+                let output = state.chart.output_untracked(app);
                 if output.revision != state.last_logged_output_revision {
                     state.last_logged_output_revision = output.revision;
                     if !output.snapshot.tooltip_lines.is_empty() {
@@ -236,9 +228,7 @@ fn render(_driver: &mut BarsDemoDriver, context: WinitRenderContext<'_, BarsDemo
         scene,
     } = context;
 
-    let engine = state.engine.clone();
-    let spec = state.spec.clone();
-    let output = state.output.clone();
+    let chart = state.chart.clone();
     let root = declarative::render_root(
         &mut state.ui,
         app,
@@ -247,9 +237,8 @@ fn render(_driver: &mut BarsDemoDriver, context: WinitRenderContext<'_, BarsDemo
         bounds,
         "bars-demo-root",
         move |cx| {
-            cx.observe_model(&engine, fret_ui::Invalidation::Paint);
-            let mut props = ChartCanvasPanelProps::new(spec).output_model(output);
-            props.engine = Some(engine);
+            chart.observe_engine_paint(cx);
+            let props = chart.panel_props();
             vec![chart_canvas_panel(cx, props)]
         },
     );
