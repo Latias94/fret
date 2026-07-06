@@ -1,7 +1,7 @@
 use anyhow::Context as _;
 use fret::app::AppLocalStateExt as _;
 use fret::app::LocalState;
-use fret_app::{App, CommandId, Effect, Model, WindowRequest};
+use fret_app::{App, CommandId, Effect, WindowRequest};
 use fret_core::{AppWindowId, Corners, Edges, Event, Px};
 use fret_launch::{
     FnDriver, WindowCreateSpec, WinitCommandContext, WinitEventContext, WinitHotReloadContext,
@@ -12,7 +12,7 @@ use fret_ui::declarative;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
 };
-use fret_ui::{ElementContext, Invalidation, UiTree};
+use fret_ui::{ElementContext, UiTree};
 use fret_ui_kit::OverlayController;
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::declarative::text as decl_text;
@@ -47,7 +47,7 @@ struct DemoRow {
 pub struct DemoWindowState {
     ui: UiTree<App>,
     table_state: LocalState<TableState>,
-    table_output: Model<shadcn::DataTableViewOutput>,
+    table_output: LocalState<shadcn::DataTableViewOutput>,
     rows: Arc<[DemoRow]>,
     started_at: Instant,
     frame: u64,
@@ -81,9 +81,7 @@ impl DataTableDemoDriver {
         let mut table_state = TableState::default();
         table_state.pagination.page_size = 50;
         let table_state = app.local_state(table_state);
-        let table_output = app
-            .models_mut()
-            .insert(shadcn::DataTableViewOutput::default());
+        let table_output = app.local_state(shadcn::DataTableViewOutput::default());
 
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
@@ -218,7 +216,8 @@ fn render(_driver: &mut DataTableDemoDriver, context: WinitRenderContext<'_, Dem
     let table_output = state.table_output.clone();
     let root = declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
         .render_root("datatable-demo", move |cx| {
-            cx.observe_model(&table_output, Invalidation::Layout);
+            // Subscribe to output changes without exposing the raw output model to the demo.
+            let _ = table_output.layout_value(cx);
 
             let theme = cx.theme_snapshot();
             let padding = theme.metric_token("metric.padding.md");

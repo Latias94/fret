@@ -40,3 +40,35 @@ fn datatable_demo_keeps_fixed_table_text_on_roles() {
         );
     }
 }
+
+#[test]
+fn datatable_demo_uses_local_state_table_output() {
+    let source = include_str!("../src/datatable_demo.rs");
+    let source = compact(source);
+
+    for needle in [
+        "table_output:LocalState<shadcn::DataTableViewOutput>,",
+        "lettable_output=app.local_state(shadcn::DataTableViewOutput::default());",
+        "lettable_output=state.table_output.clone();",
+        "let_=table_output.layout_value(cx);",
+        "shadcn::DataTablePagination::new(&table_state,table_output.clone())",
+        ".output_model(table_output.clone())",
+    ] {
+        assert!(
+            source.contains(needle),
+            "datatable demo should keep table output on the app-facing LocalState surface; missing `{needle}`"
+        );
+    }
+
+    for needle in [
+        "Model<shadcn::DataTableViewOutput>",
+        "app.models_mut().insert(shadcn::DataTableViewOutput::default())",
+        "cx.observe_model(&table_output,Invalidation::Layout);",
+        "usefret_app::{App,CommandId,Effect,Model,WindowRequest};",
+    ] {
+        assert!(
+            !source.contains(needle),
+            "datatable demo should not expose raw table output model plumbing; unexpected `{needle}`"
+        );
+    }
+}

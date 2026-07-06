@@ -79,6 +79,14 @@ Keep raw/shared-model mechanisms for now:
     `ChartCanvasMultiGridBinding` while preserving its runner-level seam classification. This keeps
     advanced chart exceptions in the same source-policy system as plot, workspace, and harness
     exceptions rather than relying only on ad hoc demo tests.
+- Table/data-grid demos.
+  - Follow-up: `datatable_demo.rs` now uses `LocalState<shadcn::DataTableViewOutput>` and
+    `app.local_state(...)` for the shadcn `DataTable` output handle. The retained table source gate
+    has been refreshed from the old `layout_read_ref_in(...)` / `advanced::prelude::LocalState`
+    markers to the current app-facing `LocalState` API and now forbids raw
+    `Model<DataTableViewOutput>` plumbing in this example.
+  - Keep raw model seams in lower-level retained table, data-grid, stress, or canvas-grid surfaces
+    only when their component contract still names the shared retained state explicitly.
 - Custom effect demos such as `custom_effect_v2_*`. They expose effect parameter models and reset
   groups; these need a dedicated parameter/control-surface design before deletion.
   - Follow-up: `custom_effect_v2_web_demo.rs`, `custom_effect_v2_identity_web_demo.rs`,

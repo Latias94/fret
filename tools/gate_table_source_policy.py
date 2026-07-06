@@ -45,7 +45,7 @@ def main() -> None:
             required=[
                 "table_state: LocalState<TableState>,",
                 "let table_state = app.local_state(table_state);",
-                "let (selected, sorting) = table_state.layout_read_ref_in(cx, |st| {",
+                "let (selected, sorting) = table_state.layout_read_ref(cx, |st| {",
                 "fret_ui_kit::declarative::table::table_virtualized(",
                 "&table_state,",
                 "let view_options_open = view_options_open.clone();",
@@ -82,12 +82,16 @@ def main() -> None:
         SourceCheck(
             Path("apps/fret-examples/src/datatable_demo.rs"),
             required=[
-                "use fret::advanced::prelude::LocalState;",
+                "use fret::app::LocalState;",
                 "table_state: LocalState<TableState>,",
+                "table_output: LocalState<shadcn::DataTableViewOutput>,",
                 "let table_state = app.local_state(table_state);",
-                "let (selected, sorting) = table_state.layout_read_ref_in(cx, |st| {",
+                "let table_output = app.local_state(shadcn::DataTableViewOutput::default());",
+                "let _ = table_output.layout_value(cx);",
+                "let (selected, sorting) = table_state.layout_read_ref(cx, |st| {",
                 "shadcn::DataTableToolbar::new(",
                 "shadcn::DataTablePagination::new(&table_state, table_output.clone())",
+                ".output_model(table_output.clone())",
                 "&table_state,",
                 ".debug_ids(fret_ui_kit::declarative::table::TableDebugIds {",
                 'header_row_test_id: Some(Arc::<str>::from("datatable-demo-header-row")),',
@@ -97,6 +101,9 @@ def main() -> None:
             forbidden=[
                 "LocalState::new_in(app.models_mut(),",
                 "table_state: Model<TableState>,",
+                "table_output: Model<shadcn::DataTableViewOutput>,",
+                "app.models_mut().insert(shadcn::DataTableViewOutput::default())",
+                "cx.observe_model(&table_output, Invalidation::Layout);",
                 ".models().read(&table_state, |st|",
             ],
         ),

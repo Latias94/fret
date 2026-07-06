@@ -23,12 +23,18 @@ inventory for current decisions:
 - `docs/knowledge/engineering/progress/2026-07-06-chart-declarative-binding.md`
 - `docs/knowledge/engineering/progress/2026-07-06-chart-binding-output.md`
 - `docs/knowledge/engineering/progress/2026-07-06-chart-advanced-surface-policy.md`
+- `docs/knowledge/engineering/progress/2026-07-06-datatable-output-local-state.md`
 
 The remaining chart raw-props examples are now source-policy classified by contract. Adapter smoke
 charts have moved behind `ChartCanvasPanelBinding`, and multi-grid/overlay composition has moved
 behind `ChartCanvasMultiGridBinding`; raw chart props remain for linked multi-axis coordination,
 explicit shared output, and stress/perf harnesses. Do not use this baseline alone to decide whether
 a current chart or plot demo should keep raw model seams.
+
+The `datatable_demo.rs` output handle has also moved behind app-facing
+`LocalState<DataTableViewOutput>`. Raw table/data-grid model seams still exist in lower-level table
+and canvas-grid stress/composition surfaces, but the shadcn `DataTable` example is no longer a raw
+output-model exception.
 
 ## Executive Summary
 
@@ -113,7 +119,7 @@ Representative files:
 
 Reason:
 
-- these examples hold shared `TableState`, menu-open state, output handles, or revision counters
+- these examples hold shared `TableState`, menu-open state, or revision counters
   consumed by retained table/data-grid infrastructure,
 - the state participates in command/event handlers and retained widget internals, not only in the
   render function.
@@ -125,7 +131,9 @@ Evidence:
 
 Audit judgment:
 
-- raw `Model<T>` remains acceptable here,
+- `datatable_demo.rs` uses `LocalState<DataTableViewOutput>` for the shadcn table output path,
+- raw `Model<T>` remains acceptable in retained table/data-grid stress or lower-level composition
+  surfaces when the component contract still requires it,
 - future cleanup should happen at the retained table/data-grid surface, not by forcing example-local
   `LocalState<T>` wrappers on top.
 
