@@ -924,3 +924,13 @@ fn fret_examples_does_not_enable_fret_plot_retained_compat_feature() {
         "fret-examples should not enable fret-plot/compat-retained-canvas after plot demos migrated"
     );
 }
+
+#[test]
+fn fret_examples_wasm_target_enables_fret_ui_assets_for_asset_demos() {
+    let manifest = compact(include_str!("../Cargo.toml"));
+
+    assert!(
+        manifest.contains("fret={path=\"../../ecosystem/fret\",default-features=false,features=[\"app\",\"state\",\"ui-assets\"]}"),
+        "fret-examples wasm target should enable fret/ui-assets because wasm-compiled demos import fret::app::ui_assets"
+    );
+}

@@ -5609,6 +5609,22 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
+    fn ui_assets_feature_stays_cross_platform_and_off_desktop_runner() {
+        let manifest = CARGO_TOML.split_whitespace().collect::<String>();
+
+        assert!(manifest.contains("ui-assets=[\"dep:fret-bootstrap\",\"dep:fret-ui-assets\","));
+        assert!(manifest.contains("\"fret-ui-assets/app-integration\","));
+        assert!(manifest.contains("\"fret-ui-assets/ui\","));
+        assert!(manifest.contains("\"fret-bootstrap/ui-assets\",]"));
+        assert!(!manifest.contains("ui-assets=[\"desktop\","));
+        assert!(!manifest.contains("ui-assets=[\"desktop\""));
+        assert!(CRATE_README.contains(
+            "- `ui-assets`: cross-platform UI render-asset caches (images/SVG) and default budgets."
+        ));
+        assert!(!CRATE_README.contains("- `ui-assets`: desktop-bound UI render-asset caches"));
+    }
+
+    #[test]
     fn view_runtime_exposes_only_app_ui_as_the_public_context_name() {
         assert!(!VIEW_RS.contains("pub type ViewCx"));
         assert!(

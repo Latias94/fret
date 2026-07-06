@@ -107,7 +107,7 @@ material3 = []
 # release/publish closure until a stable root AI UI story exists.
 ui-ai = []
 ui-assets = [
-    "desktop",
+    "dep:fret-bootstrap",
     "dep:fret-ui-assets",
     "fret-ui-assets/app-integration",
     "fret-ui-assets/ui",

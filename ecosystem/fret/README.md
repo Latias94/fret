@@ -290,7 +290,7 @@ The same ordered builder surface now also includes compile-time/static entries t
   recipes and tokens.
 - `ui-ai`: discoverability alias only; depend on `fret-ui-ai` directly for AI-specific policy
   surfaces.
-- `ui-assets`: desktop-bound UI render-asset caches (images/SVG) and default budgets.
+- `ui-assets`: cross-platform UI render-asset caches (images/SVG) and default budgets.
 - `icons`: desktop-bound default built-in icon pack (Lucide) plus app-facing icon helper exports.
 - `preload-icon-svgs`: desktop-bound SVG icon pre-registration on GPU ready.
 - `command-palette`: desktop-bound command palette wiring in the golden-path driver, including
