@@ -33,7 +33,7 @@ use fret_ui::element::{
 };
 use fret_ui::{ElementContext, Invalidation, UiTree};
 
-use crate::external_texture_imports_owner::ExternalTextureImportsModelOwner;
+use crate::external_imports_owner::ExternalImportsModelOwner;
 
 #[cfg(target_arch = "wasm32")]
 use web_sys::wasm_bindgen::JsCast as _;
@@ -487,7 +487,7 @@ fn handle_event(
     if let Event::KeyDown { key, .. } = event
         && *key == KeyCode::KeyV
     {
-        ExternalTextureImportsModelOwner::new(app.models_mut()).toggle_surface(&state.show);
+        ExternalImportsModelOwner::new(app.models_mut()).toggle_surface(&state.show);
         app.request_redraw(window);
     }
 

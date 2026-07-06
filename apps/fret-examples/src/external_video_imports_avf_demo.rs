@@ -19,6 +19,8 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, Invalidation};
 use std::time::{Duration, Instant};
 
+use crate::external_imports_owner::ExternalImportsModelOwner;
+
 #[cfg(all(not(target_arch = "wasm32"), target_os = "macos"))]
 use fret_launch::media::apple_avfoundation_video as avf;
 
@@ -108,7 +110,7 @@ fn on_event(
     if let Event::KeyDown { key, .. } = event
         && *key == KeyCode::KeyV
     {
-        let _ = app.models_mut().update(&st.view.show, |v| *v = !*v);
+        ExternalImportsModelOwner::new(app.models_mut()).toggle_surface(&st.view.show);
         app.request_redraw(window);
     }
 

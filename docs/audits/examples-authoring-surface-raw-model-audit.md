@@ -275,8 +275,8 @@ Evidence:
 - `apps/fret-examples/src/launcher_utility_window_demo.rs`
 - `apps/fret-examples/src/external_texture_imports_web_demo.rs`
 - `apps/fret-examples/src/docking_arbitration_demo.rs`
-- `apps/fret-examples/src/external_texture_imports_owner.rs` now centralizes the native and wasm
-  external texture visibility toggle write, so the event handlers do not each hand-write
+- `apps/fret-examples/src/external_imports_owner.rs` now centralizes the native/wasm texture and
+  platform video visibility toggle writes, so those event handlers do not each hand-write
   `models_mut().update(...)`.
 
 Audit judgment:

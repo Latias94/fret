@@ -153,9 +153,9 @@ pub mod emoji_conformance_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod empty_idle_demo;
 pub mod error_bars_demo;
+pub(crate) mod external_imports_owner;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod external_texture_imports_demo;
-pub(crate) mod external_texture_imports_owner;
 #[cfg(target_arch = "wasm32")]
 pub mod external_texture_imports_web_demo;
 #[cfg(all(not(target_arch = "wasm32"), target_os = "macos"))]

@@ -1,10 +1,10 @@
 use fret_runtime::{Model, ModelStore};
 
-pub(crate) struct ExternalTextureImportsModelOwner<'a> {
+pub(crate) struct ExternalImportsModelOwner<'a> {
     models: &'a mut ModelStore,
 }
 
-impl<'a> ExternalTextureImportsModelOwner<'a> {
+impl<'a> ExternalImportsModelOwner<'a> {
     pub(crate) fn new(models: &'a mut ModelStore) -> Self {
         Self { models }
     }
