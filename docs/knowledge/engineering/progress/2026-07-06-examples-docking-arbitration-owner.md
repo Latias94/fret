@@ -45,3 +45,10 @@ The correct cleanup is a named local owner boundary for the shared diagnostic mo
 Do not promote this helper into `fret::app`. If more docking demos need the same shared diagnostic
 model mutation pattern, first design a docking diagnostics binding/owner contract in
 `ecosystem/fret-docking` or a diagnostics harness layer.
+
+# Follow-up
+
+The 2026-07-07 controls-binding pass superseded this owner helper with
+`DockingArbitrationControls`. That follow-up deleted `DockingArbitrationModelOwner`, the raw
+`DockingArbitrationPanelModelsService`, and the separate `ViewportDebugService` channel, so future
+work should extend the controls binding rather than adding another app-global raw model map.

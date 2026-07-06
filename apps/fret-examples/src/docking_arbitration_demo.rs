@@ -1314,7 +1314,7 @@ struct DemoViewportToolState {
 }
 
 #[derive(Clone)]
-struct DockingArbitrationPanelModels {
+struct DockingArbitrationControls {
     popover_open: Model<bool>,
     dialog_open: Model<bool>,
     drop_mask_disallow_left_edge: Model<bool>,
@@ -1323,62 +1323,117 @@ struct DockingArbitrationPanelModels {
 }
 
 #[derive(Default)]
-struct DockingArbitrationPanelModelsService {
-    by_window: HashMap<AppWindowId, DockingArbitrationPanelModels>,
+struct DockingArbitrationControlsService {
+    by_window: HashMap<AppWindowId, DockingArbitrationControls>,
 }
 
-impl DockingArbitrationPanelModelsService {
-    fn set(&mut self, window: AppWindowId, models: DockingArbitrationPanelModels) {
-        self.by_window.insert(window, models);
+impl DockingArbitrationControlsService {
+    fn set(&mut self, window: AppWindowId, controls: DockingArbitrationControls) {
+        self.by_window.insert(window, controls);
     }
 
-    fn get(&self, window: AppWindowId) -> Option<&DockingArbitrationPanelModels> {
+    fn get(&self, window: AppWindowId) -> Option<&DockingArbitrationControls> {
         self.by_window.get(&window)
     }
 }
 
-struct DockingArbitrationModelOwner<'a> {
-    models: &'a mut ModelStore,
+struct DockingArbitrationControlsSnapshot {
+    last_viewport_input: Arc<str>,
+    synth_pointer_debug: Arc<str>,
+    popover_is_open: bool,
+    dialog_is_open: bool,
+    drop_mask_left_disallowed: bool,
 }
 
-impl<'a> DockingArbitrationModelOwner<'a> {
-    fn new(models: &'a mut ModelStore) -> Self {
-        Self { models }
+impl DockingArbitrationControls {
+    fn new(models: &mut ModelStore) -> Self {
+        Self {
+            popover_open: models.insert(false),
+            dialog_open: models.insert(false),
+            drop_mask_disallow_left_edge: models.insert(false),
+            last_viewport_input: models.insert(Arc::<str>::from("<none>")),
+            synth_pointer_debug: models.insert(Arc::<str>::from(
+                "synth_pointer: enabled=false id=<unset> pos=(n/a) down=false mouse_right_down=false drag(<none>)",
+            )),
+        }
     }
 
-    fn toggle_drop_mask_disallow_left_edge(&mut self, model: &Model<bool>) -> bool {
-        self.models
-            .update(model, |value| {
+    fn toggle_drop_mask_disallow_left_edge(
+        &self,
+        host: &mut dyn fret_ui::action::UiActionHost,
+    ) -> bool {
+        self.toggle_drop_mask_disallow_left_edge_in(host.models_mut())
+    }
+
+    fn toggle_drop_mask_disallow_left_edge_in(&self, models: &mut ModelStore) -> bool {
+        models
+            .update(&self.drop_mask_disallow_left_edge, |value| {
                 *value = !*value;
                 *value
             })
             .unwrap_or(false)
     }
 
-    fn set_last_viewport_input(
-        &mut self,
+    fn set_last_viewport_input(&self, app: &mut App, input: impl Into<Arc<str>>) -> bool {
+        self.set_arc_str_model_in(app.models_mut(), &self.last_viewport_input, input)
+    }
+
+    fn set_synth_pointer_debug(&self, app: &mut App, debug: impl Into<Arc<str>>) -> bool {
+        self.set_arc_str_model_in(app.models_mut(), &self.synth_pointer_debug, debug)
+    }
+
+    fn set_arc_str_model_in(
+        &self,
+        models: &mut ModelStore,
         model: &Model<Arc<str>>,
         input: impl Into<Arc<str>>,
     ) -> bool {
-        self.set_arc_str_model(model, input)
-    }
-
-    fn set_synth_pointer_debug(
-        &mut self,
-        model: &Model<Arc<str>>,
-        debug: impl Into<Arc<str>>,
-    ) -> bool {
-        self.set_arc_str_model(model, debug)
-    }
-
-    fn set_arc_str_model(&mut self, model: &Model<Arc<str>>, input: impl Into<Arc<str>>) -> bool {
         let input = input.into();
-        self.models
+        models
             .update(model, |value| {
                 *value = input;
                 true
             })
             .unwrap_or(false)
+    }
+
+    fn render_snapshot(
+        &self,
+        cx: &mut ElementContext<'_, App>,
+    ) -> DockingArbitrationControlsSnapshot {
+        cx.observe_model(&self.popover_open, Invalidation::Layout);
+        cx.observe_model(&self.dialog_open, Invalidation::Layout);
+        cx.observe_model(&self.drop_mask_disallow_left_edge, Invalidation::Layout);
+        cx.observe_model(&self.last_viewport_input, Invalidation::Layout);
+        cx.observe_model(&self.synth_pointer_debug, Invalidation::Layout);
+
+        DockingArbitrationControlsSnapshot {
+            last_viewport_input: cx
+                .app
+                .models()
+                .get_cloned(&self.last_viewport_input)
+                .unwrap_or_else(|| Arc::<str>::from("<missing>")),
+            synth_pointer_debug: cx
+                .app
+                .models()
+                .get_cloned(&self.synth_pointer_debug)
+                .unwrap_or_else(|| Arc::<str>::from("<missing>")),
+            popover_is_open: cx
+                .app
+                .models()
+                .get_cloned(&self.popover_open)
+                .unwrap_or(false),
+            dialog_is_open: cx
+                .app
+                .models()
+                .get_cloned(&self.dialog_open)
+                .unwrap_or(false),
+            drop_mask_left_disallowed: cx
+                .app
+                .models()
+                .get_cloned(&self.drop_mask_disallow_left_edge)
+                .unwrap_or(false),
+        }
     }
 }
 
@@ -1407,9 +1462,9 @@ fn render_controls_panel(
     cx: &mut ElementContext<'_, App>,
     window: AppWindowId,
 ) -> Option<AnyElement> {
-    let models = cx
+    let controls = cx
         .app
-        .global::<DockingArbitrationPanelModelsService>()
+        .global::<DockingArbitrationControlsService>()
         .and_then(|svc| svc.get(window))
         .cloned()?;
 
@@ -1422,11 +1477,7 @@ fn render_controls_panel(
     let layer_lines = debug_snapshot.layer_lines;
 
     Some({
-        cx.observe_model(&models.popover_open, Invalidation::Layout);
-        cx.observe_model(&models.dialog_open, Invalidation::Layout);
-        cx.observe_model(&models.drop_mask_disallow_left_edge, Invalidation::Layout);
-        cx.observe_model(&models.last_viewport_input, Invalidation::Layout);
-        cx.observe_model(&models.synth_pointer_debug, Invalidation::Layout);
+        let controls_snapshot = controls.render_snapshot(cx);
 
         let theme = Theme::global(&*cx.app);
         let padding = theme.metric_token("metric.padding.md");
@@ -1438,28 +1489,17 @@ fn render_controls_panel(
             .map(|d| format!("drag(kind={:?}, dragging={})", d.kind, d.dragging))
             .unwrap_or_else(|| "drag(<none>)".to_string());
 
-        let last = cx
-            .app
-            .models()
-            .get_cloned(&models.last_viewport_input)
-            .unwrap_or_else(|| Arc::<str>::from("<missing>"));
-        let synth_debug = cx
-            .app
-            .models()
-            .get_cloned(&models.synth_pointer_debug)
-            .unwrap_or_else(|| Arc::<str>::from("<missing>"));
+        let DockingArbitrationControlsSnapshot {
+            last_viewport_input: last,
+            synth_pointer_debug: synth_debug,
+            popover_is_open,
+            dialog_is_open,
+            drop_mask_left_disallowed,
+        } = controls_snapshot;
 
-        let popover_open = models.popover_open.clone();
-        let dialog_open = models.dialog_open.clone();
-        let drop_mask_disallow_left_edge = models.drop_mask_disallow_left_edge.clone();
+        let popover_open = controls.popover_open.clone();
+        let dialog_open = controls.dialog_open.clone();
         let sonner = shadcn::Sonner::global(&mut *cx.app);
-        let popover_is_open = cx.app.models().get_cloned(&popover_open).unwrap_or(false);
-        let dialog_is_open = cx.app.models().get_cloned(&dialog_open).unwrap_or(false);
-        let drop_mask_left_disallowed = cx
-            .app
-            .models()
-            .get_cloned(&drop_mask_disallow_left_edge)
-            .unwrap_or(false);
         let disallow_left_flag = cx
             .app
             .global::<DockingArbitrationPolicyFlags>()
@@ -1769,14 +1809,13 @@ fn render_controls_panel(
 	                                                    "Toggle drop mask (left edge)",
 	                                                )
 	                                                .variant(shadcn::ButtonVariant::Outline)
-	                                                .test_id("dock-arb-toggle-drop-mask-left-edge")
-	                                                .on_activate(Arc::new(
-	                                                    move |host, _action_cx, _reason| {
-	                                                        let next =
-	                                                            DockingArbitrationModelOwner::new(host.models_mut())
-	                                                                .toggle_drop_mask_disallow_left_edge(&drop_mask_disallow_left_edge);
-	                                                        disallow_left_flag
-	                                                            .store(next, Ordering::Relaxed);
+                                                    .test_id("dock-arb-toggle-drop-mask-left-edge")
+                                                    .on_activate(Arc::new(
+                                                        move |host, _action_cx, _reason| {
+                                                            let next = controls
+                                                                .toggle_drop_mask_disallow_left_edge(host);
+                                                            disallow_left_flag
+                                                                .store(next, Ordering::Relaxed);
 	                                                    },
 	                                                ))
 	                                                .into_element(cx)
@@ -1911,11 +1950,6 @@ impl DockPanelElementRegistry<App> for DockingArbitrationPanelRegistry {
             _ => None,
         }
     }
-}
-
-#[derive(Default)]
-struct ViewportDebugService {
-    last_event: HashMap<AppWindowId, Model<Arc<str>>>,
 }
 
 struct DemoViewportOverlayHooks {
@@ -2111,8 +2145,8 @@ impl DockingArbitrationDriver {
     }
 
     fn update_synth_debug(app: &mut App, window: AppWindowId, synth: &SynthPointerState) {
-        let Some(models) = app
-            .global::<DockingArbitrationPanelModelsService>()
+        let Some(controls) = app
+            .global::<DockingArbitrationControlsService>()
             .and_then(|svc| svc.get(window))
             .cloned()
         else {
@@ -2137,8 +2171,7 @@ impl DockingArbitrationDriver {
             )
             .into_boxed_str(),
         );
-        let _ = DockingArbitrationModelOwner::new(app.models_mut())
-            .set_synth_pointer_debug(&models.synth_pointer_debug, msg);
+        let _ = controls.set_synth_pointer_debug(app, msg);
         app.request_redraw(window);
     }
 
@@ -2180,7 +2213,7 @@ impl DockingArbitrationDriver {
         pressed: bool,
         modifiers: Modifiers,
     ) {
-        if !synth.enabled {
+        if !synth.enabled && pressed {
             return;
         }
         let evt = if pressed {
@@ -2217,7 +2250,7 @@ impl DockingArbitrationDriver {
         pressed: bool,
         modifiers: Modifiers,
     ) {
-        if !synth.enabled {
+        if !synth.enabled && pressed {
             return;
         }
         let evt = if pressed {
@@ -2288,35 +2321,16 @@ impl DockingArbitrationDriver {
     }
 
     fn build_ui(app: &mut App, window: AppWindowId) -> DockingArbitrationWindowState {
-        let popover_open = app.models_mut().insert(false);
-        let dialog_open = app.models_mut().insert(false);
-        let drop_mask_disallow_left_edge = app.models_mut().insert(false);
-        let last_viewport_input = app.models_mut().insert(Arc::<str>::from("<none>"));
-        let synth_pointer_debug = app.models_mut().insert(Arc::<str>::from(
-            "synth_pointer: enabled=false id=<unset> pos=(n/a) down=false mouse_right_down=false drag(<none>)",
-        ));
-
-        app.with_global_mut(ViewportDebugService::default, |svc, _app| {
-            svc.last_event.insert(window, last_viewport_input.clone());
-        });
+        let controls = DockingArbitrationControls::new(app.models_mut());
 
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
         ui.set_view_cache_enabled(std::env::var_os("FRET_EXAMPLES_VIEW_CACHE").is_some());
 
         app.with_global_mut(
-            DockingArbitrationPanelModelsService::default,
-            |svc, _app| {
-                svc.set(
-                    window,
-                    DockingArbitrationPanelModels {
-                        popover_open: popover_open.clone(),
-                        dialog_open: dialog_open.clone(),
-                        drop_mask_disallow_left_edge: drop_mask_disallow_left_edge.clone(),
-                        last_viewport_input: last_viewport_input.clone(),
-                        synth_pointer_debug: synth_pointer_debug.clone(),
-                    },
-                );
+            DockingArbitrationControlsService::default,
+            move |svc, _app| {
+                svc.set(window, controls);
             },
         );
 
@@ -3193,13 +3207,14 @@ fn viewport_input(driver: &mut DockingArbitrationDriver, app: &mut App, event: V
             )
             .into_boxed_str(),
     );
-    app.with_global_mut(ViewportDebugService::default, |svc, app| {
-        if let Some(model) = svc.last_event.get(&event.window).cloned() {
-            let _ = DockingArbitrationModelOwner::new(app.models_mut())
-                .set_last_viewport_input(&model, msg.clone());
-            app.request_redraw(event.window);
-        }
-    });
+    let controls = app
+        .global::<DockingArbitrationControlsService>()
+        .and_then(|svc| svc.get(event.window))
+        .cloned();
+    if let Some(controls) = controls {
+        let _ = controls.set_last_viewport_input(app, msg);
+        app.request_redraw(event.window);
+    }
 
     if let Ok(mut state) = driver.viewport_tools.lock() {
         let key = (event.window, event.target);
@@ -3819,45 +3834,117 @@ fn diag_enabled_env() -> bool {
 mod tests {
     use super::*;
 
+    struct DockingArbitrationTestActionHost<'a> {
+        app: &'a mut App,
+    }
+
+    impl fret_ui::action::UiActionHost for DockingArbitrationTestActionHost<'_> {
+        fn models_mut(&mut self) -> &mut ModelStore {
+            self.app.models_mut()
+        }
+
+        fn push_effect(&mut self, effect: Effect) {
+            self.app.push_effect(effect);
+        }
+
+        fn request_redraw(&mut self, window: AppWindowId) {
+            self.app.request_redraw(window);
+        }
+
+        fn next_timer_token(&mut self) -> fret_runtime::TimerToken {
+            self.app.next_timer_token()
+        }
+
+        fn next_clipboard_token(&mut self) -> fret_runtime::ClipboardToken {
+            self.app.next_clipboard_token()
+        }
+
+        fn next_share_sheet_token(&mut self) -> fret_runtime::ShareSheetToken {
+            self.app.next_share_sheet_token()
+        }
+    }
+
     #[test]
-    fn docking_arbitration_model_owner_preserves_diagnostic_state_transitions() {
-        let mut models = ModelStore::default();
-        let drop_mask = models.insert(false);
-        let last_viewport_input = models.insert(Arc::<str>::from("<none>"));
-        let synth_pointer_debug = models.insert(Arc::<str>::from("<none>"));
+    fn docking_arbitration_controls_service_preserves_diagnostic_state_transitions() {
+        let mut app = App::new();
+        let window = AppWindowId::default();
+        let _state = DockingArbitrationDriver::build_ui(&mut app, window);
+        let controls = app
+            .global::<DockingArbitrationControlsService>()
+            .and_then(|svc| svc.get(window))
+            .cloned()
+            .expect("build_ui should register docking arbitration controls");
 
-        assert!(
-            DockingArbitrationModelOwner::new(&mut models)
-                .toggle_drop_mask_disallow_left_edge(&drop_mask)
+        {
+            let mut host = DockingArbitrationTestActionHost { app: &mut app };
+            assert!(controls.toggle_drop_mask_disallow_left_edge(&mut host));
+        }
+        assert_eq!(
+            app.models()
+                .get_copied(&controls.drop_mask_disallow_left_edge),
+            Some(true)
         );
-        assert_eq!(models.get_copied(&drop_mask), Some(true));
 
-        assert!(
-            !DockingArbitrationModelOwner::new(&mut models)
-                .toggle_drop_mask_disallow_left_edge(&drop_mask)
+        {
+            let mut host = DockingArbitrationTestActionHost { app: &mut app };
+            assert!(!controls.toggle_drop_mask_disallow_left_edge(&mut host));
+        }
+        assert_eq!(
+            app.models()
+                .get_copied(&controls.drop_mask_disallow_left_edge),
+            Some(false)
         );
-        assert_eq!(models.get_copied(&drop_mask), Some(false));
 
-        assert!(
-            DockingArbitrationModelOwner::new(&mut models)
-                .set_last_viewport_input(&last_viewport_input, Arc::<str>::from("Viewport event"))
+        let synth = SynthPointerState {
+            enabled: true,
+            ..Default::default()
+        };
+        DockingArbitrationDriver::update_synth_debug(&mut app, window, &synth);
+        assert_eq!(
+            app.models()
+                .get_cloned(&controls.synth_pointer_debug)
+                .map(|value| value.contains("synth_pointer: enabled=true")),
+            Some(true)
+        );
+
+        let mut driver = DockingArbitrationDriver::default();
+        viewport_input(
+            &mut driver,
+            &mut app,
+            ViewportInputEvent {
+                window,
+                target: RenderTargetId::default(),
+                pointer_id: fret_core::PointerId(0),
+                pointer_type: fret_core::PointerType::Mouse,
+                geometry: fret_core::ViewportInputGeometry {
+                    content_rect_px: Rect::new(
+                        Point::new(Px(0.0), Px(0.0)),
+                        Size::new(Px(100.0), Px(100.0)),
+                    ),
+                    draw_rect_px: Rect::new(
+                        Point::new(Px(0.0), Px(0.0)),
+                        Size::new(Px(100.0), Px(100.0)),
+                    ),
+                    target_px_size: (100, 100),
+                    fit: fret_core::ViewportFit::Contain,
+                    pixels_per_point: 1.0,
+                },
+                cursor_px: Point::new(Px(25.0), Px(30.0)),
+                uv: (0.25, 0.3),
+                target_px: (25, 30),
+                kind: fret_core::ViewportInputKind::PointerMove {
+                    buttons: MouseButtons::default(),
+                    modifiers: Modifiers::default(),
+                },
+            },
         );
         assert_eq!(
-            models
-                .get_cloned(&last_viewport_input)
-                .map(|value| value.to_string()),
-            Some("Viewport event".to_string())
-        );
-
-        assert!(
-            DockingArbitrationModelOwner::new(&mut models)
-                .set_synth_pointer_debug(&synth_pointer_debug, Arc::<str>::from("Synthetic drag"))
-        );
-        assert_eq!(
-            models
-                .get_cloned(&synth_pointer_debug)
-                .map(|value| value.to_string()),
-            Some("Synthetic drag".to_string())
+            app.models()
+                .get_cloned(&controls.last_viewport_input)
+                .map(|value| {
+                    value.contains("PointerMove") && value.contains("cursor_px=(25.0,30.0)")
+                }),
+            Some(true)
         );
     }
 }
