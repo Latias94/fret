@@ -89,6 +89,11 @@ Keep raw/shared-model mechanisms for now:
     `IntoDataGridCanvasOutputModel` bridge, and `fret::app::LocalState<DataGridCanvasOutput>`
     implements it. `canvas_datagrid_stress_demo.rs` uses `LocalState` for grid telemetry output
     while preserving raw stress-control models for variable sizing, clamping, and revision state.
+  - Follow-up: `table_stress_demo.rs` remains a retained table/perf harness, but keyboard command
+    writes for sorting, role/global filters, clearing filters, and `items_revision` now route
+    through the demo-local `TableStressModelOwner` helper. Its source-surface test forbids direct
+    `models_mut().update(...)`, generic/update-any variants, and UFCS `ModelStore` bypasses in the
+    production demo source.
   - Keep raw model seams in lower-level retained table, data-grid, stress, or canvas-grid surfaces
     only when their component contract still names the shared retained state explicitly.
 - Custom effect demos such as `custom_effect_v2_*`. They expose effect parameter models and reset

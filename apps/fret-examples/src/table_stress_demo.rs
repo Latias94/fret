@@ -6,7 +6,7 @@ use fret_launch::{
     WinitRenderContext, WinitRunnerConfig, WinitWindowContext,
 };
 use fret_render::{Renderer, WgpuContext};
-use fret_runtime::PlatformCapabilities;
+use fret_runtime::{ModelStore, PlatformCapabilities};
 use fret_ui::declarative;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
@@ -106,6 +106,99 @@ pub struct TableStressWindowState {
     alloc_last_layout_bytes: u64,
     alloc_last_paint_calls: u64,
     alloc_last_paint_bytes: u64,
+}
+
+struct TableStressModelOwner<'a> {
+    models: &'a mut ModelStore,
+}
+
+impl<'a> TableStressModelOwner<'a> {
+    fn new(models: &'a mut ModelStore) -> Self {
+        Self { models }
+    }
+
+    fn update_table_state(
+        &mut self,
+        state: &Model<TableState>,
+        f: impl FnOnce(&mut TableState),
+    ) -> bool {
+        self.models
+            .update(state, |state| {
+                f(state);
+                true
+            })
+            .unwrap_or(false)
+    }
+
+    fn toggle_sorting(&mut self, state: &Model<TableState>) -> bool {
+        self.update_table_state(state, |st| {
+            let next = match st.sorting.first() {
+                None => Some(SortSpec {
+                    column: "score".into(),
+                    desc: false,
+                }),
+                Some(s) if s.column.as_ref() == "score" && !s.desc => Some(SortSpec {
+                    column: "score".into(),
+                    desc: true,
+                }),
+                _ => None,
+            };
+
+            st.sorting.clear();
+            if let Some(next) = next {
+                st.sorting.push(next);
+            }
+        })
+    }
+
+    fn toggle_role_filter(&mut self, state: &Model<TableState>) -> bool {
+        self.update_table_state(state, |st| {
+            let enabled = st
+                .column_filters
+                .iter()
+                .any(|f| f.column.as_ref() == "role" && f.value.as_str() == Some("Admin"));
+
+            st.column_filters
+                .retain(|f| !(f.column.as_ref() == "role" && f.value.as_str() == Some("Admin")));
+            if !enabled {
+                st.column_filters.push(ColumnFilter {
+                    column: "role".into(),
+                    value: Value::from("Admin"),
+                });
+            }
+
+            st.pagination.page_index = 0;
+        })
+    }
+
+    fn toggle_global_filter(&mut self, state: &Model<TableState>) -> bool {
+        self.update_table_state(state, |st| {
+            if st.global_filter.is_some() {
+                st.global_filter = None;
+            } else {
+                st.global_filter = Some(Value::from("User 1"));
+            }
+
+            st.pagination.page_index = 0;
+        })
+    }
+
+    fn clear_filters(&mut self, state: &Model<TableState>) -> bool {
+        self.update_table_state(state, |st| {
+            st.column_filters.clear();
+            st.global_filter = None;
+            st.pagination.page_index = 0;
+        })
+    }
+
+    fn bump_items_revision(&mut self, revision: &Model<u64>) -> bool {
+        self.models
+            .update(revision, |value| {
+                *value = value.wrapping_add(1);
+                true
+            })
+            .unwrap_or(false)
+    }
 }
 
 #[derive(Default)]
@@ -212,64 +305,23 @@ impl TableStressDriver {
     }
 
     fn toggle_sorting(app: &mut App, state: &Model<TableState>) {
-        let _ = app.models_mut().update(state, |st| {
-            let next = match st.sorting.first() {
-                None => Some(SortSpec {
-                    column: "score".into(),
-                    desc: false,
-                }),
-                Some(s) if s.column.as_ref() == "score" && !s.desc => Some(SortSpec {
-                    column: "score".into(),
-                    desc: true,
-                }),
-                _ => None,
-            };
-
-            st.sorting.clear();
-            if let Some(next) = next {
-                st.sorting.push(next);
-            }
-        });
+        let _ = TableStressModelOwner::new(app.models_mut()).toggle_sorting(state);
     }
 
     fn toggle_role_filter(app: &mut App, state: &Model<TableState>) {
-        let _ = app.models_mut().update(state, |st| {
-            let enabled = st
-                .column_filters
-                .iter()
-                .any(|f| f.column.as_ref() == "role" && f.value.as_str() == Some("Admin"));
-
-            st.column_filters
-                .retain(|f| !(f.column.as_ref() == "role" && f.value.as_str() == Some("Admin")));
-            if !enabled {
-                st.column_filters.push(ColumnFilter {
-                    column: "role".into(),
-                    value: Value::from("Admin"),
-                });
-            }
-
-            st.pagination.page_index = 0;
-        });
+        let _ = TableStressModelOwner::new(app.models_mut()).toggle_role_filter(state);
     }
 
     fn toggle_global_filter(app: &mut App, state: &Model<TableState>) {
-        let _ = app.models_mut().update(state, |st| {
-            if st.global_filter.is_some() {
-                st.global_filter = None;
-            } else {
-                st.global_filter = Some(Value::from("User 1"));
-            }
-
-            st.pagination.page_index = 0;
-        });
+        let _ = TableStressModelOwner::new(app.models_mut()).toggle_global_filter(state);
     }
 
     fn clear_filters(app: &mut App, state: &Model<TableState>) {
-        let _ = app.models_mut().update(state, |st| {
-            st.column_filters.clear();
-            st.global_filter = None;
-            st.pagination.page_index = 0;
-        });
+        let _ = TableStressModelOwner::new(app.models_mut()).clear_filters(state);
+    }
+
+    fn bump_items_revision(app: &mut App, revision: &Model<u64>) {
+        let _ = TableStressModelOwner::new(app.models_mut()).bump_items_revision(revision);
     }
 }
 
@@ -464,9 +516,7 @@ fn handle_event(
                 return;
             }
             fret_core::KeyCode::KeyR => {
-                let _ = app
-                    .models_mut()
-                    .update(&state.items_revision, |v| *v = v.wrapping_add(1));
+                TableStressDriver::bump_items_revision(app, &state.items_revision);
                 app.request_redraw(window);
                 return;
             }
@@ -860,4 +910,88 @@ pub fn run() -> anyhow::Result<()> {
         configure_fn_driver_hooks,
     )
     .context("run table_stress_demo app")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn table_state_snapshot(models: &ModelStore, state: &Model<TableState>) -> TableState {
+        models.read(state, Clone::clone).unwrap()
+    }
+
+    #[test]
+    fn table_stress_model_owner_preserves_command_state_transitions() {
+        let mut models = ModelStore::default();
+        let table_state = models.insert(TableState::default());
+        let revision = models.insert(u64::MAX);
+
+        assert!(TableStressModelOwner::new(&mut models).toggle_sorting(&table_state));
+        let state = table_state_snapshot(&models, &table_state);
+        assert_eq!(state.sorting.len(), 1);
+        assert_eq!(state.sorting[0].column.as_ref(), "score");
+        assert!(!state.sorting[0].desc);
+
+        assert!(TableStressModelOwner::new(&mut models).toggle_sorting(&table_state));
+        let state = table_state_snapshot(&models, &table_state);
+        assert_eq!(state.sorting.len(), 1);
+        assert_eq!(state.sorting[0].column.as_ref(), "score");
+        assert!(state.sorting[0].desc);
+
+        assert!(TableStressModelOwner::new(&mut models).toggle_sorting(&table_state));
+        let state = table_state_snapshot(&models, &table_state);
+        assert!(state.sorting.is_empty());
+
+        models
+            .update(&table_state, |state| {
+                state.pagination.page_index = 8;
+            })
+            .unwrap();
+        assert!(TableStressModelOwner::new(&mut models).toggle_role_filter(&table_state));
+        let state = table_state_snapshot(&models, &table_state);
+        assert_eq!(state.column_filters.len(), 1);
+        assert_eq!(state.column_filters[0].column.as_ref(), "role");
+        assert_eq!(state.column_filters[0].value.as_str(), Some("Admin"));
+        assert_eq!(state.pagination.page_index, 0);
+
+        models
+            .update(&table_state, |state| {
+                state.pagination.page_index = 5;
+            })
+            .unwrap();
+        assert!(TableStressModelOwner::new(&mut models).toggle_role_filter(&table_state));
+        let state = table_state_snapshot(&models, &table_state);
+        assert!(state.column_filters.is_empty());
+        assert_eq!(state.pagination.page_index, 0);
+
+        models
+            .update(&table_state, |state| {
+                state.pagination.page_index = 3;
+            })
+            .unwrap();
+        assert!(TableStressModelOwner::new(&mut models).toggle_global_filter(&table_state));
+        let state = table_state_snapshot(&models, &table_state);
+        assert_eq!(
+            state
+                .global_filter
+                .as_ref()
+                .and_then(|value| value.as_str()),
+            Some("User 1")
+        );
+        assert_eq!(state.pagination.page_index, 0);
+
+        models
+            .update(&table_state, |state| {
+                state.pagination.page_index = 2;
+            })
+            .unwrap();
+        assert!(TableStressModelOwner::new(&mut models).clear_filters(&table_state));
+        let state = table_state_snapshot(&models, &table_state);
+        assert!(state.column_filters.is_empty());
+        assert!(state.global_filter.is_none());
+        assert_eq!(state.pagination.page_index, 0);
+
+        assert!(TableStressModelOwner::new(&mut models).bump_items_revision(&revision));
+        assert_eq!(models.get_copied(&revision), Some(0));
+    }
 }
