@@ -5,7 +5,7 @@ mod hotpatch {
     use fret_bootstrap::HotLiterals;
     use fret_bootstrap::ui_app_driver::UiAppDriver;
     use fret_core::{AppWindowId, UiServices};
-    use fret_runtime::Model;
+    use fret_runtime::{Model, ModelStore};
     use fret_ui::{ElementContext, Invalidation};
     use fret_ui_kit::declarative::ElementContextThemeExt as _;
     use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -23,6 +23,31 @@ mod hotpatch {
     struct State {
         counter: Model<i64>,
         debug: Model<Arc<str>>,
+    }
+
+    struct HotpatchSmokeModelOwner<'a> {
+        models: &'a mut ModelStore,
+    }
+
+    impl<'a> HotpatchSmokeModelOwner<'a> {
+        fn new(models: &'a mut ModelStore) -> Self {
+            Self { models }
+        }
+
+        fn increment_counter(&mut self, model: &Model<i64>) -> Option<i64> {
+            self.models
+                .update(model, |value| {
+                    *value += 1;
+                    *value
+                })
+                .ok()
+        }
+
+        fn set_debug(&mut self, model: &Model<Arc<str>>, message: &str) -> bool {
+            self.models
+                .update(model, |value| *value = Arc::from(message))
+                .is_ok()
+        }
     }
 
     pub(super) fn main() -> anyhow::Result<()> {
@@ -155,17 +180,15 @@ mod hotpatch {
                 let msg = format!("pointer down {button:?}");
                 eprintln!("[hotpatch_smoke_demo] {msg}");
                 log_line(&format!("[hotpatch_smoke_demo] {msg}"));
-                let _ = app
-                    .models_mut()
-                    .update(&state.debug, |v| *v = Arc::from(msg.as_str()));
+                let _ =
+                    HotpatchSmokeModelOwner::new(app.models_mut()).set_debug(&state.debug, &msg);
             }
             fret_core::Event::Pointer(fret_core::PointerEvent::Up { button, .. }) => {
                 let msg = format!("pointer up {button:?}");
                 eprintln!("[hotpatch_smoke_demo] {msg}");
                 log_line(&format!("[hotpatch_smoke_demo] {msg}"));
-                let _ = app
-                    .models_mut()
-                    .update(&state.debug, |v| *v = Arc::from(msg.as_str()));
+                let _ =
+                    HotpatchSmokeModelOwner::new(app.models_mut()).set_debug(&state.debug, &msg);
             }
             _ => {}
         }
@@ -186,17 +209,14 @@ mod hotpatch {
         ));
         match cmd.as_str() {
             CMD_INC => {
-                let _ = app.models_mut().update(&state.counter, |v| *v += 1);
-                let value = app
-                    .models()
-                    .read(&state.counter, |v| *v)
+                let value = HotpatchSmokeModelOwner::new(app.models_mut())
+                    .increment_counter(&state.counter)
                     .unwrap_or_default();
                 eprintln!("[hotpatch_smoke_demo] counter now {value}");
                 log_line(&format!("[hotpatch_smoke_demo] counter now {value}"));
                 let msg = format!("command {CMD_INC} -> counter {value}");
-                let _ = app
-                    .models_mut()
-                    .update(&state.debug, |v| *v = Arc::from(msg.as_str()));
+                let _ =
+                    HotpatchSmokeModelOwner::new(app.models_mut()).set_debug(&state.debug, &msg);
                 app.request_redraw(window);
             }
             _ => {}

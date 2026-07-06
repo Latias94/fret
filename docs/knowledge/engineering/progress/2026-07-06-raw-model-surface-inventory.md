@@ -183,6 +183,11 @@ Keep raw/shared-model mechanisms for now:
 - `api_workbench_lite_demo.rs`. Audited and cleaned after the initial inventory: it remains a
   first-contact LocalState/query/mutation app example, while the necessary mutation/query
   `ModelStore` access is routed through a local `ApiWorkbenchModelOwner` and source-gated.
+- `apps/fret-demo/src/bin/hotpatch_smoke_demo.rs`. Audited after the IMUI collection host-write
+  cleanup: it remains a dev-only hotpatch maintainer smoke harness, while event/command counter and
+  debug writes now route through `HotpatchSmokeModelOwner` instead of direct
+  `app.models_mut().update(...)` calls. A source-surface regression test keeps those write paths
+  behind the owner while allowing the hotpatch harness to keep explicit model allocation/read seams.
 
 Likely next cleanup slices:
 
