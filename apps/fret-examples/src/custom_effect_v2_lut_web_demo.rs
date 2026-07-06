@@ -13,7 +13,7 @@ use std::sync::Arc;
 
 use crate::custom_effect_v2_web_owner::{
     CustomEffectV2ParamPack, CustomEffectV2ParamSlot, CustomEffectV2ScalarControl,
-    CustomEffectV2WebControlBinding, CustomEffectV2WebVariantControls,
+    CustomEffectV2ScalarSpec, CustomEffectV2WebControlBinding, CustomEffectV2WebVariantControls,
     CustomEffectV2WebVariantReset,
 };
 use fret::advanced::view::AppRenderDataExt as _;
@@ -223,13 +223,34 @@ impl CustomEffectV2LutWebDriver {
         let binding = CustomEffectV2WebControlBinding::new(app.models_mut());
 
         let controls = DemoControls {
-            strength_px: CustomEffectV2ScalarControl::new(app.models_mut(), 0.85),
-            max_sample_offset_px: CustomEffectV2ScalarControl::new(app.models_mut(), 0.0),
-            tint_strength: CustomEffectV2ScalarControl::new(app.models_mut(), 0.5),
-            blur_radius_px: CustomEffectV2ScalarControl::new(app.models_mut(), 0.0),
-            blur_downsample: CustomEffectV2ScalarControl::new(app.models_mut(), 1.0),
-            lens_corner_radius_px: CustomEffectV2ScalarControl::new(app.models_mut(), 24.0),
-            tile_corner_radius_px: CustomEffectV2ScalarControl::new(app.models_mut(), 18.0),
+            strength_px: CustomEffectV2ScalarControl::new(
+                app.models_mut(),
+                CustomEffectV2ScalarSpec::new(0.85, 0.0, 1.0, 0.01),
+            ),
+            max_sample_offset_px: CustomEffectV2ScalarControl::new(
+                app.models_mut(),
+                CustomEffectV2ScalarSpec::new(0.0, 0.0, 96.0, 0.5),
+            ),
+            tint_strength: CustomEffectV2ScalarControl::new(
+                app.models_mut(),
+                CustomEffectV2ScalarSpec::new(0.5, 0.0, 1.0, 0.01),
+            ),
+            blur_radius_px: CustomEffectV2ScalarControl::new(
+                app.models_mut(),
+                CustomEffectV2ScalarSpec::new(0.0, 0.0, 32.0, 0.5),
+            ),
+            blur_downsample: CustomEffectV2ScalarControl::new(
+                app.models_mut(),
+                CustomEffectV2ScalarSpec::new(1.0, 1.0, 4.0, 1.0),
+            ),
+            lens_corner_radius_px: CustomEffectV2ScalarControl::new(
+                app.models_mut(),
+                CustomEffectV2ScalarSpec::new(24.0, 0.0, 48.0, 0.5),
+            ),
+            tile_corner_radius_px: CustomEffectV2ScalarControl::new(
+                app.models_mut(),
+                CustomEffectV2ScalarSpec::new(18.0, 0.0, 48.0, 0.5),
+            ),
         };
 
         CustomEffectV2LutWebWindowState {
@@ -290,36 +311,20 @@ impl CustomEffectV2LutWebDriver {
                         .as_ref()
                         .map(|value| value.to_string())
                         .unwrap_or_else(|| "linear".to_string()),
-                    uv_span: binding.uv_span().clamped_value(uv_span, 0.05, 1.0),
-                    intensity: controls.strength_px.clamped_value(strength_px, 0.0, 1.0),
-                    max_sample_offset_px: controls.max_sample_offset_px.clamped_value(
-                        max_sample_offset_px,
-                        0.0,
-                        96.0,
-                    ),
-                    contrast01: controls
-                        .tint_strength
-                        .clamped_value(tint_strength, 0.0, 1.0),
-                    blur_radius_px: controls.blur_radius_px.clamped_value(
-                        blur_radius_px,
-                        0.0,
-                        48.0,
-                    ),
-                    blur_downsample: controls.blur_downsample.rounded_u32_value(
-                        blur_downsample,
-                        1.0,
-                        4.0,
-                    ),
-                    lens_corner_radius_px: controls.lens_corner_radius_px.clamped_value(
-                        lens_corner_radius_px,
-                        0.0,
-                        64.0,
-                    ),
-                    tile_corner_radius_px: controls.tile_corner_radius_px.clamped_value(
-                        tile_corner_radius_px,
-                        0.0,
-                        64.0,
-                    ),
+                    uv_span: binding.uv_span().clamped_value(uv_span),
+                    intensity: controls.strength_px.clamped_value(strength_px),
+                    max_sample_offset_px: controls
+                        .max_sample_offset_px
+                        .clamped_value(max_sample_offset_px),
+                    contrast01: controls.tint_strength.clamped_value(tint_strength),
+                    blur_radius_px: controls.blur_radius_px.clamped_value(blur_radius_px),
+                    blur_downsample: controls.blur_downsample.rounded_u32_value(blur_downsample),
+                    lens_corner_radius_px: controls
+                        .lens_corner_radius_px
+                        .clamped_value(lens_corner_radius_px),
+                    tile_corner_radius_px: controls
+                        .tile_corner_radius_px
+                        .clamped_value(tile_corner_radius_px),
                     debug_input,
                 }
             },
@@ -728,10 +733,7 @@ impl CustomEffectV2LutWebDriver {
                 let uv_span_row = ui::v_flex(move |cx| {
                     vec![
                         label_row(cx, "Input UV span", format!("{uv_span:.2}")),
-                        shadcn::Slider::new(binding.uv_span().clone())
-                            .range(0.05, 1.0)
-                            .step(0.01)
-                            .into_element(cx),
+                        binding.uv_span().slider().into_element(cx),
                     ]
                 })
                 .gap(Space::N2)
@@ -740,10 +742,7 @@ impl CustomEffectV2LutWebDriver {
                 let strength_row = ui::v_flex(move |cx| {
                     vec![
                         label_row(cx, "Intensity", format!("{intensity:.2}")),
-                        shadcn::Slider::new(controls.strength_px.clone())
-                            .range(0.0, 1.0)
-                            .step(0.01)
-                            .into_element(cx),
+                        controls.strength_px.slider().into_element(cx),
                     ]
                 })
                 .gap(Space::N2)
@@ -756,10 +755,7 @@ impl CustomEffectV2LutWebDriver {
                             "Max sample offset (px)",
                             format!("{max_sample_offset_px:.1}"),
                         ),
-                        shadcn::Slider::new(controls.max_sample_offset_px.clone())
-                            .range(0.0, 96.0)
-                            .step(0.5)
-                            .into_element(cx),
+                        controls.max_sample_offset_px.slider().into_element(cx),
                     ]
                 })
                 .gap(Space::N2)
@@ -768,10 +764,7 @@ impl CustomEffectV2LutWebDriver {
                 let tint_row = ui::v_flex(move |cx| {
                     vec![
                         label_row(cx, "Contrast", format!("{contrast:.2}x")),
-                        shadcn::Slider::new(controls.tint_strength.clone())
-                            .range(0.0, 1.0)
-                            .step(0.01)
-                            .into_element(cx),
+                        controls.tint_strength.slider().into_element(cx),
                     ]
                 })
                 .gap(Space::N2)
@@ -780,10 +773,7 @@ impl CustomEffectV2LutWebDriver {
                 let blur_radius_row = ui::v_flex(move |cx| {
                     vec![
                         label_row(cx, "Blur radius (px)", format!("{blur_radius_px:.1}")),
-                        shadcn::Slider::new(controls.blur_radius_px.clone())
-                            .range(0.0, 32.0)
-                            .step(0.5)
-                            .into_element(cx),
+                        controls.blur_radius_px.slider().into_element(cx),
                     ]
                 })
                 .gap(Space::N2)
@@ -792,10 +782,7 @@ impl CustomEffectV2LutWebDriver {
                 let blur_downsample_row = ui::v_flex(move |cx| {
                     vec![
                         label_row(cx, "Blur downsample", format!("{blur_downsample}x")),
-                        shadcn::Slider::new(controls.blur_downsample.clone())
-                            .range(1.0, 4.0)
-                            .step(1.0)
-                            .into_element(cx),
+                        controls.blur_downsample.slider().into_element(cx),
                     ]
                 })
                 .gap(Space::N2)
@@ -808,10 +795,7 @@ impl CustomEffectV2LutWebDriver {
                             "Lens corner radius (px)",
                             format!("{lens_corner_radius_px:.1}"),
                         ),
-                        shadcn::Slider::new(controls.lens_corner_radius_px.clone())
-                            .range(0.0, 48.0)
-                            .step(0.5)
-                            .into_element(cx),
+                        controls.lens_corner_radius_px.slider().into_element(cx),
                     ]
                 })
                 .gap(Space::N2)
@@ -824,10 +808,7 @@ impl CustomEffectV2LutWebDriver {
                             "Tile corner radius (px)",
                             format!("{tile_corner_radius_px:.1}"),
                         ),
-                        shadcn::Slider::new(controls.tile_corner_radius_px.clone())
-                            .range(0.0, 48.0)
-                            .step(0.5)
-                            .into_element(cx),
+                        controls.tile_corner_radius_px.slider().into_element(cx),
                     ]
                 })
                 .gap(Space::N2)

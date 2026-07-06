@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use fret_core::scene::EffectParamsV1;
 use fret_runtime::{Model, ModelStore};
-use fret_ui_shadcn::facade::IntoFloatVecModel;
+use fret_ui_shadcn::facade::{IntoFloatVecModel, Slider};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) struct CustomEffectV2ParamSlot {
@@ -48,17 +48,42 @@ impl CustomEffectV2ParamPack {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub(crate) struct CustomEffectV2ScalarSpec {
+    default: f32,
+    min: f32,
+    max: f32,
+    step: f32,
+}
+
+impl CustomEffectV2ScalarSpec {
+    pub(crate) fn new(default: f32, min: f32, max: f32, step: f32) -> Self {
+        assert!(min.is_finite());
+        assert!(max.is_finite());
+        assert!(step.is_finite());
+        assert!(min <= max);
+        assert!(step > 0.0);
+        assert!(default >= min && default <= max);
+        Self {
+            default,
+            min,
+            max,
+            step,
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub(crate) struct CustomEffectV2ScalarControl {
     model: Model<Vec<f32>>,
-    default: f32,
+    spec: CustomEffectV2ScalarSpec,
 }
 
 impl CustomEffectV2ScalarControl {
-    pub(crate) fn new(models: &mut ModelStore, default: f32) -> Self {
+    pub(crate) fn new(models: &mut ModelStore, spec: CustomEffectV2ScalarSpec) -> Self {
         Self {
-            model: models.insert(vec![default]),
-            default,
+            model: models.insert(vec![spec.default]),
+            spec,
         }
     }
 
@@ -66,31 +91,31 @@ impl CustomEffectV2ScalarControl {
         &self.model
     }
 
-    pub(crate) fn clamped_value(&self, values: impl AsRef<[f32]>, min: f32, max: f32) -> f32 {
+    pub(crate) fn clamped_value(&self, values: impl AsRef<[f32]>) -> f32 {
         values
             .as_ref()
             .first()
             .copied()
-            .unwrap_or(self.default)
-            .clamp(min, max)
+            .unwrap_or(self.spec.default)
+            .clamp(self.spec.min, self.spec.max)
     }
 
-    pub(crate) fn rounded_u32_value(&self, values: impl AsRef<[f32]>, min: f32, max: f32) -> u32 {
-        self.clamped_value(values, min, max).round() as u32
+    pub(crate) fn rounded_u32_value(&self, values: impl AsRef<[f32]>) -> u32 {
+        self.clamped_value(values).round() as u32
+    }
+
+    pub(crate) fn slider(&self) -> Slider {
+        Slider::new(self)
+            .range(self.spec.min, self.spec.max)
+            .step(self.spec.step)
     }
 
     pub(crate) fn reset(&self, reset: &mut CustomEffectV2WebVariantReset<'_, '_>) -> bool {
-        reset.set_model(&self.model, vec![self.default])
+        reset.set_model(&self.model, vec![self.spec.default])
     }
 
     fn reset_with_owner(&self, owner: &mut CustomEffectV2WebModelOwner<'_>) -> bool {
-        owner.set_model(&self.model, vec![self.default])
-    }
-}
-
-impl IntoFloatVecModel for CustomEffectV2ScalarControl {
-    fn into_float_vec_model(self) -> Model<Vec<f32>> {
-        self.model
+        owner.set_model(&self.model, vec![self.spec.default])
     }
 }
 
@@ -260,7 +285,10 @@ impl CustomEffectV2WebCommonControls {
             quality_open: models.insert(false),
             sampling: models.insert(Some(Arc::from(defaults.sampling))),
             sampling_open: models.insert(false),
-            uv_span: CustomEffectV2ScalarControl::new(models, defaults.uv_span),
+            uv_span: CustomEffectV2ScalarControl::new(
+                models,
+                CustomEffectV2ScalarSpec::new(defaults.uv_span, 0.05, 1.0, 0.01),
+            ),
             debug_input: models.insert(defaults.debug_input),
         }
     }
@@ -380,17 +408,67 @@ mod tests {
     #[test]
     fn scalar_control_reads_clamps_rounds_and_converts_to_slider_model() {
         let mut app = fret_app::App::new();
-        let control = CustomEffectV2ScalarControl::new(app.models_mut(), 1.5);
+        let control = CustomEffectV2ScalarControl::new(
+            app.models_mut(),
+            CustomEffectV2ScalarSpec::new(1.5, 0.0, 2.0, 0.25),
+        );
 
-        assert_eq!(control.clamped_value(&[], 0.0, 2.0), 1.5);
-        assert_eq!(control.clamped_value(&[3.0], 0.0, 2.0), 2.0);
-        assert_eq!(control.rounded_u32_value(&[2.6], 1.0, 4.0), 3);
+        assert_eq!(control.clamped_value(&[]), 1.5);
+        assert_eq!(control.clamped_value(&[3.0]), 2.0);
+        assert_eq!(control.rounded_u32_value(&[1.6]), 2);
 
         let slider_model = (&control).into_float_vec_model();
         assert_eq!(
             app.models().read(&slider_model, Clone::clone).unwrap(),
             vec![1.5]
         );
+    }
+
+    #[test]
+    fn scalar_control_slider_applies_range_and_step_spec_to_semantics() {
+        let window = fret_core::AppWindowId::default();
+        let mut app = fret_app::App::new();
+        fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
+            &mut app,
+            fret_ui_shadcn::facade::themes::ShadcnBaseColor::Slate,
+            fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
+        );
+
+        let control = CustomEffectV2ScalarControl::new(
+            app.models_mut(),
+            CustomEffectV2ScalarSpec::new(3.0, -2.0, 7.0, 0.125),
+        );
+
+        let mut ui: fret_ui::UiTree<fret_app::App> = fret_ui::UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeUiServices;
+        let bounds = fret_core::Rect::new(
+            fret_core::Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
+            fret_core::Size::new(fret_core::Px(240.0), fret_core::Px(60.0)),
+        );
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "custom-effect-v2-scalar-control-test",
+            |cx| vec![control.slider().test_id("scalar-slider").into_element(cx)],
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snapshot = ui.semantics_snapshot().expect("semantics snapshot");
+        let node = snapshot
+            .nodes
+            .iter()
+            .find(|node| node.test_id.as_deref() == Some("scalar-slider"))
+            .expect("scalar slider semantics node");
+
+        assert_eq!(node.extra.numeric.min, Some(-2.0));
+        assert_eq!(node.extra.numeric.max, Some(7.0));
+        assert_eq!(node.extra.numeric.step, Some(0.125));
     }
 
     #[test]
@@ -418,5 +496,65 @@ mod tests {
             app.models().read(&uv_span_model, Clone::clone).unwrap(),
             vec![0.75]
         );
+    }
+
+    #[derive(Default)]
+    struct FakeUiServices;
+
+    impl fret_core::TextService for FakeUiServices {
+        fn prepare(
+            &mut self,
+            _input: &fret_core::TextInput,
+            _constraints: fret_core::TextConstraints,
+        ) -> (fret_core::TextBlobId, fret_core::TextMetrics) {
+            (
+                fret_core::TextBlobId::default(),
+                fret_core::TextMetrics {
+                    size: fret_core::Size::new(fret_core::Px(10.0), fret_core::Px(10.0)),
+                    baseline: fret_core::Px(8.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: fret_core::TextBlobId) {}
+    }
+
+    impl fret_core::PathService for FakeUiServices {
+        fn prepare(
+            &mut self,
+            _commands: &[fret_core::PathCommand],
+            _style: fret_core::PathStyle,
+            _constraints: fret_core::PathConstraints,
+        ) -> (fret_core::PathId, fret_core::PathMetrics) {
+            (
+                fret_core::PathId::default(),
+                fret_core::PathMetrics::default(),
+            )
+        }
+
+        fn release(&mut self, _path: fret_core::PathId) {}
+    }
+
+    impl fret_core::SvgService for FakeUiServices {
+        fn register_svg(&mut self, _bytes: &[u8]) -> fret_core::SvgId {
+            fret_core::SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: fret_core::SvgId) -> bool {
+            true
+        }
+    }
+
+    impl fret_core::MaterialService for FakeUiServices {
+        fn register_material(
+            &mut self,
+            _desc: fret_core::MaterialDescriptor,
+        ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+            Ok(fret_core::MaterialId::default())
+        }
+
+        fn unregister_material(&mut self, _material: fret_core::MaterialId) -> bool {
+            true
+        }
     }
 }

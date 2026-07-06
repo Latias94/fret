@@ -16,7 +16,7 @@ use std::sync::Arc;
 
 use crate::custom_effect_v2_web_owner::{
     CustomEffectV2ParamPack, CustomEffectV2ParamSlot, CustomEffectV2ScalarControl,
-    CustomEffectV2WebControlBinding, CustomEffectV2WebVariantControls,
+    CustomEffectV2ScalarSpec, CustomEffectV2WebControlBinding, CustomEffectV2WebVariantControls,
     CustomEffectV2WebVariantReset,
 };
 use fret::advanced::view::AppRenderDataExt as _;
@@ -159,7 +159,10 @@ impl CustomEffectV2IdentityWebDriver {
         let binding = CustomEffectV2WebControlBinding::new(app.models_mut());
 
         let controls = DemoControls {
-            mix01: CustomEffectV2ScalarControl::new(app.models_mut(), 0.65),
+            mix01: CustomEffectV2ScalarControl::new(
+                app.models_mut(),
+                CustomEffectV2ScalarSpec::new(0.65, 0.0, 1.0, 0.01),
+            ),
         };
 
         CustomEffectV2IdentityWebWindowState {
@@ -200,8 +203,8 @@ impl CustomEffectV2IdentityWebDriver {
                         .as_ref()
                         .map(|value| value.to_string())
                         .unwrap_or_else(|| "linear".to_string()),
-                    uv_span: binding.uv_span().clamped_value(uv_span, 0.05, 1.0),
-                    mix01: controls.mix01.clamped_value(mix01, 0.0, 1.0),
+                    uv_span: binding.uv_span().clamped_value(uv_span),
+                    mix01: controls.mix01.clamped_value(mix01),
                     debug_input,
                 }
             },
@@ -586,10 +589,7 @@ impl CustomEffectV2IdentityWebDriver {
                 let uv_span_row = ui::v_flex(move |cx| {
                     vec![
                         label_row(cx, "Input UV span", format!("{uv_span:.2}")),
-                        shadcn::Slider::new(binding.uv_span().clone())
-                            .range(0.05, 1.0)
-                            .step(0.01)
-                            .into_element(cx),
+                        binding.uv_span().slider().into_element(cx),
                     ]
                 })
                 .gap(Space::N2)
@@ -598,10 +598,7 @@ impl CustomEffectV2IdentityWebDriver {
                 let mix_row = ui::v_flex(move |cx| {
                     vec![
                         label_row(cx, "Mix", format!("{mix01:.2}")),
-                        shadcn::Slider::new(controls.mix01.clone())
-                            .range(0.0, 1.0)
-                            .step(0.01)
-                            .into_element(cx),
+                        controls.mix01.slider().into_element(cx),
                     ]
                 })
                 .gap(Space::N2)

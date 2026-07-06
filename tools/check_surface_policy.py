@@ -289,7 +289,6 @@ CUSTOM_EFFECT_V2_WEB_ALLOWED_RAW_SEAMS = (
 )
 
 CUSTOM_EFFECT_V2_WEB_OWNER_HELPER_ALLOWED_RAW_SEAMS = (
-    "fret_app",
     "fret_core",
     "fret_runtime",
     "ModelStore",
@@ -306,10 +305,11 @@ CUSTOM_EFFECT_V2_WEB_RETIREMENT = (
 CUSTOM_EFFECT_V2_WEB_DEMO_REQUIRED_MARKERS = (
     "CustomEffectV2WebControlBinding",
     "CustomEffectV2ScalarControl",
+    "CustomEffectV2ScalarSpec",
     "CustomEffectV2WebVariantControls",
     "impl CustomEffectV2WebVariantControls for DemoControls",
     "fn reset_variant_controls(",
-    "CustomEffectV2ScalarControl::new(app.models_mut()",
+    "CustomEffectV2ScalarSpec::new(",
     "binding: CustomEffectV2WebControlBinding",
     ".toggle_surface_in(",
     ".reset_controls_in(",
@@ -318,6 +318,7 @@ CUSTOM_EFFECT_V2_WEB_DEMO_REQUIRED_MARKERS = (
 CUSTOM_EFFECT_V2_WEB_OWNER_HELPER_REQUIRED_MARKERS = (
     "struct CustomEffectV2ParamSlot",
     "struct CustomEffectV2ParamPack",
+    "struct CustomEffectV2ScalarSpec",
     "struct CustomEffectV2ScalarControl",
     "struct CustomEffectV2WebControlBinding",
     "struct CustomEffectV2WebCommonControls",
@@ -1054,7 +1055,11 @@ def _iter_source_files(path: Path) -> list[Path]:
     )
 
 
-def _code_lines_for_scan(path: Path, text: str) -> list[tuple[int, str]]:
+def _code_lines_for_scan(
+    path: Path, text: str, *, skip_rust_cfg_test_modules: bool = False
+) -> list[tuple[int, str]]:
+    if path.suffix == ".rs" and skip_rust_cfg_test_modules:
+        return _rust_lines_for_scan(text)
     if path.suffix != ".md":
         return list(enumerate(text.splitlines(), start=1))
 
@@ -1075,6 +1080,40 @@ def _code_lines_for_scan(path: Path, text: str) -> list[tuple[int, str]]:
             continue
         if in_fence and include_fence:
             lines.append((line_no, line))
+    return lines
+
+
+def _rust_lines_for_scan(text: str) -> list[tuple[int, str]]:
+    lines: list[tuple[int, str]] = []
+    pending_cfg_test = False
+    skipping_cfg_test_mod = False
+    skip_brace_depth = 0
+
+    for line_no, line in enumerate(text.splitlines(), start=1):
+        stripped = line.strip()
+        if skipping_cfg_test_mod:
+            skip_brace_depth += line.count("{") - line.count("}")
+            if skip_brace_depth <= 0:
+                skipping_cfg_test_mod = False
+            continue
+
+        if re.fullmatch(r"#\s*\[\s*cfg\s*\(\s*test\s*\)\s*\]", stripped):
+            pending_cfg_test = True
+            continue
+
+        if pending_cfg_test:
+            if re.match(r"(?:pub(?:\([^)]*\))?\s+)?mod\s+\w+\s*\{", stripped):
+                skip_brace_depth = line.count("{") - line.count("}")
+                if skip_brace_depth > 0:
+                    skipping_cfg_test_mod = True
+                pending_cfg_test = False
+                continue
+            if stripped.startswith("#["):
+                continue
+            pending_cfg_test = False
+
+        lines.append((line_no, line))
+
     return lines
 
 
@@ -1186,7 +1225,10 @@ def _scan_classified_raw_surface(root: Path, spec: SurfacePath) -> list[SurfaceV
     rule_prefix = _classified_raw_rule_prefix(spec)
     for path in _iter_source_files(root / spec.path):
         text = _read_text(path)
-        for line_no, line in _code_lines_for_scan(path, text):
+        skip_rust_cfg_test_modules = path.name == "custom_effect_v2_web_owner.rs"
+        for line_no, line in _code_lines_for_scan(
+            path, text, skip_rust_cfg_test_modules=skip_rust_cfg_test_modules
+        ):
             if path.suffix == ".rs" and _is_rust_source_line_ignorable(line):
                 continue
             for seam, pattern in RAW_SEAM_PATTERNS:

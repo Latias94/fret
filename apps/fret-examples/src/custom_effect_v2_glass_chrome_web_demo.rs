@@ -13,7 +13,7 @@ use std::sync::Arc;
 
 use crate::custom_effect_v2_web_owner::{
     CustomEffectV2ParamPack, CustomEffectV2ParamSlot, CustomEffectV2ScalarControl,
-    CustomEffectV2WebControlBinding, CustomEffectV2WebVariantControls,
+    CustomEffectV2ScalarSpec, CustomEffectV2WebControlBinding, CustomEffectV2WebVariantControls,
     CustomEffectV2WebVariantReset,
 };
 use fret::advanced::view::AppRenderDataExt as _;
@@ -189,10 +189,10 @@ impl CustomEffectV2GlassChromeWebDriver {
                         .as_ref()
                         .map(|value| value.to_string())
                         .unwrap_or_else(|| "linear".to_string()),
-                    uv_span: binding.uv_span().clamped_value(uv_span, 0.05, 1.0),
-                    strength: controls.strength.clamped_value(strength, 0.0, 2.0),
-                    shininess: controls.shininess.clamped_value(shininess, 1.0, 128.0),
-                    mix01: controls.mix01.clamped_value(mix01, 0.0, 1.0),
+                    uv_span: binding.uv_span().clamped_value(uv_span),
+                    strength: controls.strength.clamped_value(strength),
+                    shininess: controls.shininess.clamped_value(shininess),
+                    mix01: controls.mix01.clamped_value(mix01),
                     debug_input,
                 }
             },
@@ -574,10 +574,7 @@ impl CustomEffectV2GlassChromeWebDriver {
         let uv_span_row = ui::v_flex(move |cx: &mut ElementContext<'_, App>| {
             [
                 Self::label_row(cx, "Uv span", format!("{uv_span:.2}")).into_element(cx),
-                shadcn::Slider::new(uv_span_control.clone())
-                    .range(0.05, 1.0)
-                    .step(0.01)
-                    .into_element(cx),
+                uv_span_control.slider().into_element(cx),
             ]
         })
         .gap(Space::N2)
@@ -586,10 +583,7 @@ impl CustomEffectV2GlassChromeWebDriver {
         let strength_row = ui::v_flex(move |cx| {
             [
                 Self::label_row(cx, "Strength", format!("{strength:.2}")).into_element(cx),
-                shadcn::Slider::new(strength_model.clone())
-                    .range(0.0, 2.0)
-                    .step(0.01)
-                    .into_element(cx),
+                strength_model.slider().into_element(cx),
             ]
         })
         .gap(Space::N2)
@@ -598,10 +592,7 @@ impl CustomEffectV2GlassChromeWebDriver {
         let shininess_row = ui::v_flex(move |cx| {
             [
                 Self::label_row(cx, "Shininess", format!("{shininess:.0}")).into_element(cx),
-                shadcn::Slider::new(shininess_model.clone())
-                    .range(1.0, 128.0)
-                    .step(1.0)
-                    .into_element(cx),
+                shininess_model.slider().into_element(cx),
             ]
         })
         .gap(Space::N2)
@@ -610,10 +601,7 @@ impl CustomEffectV2GlassChromeWebDriver {
         let mix_row = ui::v_flex(move |cx| {
             [
                 Self::label_row(cx, "Mix", format!("{mix01:.2}")).into_element(cx),
-                shadcn::Slider::new(mix01_model.clone())
-                    .range(0.0, 1.0)
-                    .step(0.01)
-                    .into_element(cx),
+                mix01_model.slider().into_element(cx),
             ]
         })
         .gap(Space::N2)
@@ -782,9 +770,18 @@ impl CustomEffectV2GlassChromeWebDriver {
 
         let binding = CustomEffectV2WebControlBinding::new(app.models_mut());
         let controls = DemoControls {
-            strength: CustomEffectV2ScalarControl::new(app.models_mut(), 0.95),
-            shininess: CustomEffectV2ScalarControl::new(app.models_mut(), 36.0),
-            mix01: CustomEffectV2ScalarControl::new(app.models_mut(), 1.0),
+            strength: CustomEffectV2ScalarControl::new(
+                app.models_mut(),
+                CustomEffectV2ScalarSpec::new(0.95, 0.0, 2.0, 0.01),
+            ),
+            shininess: CustomEffectV2ScalarControl::new(
+                app.models_mut(),
+                CustomEffectV2ScalarSpec::new(36.0, 1.0, 128.0, 1.0),
+            ),
+            mix01: CustomEffectV2ScalarControl::new(
+                app.models_mut(),
+                CustomEffectV2ScalarSpec::new(1.0, 0.0, 1.0, 0.01),
+            ),
         };
 
         CustomEffectV2GlassChromeWebWindowState {

@@ -50,9 +50,9 @@ diagnostic names, and docs together.
 
 # Next Action
 
-The next useful custom-effect cleanup is a design slice, not another mechanical scalar wrapper:
-decide whether Custom Effect V2 needs a typed effect-control schema that can bind shader ABI slots,
-ranges, labels, defaults, and diagnostics in one place.
+The scalar control later gained `CustomEffectV2ScalarSpec`; see
+`2026-07-06-custom-effect-v2-scalar-specs.md`. After that slice, the next custom-effect step should
+be a real schema design only if more demos need shared shader ABI/control metadata.
 
 # Citations
 

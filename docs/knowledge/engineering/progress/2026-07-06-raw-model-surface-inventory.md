@@ -112,7 +112,9 @@ Keep raw/shared-model mechanisms for now:
     variant-specific slider state and the shared common `uv_span` slider behind
     `CustomEffectV2ScalarControl`, so those demos no longer expose raw `Model<Vec<f32>>` fields,
     direct scalar `models_mut().insert(vec![...])` allocation, or variant/common reset writes
-    through raw `set_model(... vec![...])` calls.
+    through raw `set_model(... vec![...])` calls. The scalar controls now carry
+    `CustomEffectV2ScalarSpec` metadata for default/min/max/step, so clamp reads and slider
+    range/step configuration cannot drift at separate call sites.
   - Follow-up: those four web variants are now included in `tools/check_surface_policy.py` scan
     roots and classified as advanced/manual surfaces with explicit raw seams, owner, and retirement
     condition. The same gate now rejects direct reset/toggle writes through
@@ -200,8 +202,8 @@ Keep raw/shared-model mechanisms for now:
 
 Likely next cleanup slices:
 
-- A typed custom-effect schema if defaults, diagnostics labels, numeric ranges, and parameter ABI
-  metadata need to be shared across more than these four demos.
+- A typed custom-effect schema if diagnostics labels, shader ABI metadata, and docs need to be
+  shared across more than these four demos.
 - Plot/chart family-specific bindings for remaining first-contact demos once their output/state
   contracts are named explicitly.
 
