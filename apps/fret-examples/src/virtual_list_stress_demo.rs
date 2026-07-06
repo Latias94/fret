@@ -7,7 +7,7 @@ use fret_launch::{
     WinitRenderContext, WinitRunnerConfig, WinitWindowContext,
 };
 use fret_render::{Renderer, WgpuContext};
-use fret_runtime::PlatformCapabilities;
+use fret_runtime::{ModelStore, PlatformCapabilities};
 use fret_ui::declarative;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
@@ -16,7 +16,6 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, Invalidation, UiTree, VirtualListScrollHandle};
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::declarative::text as decl_text;
-use std::any::Any;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
@@ -36,20 +35,40 @@ fn virtual_list_stress_row_label_text<H: fret_ui::UiHost>(
     decl_text::text_list_row_label(cx, text)
 }
 
-fn virtual_list_stress_update_model<T: Any>(
-    app: &mut App,
-    model: &Model<T>,
-    f: impl FnOnce(&mut T),
-) {
-    let _ = app.models_mut().update(model, f);
+struct VirtualListStressModelOwner<'a> {
+    models: &'a mut ModelStore,
 }
 
-fn virtual_list_stress_toggle_model(app: &mut App, model: &Model<bool>) {
-    virtual_list_stress_update_model(app, model, |value| *value = !*value);
-}
+impl<'a> VirtualListStressModelOwner<'a> {
+    fn new(models: &'a mut ModelStore) -> Self {
+        Self { models }
+    }
 
-fn virtual_list_stress_bump_revision(app: &mut App, model: &Model<u64>) {
-    virtual_list_stress_update_model(app, model, |value| *value = value.wrapping_add(1));
+    fn toggle_rows_enabled(&mut self, model: &Model<bool>) -> bool {
+        self.toggle_bool(model)
+    }
+
+    fn toggle_reversed(&mut self, model: &Model<bool>) -> bool {
+        self.toggle_bool(model)
+    }
+
+    fn bump_items_revision(&mut self, model: &Model<u64>) -> bool {
+        self.models
+            .update(model, |value| {
+                *value = value.wrapping_add(1);
+                true
+            })
+            .unwrap_or(false)
+    }
+
+    fn toggle_bool(&mut self, model: &Model<bool>) -> bool {
+        self.models
+            .update(model, |value| {
+                *value = !*value;
+                true
+            })
+            .unwrap_or(false)
+    }
 }
 
 fn try_println(args: std::fmt::Arguments<'_>) {
@@ -288,12 +307,15 @@ fn handle_event(
                 return;
             }
             fret_core::KeyCode::Space => {
-                virtual_list_stress_toggle_model(app, &state.tall_rows_enabled);
+                let _ = VirtualListStressModelOwner::new(app.models_mut())
+                    .toggle_rows_enabled(&state.tall_rows_enabled);
                 app.request_redraw(window);
             }
             fret_core::KeyCode::KeyR => {
-                virtual_list_stress_toggle_model(app, &state.reversed);
-                virtual_list_stress_bump_revision(app, &state.items_revision);
+                let _ = VirtualListStressModelOwner::new(app.models_mut())
+                    .toggle_reversed(&state.reversed);
+                let _ = VirtualListStressModelOwner::new(app.models_mut())
+                    .bump_items_revision(&state.items_revision);
                 app.request_redraw(window);
             }
             fret_core::KeyCode::Home => {
@@ -563,4 +585,26 @@ pub fn run() -> anyhow::Result<()> {
         configure_fn_driver_hooks,
     )
     .context("run virtual_list_stress_demo app")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn virtual_list_stress_model_owner_preserves_command_state_transitions() {
+        let mut models = ModelStore::default();
+        let tall_rows = models.insert(false);
+        let reversed = models.insert(false);
+        let revision = models.insert(u64::MAX);
+
+        assert!(VirtualListStressModelOwner::new(&mut models).toggle_rows_enabled(&tall_rows));
+        assert_eq!(models.get_copied(&tall_rows), Some(true));
+
+        assert!(VirtualListStressModelOwner::new(&mut models).toggle_reversed(&reversed));
+        assert_eq!(models.get_copied(&reversed), Some(true));
+
+        assert!(VirtualListStressModelOwner::new(&mut models).bump_items_revision(&revision));
+        assert_eq!(models.get_copied(&revision), Some(0));
+    }
 }

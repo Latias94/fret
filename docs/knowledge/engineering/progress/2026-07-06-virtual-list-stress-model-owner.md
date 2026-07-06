@@ -24,6 +24,20 @@ This slice keeps the shared state but removes raw write scatter from keyboard ha
 - Keep `models_mut().insert(...)` in `build_ui(...)` for the owned shared state.
 - Add a source gate that allows only the owner helper to call `models_mut().update(...)`.
 
+# Tightening Follow-Up
+
+Branch `refactor/examples-virtual-list-owner-tightening` upgrades the first cleanup from free
+functions to a named `VirtualListStressModelOwner`.
+
+- Deleted `virtual_list_stress_update_model(...)`, `virtual_list_stress_toggle_model(...)`, and
+  `virtual_list_stress_bump_revision(...)`.
+- Added semantic owner methods for `toggle_rows_enabled(...)`, `toggle_reversed(...)`, and
+  `bump_items_revision(...)`.
+- Tightened the source gate so production source forbids direct/generic/update-any and UFCS
+  `ModelStore` bypasses, plus the deleted legacy helper names.
+- Added `virtual_list_stress_model_owner_preserves_command_state_transitions` for owner behavior:
+  row-height toggle, reverse toggle, and wrapping item-revision bump.
+
 # Verification
 
 - `cargo check -p fret-examples --lib --tests`

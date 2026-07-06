@@ -122,7 +122,10 @@ Keep raw/shared-model mechanisms for now:
   demo-local owner helpers instead of scattering raw `models_mut().update(...)` calls.
 - `components_gallery.rs`, `virtual_list_stress_demo.rs`, and `editor_notes_demo.rs`. Audited and
   cleaned after the initial inventory: each keeps intentional shared models but routes writes
-  through local owner helpers with source gates.
+  through local owner helpers with source gates. Follow-up tightening upgraded
+  `virtual_list_stress_demo.rs` from free helper functions to a named
+  `VirtualListStressModelOwner`, and its source gate now forbids direct/generic/update-any and UFCS
+  `ModelStore` bypasses in production source.
 - `external_texture_imports_demo.rs`, `external_texture_imports_web_demo.rs`, and the platform
   `external_video_imports_*` demos. Audited and cleaned after the wasm `ui-assets` feature fix:
   they remain low-level external import harnesses, while the shared visibility toggle write now
