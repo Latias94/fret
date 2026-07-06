@@ -51,6 +51,11 @@ Keep raw/shared-model mechanisms for now:
   - Follow-up: `plot_stress_demo.rs` remains a maintainer/perf harness because it mutates plot
     bounds from the driver loop, but its raw plot/animation models now live behind
     `PlotStressModelOwner` instead of scattered `app.models()` reads and writes.
+  - Follow-up: `tags_demo.rs` and `plot_image_demo.rs` now use `LinePlotPanelBinding` for advanced
+    state-owned overlays. The binding surface accepts initial `PlotState`, exposes closure-based
+    state reads/writes, and keeps raw `Model<PlotState>` / `Model<PlotOutput>` hidden from the app
+    examples. Keep `drag_demo`, `inf_lines_demo`, and `linked_cursor_demo` on explicit raw props
+    until drag feedback and linked plot registration move to named binding/coordinator APIs.
   - Follow-up: `chart_declarative_demo.rs` now uses `ChartCanvasPanelBinding`, so the default
     FretApp chart example no longer imports `fret_runtime::Model` or wires
     `ChartCanvasPanelProps::engine` directly. Keep explicit raw chart panel props in stress,

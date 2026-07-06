@@ -1,19 +1,17 @@
 use anyhow::Context as _;
 use fret::app::prelude::*;
 use fret_bootstrap::ui_app_driver;
+use fret_plot::LinePlotPanelBinding;
 use fret_plot::cartesian::DataPoint;
-use fret_plot::declarative::{LinePlotPanelProps, line_plot_panel_in};
+use fret_plot::declarative::line_plot_panel_in;
 use fret_plot::models::{LinePlotModel, LineSeries};
 use fret_plot::series::Series;
-use fret_plot::state::{PlotOutput, PlotOverlays, PlotState};
+use fret_plot::state::{PlotOverlays, PlotState};
 use fret_plot::style::{LinePlotStyle, SeriesTooltipMode};
-use fret_runtime::Model;
 use fret_runtime::PlatformCapabilities;
 
 struct TagsDemoView {
-    model: Model<LinePlotModel>,
-    plot_state: Model<PlotState>,
-    plot_output: Model<PlotOutput>,
+    plot: LinePlotPanelBinding,
 }
 
 pub fn build_app() -> fret::app::App {
@@ -70,12 +68,10 @@ impl View for TagsDemoView {
             series0.push(DataPoint { x, y });
         }
 
-        let plot = app
-            .models_mut()
-            .insert(LinePlotModel::from_series(vec![LineSeries::new(
-                "signal",
-                Series::from_points_sorted(series0, true),
-            )]));
+        let model = LinePlotModel::from_series(vec![LineSeries::new(
+            "signal",
+            Series::from_points_sorted(series0, true),
+        )]);
 
         let mut state = PlotState::default();
         state.overlays = PlotOverlays {
@@ -96,9 +92,7 @@ impl View for TagsDemoView {
         };
 
         Self {
-            model: plot,
-            plot_state: app.models_mut().insert(state),
-            plot_output: app.models_mut().insert(PlotOutput::default()),
+            plot: LinePlotPanelBinding::new_with_state(app, model, state),
         }
     }
 
@@ -107,10 +101,10 @@ impl View for TagsDemoView {
             series_tooltip: SeriesTooltipMode::NearestAtCursor,
             ..Default::default()
         };
-        let props = LinePlotPanelProps::new(self.model.clone())
+        let props = self
+            .plot
+            .panel_props()
             .style(style)
-            .state(self.plot_state.clone())
-            .output(self.plot_output.clone())
             .x_scale(fret_plot::cartesian::AxisScale::Linear)
             .y_scale(fret_plot::cartesian::AxisScale::Linear);
 

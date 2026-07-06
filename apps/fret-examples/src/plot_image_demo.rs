@@ -2,20 +2,18 @@ use anyhow::Context as _;
 use fret::app::prelude::*;
 use fret::app::{RenderContextAccess as _, ui_assets};
 use fret_bootstrap::ui_app_driver;
+use fret_plot::LinePlotPanelBinding;
 use fret_plot::cartesian::{AxisScale, DataPoint, DataRect};
-use fret_plot::declarative::{LinePlotPanelProps, line_plot_panel_in};
+use fret_plot::declarative::line_plot_panel_in;
 use fret_plot::models::{LinePlotModel, LineSeries, YAxis};
 use fret_plot::plot::axis::{AxisLabelFormatter, AxisNumberFormat};
 use fret_plot::series::Series;
-use fret_plot::state::{PlotImage, PlotImageLayer, PlotOutput, PlotOverlays, PlotState};
+use fret_plot::state::{PlotImage, PlotImageLayer};
 use fret_plot::style::{LinePlotStyle, SeriesTooltipMode};
-use fret_runtime::Model;
 use fret_runtime::PlatformCapabilities;
 
 struct PlotImageDemoView {
-    model: Model<LinePlotModel>,
-    plot_state: Model<PlotState>,
-    plot_output: Model<PlotOutput>,
+    plot: LinePlotPanelBinding,
     image_bytes: Vec<u8>,
     image: Option<ui_assets::ImageId>,
     image_size: (u32, u32),
@@ -102,27 +100,16 @@ impl View for PlotImageDemoView {
             });
         }
 
-        let plot = app
-            .models_mut()
-            .insert(LinePlotModel::from_series(vec![LineSeries::new(
-                "signal",
-                Series::from_points_sorted(points, true),
-            )]));
-
-        let state = PlotState {
-            overlays: PlotOverlays::default(),
-            ..Default::default()
-        };
-        let plot_state = app.models_mut().insert(state);
-        let plot_output = app.models_mut().insert(PlotOutput::default());
+        let model = LinePlotModel::from_series(vec![LineSeries::new(
+            "signal",
+            Series::from_points_sorted(points, true),
+        )]);
 
         let size = (256, 256);
         let bytes = Self::generate_rgba8_pattern(size.0, size.1);
 
         Self {
-            model: plot,
-            plot_state,
-            plot_output,
+            plot: LinePlotPanelBinding::new(app, model),
             image_bytes: bytes,
             image: None,
             image_size: size,
@@ -139,7 +126,7 @@ impl View for PlotImageDemoView {
         );
         if image != self.image {
             self.image = image;
-            let _ = cx.app_mut().models_mut().update(&self.plot_state, |state| {
+            let _ = self.plot.update_state(cx.app_mut(), |state| {
                 state.overlays.images.clear();
                 if let Some(image) = image {
                     state.overlays.images.push(
@@ -169,11 +156,11 @@ impl View for PlotImageDemoView {
             hover_threshold: Px(10.0),
             ..Default::default()
         };
-        let props = LinePlotPanelProps::new(self.model.clone())
+        let props = self
+            .plot
+            .panel_props()
             .style(style)
             .y_axis_labels(AxisLabelFormatter::number(AxisNumberFormat::Fixed(2)))
-            .state(self.plot_state.clone())
-            .output(self.plot_output.clone())
             .x_scale(AxisScale::Linear)
             .y_scale(AxisScale::Linear);
 

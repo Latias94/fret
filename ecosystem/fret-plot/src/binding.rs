@@ -1,6 +1,6 @@
 //! App-facing plot bindings that hide raw runtime model plumbing from examples.
 
-use fret_runtime::{Model, ModelHost};
+use fret_runtime::{Model, ModelHost, ModelUpdateError};
 use fret_ui::{ElementContextAccess, Invalidation, UiHost};
 
 use crate::declarative::{
@@ -8,6 +8,7 @@ use crate::declarative::{
     HeatmapPlotPanelProps, Histogram2DPlotPanelProps, HistogramPlotPanelProps, LinePlotPanelProps,
     ShadedPlotPanelProps, StemsPlotPanelProps,
 };
+use crate::linking::LinkedPlotMember;
 use crate::models::{
     AreaPlotModel, BarsPlotModel, CandlestickPlotModel, ErrorBarsPlotModel, HeatmapPlotModel,
     Histogram2DPlotModel, HistogramPlotModel, LinePlotModel, ShadedPlotModel, StemsPlotModel,
@@ -24,9 +25,14 @@ struct PlotPanelBindingCore<M> {
 impl<M: 'static> PlotPanelBindingCore<M> {
     #[track_caller]
     fn new(host: &mut impl ModelHost, model: M) -> Self {
+        Self::new_with_state(host, model, PlotState::default())
+    }
+
+    #[track_caller]
+    fn new_with_state(host: &mut impl ModelHost, model: M, state: PlotState) -> Self {
         Self {
             model: host.models_mut().insert(model),
-            state: host.models_mut().insert(PlotState::default()),
+            state: host.models_mut().insert(state),
             output: host.models_mut().insert(PlotOutput::default()),
         }
     }
@@ -56,6 +62,29 @@ impl<M: 'static> PlotPanelBindingCore<M> {
             .read_ref(host, |output| *output)
             .unwrap_or_default()
     }
+
+    fn read_state_untracked<R>(
+        &self,
+        host: &impl ModelHost,
+        f: impl FnOnce(&PlotState) -> R,
+    ) -> Result<R, ModelUpdateError> {
+        self.state.read_ref(host, f)
+    }
+
+    fn update_state<R>(
+        &self,
+        host: &mut impl ModelHost,
+        f: impl FnOnce(&mut PlotState) -> R,
+    ) -> Result<R, ModelUpdateError> {
+        self.state.update(host, |state, _cx| f(state))
+    }
+
+    fn linked_member(&self) -> LinkedPlotMember {
+        LinkedPlotMember {
+            state: self.state.clone(),
+            output: self.output.clone(),
+        }
+    }
 }
 
 macro_rules! define_plot_panel_binding {
@@ -72,6 +101,14 @@ macro_rules! define_plot_panel_binding {
             pub fn new(host: &mut impl ModelHost, model: $model) -> Self {
                 Self {
                     core: PlotPanelBindingCore::new(host, model),
+                }
+            }
+
+            /// Insert the plot model with caller-provided initial interaction state.
+            #[track_caller]
+            pub fn new_with_state(host: &mut impl ModelHost, model: $model, state: PlotState) -> Self {
+                Self {
+                    core: PlotPanelBindingCore::new_with_state(host, model, state),
                 }
             }
 
@@ -106,6 +143,38 @@ macro_rules! define_plot_panel_binding {
             /// observe interaction output outside a render/layout context.
             pub fn output_untracked(&self, host: &impl ModelHost) -> PlotOutput {
                 self.core.output_untracked(host)
+            }
+
+            /// Read caller-owned plot state without registering a UI invalidation dependency.
+            ///
+            /// This keeps app code on the binding surface when it needs diagnostics or event-time
+            /// decisions based on view bounds, query selection, or overlays.
+            pub fn read_state_untracked<R>(
+                &self,
+                host: &impl ModelHost,
+                f: impl FnOnce(&PlotState) -> R,
+            ) -> Result<R, ModelUpdateError> {
+                self.core.read_state_untracked(host, f)
+            }
+
+            /// Mutate caller-owned plot state without exposing the raw model handle.
+            ///
+            /// Use this for advanced plot behaviors such as overlay updates, drag feedback loops,
+            /// linked cursor/view coordination, or externally-controlled view bounds.
+            pub fn update_state<R>(
+                &self,
+                host: &mut impl ModelHost,
+                f: impl FnOnce(&mut PlotState) -> R,
+            ) -> Result<R, ModelUpdateError> {
+                self.core.update_state(host, f)
+            }
+
+            /// Build the coordinator member used by [`LinkedPlotGroup`](crate::linking::LinkedPlotGroup).
+            ///
+            /// The returned value is an advanced coordinator bridge; ordinary app code should keep
+            /// using the binding methods instead of constructing raw plot model handles.
+            pub fn linked_member(&self) -> LinkedPlotMember {
+                self.core.linked_member()
             }
 
             /// Advanced bridge for component authors that already own raw model handles.
@@ -247,6 +316,7 @@ mod tests {
     use fret_runtime::{ModelHost, ModelStore};
 
     use crate::cartesian::DataPoint;
+    use crate::linking::{LinkedPlotGroup, PlotLinkPolicy};
     use crate::models::{
         AreaPlotModel, AreaSeries, BarSeries, BarsPlotModel, CandlestickPlotModel,
         CandlestickSeries, ErrorBar, ErrorBarsPlotModel, ErrorBarsSeries, HeatmapPlotModel,
@@ -254,7 +324,7 @@ mod tests {
         OhlcPoint, ShadedPlotModel, ShadedSeries, StemsPlotModel, StemsSeries,
     };
     use crate::series::Series;
-    use crate::state::PlotOutput;
+    use crate::state::{InfLineX, PlotOutput, PlotOverlays, PlotState};
 
     use super::{
         AreaPlotPanelBinding, BarsPlotPanelBinding, CandlestickPlotPanelBinding,
@@ -430,6 +500,54 @@ mod tests {
             .expect("output model update should succeed");
 
         assert_eq!(binding.output_untracked(&host).revision, 42);
+    }
+
+    #[test]
+    fn line_plot_binding_accepts_initial_state_without_public_raw_handles() {
+        let mut host = TestHost::default();
+        let initial_state = PlotState {
+            overlays: PlotOverlays {
+                inf_lines_x: vec![InfLineX::new(0.5)],
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+
+        let binding =
+            LinePlotPanelBinding::new_with_state(&mut host, sample_line_model(), initial_state);
+
+        assert_eq!(
+            binding.read_state_untracked(&host, |state| state.overlays.inf_lines_x.len()),
+            Ok(1)
+        );
+    }
+
+    #[test]
+    fn line_plot_binding_updates_state_without_exposing_state_model_handle() {
+        let mut host = TestHost::default();
+
+        let binding = LinePlotPanelBinding::new(&mut host, sample_line_model());
+        let len = binding.update_state(&mut host, |state| {
+            state.overlays.inf_lines_x.push(InfLineX::new(0.75));
+            state.overlays.inf_lines_x.len()
+        });
+
+        assert_eq!(len, Ok(1));
+        assert_eq!(
+            binding.read_state_untracked(&host, |state| state.overlays.inf_lines_x[0].x),
+            Ok(0.75)
+        );
+    }
+
+    #[test]
+    fn line_plot_binding_creates_linked_member_without_manual_raw_model_wiring() {
+        let mut host = TestHost::default();
+
+        let binding = LinePlotPanelBinding::new(&mut host, sample_line_model());
+        let mut group = LinkedPlotGroup::new(PlotLinkPolicy::default());
+        group.push(binding.linked_member());
+
+        assert_eq!(group.len(), 1);
     }
 
     #[test]
