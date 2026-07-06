@@ -132,6 +132,33 @@ fn gizmo3d_demo_routes_theme_keyboard_mutations_through_binding() {
 }
 
 #[test]
+fn gizmo3d_demo_routes_undo_redo_mutations_through_binding() {
+    let source = compact(include_str!("../src/gizmo3d_demo.rs"));
+
+    for needle in [
+        "letdid_cancel=state.demo.cancel_active_or_in_progress(app);",
+        "state.demo.apply_target_transforms(app,&rec.tx.after);",
+        "state.demo.apply_custom_scalar_values(app,&rec.tx.after);",
+    ] {
+        assert!(
+            source.contains(needle),
+            "gizmo3d_demo undo/redo mutations should route through binding methods; missing `{needle}`"
+        );
+    }
+
+    for legacy in [
+        "letdid_cancel=state.demo.update(app,|m,_cx|{m.cancel_active_viewport_tool_interaction()||m.cancel_in_progress_interaction()})",
+        "let_=state.demo.update(app,|m,_cx|{forupdatedin&rec.tx.after{ifletSome(target)=m.targets.iter_mut().find(|t|t.id==updated.id){target.transform=updated.transform;}}});",
+        "let_=state.demo.update(app,|m,_cx|{for(&k,&v)in&rec.tx.after{m.custom_scalar_values.insert(k,v);}});",
+    ] {
+        assert!(
+            !source.contains(legacy),
+            "gizmo3d_demo should not keep direct undo/redo model writes in the driver; unexpected `{legacy}`"
+        );
+    }
+}
+
+#[test]
 fn gizmo3d_demo_routes_visual_keyboard_mutations_through_binding() {
     let source = compact(include_str!("../src/gizmo3d_demo.rs"));
 

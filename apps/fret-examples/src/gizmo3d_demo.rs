@@ -2051,6 +2051,28 @@ impl Gizmo3dDemoModelBinding {
         .unwrap_or(false)
     }
 
+    fn apply_target_transforms(&self, app: &mut App, updated: &[GizmoTarget3d]) {
+        let _ = self.update(app, |model, _cx| {
+            for updated in updated {
+                if let Some(target) = model
+                    .targets
+                    .iter_mut()
+                    .find(|target| target.id == updated.id)
+                {
+                    target.transform = updated.transform;
+                }
+            }
+        });
+    }
+
+    fn apply_custom_scalar_values(&self, app: &mut App, values: &HashMap<CustomScalarKey, f32>) {
+        let _ = self.update(app, |model, _cx| {
+            for (&key, &value) in values {
+                model.custom_scalar_values.insert(key, value);
+            }
+        });
+    }
+
     fn set_transform_mode(
         &self,
         app: &mut App,
@@ -2919,12 +2941,7 @@ fn fs_main(in: VsOut) -> @location(0) vec4f {
         let mut did_apply = false;
 
         // Always cancel in-progress viewport interactions before applying undo/redo.
-        let did_cancel = state
-            .demo
-            .update(app, |m, _cx| {
-                m.cancel_active_viewport_tool_interaction() || m.cancel_in_progress_interaction()
-            })
-            .unwrap_or(false);
+        let did_cancel = state.demo.cancel_active_or_in_progress(app);
 
         let mut applied_transform = false;
         let _ = app.with_global_mut(
@@ -2936,30 +2953,14 @@ fn fs_main(in: VsOut) -> @location(0) vec4f {
                 applied_transform = if undo {
                     undo_svc
                         .undo_active_invertible(window, |rec| {
-                            let _ = state.demo.update(app, |m, _cx| {
-                                for updated in &rec.tx.after {
-                                    if let Some(target) =
-                                        m.targets.iter_mut().find(|t| t.id == updated.id)
-                                    {
-                                        target.transform = updated.transform;
-                                    }
-                                }
-                            });
+                            state.demo.apply_target_transforms(app, &rec.tx.after);
                             Ok::<(), ()>(())
                         })
                         .unwrap_or(false)
                 } else {
                     undo_svc
                         .redo_active_invertible(window, |rec| {
-                            let _ = state.demo.update(app, |m, _cx| {
-                                for updated in &rec.tx.after {
-                                    if let Some(target) =
-                                        m.targets.iter_mut().find(|t| t.id == updated.id)
-                                    {
-                                        target.transform = updated.transform;
-                                    }
-                                }
-                            });
+                            state.demo.apply_target_transforms(app, &rec.tx.after);
                             Ok::<(), ()>(())
                         })
                         .unwrap_or(false)
@@ -2977,22 +2978,14 @@ fn fs_main(in: VsOut) -> @location(0) vec4f {
                     let applied = if undo {
                         undo_svc
                             .undo_active_invertible(window, |rec| {
-                                let _ = state.demo.update(app, |m, _cx| {
-                                    for (&k, &v) in &rec.tx.after {
-                                        m.custom_scalar_values.insert(k, v);
-                                    }
-                                });
+                                state.demo.apply_custom_scalar_values(app, &rec.tx.after);
                                 Ok::<(), ()>(())
                             })
                             .unwrap_or(false)
                     } else {
                         undo_svc
                             .redo_active_invertible(window, |rec| {
-                                let _ = state.demo.update(app, |m, _cx| {
-                                    for (&k, &v) in &rec.tx.after {
-                                        m.custom_scalar_values.insert(k, v);
-                                    }
-                                });
+                                state.demo.apply_custom_scalar_values(app, &rec.tx.after);
                                 Ok::<(), ()>(())
                             })
                             .unwrap_or(false)

@@ -106,8 +106,9 @@ Keep raw/shared-model mechanisms for now:
     cycling, orientation/pivot toggles, active-target cycling, camera frame, select-all, and digit
     target-selection shortcuts to binding methods. The theme preset pass moved KeyY model
     coordination to binding request/commit methods while leaving file IO and global Theme
-    orchestration in the event branch. Viewport-input routing and render-HUD mutations remain as
-    the semantic-method cleanup areas.
+    orchestration in the event branch. The undo/redo pass moved cancel, target-transform replay,
+    and custom-scalar replay into binding methods. Viewport-input routing and render-HUD mutations
+    remain as the semantic-method cleanup areas.
 - Table/data-grid demos.
   - Follow-up: `datatable_demo.rs` now uses `LocalState<shadcn::DataTableViewOutput>` and
     `app.local_state(...)` for the shadcn `DataTable` output handle. The retained table source gate
