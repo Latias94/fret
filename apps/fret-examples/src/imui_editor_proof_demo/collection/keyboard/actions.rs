@@ -1,12 +1,9 @@
 use std::sync::Arc;
 
 use fret::imui::kit::ImUiMultiSelectState;
-use fret_ui::action::{ActionCx, UiActionHostExt as _, UiFocusActionHost};
+use fret_ui::action::{ActionCx, UiFocusActionHost};
 
-use super::super::readouts::{
-    proof_collection_delete_status, proof_collection_duplicate_status,
-    proof_collection_rename_ready_status, proof_collection_select_all_status,
-};
+use super::super::model_owner::ProofCollectionModelOwner;
 use super::super::rename::ProofCollectionRenameSession;
 use super::super::selection::{
     ProofCollectionDeleteResult, ProofCollectionDuplicateResult, ProofCollectionKeyboardState,
@@ -19,20 +16,13 @@ pub(super) fn proof_collection_keyboard_apply_delete(
     models: &ProofCollectionKeyboardHandlerModels,
     delete: ProofCollectionDeleteResult,
 ) {
-    let next_status = proof_collection_delete_status(&delete.deleted_assets);
-    let _ = host.update_model(&models.assets, |state| {
-        *state = delete.remaining_assets.clone();
-    });
-    let _ = host.update_model(&models.selection, |state| {
-        *state = delete.next_selection.clone();
-    });
-    let _ = host.update_model(&models.keyboard, |state| {
-        *state = delete.next_keyboard.clone();
-    });
-    let _ = host.update_model(&models.command_status, |status| {
-        status.clear();
-        status.push_str(&next_status);
-    });
+    ProofCollectionModelOwner::new(host.models_mut()).apply_delete(
+        &models.assets,
+        &models.selection,
+        &models.keyboard,
+        &models.command_status,
+        delete,
+    );
     host.notify(acx);
 }
 
@@ -42,22 +32,13 @@ pub(super) fn proof_collection_keyboard_begin_rename(
     models: &ProofCollectionKeyboardHandlerModels,
     session: ProofCollectionRenameSession,
 ) {
-    let _ = host.update_model(&models.rename_session, |state| {
-        *state = Some(session.clone());
-    });
-    let _ = host.update_model(&models.rename_draft, |draft| {
-        draft.clear();
-        draft.push_str(session.original_label.as_ref());
-    });
-    let _ = host.update_model(&models.rename_focus_pending, |state| {
-        *state = true;
-    });
-    let _ = host.update_model(&models.rename_status, |status| {
-        status.clear();
-        status.push_str(&proof_collection_rename_ready_status(
-            session.original_label.as_ref(),
-        ));
-    });
+    ProofCollectionModelOwner::new(host.models_mut()).begin_inline_rename(
+        &models.rename_session,
+        &models.rename_draft,
+        &models.rename_focus_pending,
+        &models.rename_status,
+        &session,
+    );
     host.notify(acx);
 }
 
@@ -68,17 +49,13 @@ pub(super) fn proof_collection_keyboard_apply_select_all(
     next_selection: ImUiMultiSelectState<Arc<str>>,
     next_keyboard: ProofCollectionKeyboardState,
 ) {
-    let next_status = proof_collection_select_all_status(next_selection.selected_count());
-    let _ = host.update_model(&models.selection, |state| {
-        *state = next_selection.clone();
-    });
-    let _ = host.update_model(&models.keyboard, |state| {
-        *state = next_keyboard.clone();
-    });
-    let _ = host.update_model(&models.command_status, |status| {
-        status.clear();
-        status.push_str(&next_status);
-    });
+    ProofCollectionModelOwner::new(host.models_mut()).apply_select_all(
+        &models.selection,
+        &models.keyboard,
+        &models.command_status,
+        next_selection,
+        next_keyboard,
+    );
     host.notify(acx);
 }
 
@@ -88,20 +65,13 @@ pub(super) fn proof_collection_keyboard_apply_duplicate(
     models: &ProofCollectionKeyboardHandlerModels,
     duplicate: ProofCollectionDuplicateResult,
 ) {
-    let next_status = proof_collection_duplicate_status(&duplicate.duplicated_assets);
-    let _ = host.update_model(&models.assets, |state| {
-        *state = duplicate.next_assets.clone();
-    });
-    let _ = host.update_model(&models.selection, |state| {
-        *state = duplicate.next_selection.clone();
-    });
-    let _ = host.update_model(&models.keyboard, |state| {
-        *state = duplicate.next_keyboard.clone();
-    });
-    let _ = host.update_model(&models.command_status, |status| {
-        status.clear();
-        status.push_str(&next_status);
-    });
+    ProofCollectionModelOwner::new(host.models_mut()).apply_duplicate(
+        &models.assets,
+        &models.selection,
+        &models.keyboard,
+        &models.command_status,
+        duplicate,
+    );
     host.notify(acx);
 }
 
@@ -112,11 +82,11 @@ pub(super) fn proof_collection_keyboard_apply_navigation(
     next_selection: ImUiMultiSelectState<Arc<str>>,
     next_keyboard: ProofCollectionKeyboardState,
 ) {
-    let _ = host.update_model(&models.selection, |state| {
-        *state = next_selection.clone();
-    });
-    let _ = host.update_model(&models.keyboard, |state| {
-        *state = next_keyboard.clone();
-    });
+    ProofCollectionModelOwner::new(host.models_mut()).apply_navigation(
+        &models.selection,
+        &models.keyboard,
+        next_selection,
+        next_keyboard,
+    );
     host.notify(acx);
 }

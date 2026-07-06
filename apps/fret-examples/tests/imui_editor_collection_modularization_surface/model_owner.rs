@@ -30,6 +30,8 @@ pub(super) fn assert_model_owner_boundary(
         "fn update<T: Any, R>(",
         "pub(super) fn apply_duplicate(",
         "pub(super) fn apply_delete(",
+        "pub(super) fn apply_select_all(",
+        "pub(super) fn apply_navigation(",
         "pub(super) fn begin_inline_rename(",
         "pub(super) fn publish_active_focus_target(",
         "pub(super) fn activate_asset(",
@@ -38,6 +40,7 @@ pub(super) fn assert_model_owner_boundary(
         "proof_collection_duplicate_status(",
         "proof_collection_delete_status(",
         "proof_collection_rename_ready_status(",
+        "proof_collection_select_all_status(",
     ] {
         assert!(
             model_owner_source.contains(needle),

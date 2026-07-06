@@ -264,19 +264,17 @@ fn imui_editor_proof_demo_keeps_collection_keyboard_owner_app_owned_and_explicit
         "pub(super) fn proof_collection_keyboard_apply_select_all(",
         "pub(super) fn proof_collection_keyboard_apply_duplicate(",
         "pub(super) fn proof_collection_keyboard_apply_navigation(",
-        "proof_collection_delete_status(&delete.deleted_assets)",
-        "proof_collection_duplicate_status(&duplicate.duplicated_assets)",
-        "proof_collection_select_all_status(next_selection.selected_count())",
-        "proof_collection_rename_ready_status(",
-        "host.update_model(&models.assets",
-        "host.update_model(&models.selection",
-        "host.update_model(&models.keyboard",
-        "host.update_model(&models.command_status",
+        "use super::super::model_owner::ProofCollectionModelOwner;",
+        "ProofCollectionModelOwner::new(host.models_mut()).apply_delete(",
+        "ProofCollectionModelOwner::new(host.models_mut()).begin_inline_rename(",
+        "ProofCollectionModelOwner::new(host.models_mut()).apply_select_all(",
+        "ProofCollectionModelOwner::new(host.models_mut()).apply_duplicate(",
+        "ProofCollectionModelOwner::new(host.models_mut()).apply_navigation(",
         "host.notify(acx);",
     ] {
         assert!(
             keyboard_actions_source.contains(needle),
-            "collection keyboard actions owner should keep app-state mutation explicit; missing `{needle}`"
+            "collection keyboard actions owner should route app-state mutation through ProofCollectionModelOwner; missing `{needle}`"
         );
     }
     for needle in [
@@ -288,10 +286,15 @@ fn imui_editor_proof_demo_keeps_collection_keyboard_owner_app_owned_and_explicit
         "proof_collection_keyboard_selection(",
         "proof_collection_assets_in_visible_order(",
         "host.models_mut().read(",
+        "host.update_model(",
+        "proof_collection_delete_status(",
+        "proof_collection_duplicate_status(",
+        "proof_collection_select_all_status(",
+        "proof_collection_rename_ready_status(",
     ] {
         assert!(
             !keyboard_actions_source.contains(needle),
-            "collection keyboard actions owner should not take key matching, snapshot reads, or selection derivation policy; unexpected `{needle}`"
+            "collection keyboard actions owner should not take key matching, snapshot reads, selection derivation policy, or raw model writes; unexpected `{needle}`"
         );
     }
 

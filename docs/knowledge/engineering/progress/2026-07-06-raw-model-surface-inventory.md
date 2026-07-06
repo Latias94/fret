@@ -124,8 +124,11 @@ Keep raw/shared-model mechanisms for now:
   `EditorProofModelOwner`. A final editor-surface cleanup routed Material/Advanced numeric reset
   and edit-outcome writes through `EditorProofModelOwner`, leaving no direct
   `models_mut().update(...)` / UFCS `ModelStore::update(...)` hits under
-  `imui_editor_proof_demo/*`. Remaining follow-up work is collection
-  `UiActionHostExt::update_model(...)` host-facing action paths.
+  `imui_editor_proof_demo/*`. The collection keyboard action helpers now route delete, duplicate,
+  begin-rename, select-all, and navigation writes through `ProofCollectionModelOwner` instead of
+  direct `UiActionHostExt::update_model(...)`. Remaining follow-up work is collection
+  `UiActionHostExt::update_model(...)` host-facing paths in inline rename outcomes, context-menu
+  anchor publication, zoom, rename focus-pending consumption, and box-select runtime state.
 - `workspace_shell_demo/*`. Audited after the initial inventory: it is application-level workspace
   shell state, so the shared model graph remains. The follow-up cleanup routes writes through
   demo-local owner helpers instead of scattering raw `models_mut().update(...)` calls. Follow-up

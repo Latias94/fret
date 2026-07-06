@@ -9,7 +9,7 @@ use fret_ui::GlobalElementId;
 use super::ProofCollectionAsset;
 use super::readouts::{
     proof_collection_delete_status, proof_collection_duplicate_status,
-    proof_collection_rename_ready_status,
+    proof_collection_rename_ready_status, proof_collection_select_all_status,
 };
 use super::rename::ProofCollectionRenameSession;
 use super::selection::{
@@ -69,6 +69,31 @@ impl<'a> ProofCollectionModelOwner<'a> {
         let _ = self.set(selection_model, delete.next_selection);
         let _ = self.set(keyboard_model, delete.next_keyboard);
         let _ = self.replace_string(command_status_model, command_status);
+    }
+
+    pub(super) fn apply_select_all(
+        &mut self,
+        selection_model: &Model<ImUiMultiSelectState<Arc<str>>>,
+        keyboard_model: &Model<ProofCollectionKeyboardState>,
+        command_status_model: &Model<String>,
+        next_selection: ImUiMultiSelectState<Arc<str>>,
+        next_keyboard: ProofCollectionKeyboardState,
+    ) {
+        let command_status = proof_collection_select_all_status(next_selection.selected_count());
+        let _ = self.set(selection_model, next_selection);
+        let _ = self.set(keyboard_model, next_keyboard);
+        let _ = self.replace_string(command_status_model, command_status);
+    }
+
+    pub(super) fn apply_navigation(
+        &mut self,
+        selection_model: &Model<ImUiMultiSelectState<Arc<str>>>,
+        keyboard_model: &Model<ProofCollectionKeyboardState>,
+        next_selection: ImUiMultiSelectState<Arc<str>>,
+        next_keyboard: ProofCollectionKeyboardState,
+    ) {
+        let _ = self.set(selection_model, next_selection);
+        let _ = self.set(keyboard_model, next_keyboard);
     }
 
     pub(super) fn begin_inline_rename(
@@ -225,6 +250,58 @@ mod tests {
         assert_eq!(
             models.read(&command_status, Clone::clone).unwrap(),
             "Deleted 1 asset(s): Stone Copy"
+        );
+
+        ProofCollectionModelOwner::new(&mut models).apply_select_all(
+            &selection,
+            &keyboard,
+            &command_status,
+            ImUiMultiSelectState::new(
+                vec![Arc::<str>::from("stone"), Arc::<str>::from("water")],
+                Some(Arc::from("stone")),
+            ),
+            ProofCollectionKeyboardState {
+                active_id: Some(Arc::from("water")),
+            },
+        );
+
+        assert_eq!(
+            models
+                .read(&selection, |state| state.selected().to_vec())
+                .unwrap(),
+            vec![Arc::<str>::from("stone"), Arc::<str>::from("water")]
+        );
+        assert_eq!(
+            models
+                .read(&keyboard, |state| state.active_id.clone())
+                .unwrap(),
+            Some(Arc::<str>::from("water"))
+        );
+        assert_eq!(
+            models.read(&command_status, Clone::clone).unwrap(),
+            "Selected all 2 visible asset(s)."
+        );
+
+        ProofCollectionModelOwner::new(&mut models).apply_navigation(
+            &selection,
+            &keyboard,
+            ImUiMultiSelectState::single(Arc::from("stone")),
+            ProofCollectionKeyboardState {
+                active_id: Some(Arc::from("stone")),
+            },
+        );
+
+        assert_eq!(
+            models
+                .read(&selection, |state| state.selected().to_vec())
+                .unwrap(),
+            vec![Arc::<str>::from("stone")]
+        );
+        assert_eq!(
+            models
+                .read(&keyboard, |state| state.active_id.clone())
+                .unwrap(),
+            Some(Arc::<str>::from("stone"))
         );
     }
 
