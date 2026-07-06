@@ -106,6 +106,32 @@ fn gizmo3d_demo_routes_basic_keyboard_mutations_through_binding() {
 }
 
 #[test]
+fn gizmo3d_demo_routes_theme_keyboard_mutations_through_binding() {
+    let source = compact(include_str!("../src/gizmo3d_demo.rs"));
+
+    for needle in [
+        "letSome(request)=state.demo.next_theme_preset_request(app)else{return;};",
+        "letSome(bytes)=fs::read(request.path).ok()else{return;};",
+        "state.demo.apply_theme_preset(app,request,&theme);",
+    ] {
+        assert!(
+            source.contains(needle),
+            "gizmo3d_demo theme keyboard mutation should route model coordination through binding methods; missing `{needle}`"
+        );
+    }
+
+    for legacy in [
+        "key:fret_core::KeyCode::KeyY,repeat:false,..}=>{letmutnext_index:Option<usize>=None;let_=state.demo.update(app,|m,_cx|{ifm.is_busy(){return;}letidx=(m.theme_preset_index+1)%DEMO_THEME_PRESETS.len();next_index=Some(idx);});",
+        "let_=state.demo.update(app,|m,_cx|{m.theme_preset_index=next_index;apply_viewport_gizmo_theme(&theme,m);});",
+    ] {
+        assert!(
+            !source.contains(legacy),
+            "gizmo3d_demo should not keep direct theme keyboard model writes in the event branch; unexpected `{legacy}`"
+        );
+    }
+}
+
+#[test]
 fn gizmo3d_demo_routes_visual_keyboard_mutations_through_binding() {
     let source = compact(include_str!("../src/gizmo3d_demo.rs"));
 

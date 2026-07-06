@@ -1949,6 +1949,12 @@ const DEMO_THEME_PRESETS: [(&str, &str); 3] = [
     ("HardHacker", "themes/hardhacker-dark.json"),
 ];
 
+#[derive(Debug, Clone, Copy)]
+struct DemoThemePresetRequest {
+    index: usize,
+    path: &'static str,
+}
+
 fn apply_viewport_gizmo_theme(theme: &Theme, model: &mut Gizmo3dDemoModel) {
     let x_color = theme.color_token("color.viewport.gizmo.x");
     let y_color = theme.color_token("color.viewport.gizmo.y");
@@ -1992,6 +1998,26 @@ impl Gizmo3dDemoModelBinding {
         let theme = Theme::global(&*app).clone();
         let _ = self.update(app, |model, _cx| {
             apply_viewport_gizmo_theme(&theme, model);
+        });
+    }
+
+    fn next_theme_preset_request(&self, app: &mut App) -> Option<DemoThemePresetRequest> {
+        self.read(app, |_app, model| {
+            if model.is_busy() {
+                return None;
+            }
+            let index = (model.theme_preset_index + 1) % DEMO_THEME_PRESETS.len();
+            let (_name, path) = DEMO_THEME_PRESETS[index];
+            Some(DemoThemePresetRequest { index, path })
+        })
+        .ok()
+        .flatten()
+    }
+
+    fn apply_theme_preset(&self, app: &mut App, request: DemoThemePresetRequest, theme: &Theme) {
+        let _ = self.update(app, |model, _cx| {
+            model.theme_preset_index = request.index;
+            apply_viewport_gizmo_theme(theme, model);
         });
     }
 
@@ -3340,21 +3366,11 @@ fn handle_event(
             repeat: false,
             ..
         } => {
-            let mut next_index: Option<usize> = None;
-            let _ = state.demo.update(app, |m, _cx| {
-                if m.is_busy() {
-                    return;
-                }
-                let idx = (m.theme_preset_index + 1) % DEMO_THEME_PRESETS.len();
-                next_index = Some(idx);
-            });
-
-            let Some(next_index) = next_index else {
+            let Some(request) = state.demo.next_theme_preset_request(app) else {
                 return;
             };
-            let (_name, path) = DEMO_THEME_PRESETS[next_index];
 
-            let Some(bytes) = fs::read(path).ok() else {
+            let Some(bytes) = fs::read(request.path).ok() else {
                 return;
             };
             let Ok(cfg) = ThemeConfig::from_slice(&bytes) else {
@@ -3364,10 +3380,7 @@ fn handle_event(
             Theme::with_global_mut(app, |theme| theme.apply_config(&cfg));
 
             let theme = Theme::global(&*app).clone();
-            let _ = state.demo.update(app, |m, _cx| {
-                m.theme_preset_index = next_index;
-                apply_viewport_gizmo_theme(&theme, m);
-            });
+            state.demo.apply_theme_preset(app, request, &theme);
             app.request_redraw(window);
         }
         Event::KeyDown {
