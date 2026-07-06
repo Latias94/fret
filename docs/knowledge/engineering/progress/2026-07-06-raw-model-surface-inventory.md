@@ -176,7 +176,9 @@ Keep raw/shared-model mechanisms for now:
   `VirtualListStressControls`, so startup allocation, command writes, and render snapshot reads
   now sit behind one demo-local binding. Its source gate forbids direct/generic/update-any and UFCS
   `ModelStore` bypasses in production source. The same tightening upgraded `editor_notes_demo.rs`
-  from free host helper functions to `EditorNotesModelOwner`.
+  from free host helper functions to `EditorNotesModelOwner`; a later tightening added
+  `EditorAssetModels`, `editor_asset_paint_snapshot(...)`, and `EditorThemePresetBinding`, so the
+  editor notes app and device-shell views no longer expose separate raw text/theme model fields.
 - `external_texture_imports_demo.rs`, `external_texture_imports_web_demo.rs`, and the platform
   `external_video_imports_*` demos. Audited and cleaned after the wasm `ui-assets` feature fix:
   they remain low-level external import harnesses, while the shared visibility toggle write now

@@ -49,7 +49,10 @@ fn editor_notes_demo_composes_shell_mounted_rails_through_workspace_frame_slots(
         "draft_controller: Some(draft_controller.clone())",
         ".commit(host, action_cx)",
         ".discard(host, action_cx)",
-        "summary_status_model: Model<String>",
+        "models: EditorAssetModels",
+        "EditorThemePresetBinding::new(app)",
+        "editor_asset_paint_snapshot(cx, &asset)",
+        "EditorThemePresetPicker::new(theme.picker_model())",
         "shadcn::Button::new(\"Copy asset summary\")",
         ".test_id(TEST_ID_SUMMARY_COMMAND)",
         ".test_id(TEST_ID_SUMMARY_STATUS)",
@@ -108,7 +111,7 @@ fn editor_notes_demo_composes_shell_mounted_rails_through_workspace_frame_slots(
 }
 
 #[test]
-fn editor_notes_demo_model_writes_stay_behind_owner_helpers() {
+fn editor_notes_demo_model_state_stays_behind_asset_bindings() {
     let source = include_str!("../src/editor_notes_demo.rs");
     let production_source = source
         .split("#[cfg(test)]")
@@ -119,24 +122,47 @@ fn editor_notes_demo_model_writes_stay_behind_owner_helpers() {
 
     for needle in [
         "usefret_runtime::ModelStore;",
+        "structEditorAssetModels{",
+        "name:Model<String>,",
+        "notes:Model<String>,",
+        "notes_outcome:Model<String>,",
+        "summary_status:Model<String>,",
+        "models:EditorAssetModels,",
+        "structEditorThemePresetBinding{",
+        "theme:EditorThemePresetBinding,",
+        "fneditor_asset_paint_snapshot(",
         "structEditorNotesModelOwner<'a>{",
         "models:&'amutModelStore,",
         "fnset_text(&mutself,model:&Model<String>,value:implInto<String>)->bool{",
-        "letmutowner=EditorNotesModelOwner::new(host.models_mut());",
-        "owner.set_text(&notes_outcome_model,next",
-        "owner.set_text(&notes_outcome_model,\"Committed\"",
-        "owner.set_text(&notes_outcome_model,\"Canceled\"",
-        "owner.set_text(&summary_status_model,draft_commit_status.clone()",
-        "owner.set_text(&summary_status_model,draft_discard_status.clone()",
-        "owner.set_text(&summary_status_model,summary_status_next.clone()",
+        "fnset_notes_outcome(&self,models:&mutModelStore,value:implInto<String>)->bool{",
+        "fnset_summary_status(&self,models:&mutModelStore,value:implInto<String>)->bool{",
+        "EditorNotesModelOwner::new(models).set_text(&self.notes_outcome,value)",
+        "EditorNotesModelOwner::new(models).set_text(&self.summary_status,value)",
+        "models.set_notes_outcome(host.models_mut(),next",
+        "models.set_notes_outcome(host.models_mut(),\"Committed\"",
+        "models.set_notes_outcome(host.models_mut(),\"Canceled\"",
+        "models.set_summary_status(host.models_mut(),draft_commit_status.clone()",
+        "models.set_summary_status(host.models_mut(),draft_discard_status.clone()",
+        "models.set_summary_status(host.models_mut(),summary_status_next.clone()",
     ] {
         assert!(
             compact_source.contains(needle),
-            "editor notes demo should keep shared-model writes behind a named owner helper; missing `{needle}`"
+            "editor notes demo should keep shared-model state behind named asset/theme bindings; missing `{needle}`"
         );
     }
 
     for forbidden in [
+        "pub(crate)name_model:Model<String>",
+        "pub(crate)notes_model:Model<String>",
+        "pub(crate)notes_outcome_model:Model<String>",
+        "pub(crate)summary_status_model:Model<String>",
+        "theme_preset_model:Model<EditorThemePresetV1>",
+        "asset.name_model",
+        "asset.notes_model",
+        "asset.notes_outcome_model",
+        "asset.summary_status_model",
+        "notes_outcome_model",
+        "summary_status_model",
         "models_mut().update(",
         "models_mut().update::<",
         "models_mut().update_any(",

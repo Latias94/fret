@@ -77,6 +77,67 @@ impl<'a> EditorNotesModelOwner<'a> {
     }
 }
 
+#[derive(Clone)]
+struct EditorAssetModels {
+    name: Model<String>,
+    notes: Model<String>,
+    notes_outcome: Model<String>,
+    summary_status: Model<String>,
+}
+
+impl EditorAssetModels {
+    fn new(models: &mut ModelStore, title: &str, name: &str, notes: &str) -> Self {
+        Self {
+            name: models.insert(name.to_string()),
+            notes: models.insert(notes.to_string()),
+            notes_outcome: models.insert("Idle".to_string()),
+            summary_status: models.insert(format!("Ready to copy summary for {title}.")),
+        }
+    }
+
+    fn name_text_model(&self) -> Model<String> {
+        self.name.clone()
+    }
+
+    fn notes_text_model(&self) -> Model<String> {
+        self.notes.clone()
+    }
+
+    fn set_notes_outcome(&self, models: &mut ModelStore, value: impl Into<String>) -> bool {
+        EditorNotesModelOwner::new(models).set_text(&self.notes_outcome, value)
+    }
+
+    fn set_summary_status(&self, models: &mut ModelStore, value: impl Into<String>) -> bool {
+        EditorNotesModelOwner::new(models).set_text(&self.summary_status, value)
+    }
+}
+
+pub(crate) struct EditorAssetSnapshot {
+    pub(crate) name_value: String,
+    pub(crate) committed_notes: String,
+    pub(crate) notes_outcome: String,
+    pub(crate) summary_status: String,
+}
+
+#[derive(Clone)]
+pub(crate) struct EditorThemePresetBinding {
+    preset: Model<EditorThemePresetV1>,
+}
+
+impl EditorThemePresetBinding {
+    pub(crate) fn new(app: &mut App) -> Self {
+        let theme_preset = fret_ui_editor::theme::installed_editor_theme_preset_v1(app)
+            .unwrap_or(EditorThemePresetV1::Default);
+        Self {
+            preset: app.models_mut().insert(theme_preset),
+        }
+    }
+
+    fn picker_model(&self) -> Model<EditorThemePresetV1> {
+        self.preset.clone()
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub(crate) enum EditorAssetSelection {
     #[default]
@@ -92,15 +153,12 @@ pub(crate) struct EditorAssetState {
     subtitle: Arc<str>,
     name_id_source: Arc<str>,
     notes_id_source: Arc<str>,
-    pub(crate) name_model: Model<String>,
-    pub(crate) notes_model: Model<String>,
-    pub(crate) notes_outcome_model: Model<String>,
-    pub(crate) summary_status_model: Model<String>,
+    models: EditorAssetModels,
 }
 
 pub(crate) struct EditorNotesDemoView {
     assets: Arc<[EditorAssetState]>,
-    theme_preset_model: Model<EditorThemePresetV1>,
+    theme: EditorThemePresetBinding,
 }
 
 pub(crate) fn install_editor_notes_demo_theme(app: &mut App) {
@@ -130,11 +188,9 @@ pub fn run() -> anyhow::Result<()> {
 
 impl View for EditorNotesDemoView {
     fn init(app: &mut App, _window: WindowId) -> Self {
-        let theme_preset = fret_ui_editor::theme::installed_editor_theme_preset_v1(app)
-            .unwrap_or(EditorThemePresetV1::Default);
         Self {
             assets: default_editor_assets(app),
-            theme_preset_model: app.models_mut().insert(theme_preset),
+            theme: EditorThemePresetBinding::new(app),
         }
     }
 
@@ -153,37 +209,26 @@ impl View for EditorNotesDemoView {
         let theme = cx.theme_snapshot();
         let selected = cx.state().watch(&selected).layout().value_or_default();
         let asset = self.asset(selected).clone();
-        let (name_value, committed_notes, notes_outcome, summary_status) =
-            cx.data().selector_model_paint(
-                (
-                    &asset.name_model,
-                    &asset.notes_model,
-                    &asset.notes_outcome_model,
-                    &asset.summary_status_model,
-                ),
-                |(name, committed_notes, notes_outcome, summary_status)| {
-                    (name, committed_notes, notes_outcome, summary_status)
-                },
-            );
+        let snapshot = editor_asset_paint_snapshot(cx, &asset);
 
         let selection_panel = render_selection_panel(cx, selected);
 
         let center = render_center_panel(
             cx,
             asset.clone(),
-            name_value,
-            committed_notes.clone(),
-            notes_outcome.clone(),
+            snapshot.name_value,
+            snapshot.committed_notes.clone(),
+            snapshot.notes_outcome.clone(),
             "WorkspaceFrame owns the outer shell slots; fret-ui-editor owns the reusable inspector content.",
             "This center region is app-local content, while both side regions are mounted through the existing workspace shell seam.",
         );
         let inspector = render_inspector_panel(
             cx,
             asset,
-            self.theme_preset_model.clone(),
-            committed_line_count_label(&committed_notes),
-            notes_outcome,
-            summary_status,
+            self.theme.clone(),
+            committed_line_count_label(&snapshot.committed_notes),
+            snapshot.notes_outcome,
+            snapshot.summary_status,
         );
         let left_rail = ui::container(|_cx| [selection_panel])
             .w_px(Px(256.0))
@@ -278,12 +323,32 @@ fn make_asset_state(
         subtitle: Arc::from(subtitle),
         name_id_source: Arc::from(format!("editor-notes-demo.asset.{key}.name")),
         notes_id_source: Arc::from(format!("editor-notes-demo.asset.{key}.notes")),
-        name_model: app.models_mut().insert(name.to_string()),
-        notes_model: app.models_mut().insert(notes.to_string()),
-        notes_outcome_model: app.models_mut().insert("Idle".to_string()),
-        summary_status_model: app
-            .models_mut()
-            .insert(format!("Ready to copy summary for {title}.")),
+        models: EditorAssetModels::new(app.models_mut(), title, name, notes),
+    }
+}
+
+pub(crate) fn editor_asset_paint_snapshot(
+    cx: &mut AppUi<'_, '_>,
+    asset: &EditorAssetState,
+) -> EditorAssetSnapshot {
+    let (name_value, committed_notes, notes_outcome, summary_status) =
+        cx.data().selector_model_paint(
+            (
+                &asset.models.name,
+                &asset.models.notes,
+                &asset.models.notes_outcome,
+                &asset.models.summary_status,
+            ),
+            |(name, committed_notes, notes_outcome, summary_status)| {
+                (name, committed_notes, notes_outcome, summary_status)
+            },
+        );
+
+    EditorAssetSnapshot {
+        name_value,
+        committed_notes,
+        notes_outcome,
+        summary_status,
     }
 }
 
@@ -550,7 +615,7 @@ where
 pub(crate) fn render_inspector_panel<'a, Cx>(
     cx: &mut Cx,
     asset: EditorAssetState,
-    theme_preset_model: Model<EditorThemePresetV1>,
+    theme: EditorThemePresetBinding,
     committed_label: String,
     outcome_label: String,
     summary_status: String,
@@ -560,8 +625,6 @@ where
 {
     let subtitle = asset.subtitle.clone();
     let title = asset.title.clone();
-    let notes_outcome_model = asset.notes_outcome_model.clone();
-    let summary_status_model = asset.summary_status_model.clone();
     let summary_status_next = editor_asset_summary_command_status(&asset);
     let draft_commit_status = editor_notes_draft_action_status(&asset, "Draft committed");
     let draft_discard_status = editor_notes_draft_action_status(&asset, "Draft discarded");
@@ -612,7 +675,7 @@ where
                                         PropertyRow::new(),
                                         |cx| row_cx.label_text(cx, "Name"),
                                         |cx| {
-                                            TextField::new(asset.name_model.clone())
+                                            TextField::new(asset.models.name_text_model())
                                             .options(TextFieldOptions {
                                                 id_source: Some(asset.name_id_source.clone()),
                                                 selection_behavior:
@@ -631,19 +694,16 @@ where
                                         PropertyRow::new(),
                                         |cx| row_cx.label_text(cx, "Notes"),
                                         |cx| {
-                                            TextField::new(asset.notes_model.clone())
+                                            TextField::new(asset.models.notes_text_model())
                                             .on_outcome(Some(Arc::new({
-                                                let notes_outcome_model =
-                                                    notes_outcome_model.clone();
+                                                let models = asset.models.clone();
                                                 move |host, action_cx, outcome: TextFieldOutcome| {
                                                     let next = match outcome {
                                                         TextFieldOutcome::Committed => "Committed",
                                                         TextFieldOutcome::Canceled => "Canceled",
                                                     };
-                                                    let mut owner =
-                                                        EditorNotesModelOwner::new(host.models_mut());
-                                                    let _ =
-                                                        owner.set_text(&notes_outcome_model, next);
+                                                    let _ = models
+                                                        .set_notes_outcome(host.models_mut(), next);
                                                     host.request_redraw(action_cx.window);
                                                 }
                                             })))
@@ -710,10 +770,7 @@ where
                                                         .variant(shadcn::ButtonVariant::Secondary)
                                                         .size(shadcn::ButtonSize::Sm)
                                                         .on_activate(fret_ui_kit::on_activate({
-                                                            let notes_outcome_model =
-                                                                notes_outcome_model.clone();
-                                                            let summary_status_model =
-                                                                summary_status_model.clone();
+                                                            let models = asset.models.clone();
                                                             let draft_commit_status =
                                                                 draft_commit_status.clone();
                                                             let draft_controller =
@@ -722,18 +779,17 @@ where
                                                                 if draft_controller
                                                                     .commit(host, action_cx)
                                                                 {
-                                                                    let mut owner =
-                                                                        EditorNotesModelOwner::new(
+                                                                    let _ = models
+                                                                        .set_notes_outcome(
                                                                             host.models_mut(),
+                                                                            "Committed",
                                                                         );
-                                                                    let _ = owner.set_text(
-                                                                        &notes_outcome_model,
-                                                                        "Committed",
-                                                                    );
-                                                                    let _ = owner.set_text(
-                                                                        &summary_status_model,
-                                                                        draft_commit_status.clone(),
-                                                                    );
+                                                                    let _ = models
+                                                                        .set_summary_status(
+                                                                            host.models_mut(),
+                                                                            draft_commit_status
+                                                                                .clone(),
+                                                                        );
                                                                     host.request_redraw(
                                                                         action_cx.window,
                                                                     );
@@ -747,10 +803,7 @@ where
                                                         .variant(shadcn::ButtonVariant::Ghost)
                                                         .size(shadcn::ButtonSize::Sm)
                                                         .on_activate(fret_ui_kit::on_activate({
-                                                            let notes_outcome_model =
-                                                                notes_outcome_model.clone();
-                                                            let summary_status_model =
-                                                                summary_status_model.clone();
+                                                            let models = asset.models.clone();
                                                             let draft_discard_status =
                                                                 draft_discard_status.clone();
                                                             let draft_controller =
@@ -759,19 +812,17 @@ where
                                                                 if draft_controller
                                                                     .discard(host, action_cx)
                                                                 {
-                                                                    let mut owner =
-                                                                        EditorNotesModelOwner::new(
+                                                                    let _ = models
+                                                                        .set_notes_outcome(
                                                                             host.models_mut(),
+                                                                            "Canceled",
                                                                         );
-                                                                    let _ = owner.set_text(
-                                                                        &notes_outcome_model,
-                                                                        "Canceled",
-                                                                    );
-                                                                    let _ = owner.set_text(
-                                                                        &summary_status_model,
-                                                                        draft_discard_status
-                                                                            .clone(),
-                                                                    );
+                                                                    let _ = models
+                                                                        .set_summary_status(
+                                                                            host.models_mut(),
+                                                                            draft_discard_status
+                                                                                .clone(),
+                                                                        );
                                                                     host.request_redraw(
                                                                         action_cx.window,
                                                                     );
@@ -794,7 +845,7 @@ where
                                         PropertyRow::new(),
                                         |cx| row_cx.label_text(cx, "Theme preset"),
                                         |cx| {
-                                            EditorThemePresetPicker::new(theme_preset_model.clone())
+                                            EditorThemePresetPicker::new(theme.picker_model())
                                                 .options(EditorThemePresetPickerOptions {
                                                     label: Some(Arc::from("Editor theme preset")),
                                                     test_id: Some(Arc::from(
@@ -816,15 +867,12 @@ where
                                                 .variant(shadcn::ButtonVariant::Secondary)
                                                 .size(shadcn::ButtonSize::Sm)
                                                 .on_activate(fret_ui_kit::on_activate({
-                                                    let summary_status_model =
-                                                        summary_status_model.clone();
+                                                    let models = asset.models.clone();
                                                     let summary_status_next =
                                                         summary_status_next.clone();
                                                     move |host, action_cx, _reason| {
-                                                        let mut owner =
-                                                            EditorNotesModelOwner::new(host.models_mut());
-                                                        let _ = owner.set_text(
-                                                            &summary_status_model,
+                                                        let _ = models.set_summary_status(
+                                                            host.models_mut(),
                                                             summary_status_next.clone(),
                                                         );
                                                         host.request_redraw(action_cx.window);
