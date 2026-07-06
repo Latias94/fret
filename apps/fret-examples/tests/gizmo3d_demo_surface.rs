@@ -68,3 +68,39 @@ fn gizmo3d_demo_hides_demo_model_handle_behind_binding() {
         );
     }
 }
+
+#[test]
+fn gizmo3d_demo_routes_basic_keyboard_mutations_through_binding() {
+    let source = compact(include_str!("../src/gizmo3d_demo.rs"));
+
+    for needle in [
+        "state.demo.cancel_active_or_in_progress(app)",
+        "state.demo.set_transform_mode(app,GizmoMode::Rotate,GizmoOpMaskPreset::Rotate);",
+        "state.demo.set_transform_mode(app,GizmoMode::Scale,GizmoOpMaskPreset::Scale);",
+        "state.demo.set_transform_mode(app,GizmoMode::Translate,GizmoOpMaskPreset::Translate);",
+        "state.demo.set_transform_mode(app,GizmoMode::Universal,GizmoOpMaskPreset::Universal);",
+        "state.demo.toggle_help(app);",
+        "state.demo.toggle_op_mask(app);",
+        "state.demo.toggle_depth_mode(app);",
+        "state.demo.toggle_universal_translate_depth(app);",
+    ] {
+        assert!(
+            source.contains(needle),
+            "gizmo3d_demo basic keyboard mutations should route through binding methods; missing `{needle}`"
+        );
+    }
+
+    for legacy in [
+        "key:fret_core::KeyCode::Escape,..}=>{letdid_cancel=state.demo.update(app,|m,_cx|{m.cancel_active_viewport_tool_interaction()||m.cancel_in_progress_interaction()})",
+        "key:fret_core::KeyCode::KeyR,repeat:false,..}=>{let_=state.demo.update(app,|m,_cx|{ifm.is_busy(){return;}ifm.op_mask_enabled{m.set_op_mask_preset(GizmoOpMaskPreset::Rotate);}else{m.gizmo_mut().config.mode=GizmoMode::Rotate;}});",
+        "key:fret_core::KeyCode::KeyH,repeat:false,..}=>{let_=state.demo.update(app,|m,_cx|{m.show_help=!m.show_help;});",
+        "key:fret_core::KeyCode::KeyM,repeat:false,..}=>{let_=state.demo.update(app,|m,_cx|{ifm.is_busy(){return;}m.op_mask_enabled=!m.op_mask_enabled;",
+        "key:fret_core::KeyCode::KeyO,repeat:false,..}=>{let_=state.demo.update(app,|m,_cx|{ifm.is_busy(){return;}m.gizmo_mut().config.depth_mode=matchm.gizmo().config.depth_mode",
+        "key:fret_core::KeyCode::KeyD,repeat:false,..}=>{let_=state.demo.update(app,|m,_cx|{ifm.is_busy(){return;}m.gizmo_mut().config.universal_includes_translate_depth=!m.gizmo().config.universal_includes_translate_depth;});",
+    ] {
+        assert!(
+            !source.contains(legacy),
+            "gizmo3d_demo should not keep direct basic keyboard model writes in event branches; unexpected `{legacy}`"
+        );
+    }
+}

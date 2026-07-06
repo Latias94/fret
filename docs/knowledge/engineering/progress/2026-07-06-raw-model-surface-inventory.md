@@ -100,6 +100,9 @@ Keep raw/shared-model mechanisms for now:
     demo is the larger gizmo/editor state model and should be handled by a dedicated owner pass.
     The first owner pass now hides that shared model handle behind `Gizmo3dDemoModelBinding`, while
     leaving the existing event/render mutation closures as the next semantic-method cleanup target.
+    The next pass moved the basic keyboard shortcuts (Esc, T/R/S/U, H/M/O/D) to binding methods,
+    leaving visual preset, selection, camera, viewport-input, and render-HUD mutations as the
+    remaining semantic-method cleanup areas.
 - Table/data-grid demos.
   - Follow-up: `datatable_demo.rs` now uses `LocalState<shadcn::DataTableViewOutput>` and
     `app.local_state(...)` for the shadcn `DataTable` output handle. The retained table source gate

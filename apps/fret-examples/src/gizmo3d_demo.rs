@@ -2017,6 +2017,80 @@ impl Gizmo3dDemoModelBinding {
         .is_ok()
     }
 
+    fn cancel_active_or_in_progress(&self, app: &mut App) -> bool {
+        self.update(app, |model, _cx| {
+            model.cancel_active_viewport_tool_interaction()
+                || model.cancel_in_progress_interaction()
+        })
+        .unwrap_or(false)
+    }
+
+    fn set_transform_mode(
+        &self,
+        app: &mut App,
+        mode: GizmoMode,
+        op_mask_preset: GizmoOpMaskPreset,
+    ) {
+        let _ = self.update(app, |model, _cx| {
+            if model.is_busy() {
+                return;
+            }
+            if model.op_mask_enabled {
+                model.set_op_mask_preset(op_mask_preset);
+            } else {
+                model.gizmo_mut().config.mode = mode;
+            }
+        });
+    }
+
+    fn toggle_help(&self, app: &mut App) {
+        let _ = self.update(app, |model, _cx| {
+            model.show_help = !model.show_help;
+        });
+    }
+
+    fn toggle_op_mask(&self, app: &mut App) {
+        let _ = self.update(app, |model, _cx| {
+            if model.is_busy() {
+                return;
+            }
+            model.op_mask_enabled = !model.op_mask_enabled;
+            if model.op_mask_enabled {
+                let preset = match model.gizmo().config.mode {
+                    GizmoMode::Translate => GizmoOpMaskPreset::Translate,
+                    GizmoMode::Rotate => GizmoOpMaskPreset::Rotate,
+                    GizmoMode::Scale => GizmoOpMaskPreset::Scale,
+                    GizmoMode::Universal => GizmoOpMaskPreset::Universal,
+                };
+                model.set_op_mask_preset(preset);
+            } else {
+                model.apply_op_mask();
+            }
+        });
+    }
+
+    fn toggle_depth_mode(&self, app: &mut App) {
+        let _ = self.update(app, |model, _cx| {
+            if model.is_busy() {
+                return;
+            }
+            model.gizmo_mut().config.depth_mode = match model.gizmo().config.depth_mode {
+                DepthMode::Test => DepthMode::Always,
+                DepthMode::Ghost | DepthMode::Always => DepthMode::Test,
+            };
+        });
+    }
+
+    fn toggle_universal_translate_depth(&self, app: &mut App) {
+        let _ = self.update(app, |model, _cx| {
+            if model.is_busy() {
+                return;
+            }
+            model.gizmo_mut().config.universal_includes_translate_depth =
+                !model.gizmo().config.universal_includes_translate_depth;
+        });
+    }
+
     fn read<H: ModelHost, R>(
         &self,
         host: &mut H,
@@ -2922,14 +2996,7 @@ fn handle_event(
             key: fret_core::KeyCode::Escape,
             ..
         } => {
-            let did_cancel = state
-                .demo
-                .update(app, |m, _cx| {
-                    m.cancel_active_viewport_tool_interaction()
-                        || m.cancel_in_progress_interaction()
-                })
-                .unwrap_or(false);
-
+            let did_cancel = state.demo.cancel_active_or_in_progress(app);
             if did_cancel {
                 app.request_redraw(window);
             } else {
@@ -2941,16 +3008,9 @@ fn handle_event(
             repeat: false,
             ..
         } => {
-            let _ = state.demo.update(app, |m, _cx| {
-                if m.is_busy() {
-                    return;
-                }
-                if m.op_mask_enabled {
-                    m.set_op_mask_preset(GizmoOpMaskPreset::Rotate);
-                } else {
-                    m.gizmo_mut().config.mode = GizmoMode::Rotate;
-                }
-            });
+            state
+                .demo
+                .set_transform_mode(app, GizmoMode::Rotate, GizmoOpMaskPreset::Rotate);
             app.request_redraw(window);
         }
         Event::KeyDown {
@@ -2958,16 +3018,9 @@ fn handle_event(
             repeat: false,
             ..
         } => {
-            let _ = state.demo.update(app, |m, _cx| {
-                if m.is_busy() {
-                    return;
-                }
-                if m.op_mask_enabled {
-                    m.set_op_mask_preset(GizmoOpMaskPreset::Scale);
-                } else {
-                    m.gizmo_mut().config.mode = GizmoMode::Scale;
-                }
-            });
+            state
+                .demo
+                .set_transform_mode(app, GizmoMode::Scale, GizmoOpMaskPreset::Scale);
             app.request_redraw(window);
         }
         Event::KeyDown {
@@ -2975,16 +3028,9 @@ fn handle_event(
             repeat: false,
             ..
         } => {
-            let _ = state.demo.update(app, |m, _cx| {
-                if m.is_busy() {
-                    return;
-                }
-                if m.op_mask_enabled {
-                    m.set_op_mask_preset(GizmoOpMaskPreset::Translate);
-                } else {
-                    m.gizmo_mut().config.mode = GizmoMode::Translate;
-                }
-            });
+            state
+                .demo
+                .set_transform_mode(app, GizmoMode::Translate, GizmoOpMaskPreset::Translate);
             app.request_redraw(window);
         }
         Event::KeyDown {
@@ -2992,16 +3038,9 @@ fn handle_event(
             repeat: false,
             ..
         } => {
-            let _ = state.demo.update(app, |m, _cx| {
-                if m.is_busy() {
-                    return;
-                }
-                if m.op_mask_enabled {
-                    m.set_op_mask_preset(GizmoOpMaskPreset::Universal);
-                } else {
-                    m.gizmo_mut().config.mode = GizmoMode::Universal;
-                }
-            });
+            state
+                .demo
+                .set_transform_mode(app, GizmoMode::Universal, GizmoOpMaskPreset::Universal);
             app.request_redraw(window);
         }
         Event::KeyDown {
@@ -3009,9 +3048,7 @@ fn handle_event(
             repeat: false,
             ..
         } => {
-            let _ = state.demo.update(app, |m, _cx| {
-                m.show_help = !m.show_help;
-            });
+            state.demo.toggle_help(app);
             app.request_redraw(window);
         }
         Event::KeyDown {
@@ -3019,24 +3056,7 @@ fn handle_event(
             repeat: false,
             ..
         } => {
-            let _ = state.demo.update(app, |m, _cx| {
-                if m.is_busy() {
-                    return;
-                }
-                m.op_mask_enabled = !m.op_mask_enabled;
-                if m.op_mask_enabled {
-                    // Pick a reasonable starting preset based on the current coarse mode.
-                    let preset = match m.gizmo().config.mode {
-                        GizmoMode::Translate => GizmoOpMaskPreset::Translate,
-                        GizmoMode::Rotate => GizmoOpMaskPreset::Rotate,
-                        GizmoMode::Scale => GizmoOpMaskPreset::Scale,
-                        GizmoMode::Universal => GizmoOpMaskPreset::Universal,
-                    };
-                    m.set_op_mask_preset(preset);
-                } else {
-                    m.apply_op_mask();
-                }
-            });
+            state.demo.toggle_op_mask(app);
             app.request_redraw(window);
         }
         Event::KeyDown {
@@ -3044,15 +3064,7 @@ fn handle_event(
             repeat: false,
             ..
         } => {
-            let _ = state.demo.update(app, |m, _cx| {
-                if m.is_busy() {
-                    return;
-                }
-                m.gizmo_mut().config.depth_mode = match m.gizmo().config.depth_mode {
-                    DepthMode::Test => DepthMode::Always,
-                    DepthMode::Ghost | DepthMode::Always => DepthMode::Test,
-                };
-            });
+            state.demo.toggle_depth_mode(app);
             app.request_redraw(window);
         }
         Event::KeyDown {
@@ -3060,13 +3072,7 @@ fn handle_event(
             repeat: false,
             ..
         } => {
-            let _ = state.demo.update(app, |m, _cx| {
-                if m.is_busy() {
-                    return;
-                }
-                m.gizmo_mut().config.universal_includes_translate_depth =
-                    !m.gizmo().config.universal_includes_translate_depth;
-            });
+            state.demo.toggle_universal_translate_depth(app);
             app.request_redraw(window);
         }
         Event::KeyDown {
