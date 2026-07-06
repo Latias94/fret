@@ -58,8 +58,8 @@ Keep raw/shared-model mechanisms for now:
     feedback writes, so the drag overlay example no longer stores raw plot state/output models.
     `linked_cursor_demo.rs` now registers binding-backed plots through
     `LinkedPlotGroup::push_binding(...)` instead of hand-wiring `LinkedPlotMember { state, output }`.
-    Keep `inf_lines_demo` on explicit raw props until multi-axis overlay configuration moves to a
-    named binding API.
+    `inf_lines_demo.rs` now uses `LinePlotPanelBinding::new_with_state(...)` for multi-axis
+    reference-line overlays and reads query output through `output_untracked(...)`.
   - Follow-up: `chart_declarative_demo.rs` now uses `ChartCanvasPanelBinding`, so the default
     FretApp chart example no longer imports `fret_runtime::Model` or wires
     `ChartCanvasPanelProps::engine` directly. Keep explicit raw chart panel props in stress,

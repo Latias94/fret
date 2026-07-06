@@ -6,11 +6,12 @@ use fret_core::{AppWindowId, Event};
 use fret_launch::{
     FnDriver, WinitEventContext, WinitHotReloadContext, WinitRenderContext, WinitRunnerConfig,
 };
-use fret_plot::declarative::{LinePlotPanelProps, line_plot_panel_in};
+use fret_plot::LinePlotPanelBinding;
+use fret_plot::declarative::line_plot_panel_in;
 use fret_plot::models::{LinePlotModel, LineSeries, YAxis};
 use fret_plot::plot::axis::AxisLabelFormatter;
 use fret_plot::series::Series;
-use fret_plot::state::{InfLineX, InfLineY, PlotOutput, PlotOverlays, PlotState};
+use fret_plot::state::{InfLineX, InfLineY, PlotOverlays, PlotState};
 use fret_plot::style::{LinePlotStyle, SeriesTooltipMode};
 use fret_runtime::PlatformCapabilities;
 use fret_ui::{UiTree, declarative};
@@ -18,9 +19,7 @@ use fret_ui::{UiTree, declarative};
 struct InfLinesDemoWindowState {
     ui: UiTree<App>,
     root: Option<fret_core::NodeId>,
-    plot: fret_runtime::Model<LinePlotModel>,
-    plot_state: fret_runtime::Model<PlotState>,
-    plot_output: fret_runtime::Model<PlotOutput>,
+    plot: LinePlotPanelBinding,
     last_logged_output_revision: u64,
 }
 
@@ -53,7 +52,7 @@ impl InfLinesDemoDriver {
             push(&mut series3, x, (u * 0.25).sin() * 1_500.0 + 2_000.0);
         }
 
-        let plot = app.models_mut().insert(LinePlotModel::from_series(vec![
+        let model = LinePlotModel::from_series(vec![
             LineSeries::new("signal A (left)", Series::from_points_sorted(series0, true)),
             LineSeries::new(
                 "signal B (right)",
@@ -70,7 +69,7 @@ impl InfLinesDemoDriver {
                 Series::from_points_sorted(series3, true),
             )
             .y_axis(YAxis::Right3),
-        ]));
+        ]);
 
         let mut state = PlotState::default();
         state.overlays = PlotOverlays {
@@ -88,8 +87,7 @@ impl InfLinesDemoDriver {
             ..Default::default()
         };
 
-        let plot_state = app.models_mut().insert(state);
-        let plot_output = app.models_mut().insert(PlotOutput::default());
+        let plot = LinePlotPanelBinding::new_with_state(app, model, state);
 
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
@@ -98,8 +96,6 @@ impl InfLinesDemoDriver {
             ui,
             root: None,
             plot,
-            plot_state,
-            plot_output,
             last_logged_output_revision: 0,
         }
     }
@@ -153,10 +149,7 @@ fn handle_event(
                 event,
                 Event::Pointer(fret_core::PointerEvent::Up { .. }) | Event::KeyDown { .. }
             ) {
-                let output = state
-                    .plot_output
-                    .read(app, |_app, o| *o)
-                    .unwrap_or_default();
+                let output = state.plot.output_untracked(app);
                 if output.revision != state.last_logged_output_revision {
                     state.last_logged_output_revision = output.revision;
                     if let Some(query) = output.snapshot.query {
@@ -189,15 +182,14 @@ fn render(
     } = context;
 
     let plot = state.plot.clone();
-    let plot_state = state.plot_state.clone();
-    let plot_output = state.plot_output.clone();
     let root = declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
         .render_root("inf-lines-demo", move |cx| {
             let style = LinePlotStyle {
                 series_tooltip: SeriesTooltipMode::NearestAtCursor,
                 ..Default::default()
             };
-            let props = LinePlotPanelProps::new(plot.clone())
+            let props = plot
+                .panel_props()
                 .style(style)
                 .y_axis_labels(AxisLabelFormatter::custom(
                     0x494e464c_5900u64,
@@ -234,9 +226,7 @@ fn render(
                         }
                         format!("{v:.0} Pa")
                     },
-                ))
-                .state(plot_state.clone())
-                .output(plot_output.clone());
+                ));
             vec![line_plot_panel_in(cx, props)]
         });
 

@@ -267,20 +267,22 @@ fn inf_lines_demo_uses_manual_harness_declarative_line_plot_panel() {
     let source = compact(include_str!("../src/inf_lines_demo.rs"));
 
     for needle in [
-        "usefret_plot::declarative::{LinePlotPanelProps,line_plot_panel_in};",
+        "usefret_plot::LinePlotPanelBinding;",
+        "usefret_plot::declarative::line_plot_panel_in;",
         "usefret_plot::models::{LinePlotModel,LineSeries,YAxis};",
-        "usefret_plot::state::{InfLineX,InfLineY,PlotOutput,PlotOverlays,PlotState};",
+        "usefret_plot::state::{InfLineX,InfLineY,PlotOverlays,PlotState};",
         "usefret_plot::style::{LinePlotStyle,SeriesTooltipMode};",
+        "plot:LinePlotPanelBinding",
         "declarative::RenderRootContext::new(&mutstate.ui,app,services,window,bounds)",
         "LinePlotModel::from_series(vec![",
-        "LinePlotPanelProps::new(plot.clone())",
+        "LinePlotPanelBinding::new_with_state(app,model,state)",
+        "state.plot.output_untracked(app)",
+        "plot.panel_props()",
         ".style(style)",
         ".y_axis_labels(",
         ".y2_axis_labels(",
         ".y3_axis_labels(",
         ".y4_axis_labels(",
-        ".state(plot_state.clone())",
-        ".output(plot_output.clone())",
         "vec![line_plot_panel_in(cx,props)]",
     ] {
         assert!(
@@ -295,6 +297,12 @@ fn inf_lines_demo_uses_manual_harness_declarative_line_plot_panel() {
         "LinePlotCanvas",
         "PlotCanvas",
         "create_node_retained(",
+        "fret_runtime::Model<",
+        "PlotOutput",
+        "LinePlotPanelProps::new(plot.clone())",
+        ".state(plot_state.clone())",
+        ".output(plot_output.clone())",
+        "app.models_mut().insert(PlotOutput::default())",
     ] {
         assert!(
             !source.contains(legacy),

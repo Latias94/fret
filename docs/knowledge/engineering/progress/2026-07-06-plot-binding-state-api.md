@@ -23,6 +23,8 @@ without making app examples store raw runtime model handles:
 state feedback through `LinePlotPanelBinding::output_untracked(...)` and `update_state(...)`.
 `linked_cursor_demo` now demonstrates binding-backed plot coordination through
 `LinkedPlotGroup::push_binding(...)`.
+`inf_lines_demo` now demonstrates multi-axis overlay initialization and event-time query output
+through the same binding surface.
 
 # Decision
 
@@ -39,6 +41,7 @@ component-specific state operations. `LinePlotPanelProps::state(...)`, `output(.
 - `cargo nextest run -p fret-examples --test basic_plot_demos_surface plot_image_demo_uses_default_declarative_line_plot_panel --no-fail-fast`
 - `cargo nextest run -p fret-examples --test basic_plot_demos_surface drag_demo_uses_manual_harness_declarative_line_plot_panel --no-fail-fast`
 - `cargo nextest run -p fret-examples --test basic_plot_demos_surface linked_cursor_demo_uses_manual_harness_declarative_top_line_plot_panel --no-fail-fast`
+- `cargo nextest run -p fret-examples --test basic_plot_demos_surface inf_lines_demo_uses_manual_harness_declarative_line_plot_panel --no-fail-fast`
 
 # Next
 
