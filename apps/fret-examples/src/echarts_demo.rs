@@ -1,18 +1,16 @@
 use fret::advanced::KernelApp;
 use fret::advanced::driver::{ViewElements, ui_app_with_hooks};
 use fret_core::AppWindowId;
-use fret_runtime::Model;
+use fret_ui::ElementContext;
 use fret_ui::element::AnyElement;
-use fret_ui::{ElementContext, Invalidation};
 
 use delinea::{ChartEngine, ChartSpec};
-use fret_chart::{ChartCanvasPanelProps, chart_canvas_panel};
+use fret_chart::{ChartCanvasPanelBinding, chart_canvas_panel};
 use fret_ui_kit::declarative::text as decl_text;
 
 struct EchartsDemoChart {
     title: std::sync::Arc<str>,
-    engine: Model<ChartEngine>,
-    spec: ChartSpec,
+    chart: ChartCanvasPanelBinding,
 }
 
 struct EchartsDemoState {
@@ -86,19 +84,15 @@ fn init_window(app: &mut KernelApp, _window: AppWindowId) -> EchartsDemoState {
     let (engine_basic, spec_basic) = build_chart(option_basic);
     let (engine_percent, spec_percent) = build_chart(&option_percent_order);
 
-    let engine_basic = app.models_mut().insert(engine_basic);
-    let engine_percent = app.models_mut().insert(engine_percent);
     EchartsDemoState {
         charts: vec![
             EchartsDemoChart {
                 title: "ECharts adapter smoke (category line + bar)".into(),
-                engine: engine_basic,
-                spec: spec_basic,
+                chart: ChartCanvasPanelBinding::new(app, spec_basic, engine_basic),
             },
             EchartsDemoChart {
                 title: "Percent order sensitivity smoke (X before Y)".into(),
-                engine: engine_percent,
-                spec: spec_percent,
+                chart: ChartCanvasPanelBinding::new(app, spec_percent, engine_percent),
             },
         ],
     }
@@ -106,7 +100,7 @@ fn init_window(app: &mut KernelApp, _window: AppWindowId) -> EchartsDemoState {
 
 fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut EchartsDemoState) -> ViewElements {
     for chart in &st.charts {
-        cx.observe_model(&chart.engine, Invalidation::Paint);
+        chart.chart.observe_engine_paint(cx);
     }
 
     let mut out: Vec<AnyElement> = Vec::new();
@@ -115,8 +109,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut EchartsDemoState) -> Vi
             cx,
             std::sync::Arc::clone(&chart.title),
         ));
-        let mut props = ChartCanvasPanelProps::new(chart.spec.clone());
-        props.engine = Some(chart.engine.clone());
+        let props = chart.chart.panel_props();
         out.push(chart_canvas_panel(cx, props));
     }
     out.into()

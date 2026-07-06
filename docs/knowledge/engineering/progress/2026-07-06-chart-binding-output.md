@@ -33,6 +33,7 @@ synchronization semantics behind the first-contact binding.
 
 # Next
 
-Name explicit contracts before migrating linked, multi-grid, adapter, or stress demos. Those demos
-still use raw `ChartCanvasPanelProps` intentionally because they exercise shared output, grid views,
-overlay-only panels, lower-level adapter wiring, or perf harness state.
+`echarts_demo.rs` now uses `ChartCanvasPanelBinding` for adapter smoke charts. Name explicit
+contracts before migrating linked, multi-grid, or stress demos; those surfaces still use raw
+`ChartCanvasPanelProps` intentionally because they exercise shared output, grid views,
+overlay-only panels, or perf harness state.

@@ -342,7 +342,6 @@ COMPARISON_SURFACES: tuple[SurfacePath, ...] = (
         (
             "fret::advanced",
             "fret_core",
-            "fret_runtime",
             "fret_ui",
             "AnyElement",
             "ElementContext",

@@ -48,4 +48,4 @@ Remaining chart raw-model pressure should be split by advanced contract:
 
 - explicit linked or multi-grid contracts before migrating linked chart demos;
 - chart stress harnesses that intentionally stay manual and diagnostic-heavy;
-- adapter smoke tests that intentionally exercise lower-level chart props.
+- multi-grid, linked, or stress tests that intentionally exercise lower-level chart props.

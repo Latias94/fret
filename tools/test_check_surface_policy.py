@@ -766,6 +766,12 @@ class SurfacePolicyTests(unittest.TestCase):
                 for spec in POLICY.COMPARISON_SURFACES
             )
         )
+        echarts_spec = next(
+            spec
+            for spec in POLICY.COMPARISON_SURFACES
+            if spec.path == "apps/fret-examples/src/echarts_demo.rs"
+        )
+        self.assertNotIn("fret_runtime", echarts_spec.allowed_raw_seams)
         for chart_path in {
             "apps/fret-examples/src/echarts_multi_grid_demo.rs",
             "apps/fret-examples/src/chart_multi_axis_demo.rs",
