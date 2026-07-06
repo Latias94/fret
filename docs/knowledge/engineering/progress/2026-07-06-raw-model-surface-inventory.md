@@ -67,6 +67,11 @@ Keep raw/shared-model mechanisms for now:
     `ChartCanvasPanelProps::{engine, output_model}` directly. Keep explicit raw chart panel props
     in stress, linked, multi-grid, adapter, and intentionally shared output-model demos until those
     advanced contracts are named.
+  - Follow-up: `tools/check_surface_policy.py` now explicitly scans and classifies
+    `echarts_demo.rs`, `echarts_multi_grid_demo.rs`, `chart_multi_axis_demo.rs`, and
+    `chart_stress_demo.rs` with owners, allowed raw seams, and category-specific retirement
+    conditions. This keeps advanced chart exceptions in the same source-policy system as plot,
+    workspace, and harness exceptions rather than relying only on ad hoc demo tests.
 - Custom effect demos such as `custom_effect_v2_*`. They expose effect parameter models and reset
   groups; these need a dedicated parameter/control-surface design before deletion.
   - Follow-up: `custom_effect_v2_web_demo.rs`, `custom_effect_v2_identity_web_demo.rs`,

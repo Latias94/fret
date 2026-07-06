@@ -336,6 +336,20 @@ COMPARISON_SURFACES: tuple[SurfacePath, ...] = (
         owner="examples-hello-world-compare",
     ),
     _fret_examples_comparison_surface(
+        "echarts_demo.rs",
+        "it is an ECharts adapter smoke/comparison surface, while first-contact chart examples use "
+        "ChartCanvasPanelBinding",
+        (
+            "fret::advanced",
+            "fret_core",
+            "fret_runtime",
+            "fret_ui",
+            "AnyElement",
+            "ElementContext",
+        ),
+        owner="examples-echarts-adapter",
+    ),
+    _fret_examples_comparison_surface(
         "imui_editor_proof_demo/authoring_parity",
         "it compares declarative and immediate-mode authoring surfaces inside the editor proof",
         (
@@ -389,6 +403,21 @@ INTERNAL_HARNESS_SURFACES: tuple[SurfacePath, ...] = (
             "UiTree",
         ),
         owner="examples-plot-stress",
+    ),
+    _fret_examples_internal_harness(
+        "chart_stress_demo.rs",
+        "the chart stress harness owns manual driver state, env-driven perf controls, and chart "
+        "engine statistics directly",
+        (
+            "fret_app",
+            "fret_core",
+            "fret_launch",
+            "fret_runtime",
+            "fret_ui",
+            "FnDriver",
+            "UiTree",
+        ),
+        owner="examples-chart-stress",
     ),
     _fret_examples_internal_harness(
         "simple_todo_demo/driver.rs",
@@ -529,6 +558,38 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
             "UiTree",
         ),
         owner="examples-gizmo3d",
+    ),
+    _fret_examples_advanced_surface(
+        "echarts_multi_grid_demo.rs",
+        "the multi-grid ECharts proof owns one shared chart engine, per-grid panel props, and an "
+        "overlay-only panel that do not belong in the default single-chart binding",
+        (
+            "fret_app",
+            "fret_core",
+            "fret_launch",
+            "fret_runtime",
+            "fret_ui",
+            "FnDriver",
+            "UiTree",
+        ),
+        owner="examples-echarts-multi-grid",
+    ),
+    _fret_examples_advanced_surface(
+        "chart_multi_axis_demo.rs",
+        "the linked multi-axis proof owns shared output, brush, axis-pointer, and domain-window "
+        "models for explicit chart coordination",
+        (
+            "fret_app",
+            "fret_core",
+            "fret_launch",
+            "fret_runtime",
+            "fret_ui",
+            "AnyElement",
+            "ElementContext",
+            "FnDriver",
+            "UiTree",
+        ),
+        owner="examples-chart-multi-axis",
     ),
     _cookbook_advanced_surface(
         "docking_basics.rs",
@@ -734,6 +795,10 @@ PUBLIC_EXAMPLE_SCAN_ROOTS: tuple[str, ...] = (
     "apps/fret-examples/src/lib.rs",
     "apps/fret-examples/src/api_workbench_lite_demo.rs",
     "apps/fret-examples/src/hello_world_compare_demo.rs",
+    "apps/fret-examples/src/echarts_demo.rs",
+    "apps/fret-examples/src/echarts_multi_grid_demo.rs",
+    "apps/fret-examples/src/chart_multi_axis_demo.rs",
+    "apps/fret-examples/src/chart_stress_demo.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/authoring_parity",
     "apps/fret-examples/src/simple_todo_demo.rs",
     "apps/fret-examples/src/todo_demo.rs",

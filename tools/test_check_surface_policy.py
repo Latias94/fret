@@ -732,12 +732,48 @@ class SurfacePolicyTests(unittest.TestCase):
             "apps/fret-examples/src/plot_stress_demo.rs",
             POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS,
         )
+        self.assertIn(
+            "apps/fret-examples/src/echarts_demo.rs",
+            POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS,
+        )
+        self.assertIn(
+            "apps/fret-examples/src/echarts_multi_grid_demo.rs",
+            POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS,
+        )
+        self.assertIn(
+            "apps/fret-examples/src/chart_multi_axis_demo.rs",
+            POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS,
+        )
+        self.assertIn(
+            "apps/fret-examples/src/chart_stress_demo.rs",
+            POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS,
+        )
         self.assertTrue(
             any(
                 spec.path == "apps/fret-examples/src/plot_stress_demo.rs"
                 for spec in POLICY.INTERNAL_HARNESS_SURFACES
             )
         )
+        self.assertTrue(
+            any(
+                spec.path == "apps/fret-examples/src/chart_stress_demo.rs"
+                for spec in POLICY.INTERNAL_HARNESS_SURFACES
+            )
+        )
+        self.assertTrue(
+            any(
+                spec.path == "apps/fret-examples/src/echarts_demo.rs"
+                for spec in POLICY.COMPARISON_SURFACES
+            )
+        )
+        for chart_path in {
+            "apps/fret-examples/src/echarts_multi_grid_demo.rs",
+            "apps/fret-examples/src/chart_multi_axis_demo.rs",
+        }:
+            self.assertTrue(
+                any(spec.path == chart_path for spec in POLICY.ADVANCED_MANUAL_SURFACES),
+                f"{chart_path} should be classified as an advanced chart surface",
+            )
         self.assertTrue(
             any(
                 spec.path == "apps/fret-examples/src/simple_todo_demo/driver.rs"
