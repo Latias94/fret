@@ -1,9 +1,14 @@
+fn compact(source: &str) -> String {
+    source.chars().filter(|ch| !ch.is_whitespace()).collect()
+}
+
 #[test]
 fn imui_editor_proof_demo_keeps_collection_context_menu_app_owned_and_explicit() {
     let context_menu_source =
         include_str!("../src/imui_editor_proof_demo/collection/context_menu.rs");
     let context_menu_actions_source =
         include_str!("../src/imui_editor_proof_demo/collection/context_menu/actions.rs");
+    let compact_context_menu_actions_source = compact(context_menu_actions_source);
     let context_menu_chrome_source =
         include_str!("../src/imui_editor_proof_demo/collection/context_menu/chrome.rs");
     let source = concat!(
@@ -62,6 +67,8 @@ fn imui_editor_proof_demo_keeps_collection_context_menu_app_owned_and_explicit()
         include_str!("../src/imui_editor_proof_demo/collection/command_buttons.rs"),
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/command_buttons/actions.rs"),
+        "\n",
+        include_str!("../src/imui_editor_proof_demo/collection/model_owner.rs"),
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/context_menu.rs"),
         "\n",
@@ -259,17 +266,21 @@ fn imui_editor_proof_demo_keeps_collection_context_menu_app_owned_and_explicit()
         "pub(super) fn proof_collection_context_menu_apply_duplicate(",
         "pub(super) fn proof_collection_context_menu_begin_rename(",
         "pub(super) fn proof_collection_context_menu_apply_delete(",
-        "proof_collection_duplicate_status(&duplicate.duplicated_assets)",
-        "proof_collection_delete_status(&delete.deleted_assets)",
-        "proof_collection_begin_inline_rename_in_app(",
-        "app.models_mut().update(&models.assets",
-        "app.models_mut().update(&models.selection",
-        "app.models_mut().update(&models.keyboard",
-        "app.models_mut().update(&models.command_status",
+        "use super::super::model_owner::ProofCollectionModelOwner;",
     ] {
         assert!(
             context_menu_actions_source.contains(needle),
-            "collection context-menu actions owner should keep app-owned state transitions explicit; missing `{needle}`"
+            "collection context-menu actions owner should route app-owned state transitions through the collection model owner; missing `{needle}`"
+        );
+    }
+    for needle in [
+        "ProofCollectionModelOwner::new(app.models_mut()).apply_duplicate(",
+        "ProofCollectionModelOwner::new(app.models_mut()).begin_inline_rename(",
+        "ProofCollectionModelOwner::new(app.models_mut()).apply_delete(",
+    ] {
+        assert!(
+            compact_context_menu_actions_source.contains(&compact(needle)),
+            "collection context-menu actions owner should route app-owned state transitions through the collection model owner; missing `{needle}`"
         );
     }
     for needle in [
@@ -284,10 +295,14 @@ fn imui_editor_proof_demo_keeps_collection_context_menu_app_owned_and_explicit()
         "proof_collection_delete_selection(",
         "proof_collection_begin_rename_session(",
         "kit::MenuItemOptions",
+        "proof_collection_duplicate_status(",
+        "proof_collection_delete_status(",
+        "proof_collection_begin_inline_rename_in_app(",
+        "models_mut().update",
     ] {
         assert!(
             !context_menu_actions_source.contains(needle),
-            "collection context-menu actions owner should not take popup layout, menu chrome, or selection derivation policy; unexpected `{needle}`"
+            "collection context-menu actions owner should not take popup layout, menu chrome, selection derivation policy, or raw model mutation; unexpected `{needle}`"
         );
     }
     for needle in [

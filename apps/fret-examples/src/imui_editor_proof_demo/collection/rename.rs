@@ -2,11 +2,8 @@ use std::sync::Arc;
 
 use fret::imui::kit::ImUiMultiSelectState;
 use fret_core::{KeyCode, Modifiers};
-use fret_runtime::Model;
 
-use super::super::KernelApp;
 use super::ProofCollectionAsset;
-use super::readouts::proof_collection_rename_ready_status;
 use super::selection::{ProofCollectionKeyboardState, proof_collection_active_id};
 
 mod commit;
@@ -44,34 +41,6 @@ pub(super) fn proof_collection_begin_rename_session(
         target_id: asset.id.clone(),
         original_label: asset.label.clone(),
     })
-}
-
-pub(super) fn proof_collection_begin_inline_rename_in_app(
-    app: &mut KernelApp,
-    rename_session_model: &Model<Option<ProofCollectionRenameSession>>,
-    rename_draft_model: &Model<String>,
-    rename_focus_pending_model: &Model<bool>,
-    rename_status_model: &Model<String>,
-    session: &ProofCollectionRenameSession,
-) {
-    let _ = app.models_mut().update(rename_session_model, |state| {
-        *state = Some(session.clone());
-    });
-    let _ = app.models_mut().update(rename_draft_model, |draft| {
-        draft.clear();
-        draft.push_str(session.original_label.as_ref());
-    });
-    let _ = app
-        .models_mut()
-        .update(rename_focus_pending_model, |state| {
-            *state = true;
-        });
-    let _ = app.models_mut().update(rename_status_model, |status| {
-        status.clear();
-        status.push_str(&proof_collection_rename_ready_status(
-            session.original_label.as_ref(),
-        ));
-    });
 }
 
 #[cfg(test)]

@@ -1,3 +1,7 @@
+fn compact(source: &str) -> String {
+    source.chars().filter(|ch| !ch.is_whitespace()).collect()
+}
+
 #[test]
 fn imui_editor_proof_demo_keeps_collection_command_package_app_owned_and_explicit() {
     let collection_source = include_str!("../src/imui_editor_proof_demo/collection.rs");
@@ -47,6 +51,7 @@ fn imui_editor_proof_demo_keeps_collection_command_package_app_owned_and_explici
         include_str!("../src/imui_editor_proof_demo/collection/command_buttons.rs");
     let command_buttons_actions_source =
         include_str!("../src/imui_editor_proof_demo/collection/command_buttons/actions.rs");
+    let compact_command_buttons_actions_source = compact(command_buttons_actions_source);
     let command_buttons_chrome_source =
         include_str!("../src/imui_editor_proof_demo/collection/command_buttons/chrome.rs");
     let source = concat!(
@@ -145,6 +150,8 @@ fn imui_editor_proof_demo_keeps_collection_command_package_app_owned_and_explici
         include_str!("../src/imui_editor_proof_demo/collection/keyboard/actions.rs"),
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/models.rs"),
+        "\n",
+        include_str!("../src/imui_editor_proof_demo/collection/model_owner.rs"),
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/readouts.rs"),
         "\n",
@@ -250,7 +257,8 @@ fn imui_editor_proof_demo_keeps_collection_command_package_app_owned_and_explici
         "fn proof_collection_duplicate_shortcut_matches(",
         "fn proof_collection_duplicate_selection(",
         "fn proof_collection_duplicate_status(",
-        "fn proof_collection_begin_inline_rename_in_app(",
+        "struct ProofCollectionModelOwner<'a>",
+        "fn begin_inline_rename(",
         "fn authoring_parity_collection_command_status_model<H: UiHost>(",
         "imui_editor_proof_demo.model.authoring_parity.collection_command_status",
         "\"Duplicate, delete, rename, and select-all stay inside one app-owned collection command package; duplicate/delete/rename now route across keyboard, explicit buttons, and context menu without widening shared IMUI helpers.\"",
@@ -319,17 +327,21 @@ fn imui_editor_proof_demo_keeps_collection_command_package_app_owned_and_explici
         "pub(super) fn proof_collection_command_button_apply_duplicate(",
         "pub(super) fn proof_collection_command_button_begin_rename(",
         "pub(super) fn proof_collection_command_button_apply_delete(",
-        "proof_collection_duplicate_status(&duplicate.duplicated_assets)",
-        "proof_collection_delete_status(&delete.deleted_assets)",
-        "proof_collection_begin_inline_rename_in_app(",
-        "app.models_mut().update(&models.assets",
-        "app.models_mut().update(&models.selection",
-        "app.models_mut().update(&models.keyboard",
-        "proof_collection_set_command_status(",
+        "use super::super::model_owner::ProofCollectionModelOwner;",
     ] {
         assert!(
             command_buttons_actions_source.contains(needle),
-            "collection command-buttons actions owner should keep button-triggered state writes explicit; missing `{needle}`"
+            "collection command-buttons actions owner should route button-triggered state writes through the collection model owner; missing `{needle}`"
+        );
+    }
+    for needle in [
+        "ProofCollectionModelOwner::new(app.models_mut()).apply_duplicate(",
+        "ProofCollectionModelOwner::new(app.models_mut()).begin_inline_rename(",
+        "ProofCollectionModelOwner::new(app.models_mut()).apply_delete(",
+    ] {
+        assert!(
+            compact_command_buttons_actions_source.contains(&compact(needle)),
+            "collection command-buttons actions owner should route button-triggered state writes through the collection model owner; missing `{needle}`"
         );
     }
     for needle in [
@@ -342,10 +354,15 @@ fn imui_editor_proof_demo_keeps_collection_command_package_app_owned_and_explici
         "collection_delete_selected_button_options(",
         "proof_collection_duplicate_selection(",
         "proof_collection_delete_selection(",
+        "proof_collection_duplicate_status(",
+        "proof_collection_delete_status(",
+        "proof_collection_begin_inline_rename_in_app(",
+        "proof_collection_set_command_status(",
+        "models_mut().update",
     ] {
         assert!(
             !command_buttons_actions_source.contains(needle),
-            "collection command-buttons actions owner should not take button rendering or selection policy; unexpected `{needle}`"
+            "collection command-buttons actions owner should not take button rendering, selection policy, or raw model mutation; unexpected `{needle}`"
         );
     }
     for needle in [

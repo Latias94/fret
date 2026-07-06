@@ -19,8 +19,6 @@ pub(super) fn assert_rename_owner_split(
         "proof_collection_sync_inline_rename_focus",
         "pub(super) struct ProofCollectionRenameSession",
         "pub(super) fn proof_collection_begin_rename_session(",
-        "pub(super) fn proof_collection_begin_inline_rename_in_app(",
-        "proof_collection_rename_ready_status(",
         "#[cfg(test)]",
         "mod tests;",
     ] {
@@ -92,6 +90,7 @@ pub(super) fn assert_rename_owner_split(
         "proof_collection_rename_shortcut_matches(",
         "proof_collection_begin_inline_rename_in_app(",
         "proof_collection_rename_ready_status(",
+        "models_mut().update",
         "pub(super) struct ProofCollectionRenameSession",
         "pub(super) struct ProofCollectionRenameCommit",
         "struct ProofCollectionInlineRenameFocusState",

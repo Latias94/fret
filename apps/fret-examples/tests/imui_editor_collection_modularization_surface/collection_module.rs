@@ -18,6 +18,7 @@ pub(super) fn assert_collection_module_routing(collection_source: &str) {
         "mod keyboard;",
         "mod lifecycle;",
         "mod models;",
+        "mod model_owner;",
         "mod order_toggle;",
         "mod rename;",
         "mod render_states;",

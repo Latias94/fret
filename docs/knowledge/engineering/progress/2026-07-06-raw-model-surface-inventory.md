@@ -117,6 +117,12 @@ Keep raw/shared-model mechanisms for now:
   canvas/node-graph interaction state and should be handled as a dedicated workstream.
 - `imui_editor_proof_demo/*`. This is an editor-grade retained proof lane with explicit model
   graphs; migrate only with editor-state public contracts, not by mechanical LocalState rewrites.
+  Follow-up cleanup started with `collection/`: app-side command, context-menu, asset-grid, and
+  rename-start writes now route through `ProofCollectionModelOwner`, and the legacy
+  `proof_collection_begin_inline_rename_in_app(...)` free helper was deleted. Remaining IMUI proof
+  work still includes collection `UiActionHostExt::update_model(...)` paths plus
+  `asset_ref.rs`, `editor_text_assist.rs`, `editor_material/surface.rs`, and
+  `editor_advanced/surface.rs`.
 - `workspace_shell_demo/*`. Audited after the initial inventory: it is application-level workspace
   shell state, so the shared model graph remains. The follow-up cleanup routes writes through
   demo-local owner helpers instead of scattering raw `models_mut().update(...)` calls. Follow-up

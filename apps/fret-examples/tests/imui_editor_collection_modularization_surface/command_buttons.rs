@@ -1,8 +1,14 @@
+fn compact(source: &str) -> String {
+    source.chars().filter(|ch| !ch.is_whitespace()).collect()
+}
+
 pub(super) fn assert_command_buttons_owner_split(
     command_buttons_source: &str,
     command_buttons_actions_source: &str,
     command_buttons_chrome_source: &str,
 ) {
+    let compact_actions_source = compact(command_buttons_actions_source);
+
     for needle in [
         "pub(super) struct ProofCollectionCommandButtonModels",
         "pub(super) struct ProofCollectionCommandButtonState",
@@ -47,17 +53,21 @@ pub(super) fn assert_command_buttons_owner_split(
         "pub(super) fn proof_collection_command_button_apply_duplicate(",
         "pub(super) fn proof_collection_command_button_begin_rename(",
         "pub(super) fn proof_collection_command_button_apply_delete(",
-        "proof_collection_duplicate_status(&duplicate.duplicated_assets)",
-        "proof_collection_delete_status(&delete.deleted_assets)",
-        "proof_collection_begin_inline_rename_in_app(",
-        "app.models_mut().update(&models.assets",
-        "app.models_mut().update(&models.selection",
-        "app.models_mut().update(&models.keyboard",
-        "proof_collection_set_command_status(",
+        "use super::super::model_owner::ProofCollectionModelOwner;",
     ] {
         assert!(
             command_buttons_actions_source.contains(needle),
-            "the demo-local collection command-buttons actions owner should keep button-triggered state writes explicit; missing `{needle}`"
+            "the demo-local collection command-buttons actions owner should route button-triggered state writes through the collection model owner; missing `{needle}`"
+        );
+    }
+    for needle in [
+        "ProofCollectionModelOwner::new(app.models_mut()).apply_duplicate(",
+        "ProofCollectionModelOwner::new(app.models_mut()).begin_inline_rename(",
+        "ProofCollectionModelOwner::new(app.models_mut()).apply_delete(",
+    ] {
+        assert!(
+            compact_actions_source.contains(&compact(needle)),
+            "the demo-local collection command-buttons actions owner should route button-triggered state writes through the collection model owner; missing `{needle}`"
         );
     }
     for needle in [
@@ -70,10 +80,15 @@ pub(super) fn assert_command_buttons_owner_split(
         "collection_delete_selected_button_options(",
         "proof_collection_duplicate_selection(",
         "proof_collection_delete_selection(",
+        "proof_collection_duplicate_status(",
+        "proof_collection_delete_status(",
+        "proof_collection_begin_inline_rename_in_app(",
+        "proof_collection_set_command_status(",
+        "models_mut().update",
     ] {
         assert!(
             !command_buttons_actions_source.contains(needle),
-            "the demo-local collection command-buttons actions owner should not take button rendering or selection policy; unexpected `{needle}`"
+            "the demo-local collection command-buttons actions owner should not take button rendering, selection policy, or raw model mutation; unexpected `{needle}`"
         );
     }
     for needle in [

@@ -7,6 +7,7 @@ use fret_runtime::Model;
 
 use super::super::KernelApp;
 use super::ProofCollectionAsset;
+use super::model_owner::ProofCollectionModelOwner;
 use super::proof_collection_readout_text;
 use super::rename::{ProofCollectionRenameSession, proof_collection_begin_rename_session};
 use super::selection::{
@@ -56,11 +57,8 @@ pub(super) fn render_collection_context_menu(
             collection_context_menu_popup_id(),
             Rect::new(anchor, Size::new(Px(1.0), Px(1.0))),
         );
-        let _ = ui
-            .cx_mut()
-            .app
-            .models_mut()
-            .update(&models.anchor, |state| *state = None);
+        ProofCollectionModelOwner::new(ui.cx_mut().app.models_mut())
+            .clear_context_menu_anchor(&models.anchor);
     }
 
     let popup_open = ui.popup_open_model(collection_context_menu_popup_id());

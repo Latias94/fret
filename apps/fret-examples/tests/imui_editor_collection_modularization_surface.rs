@@ -36,6 +36,8 @@ mod import_target;
 mod keyboard;
 #[path = "imui_editor_collection_modularization_surface/lifecycle.rs"]
 mod lifecycle;
+#[path = "imui_editor_collection_modularization_surface/model_owner.rs"]
+mod model_owner;
 #[path = "imui_editor_collection_modularization_surface/models.rs"]
 mod models;
 #[path = "imui_editor_collection_modularization_surface/order_toggle.rs"]
@@ -191,6 +193,8 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         include_str!("../src/imui_editor_proof_demo/collection/keyboard/actions.rs");
     let lifecycle_source = include_str!("../src/imui_editor_proof_demo/collection/lifecycle.rs");
     let models_source = include_str!("../src/imui_editor_proof_demo/collection/models.rs");
+    let model_owner_source =
+        include_str!("../src/imui_editor_proof_demo/collection/model_owner.rs");
     let order_toggle_source =
         include_str!("../src/imui_editor_proof_demo/collection/order_toggle.rs");
     let readouts_source = include_str!("../src/imui_editor_proof_demo/collection/readouts.rs");
@@ -396,6 +400,16 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     keyboard::assert_keyboard_owner_split(keyboard_source, keyboard_actions_source);
 
     models::assert_models_owner_split(models_source);
+
+    model_owner::assert_model_owner_boundary(
+        collection_source,
+        model_owner_source,
+        command_buttons_actions_source,
+        context_menu_source,
+        context_menu_actions_source,
+        asset_grid_actions_source,
+        rename_source,
+    );
 
     rename::assert_rename_owner_split(
         rename_source,

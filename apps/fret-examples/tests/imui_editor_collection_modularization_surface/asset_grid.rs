@@ -1,3 +1,7 @@
+fn compact(source: &str) -> String {
+    source.chars().filter(|ch| !ch.is_whitespace()).collect()
+}
+
 pub(super) fn assert_asset_grid_owner_split(
     asset_grid_source: &str,
     asset_grid_tile_source: &str,
@@ -7,6 +11,8 @@ pub(super) fn assert_asset_grid_owner_split(
     asset_grid_inline_rename_actions_source: &str,
     asset_grid_metadata_source: &str,
 ) {
+    let compact_actions_source = compact(asset_grid_actions_source);
+
     for needle in [
         "pub(super) struct ProofCollectionAssetGridModels",
         "pub(super) struct ProofCollectionAssetGridState",
@@ -68,16 +74,21 @@ pub(super) fn assert_asset_grid_owner_split(
         "pub(super) fn proof_collection_asset_grid_publish_active_focus_target(",
         "pub(super) fn proof_collection_asset_grid_activate_clicked_asset(",
         "pub(super) fn proof_collection_asset_grid_apply_context_menu(",
-        "app.models_mut().update(active_focus_target",
-        "keyboard.active_id = Some(asset_id);",
-        "app.models_mut().update(&models.selection",
-        "app.models_mut().update(&models.keyboard",
-        "app.models_mut()",
-        ".update(&models.context_menu_anchor",
+        "use super::super::model_owner::ProofCollectionModelOwner;",
     ] {
         assert!(
             asset_grid_actions_source.contains(needle),
-            "the demo-local collection asset-grid actions owner should keep tile-triggered model writes explicit; missing `{needle}`"
+            "the demo-local collection asset-grid actions owner should route tile-triggered model writes through the collection model owner; missing `{needle}`"
+        );
+    }
+    for needle in [
+        "ProofCollectionModelOwner::new(app.models_mut()).publish_active_focus_target(",
+        "ProofCollectionModelOwner::new(app.models_mut()).activate_asset(",
+        "ProofCollectionModelOwner::new(app.models_mut()).apply_context_menu(",
+    ] {
+        assert!(
+            compact_actions_source.contains(&compact(needle)),
+            "the demo-local collection asset-grid actions owner should route tile-triggered model writes through the collection model owner; missing `{needle}`"
         );
     }
     for needle in [
@@ -89,10 +100,13 @@ pub(super) fn assert_asset_grid_owner_split(
         "proof_collection_drag_payload_for_asset(",
         "proof_collection_context_menu_selection(",
         "ProofCollectionRenderedItem {",
+        "models_mut().update",
+        ".update(&models.context_menu_anchor",
+        "keyboard.active_id = Some(asset_id);",
     ] {
         assert!(
             !asset_grid_actions_source.contains(needle),
-            "the demo-local collection asset-grid actions owner should not take tile rendering, drag preview, metadata, or selection policy; unexpected `{needle}`"
+            "the demo-local collection asset-grid actions owner should not take tile rendering, drag preview, metadata, selection policy, or raw model mutation; unexpected `{needle}`"
         );
     }
     for needle in [

@@ -16,6 +16,7 @@ mod geometry;
 mod import_target;
 mod keyboard;
 mod lifecycle;
+mod model_owner;
 mod models;
 mod order_toggle;
 mod readouts;
