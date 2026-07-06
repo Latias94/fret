@@ -440,16 +440,18 @@ fn stairs_demo_uses_manual_harness_declarative_line_plot_panel_with_step_mode() 
     let source = compact(include_str!("../src/stairs_demo.rs"));
 
     for needle in [
-        "usefret_plot::declarative::{LinePlotPanelProps,line_plot_panel_in};",
+        "usefret_plot::LinePlotPanelBinding;",
+        "usefret_plot::declarative::line_plot_panel_in;",
         "usefret_plot::models::{LinePlotModel,LineSeries,StepMode};",
         "usefret_ui::{UiTree,declarative};",
+        "plot:LinePlotPanelBinding",
+        "LinePlotPanelBinding::new(app,LinePlotModel::from_series(vec![",
         "LinePlotModel::from_series(vec![",
         "LineSeries::new(",
         "declarative::RenderRootContext::new(&mutstate.ui,app,services,window,bounds).render_root(\"stairs-demo\"",
-        "LinePlotPanelProps::new(plot.clone())",
+        "plot.panel_props()",
         ".step_mode(StepMode::Post)",
-        ".state(plot_state.clone())",
-        ".output(plot_output.clone())",
+        "state.plot.output_untracked(app)",
         "vec![line_plot_panel_in(cx,props)]",
     ] {
         assert!(
@@ -464,6 +466,12 @@ fn stairs_demo_uses_manual_harness_declarative_line_plot_panel_with_step_mode() 
         "StairsPlotCanvas",
         "PlotCanvas",
         "create_node_retained(",
+        "fret_runtime::Model<",
+        "LinePlotPanelProps::new(",
+        ".state(plot_state.clone())",
+        ".output(plot_output.clone())",
+        "app.models_mut().insert(PlotState::default())",
+        "app.models_mut().insert(PlotOutput::default())",
     ] {
         assert!(
             !source.contains(legacy),

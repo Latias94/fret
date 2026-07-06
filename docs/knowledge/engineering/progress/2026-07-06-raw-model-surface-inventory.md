@@ -43,8 +43,11 @@ Keep raw/shared-model mechanisms for now:
     `BarsPlotPanelProps` available for advanced composition.
   - Follow-up: `area_demo.rs`, `shaded_demo.rs`, `candlestick_demo.rs`, `heatmap_demo.rs`, and
     `histogram2d_demo.rs` now use family-specific panel bindings. Keep raw line/area props in
-    `drag_demo`, `inf_lines_demo`, `tags_demo`, `plot_image_demo`, `stairs_demo`, and
-    `linked_cursor_demo` until their overlay/state/linkage contracts are explicitly named.
+    `drag_demo`, `inf_lines_demo`, `tags_demo`, `plot_image_demo`, and `linked_cursor_demo` until
+    their overlay/state/linkage contracts are explicitly named.
+  - Follow-up: `stairs_demo.rs` now uses `LinePlotPanelBinding`; step mode stays a normal
+    declarative props option layered on top of the default app-facing binding rather than a reason
+    to expose raw state/output models.
   - Follow-up: `chart_declarative_demo.rs` now uses `ChartCanvasPanelBinding`, so the default
     FretApp chart example no longer imports `fret_runtime::Model` or wires
     `ChartCanvasPanelProps::engine` directly. Keep explicit raw chart panel props in stress,

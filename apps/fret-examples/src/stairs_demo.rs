@@ -5,11 +5,11 @@ use fret_core::{AppWindowId, Event};
 use fret_launch::{
     FnDriver, WinitEventContext, WinitHotReloadContext, WinitRenderContext, WinitRunnerConfig,
 };
+use fret_plot::LinePlotPanelBinding;
 use fret_plot::cartesian::DataPoint;
-use fret_plot::declarative::{LinePlotPanelProps, line_plot_panel_in};
+use fret_plot::declarative::line_plot_panel_in;
 use fret_plot::models::{LinePlotModel, LineSeries, StepMode};
 use fret_plot::series::Series;
-use fret_plot::state::{PlotOutput, PlotState};
 use fret_plot::style::{LinePlotStyle, SeriesTooltipMode};
 use fret_runtime::PlatformCapabilities;
 use fret_ui::{UiTree, declarative};
@@ -17,9 +17,7 @@ use fret_ui::{UiTree, declarative};
 struct StairsDemoWindowState {
     ui: UiTree<App>,
     root: Option<fret_core::NodeId>,
-    plot: fret_runtime::Model<LinePlotModel>,
-    plot_state: fret_runtime::Model<PlotState>,
-    plot_output: fret_runtime::Model<PlotOutput>,
+    plot: LinePlotPanelBinding,
     last_logged_output_revision: u64,
 }
 
@@ -41,12 +39,13 @@ impl StairsDemoDriver {
             series1.push(DataPoint { x, y: y1 });
         }
 
-        let plot = app.models_mut().insert(LinePlotModel::from_series(vec![
-            LineSeries::new("stairs A", Series::from_points_sorted(series0, true)),
-            LineSeries::new("stairs B", Series::from_points_sorted(series1, true)),
-        ]));
-        let plot_state = app.models_mut().insert(PlotState::default());
-        let plot_output = app.models_mut().insert(PlotOutput::default());
+        let plot = LinePlotPanelBinding::new(
+            app,
+            LinePlotModel::from_series(vec![
+                LineSeries::new("stairs A", Series::from_points_sorted(series0, true)),
+                LineSeries::new("stairs B", Series::from_points_sorted(series1, true)),
+            ]),
+        );
 
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
@@ -55,8 +54,6 @@ impl StairsDemoDriver {
             ui,
             root: None,
             plot,
-            plot_state,
-            plot_output,
             last_logged_output_revision: 0,
         }
     }
@@ -110,10 +107,7 @@ fn handle_event(
                 event,
                 Event::Pointer(fret_core::PointerEvent::Up { .. }) | Event::KeyDown { .. }
             ) {
-                let output = state
-                    .plot_output
-                    .read(app, |_app, o| *o)
-                    .unwrap_or_default();
+                let output = state.plot.output_untracked(app);
                 if output.revision != state.last_logged_output_revision {
                     state.last_logged_output_revision = output.revision;
                     if let Some(query) = output.snapshot.query {
@@ -147,18 +141,12 @@ fn render(_driver: &mut StairsDemoDriver, context: WinitRenderContext<'_, Stairs
             declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
                 .render_root("stairs-demo", {
                     let plot = state.plot.clone();
-                    let plot_state = state.plot_state.clone();
-                    let plot_output = state.plot_output.clone();
                     move |cx| {
                         let style = LinePlotStyle {
                             series_tooltip: SeriesTooltipMode::NearestAtCursor,
                             ..Default::default()
                         };
-                        let props = LinePlotPanelProps::new(plot.clone())
-                            .step_mode(StepMode::Post)
-                            .style(style)
-                            .state(plot_state.clone())
-                            .output(plot_output.clone());
+                        let props = plot.panel_props().step_mode(StepMode::Post).style(style);
                         vec![line_plot_panel_in(cx, props)]
                     }
                 });
