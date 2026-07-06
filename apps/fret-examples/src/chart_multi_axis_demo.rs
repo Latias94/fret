@@ -28,17 +28,15 @@ use delinea::{
 };
 use delinea::{AxisKind, AxisPosition, AxisScale, SeriesKind};
 use fret_chart::{
-    AxisPointerLinkAnchor, BrushSelectionLink2D, ChartCanvasOutput, ChartCanvasPanelProps,
-    ChartLinkPolicy, ChartLinkRouter, LinkAxisKey, LinkedChartGroup, LinkedChartMember,
-    chart_canvas_panel,
+    ChartCanvasLinkedGroupBinding, ChartCanvasLinkedPanelBinding, ChartCanvasLinkedStateBinding,
+    ChartLinkPolicy, ChartLinkRouter, LinkAxisKey, chart_canvas_panel,
 };
-use fret_runtime::Model;
 
 #[derive(Clone)]
 struct ChartMultiAxisDemoDiagnosticsHandles {
-    shared_domain_windows: Model<BTreeMap<LinkAxisKey, Option<DataWindow>>>,
-    top_output: Model<ChartCanvasOutput>,
-    bottom_output: Model<ChartCanvasOutput>,
+    shared_state: ChartCanvasLinkedStateBinding,
+    top_chart: ChartCanvasLinkedPanelBinding,
+    bottom_chart: ChartCanvasLinkedPanelBinding,
 }
 
 #[derive(Default)]
@@ -49,16 +47,9 @@ struct ChartMultiAxisDemoDiagnosticsStore {
 pub struct ChartMultiAxisDemoWindowState {
     ui: UiTree<App>,
     root: Option<fret_core::NodeId>,
-    top_engine: Model<ChartEngine>,
-    bottom_engine: Model<ChartEngine>,
-    top_spec: ChartSpec,
-    bottom_spec: ChartSpec,
-    linked: LinkedChartGroup,
-    shared_brush: Model<Option<BrushSelectionLink2D>>,
-    shared_axis_pointer: Model<Option<AxisPointerLinkAnchor>>,
-    shared_domain_windows: Model<BTreeMap<LinkAxisKey, Option<DataWindow>>>,
-    top_output: Model<ChartCanvasOutput>,
-    bottom_output: Model<ChartCanvasOutput>,
+    linked: ChartCanvasLinkedGroupBinding,
+    top_chart: ChartCanvasLinkedPanelBinding,
+    bottom_chart: ChartCanvasLinkedPanelBinding,
     last_diag_shared_domain_windows: BTreeMap<LinkAxisKey, Option<DataWindow>>,
     last_diag_top_domain_windows: BTreeMap<LinkAxisKey, Option<DataWindow>>,
     last_diag_bottom_domain_windows: BTreeMap<LinkAxisKey, Option<DataWindow>>,
@@ -119,9 +110,9 @@ fn chart_multi_axis_demo_snapshot_json(
         .global::<ChartMultiAxisDemoDiagnosticsStore>()?
         .per_window
         .get(&window)?;
-    let shared_domain_windows = app.models().get_cloned(&handles.shared_domain_windows)?;
-    let top_output = app.models().get_cloned(&handles.top_output)?;
-    let bottom_output = app.models().get_cloned(&handles.bottom_output)?;
+    let shared_domain_windows = handles.shared_state.domain_windows_untracked(app);
+    let top_output = handles.top_chart.output_untracked(app);
+    let bottom_output = handles.bottom_chart.output_untracked(app);
 
     let x_domain_key = LinkAxisKey {
         kind: AxisKind::X,
@@ -203,40 +194,20 @@ impl ChartMultiAxisDemoDriver {
              - This demo uses fret-chart LinkedChartGroup to route delinea link events by LinkAxisKey."
         );
 
-        let shared_brush = app.models_mut().insert(None::<BrushSelectionLink2D>);
-        let shared_axis_pointer = app.models_mut().insert(None::<AxisPointerLinkAnchor>);
-        let shared_domain_windows = app
-            .models_mut()
-            .insert(BTreeMap::<LinkAxisKey, Option<DataWindow>>::default());
-        let top_output = app.models_mut().insert(ChartCanvasOutput::default());
-        let bottom_output = app.models_mut().insert(ChartCanvasOutput::default());
-
         let (top_engine, top_spec, top_router) =
             ChartMultiAxisDemoDriver::build_chart(delinea::ids::ChartId::new(1));
         let (bottom_engine, bottom_spec, bottom_router) =
             ChartMultiAxisDemoDriver::build_chart(delinea::ids::ChartId::new(2));
-        let top_engine = app.models_mut().insert(top_engine);
-        let bottom_engine = app.models_mut().insert(bottom_engine);
-
-        let mut linked = LinkedChartGroup::new(
+        let mut linked = ChartCanvasLinkedGroupBinding::new(
+            app,
             ChartLinkPolicy {
                 brush: true,
                 axis_pointer: true,
                 domain_windows: true,
             },
-            shared_brush.clone(),
-            shared_axis_pointer.clone(),
-            shared_domain_windows.clone(),
         );
-        linked
-            .push(LinkedChartMember {
-                router: top_router,
-                output: top_output.clone(),
-            })
-            .push(LinkedChartMember {
-                router: bottom_router,
-                output: bottom_output.clone(),
-            });
+        let top_chart = linked.push_panel(app, top_spec, top_engine, top_router);
+        let bottom_chart = linked.push_panel(app, bottom_spec, bottom_engine, bottom_router);
 
         app.with_global_mut_untracked(
             ChartMultiAxisDemoDiagnosticsStore::default,
@@ -244,9 +215,9 @@ impl ChartMultiAxisDemoDriver {
                 store.per_window.insert(
                     window,
                     ChartMultiAxisDemoDiagnosticsHandles {
-                        shared_domain_windows: shared_domain_windows.clone(),
-                        top_output: top_output.clone(),
-                        bottom_output: bottom_output.clone(),
+                        shared_state: linked.shared_state(),
+                        top_chart: top_chart.clone(),
+                        bottom_chart: bottom_chart.clone(),
                     },
                 );
             },
@@ -255,16 +226,9 @@ impl ChartMultiAxisDemoDriver {
         ChartMultiAxisDemoWindowState {
             ui,
             root: None,
-            top_engine,
-            bottom_engine,
-            top_spec,
-            bottom_spec,
             linked,
-            shared_brush,
-            shared_axis_pointer,
-            shared_domain_windows,
-            top_output,
-            bottom_output,
+            top_chart,
+            bottom_chart,
             last_diag_shared_domain_windows: BTreeMap::new(),
             last_diag_top_domain_windows: BTreeMap::new(),
             last_diag_bottom_domain_windows: BTreeMap::new(),
@@ -577,22 +541,10 @@ impl ChartMultiAxisDemoDriver {
 
     fn chart_panel(
         cx: &mut ElementContext<'_, App>,
-        spec: ChartSpec,
-        engine: Model<ChartEngine>,
-        output: Model<ChartCanvasOutput>,
-        shared_brush: Model<Option<BrushSelectionLink2D>>,
-        shared_axis_pointer: Model<Option<AxisPointerLinkAnchor>>,
-        shared_domain_windows: Model<BTreeMap<LinkAxisKey, Option<DataWindow>>>,
+        chart: ChartCanvasLinkedPanelBinding,
         test_id: &'static str,
     ) -> AnyElement {
-        let mut props = ChartCanvasPanelProps::new(spec)
-            .output_model(output)
-            .linked_brush(shared_brush)
-            .linked_axis_pointer(shared_axis_pointer)
-            .linked_domain_windows(shared_domain_windows)
-            .test_id(test_id);
-        props.engine = Some(engine);
-        chart_canvas_panel(cx, props)
+        chart_canvas_panel(cx, chart.panel_props_with_test_id(test_id))
     }
 
     fn tick_linking(app: &mut App, window: AppWindowId, state: &mut ChartMultiAxisDemoWindowState) {
@@ -616,31 +568,13 @@ impl ChartMultiAxisDemoDriver {
             return;
         }
 
-        let top = state
-            .top_output
-            .read(app, |_app, o| o.snapshot.link_events.clone())
-            .ok()
-            .unwrap_or_default();
-        let bottom = state
-            .bottom_output
-            .read(app, |_app, o| o.snapshot.link_events.clone())
-            .ok()
-            .unwrap_or_default();
-        let shared_domain_windows = state
-            .shared_domain_windows
-            .read(app, |_app, w| w.clone())
-            .ok()
-            .unwrap_or_default();
-        let top_domain_windows = state
-            .top_output
-            .read(app, |_app, o| o.snapshot.domain_windows_by_key.clone())
-            .ok()
-            .unwrap_or_default();
-        let bottom_domain_windows = state
-            .bottom_output
-            .read(app, |_app, o| o.snapshot.domain_windows_by_key.clone())
-            .ok()
-            .unwrap_or_default();
+        let top_output = state.top_chart.output_untracked(app);
+        let bottom_output = state.bottom_chart.output_untracked(app);
+        let top = top_output.snapshot.link_events.clone();
+        let bottom = bottom_output.snapshot.link_events.clone();
+        let shared_domain_windows = state.linked.domain_windows_untracked(app);
+        let top_domain_windows = top_output.snapshot.domain_windows_by_key.clone();
+        let bottom_domain_windows = bottom_output.snapshot.domain_windows_by_key.clone();
 
         let any_changed = state.last_diag_shared_domain_windows != shared_domain_windows
             || state.last_diag_top_domain_windows != top_domain_windows
@@ -721,8 +655,8 @@ impl ChartMultiAxisDemoDriver {
         // stable producer signal for `LinkedChartGroup` and avoids relying on pointer input
         // dispatch in the diag harness.
         let before_zoom = state
-            .top_engine
-            .read(app, |_app, engine| {
+            .top_chart
+            .read_engine(app, |_app, engine| {
                 engine
                     .state()
                     .data_zoom_x
@@ -735,8 +669,8 @@ impl ChartMultiAxisDemoDriver {
             "[chart_multi_axis_demo][diag] applying deterministic top auto-zoom window at frame_id={frame_id} next_step={next_step:?} before_zoom={before_zoom:?}"
         );
         let after_zoom = state
-            .top_engine
-            .update(app, |engine, _cx| {
+            .top_chart
+            .update_engine(app, |engine, _cx| {
                 engine.apply_action(Action::SetDataWindowX {
                     axis: AxisId::new(1),
                     window: Some(DataWindow {
@@ -879,15 +813,8 @@ fn render(
 
     scene.clear();
 
-    let top_spec = state.top_spec.clone();
-    let bottom_spec = state.bottom_spec.clone();
-    let top_engine = state.top_engine.clone();
-    let bottom_engine = state.bottom_engine.clone();
-    let top_output = state.top_output.clone();
-    let bottom_output = state.bottom_output.clone();
-    let shared_brush = state.shared_brush.clone();
-    let shared_axis_pointer = state.shared_axis_pointer.clone();
-    let shared_domain_windows = state.shared_domain_windows.clone();
+    let top_chart = state.top_chart.clone();
+    let bottom_chart = state.bottom_chart.clone();
     let root = declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
         .render_root("chart-multi-axis-demo", move |cx| {
             let mut root_layout = LayoutStyle::default();
@@ -904,18 +831,8 @@ fn render(
 
             let top_panel_layout = panel_layout;
             let bottom_panel_layout = panel_layout;
-            let top_spec = top_spec.clone();
-            let bottom_spec = bottom_spec.clone();
-            let top_engine = top_engine.clone();
-            let bottom_engine = bottom_engine.clone();
-            let top_output = top_output.clone();
-            let bottom_output = bottom_output.clone();
-            let top_shared_brush = shared_brush.clone();
-            let top_shared_axis_pointer = shared_axis_pointer.clone();
-            let top_shared_domain_windows = shared_domain_windows.clone();
-            let bottom_shared_brush = shared_brush.clone();
-            let bottom_shared_axis_pointer = shared_axis_pointer.clone();
-            let bottom_shared_domain_windows = shared_domain_windows.clone();
+            let top_chart = top_chart.clone();
+            let bottom_chart = bottom_chart.clone();
 
             vec![cx.flex(
                 FlexProps {
@@ -936,12 +853,7 @@ fn render(
                             move |cx| {
                                 vec![ChartMultiAxisDemoDriver::chart_panel(
                                     cx,
-                                    top_spec.clone(),
-                                    top_engine.clone(),
-                                    top_output.clone(),
-                                    top_shared_brush.clone(),
-                                    top_shared_axis_pointer.clone(),
-                                    top_shared_domain_windows.clone(),
+                                    top_chart.clone(),
                                     "chart-multi-axis-top",
                                 )]
                             },
@@ -954,12 +866,7 @@ fn render(
                             move |cx| {
                                 vec![ChartMultiAxisDemoDriver::chart_panel(
                                     cx,
-                                    bottom_spec.clone(),
-                                    bottom_engine.clone(),
-                                    bottom_output.clone(),
-                                    bottom_shared_brush.clone(),
-                                    bottom_shared_axis_pointer.clone(),
-                                    bottom_shared_domain_windows.clone(),
+                                    bottom_chart.clone(),
                                     "chart-multi-axis-bottom",
                                 )]
                             },

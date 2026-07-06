@@ -20,7 +20,10 @@ mod slider_logic;
 mod tooltip_layout;
 mod visual_map_logic;
 
-pub use binding::{ChartCanvasMultiGridBinding, ChartCanvasPanelBinding};
+pub use binding::{
+    ChartCanvasLinkedGroupBinding, ChartCanvasLinkedPanelBinding, ChartCanvasLinkedStateBinding,
+    ChartCanvasMultiGridBinding, ChartCanvasPanelBinding,
+};
 pub use declarative::*;
 pub use input_map::*;
 pub use linking::*;

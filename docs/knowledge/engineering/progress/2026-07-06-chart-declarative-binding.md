@@ -29,10 +29,10 @@ The new binding is intentionally narrow:
 
 # Decision
 
-Do not hide `ChartCanvasPanelProps` from component authors or linked-chart demos. The prop record is
-still the right low-level composition surface for linked brushes, axis pointers, domain windows,
-grid views, overlay-only panels, and intentionally shared output models. The binding is the default
-single-chart app surface, not a replacement for advanced chart coordination.
+Do not hide `ChartCanvasPanelProps` from component authors. The prop record is still the right
+low-level composition surface for grid views, overlay-only panels, and intentionally shared output
+models. The single-chart binding is the default app surface, and linked chart demos should prefer a
+named linked binding instead of re-exposing raw chart model handles.
 
 # Verification
 
@@ -46,6 +46,7 @@ single-chart app surface, not a replacement for advanced chart coordination.
 
 Remaining chart raw-model pressure should be split by advanced contract:
 
-- explicit linked contracts before migrating linked chart demos;
+- linked chart examples should use `ChartCanvasLinkedGroupBinding` and
+  `ChartCanvasLinkedPanelBinding`;
 - chart stress harnesses that intentionally stay manual and diagnostic-heavy;
 - linked or stress tests that intentionally exercise lower-level chart props.

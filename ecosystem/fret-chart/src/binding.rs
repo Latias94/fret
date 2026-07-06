@@ -1,10 +1,17 @@
 //! App-facing chart bindings that hide raw runtime model plumbing from examples.
 
+use std::{collections::BTreeMap, sync::Arc};
+
+use delinea::engine::window::DataWindow;
 use delinea::ids::GridId;
 use delinea::{ChartEngine, ChartSpec};
-use fret_runtime::{Model, ModelHost};
+use fret_runtime::{Model, ModelCx, ModelHost, ModelUpdateError};
 use fret_ui::{ElementContextAccess, Invalidation, UiHost};
 
+use crate::linking::{
+    AxisPointerLinkAnchor, BrushSelectionLink2D, ChartLinkPolicy, ChartLinkRouter, LinkAxisKey,
+    LinkedChartGroup, LinkedChartMember,
+};
 use crate::{ChartCanvasOutput, ChartCanvasPanelProps};
 
 /// App-facing handle for a chart canvas panel plus its controlled engine model.
@@ -172,6 +179,173 @@ impl ChartCanvasMultiGridBinding {
     }
 }
 
+/// Shared linked-chart state handle for diagnostics and orchestration code.
+///
+/// This is a read-only companion to [`ChartCanvasLinkedGroupBinding`]. It lets diagnostics inspect
+/// the shared domain-window state without exposing the raw model handle to app examples.
+#[derive(Clone)]
+pub struct ChartCanvasLinkedStateBinding {
+    domain_windows: Model<BTreeMap<LinkAxisKey, Option<DataWindow>>>,
+}
+
+impl ChartCanvasLinkedStateBinding {
+    /// Read linked domain windows without registering a UI invalidation dependency.
+    pub fn domain_windows_untracked(
+        &self,
+        host: &impl ModelHost,
+    ) -> BTreeMap<LinkAxisKey, Option<DataWindow>> {
+        self.domain_windows
+            .read_ref(host, Clone::clone)
+            .unwrap_or_default()
+    }
+}
+
+/// App-facing coordinator for linked chart panels.
+///
+/// The lower-level linking machinery still exists for component authors, but app examples should
+/// usually keep linked brush, axis-pointer, domain-window, engine, and output model plumbing behind
+/// this binding.
+pub struct ChartCanvasLinkedGroupBinding {
+    linked: LinkedChartGroup,
+    shared_brush: Model<Option<BrushSelectionLink2D>>,
+    shared_axis_pointer: Model<Option<AxisPointerLinkAnchor>>,
+    shared_domain_windows: Model<BTreeMap<LinkAxisKey, Option<DataWindow>>>,
+}
+
+impl ChartCanvasLinkedGroupBinding {
+    /// Insert linked-chart shared state into a model host.
+    #[track_caller]
+    pub fn new(host: &mut impl ModelHost, policy: ChartLinkPolicy) -> Self {
+        let shared_brush = host.models_mut().insert(None::<BrushSelectionLink2D>);
+        let shared_axis_pointer = host.models_mut().insert(None::<AxisPointerLinkAnchor>);
+        let shared_domain_windows = host
+            .models_mut()
+            .insert(BTreeMap::<LinkAxisKey, Option<DataWindow>>::default());
+        let linked = LinkedChartGroup::new(
+            policy,
+            shared_brush.clone(),
+            shared_axis_pointer.clone(),
+            shared_domain_windows.clone(),
+        );
+
+        Self {
+            linked,
+            shared_brush,
+            shared_axis_pointer,
+            shared_domain_windows,
+        }
+    }
+
+    /// Add a chart panel to the linked group and return its app-facing panel binding.
+    #[track_caller]
+    pub fn push_panel(
+        &mut self,
+        host: &mut impl ModelHost,
+        spec: ChartSpec,
+        engine: ChartEngine,
+        router: ChartLinkRouter,
+    ) -> ChartCanvasLinkedPanelBinding {
+        let engine = host.models_mut().insert(engine);
+        let output = host.models_mut().insert(ChartCanvasOutput::default());
+        self.linked.push(LinkedChartMember {
+            router,
+            output: output.clone(),
+        });
+
+        ChartCanvasLinkedPanelBinding {
+            spec,
+            engine,
+            output,
+            shared_brush: self.shared_brush.clone(),
+            shared_axis_pointer: self.shared_axis_pointer.clone(),
+            shared_domain_windows: self.shared_domain_windows.clone(),
+        }
+    }
+
+    /// Tick the linked group and propagate pending link output into shared state.
+    pub fn tick<H: UiHost>(&mut self, host: &mut H) -> bool {
+        self.linked.tick(host)
+    }
+
+    /// Clone a read-only diagnostics handle for the shared linked state.
+    pub fn shared_state(&self) -> ChartCanvasLinkedStateBinding {
+        ChartCanvasLinkedStateBinding {
+            domain_windows: self.shared_domain_windows.clone(),
+        }
+    }
+
+    /// Read linked domain windows without registering a UI invalidation dependency.
+    pub fn domain_windows_untracked(
+        &self,
+        host: &impl ModelHost,
+    ) -> BTreeMap<LinkAxisKey, Option<DataWindow>> {
+        self.shared_state().domain_windows_untracked(host)
+    }
+}
+
+/// App-facing handle for one chart panel owned by a linked chart group.
+#[derive(Clone)]
+pub struct ChartCanvasLinkedPanelBinding {
+    spec: ChartSpec,
+    engine: Model<ChartEngine>,
+    output: Model<ChartCanvasOutput>,
+    shared_brush: Model<Option<BrushSelectionLink2D>>,
+    shared_axis_pointer: Model<Option<AxisPointerLinkAnchor>>,
+    shared_domain_windows: Model<BTreeMap<LinkAxisKey, Option<DataWindow>>>,
+}
+
+impl ChartCanvasLinkedPanelBinding {
+    /// Build declarative panel props wired to this linked panel and its shared link state.
+    pub fn panel_props(&self) -> ChartCanvasPanelProps {
+        let mut props = ChartCanvasPanelProps::new(self.spec.clone())
+            .output_model(self.output.clone())
+            .linked_brush(self.shared_brush.clone())
+            .linked_axis_pointer(self.shared_axis_pointer.clone())
+            .linked_domain_windows(self.shared_domain_windows.clone());
+        props.engine = Some(self.engine.clone());
+        props
+    }
+
+    /// Build declarative panel props and attach a stable test id.
+    pub fn panel_props_with_test_id(&self, test_id: impl Into<Arc<str>>) -> ChartCanvasPanelProps {
+        self.panel_props().test_id(test_id)
+    }
+
+    /// Observe the chart engine as a paint dependency from an app view render pass.
+    pub fn observe_engine_paint<'a, H, Cx>(&self, cx: &mut Cx)
+    where
+        H: UiHost + 'a,
+        Cx: ElementContextAccess<'a, H>,
+    {
+        cx.elements()
+            .observe_model(&self.engine, Invalidation::Paint);
+    }
+
+    /// Read the latest chart output without registering a UI invalidation dependency.
+    pub fn output_untracked(&self, host: &impl ModelHost) -> ChartCanvasOutput {
+        self.output.read_ref(host, Clone::clone).unwrap_or_default()
+    }
+
+    /// Read the controlled chart engine through the host's normal model read path.
+    pub fn read_engine<H: ModelHost, R>(
+        &self,
+        host: &mut H,
+        f: impl FnOnce(&mut H, &ChartEngine) -> R,
+    ) -> Result<R, ModelUpdateError> {
+        self.engine.read(host, f)
+    }
+
+    /// Mutate the controlled chart engine through the host's normal model update path.
+    #[track_caller]
+    pub fn update_engine<H: ModelHost, R>(
+        &self,
+        host: &mut H,
+        f: impl FnOnce(&mut ChartEngine, &mut ModelCx<'_, H>) -> R,
+    ) -> Result<R, ModelUpdateError> {
+        self.engine.update(host, f)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use delinea::ids::{AxisId, ChartId, DatasetId, FieldId, GridId, SeriesId};
@@ -183,7 +357,10 @@ mod tests {
 
     use crate::ChartCanvasPanelMode;
 
-    use super::{ChartCanvasMultiGridBinding, ChartCanvasPanelBinding};
+    use super::{
+        ChartCanvasLinkedGroupBinding, ChartCanvasMultiGridBinding, ChartCanvasPanelBinding,
+    };
+    use crate::ChartCanvasOutput;
 
     #[derive(Default)]
     struct TestHost {
@@ -325,5 +502,44 @@ mod tests {
         assert!(overlay_props.engine.is_some());
         assert!(grid_props.output_model.is_none());
         assert!(overlay_props.output_model.is_none());
+    }
+
+    #[test]
+    fn chart_canvas_linked_group_binding_creates_panel_props_without_public_raw_handles() {
+        let mut host = TestHost::default();
+        let spec = sample_spec();
+        let engine = ChartEngine::new(spec.clone()).expect("sample spec should be valid");
+        let mut linked = ChartCanvasLinkedGroupBinding::new(
+            &mut host,
+            crate::ChartLinkPolicy {
+                brush: true,
+                axis_pointer: true,
+                domain_windows: true,
+            },
+        );
+
+        let panel = linked.push_panel(
+            &mut host,
+            spec.clone(),
+            engine,
+            crate::ChartLinkRouter::from_spec(&spec),
+        );
+        let props = panel.panel_props_with_test_id("chart-linked-panel");
+
+        assert_eq!(props.spec.id, spec.id);
+        assert_eq!(props.test_id.as_deref(), Some("chart-linked-panel"));
+        assert!(props.engine.is_some());
+        assert!(props.output_model.is_some());
+        assert!(props.linked_brush_model.is_some());
+        assert!(props.linked_axis_pointer_model.is_some());
+        assert!(props.linked_domain_windows_model.is_some());
+        assert_eq!(panel.output_untracked(&host), ChartCanvasOutput::default());
+        assert!(linked.domain_windows_untracked(&host).is_empty());
+        assert!(
+            linked
+                .shared_state()
+                .domain_windows_untracked(&host)
+                .is_empty()
+        );
     }
 }

@@ -724,8 +724,9 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
     ),
     _fret_examples_advanced_surface(
         "chart_multi_axis_demo.rs",
-        "the linked multi-axis proof owns shared output, brush, axis-pointer, and domain-window "
-        "models for explicit chart coordination",
+        "the linked multi-axis proof still owns manual runner/bootstrap seams, while linked "
+        "chart engine, output, brush, axis-pointer, and domain-window model wiring is routed "
+        "through ChartCanvasLinkedGroupBinding and ChartCanvasLinkedPanelBinding",
         (
             "fret_app",
             "fret_core",
