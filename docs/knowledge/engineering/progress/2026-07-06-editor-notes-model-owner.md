@@ -27,6 +27,20 @@ all callback writes through demo-local owner helpers:
   plumbing.
 - Add a source gate that allows only the owner helper to call `models_mut().update(...)`.
 
+# Tightening Follow-Up
+
+Branch `refactor/examples-editor-notes-owner-tightening` upgrades the first cleanup from free
+functions to a named `EditorNotesModelOwner`.
+
+- Deleted `editor_notes_host_update_model(...)`, `editor_notes_host_set_model(...)`, and
+  `editor_notes_host_set_text(...)`.
+- Added the semantic owner method `set_text(...)`.
+- Action handlers now create a local owner from `host.models_mut()` and route text-status updates
+  through `owner.set_text(...)`.
+- Tightened the source gate so production source forbids direct/generic/update-any and UFCS
+  `ModelStore` bypasses, plus the deleted legacy helper names.
+- Added `editor_notes_model_owner_preserves_text_state_updates` for owner behavior.
+
 # Verification
 
 - `cargo check -p fret-examples --lib --tests`

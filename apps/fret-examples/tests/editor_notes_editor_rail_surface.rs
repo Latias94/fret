@@ -110,30 +110,54 @@ fn editor_notes_demo_composes_shell_mounted_rails_through_workspace_frame_slots(
 #[test]
 fn editor_notes_demo_model_writes_stay_behind_owner_helpers() {
     let source = include_str!("../src/editor_notes_demo.rs");
+    let production_source = source
+        .split("#[cfg(test)]")
+        .next()
+        .expect("editor notes demo should have production source before tests");
     let compact_source = compact(source);
+    let compact_production = compact(production_source);
 
     for needle in [
-        "fneditor_notes_host_update_model<T:Any>(",
-        "fneditor_notes_host_set_model<T:Any>(",
-        "fneditor_notes_host_set_text(",
-        "editor_notes_host_set_text(host,&notes_outcome_model,next,);",
-        "editor_notes_host_set_text(host,&notes_outcome_model,\"Committed\",);",
-        "editor_notes_host_set_text(host,&notes_outcome_model,\"Canceled\",);",
-        "editor_notes_host_set_text(host,&summary_status_model,draft_commit_status.clone(),);",
-        "editor_notes_host_set_text(host,&summary_status_model,draft_discard_status.clone(),);",
-        "editor_notes_host_set_text(host,&summary_status_model,summary_status_next.clone(),);",
+        "usefret_runtime::ModelStore;",
+        "structEditorNotesModelOwner<'a>{",
+        "models:&'amutModelStore,",
+        "fnset_text(&mutself,model:&Model<String>,value:implInto<String>)->bool{",
+        "letmutowner=EditorNotesModelOwner::new(host.models_mut());",
+        "owner.set_text(&notes_outcome_model,next",
+        "owner.set_text(&notes_outcome_model,\"Committed\"",
+        "owner.set_text(&notes_outcome_model,\"Canceled\"",
+        "owner.set_text(&summary_status_model,draft_commit_status.clone()",
+        "owner.set_text(&summary_status_model,draft_discard_status.clone()",
+        "owner.set_text(&summary_status_model,summary_status_next.clone()",
     ] {
         assert!(
             compact_source.contains(needle),
-            "editor notes demo should keep shared-model writes behind explicit owner helpers; missing `{needle}`"
+            "editor notes demo should keep shared-model writes behind a named owner helper; missing `{needle}`"
         );
     }
 
-    assert_eq!(
-        source.matches("models_mut().update(").count(),
-        1,
-        "editor notes demo should not scatter raw ModelStore updates outside the owner helper"
-    );
+    for forbidden in [
+        "models_mut().update(",
+        "models_mut().update::<",
+        "models_mut().update_any(",
+        "models_mut().update_any::<",
+        "ModelStore::update(",
+        "ModelStore::update::<",
+        "ModelStore::update_any(",
+        "ModelStore::update_any::<",
+        "<ModelStore>::update(",
+        "<ModelStore>::update::<",
+        "<ModelStore>::update_any(",
+        "<ModelStore>::update_any::<",
+        "fneditor_notes_host_update_model",
+        "fneditor_notes_host_set_model",
+        "fneditor_notes_host_set_text",
+    ] {
+        assert!(
+            !compact_production.contains(forbidden),
+            "editor notes production code should not bypass the owner helper with `{forbidden}`"
+        );
+    }
 }
 
 #[test]

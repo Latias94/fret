@@ -1,10 +1,10 @@
-use std::any::Any;
 use std::sync::Arc;
 
 use fret::app::prelude::*;
 use fret::{Defaults, FretApp, shadcn};
 use fret_app::{CommandId, Model};
 use fret_core::Px;
+use fret_runtime::ModelStore;
 use fret_ui::element::{AnyElement, LayoutStyle, Length, SizeStyle};
 use fret_ui_editor::composites::{
     InspectorPanel, InspectorPanelOptions, PropertyGrid, PropertyGroup, PropertyGroupOptions,
@@ -57,28 +57,24 @@ pub(crate) mod act {
     ]);
 }
 
-fn editor_notes_host_update_model<T: Any>(
-    host: &mut dyn fret_ui::action::UiActionHost,
-    model: &Model<T>,
-    f: impl FnOnce(&mut T),
-) {
-    let _ = host.models_mut().update(model, f);
+struct EditorNotesModelOwner<'a> {
+    models: &'a mut ModelStore,
 }
 
-fn editor_notes_host_set_model<T: Any>(
-    host: &mut dyn fret_ui::action::UiActionHost,
-    model: &Model<T>,
-    value: T,
-) {
-    editor_notes_host_update_model(host, model, |slot| *slot = value);
-}
+impl<'a> EditorNotesModelOwner<'a> {
+    fn new(models: &'a mut ModelStore) -> Self {
+        Self { models }
+    }
 
-fn editor_notes_host_set_text(
-    host: &mut dyn fret_ui::action::UiActionHost,
-    model: &Model<String>,
-    value: impl Into<String>,
-) {
-    editor_notes_host_set_model(host, model, value.into());
+    fn set_text(&mut self, model: &Model<String>, value: impl Into<String>) -> bool {
+        let value = value.into();
+        self.models
+            .update(model, |slot| {
+                *slot = value;
+                true
+            })
+            .unwrap_or(false)
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
@@ -644,11 +640,10 @@ where
                                                         TextFieldOutcome::Committed => "Committed",
                                                         TextFieldOutcome::Canceled => "Canceled",
                                                     };
-                                                    editor_notes_host_set_text(
-                                                        host,
-                                                        &notes_outcome_model,
-                                                        next,
-                                                    );
+                                                    let mut owner =
+                                                        EditorNotesModelOwner::new(host.models_mut());
+                                                    let _ =
+                                                        owner.set_text(&notes_outcome_model, next);
                                                     host.request_redraw(action_cx.window);
                                                 }
                                             })))
@@ -727,16 +722,17 @@ where
                                                                 if draft_controller
                                                                     .commit(host, action_cx)
                                                                 {
-                                                                    editor_notes_host_set_text(
-                                                                        host,
+                                                                    let mut owner =
+                                                                        EditorNotesModelOwner::new(
+                                                                            host.models_mut(),
+                                                                        );
+                                                                    let _ = owner.set_text(
                                                                         &notes_outcome_model,
                                                                         "Committed",
                                                                     );
-                                                                    editor_notes_host_set_text(
-                                                                        host,
+                                                                    let _ = owner.set_text(
                                                                         &summary_status_model,
-                                                                        draft_commit_status
-                                                                            .clone(),
+                                                                        draft_commit_status.clone(),
                                                                     );
                                                                     host.request_redraw(
                                                                         action_cx.window,
@@ -763,13 +759,15 @@ where
                                                                 if draft_controller
                                                                     .discard(host, action_cx)
                                                                 {
-                                                                    editor_notes_host_set_text(
-                                                                        host,
+                                                                    let mut owner =
+                                                                        EditorNotesModelOwner::new(
+                                                                            host.models_mut(),
+                                                                        );
+                                                                    let _ = owner.set_text(
                                                                         &notes_outcome_model,
                                                                         "Canceled",
                                                                     );
-                                                                    editor_notes_host_set_text(
-                                                                        host,
+                                                                    let _ = owner.set_text(
                                                                         &summary_status_model,
                                                                         draft_discard_status
                                                                             .clone(),
@@ -823,8 +821,9 @@ where
                                                     let summary_status_next =
                                                         summary_status_next.clone();
                                                     move |host, action_cx, _reason| {
-                                                        editor_notes_host_set_text(
-                                                            host,
+                                                        let mut owner =
+                                                            EditorNotesModelOwner::new(host.models_mut());
+                                                        let _ = owner.set_text(
                                                             &summary_status_model,
                                                             summary_status_next.clone(),
                                                         );
@@ -872,5 +871,28 @@ pub(crate) fn editor_notes_draft_status_label(outcome: &str, committed_label: &s
         "Committed" => format!("Clean draft · {committed_label}"),
         "Canceled" => format!("Draft canceled · preserved editor text · {committed_label}"),
         _ => format!("Draft preserved until commit · {committed_label}"),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn editor_notes_model_owner_preserves_text_state_updates() {
+        let mut models = ModelStore::default();
+        let status = models.insert("Idle".to_string());
+
+        assert!(EditorNotesModelOwner::new(&mut models).set_text(&status, "Committed"));
+        assert_eq!(
+            models.read(&status, Clone::clone).ok().as_deref(),
+            Some("Committed")
+        );
+
+        assert!(EditorNotesModelOwner::new(&mut models).set_text(&status, "Canceled"));
+        assert_eq!(
+            models.read(&status, Clone::clone).ok().as_deref(),
+            Some("Canceled")
+        );
     }
 }
