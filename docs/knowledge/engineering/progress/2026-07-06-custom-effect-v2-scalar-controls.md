@@ -40,6 +40,7 @@ effect schema can own UI controls, shader ABI, defaults, diagnostics labels, and
 
 # Follow-Up
 
-The shared common controls still expose `uv_span()` as a raw `Model<Vec<f32>>` because that value is
-part of the existing common binding. A later cleanup can decide whether common numeric controls
-should also use `CustomEffectV2ScalarControl` or a more general numeric-control binding.
+The shared common `uv_span()` control was later moved behind `CustomEffectV2ScalarControl`; see
+`2026-07-06-custom-effect-v2-common-scalar-control.md`. The remaining design question is whether a
+future typed effect schema should own shader ABI slots, ranges, labels, defaults, and diagnostics
+across more than these four demos.

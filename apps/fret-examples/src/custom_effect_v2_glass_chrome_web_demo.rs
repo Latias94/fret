@@ -158,7 +158,7 @@ impl CustomEffectV2GlassChromeWebDriver {
                 binding.mode(),
                 binding.quality(),
                 binding.sampling(),
-                binding.uv_span(),
+                binding.uv_span().values(),
                 controls.strength.values(),
                 controls.shininess.values(),
                 controls.mix01.values(),
@@ -189,7 +189,7 @@ impl CustomEffectV2GlassChromeWebDriver {
                         .as_ref()
                         .map(|value| value.to_string())
                         .unwrap_or_else(|| "linear".to_string()),
-                    uv_span: uv_span.first().copied().unwrap_or(1.0).clamp(0.05, 1.0),
+                    uv_span: binding.uv_span().clamped_value(uv_span, 0.05, 1.0),
                     strength: controls.strength.clamped_value(strength, 0.0, 2.0),
                     shininess: controls.shininess.clamped_value(shininess, 1.0, 128.0),
                     mix01: controls.mix01.clamped_value(mix01, 0.0, 1.0),
@@ -500,7 +500,7 @@ impl CustomEffectV2GlassChromeWebDriver {
         let quality_open_model = binding.quality_open().clone();
         let sampling_model = binding.sampling().clone();
         let sampling_open_model = binding.sampling_open().clone();
-        let uv_span_model = binding.uv_span().clone();
+        let uv_span_control = binding.uv_span().clone();
         let strength_model = controls.strength.clone();
         let shininess_model = controls.shininess.clone();
         let mix01_model = controls.mix01.clone();
@@ -574,7 +574,7 @@ impl CustomEffectV2GlassChromeWebDriver {
         let uv_span_row = ui::v_flex(move |cx: &mut ElementContext<'_, App>| {
             [
                 Self::label_row(cx, "Uv span", format!("{uv_span:.2}")).into_element(cx),
-                shadcn::Slider::new(uv_span_model.clone())
+                shadcn::Slider::new(uv_span_control.clone())
                     .range(0.05, 1.0)
                     .step(0.01)
                     .into_element(cx),

@@ -108,10 +108,11 @@ Keep raw/shared-model mechanisms for now:
     in each demo behind `CustomEffectV2WebVariantReset`. Follow-up tightening also moved raw
     `EffectParamsV1 { vec4s: ... }` literals behind explicit `CustomEffectV2ParamSlot` /
     `CustomEffectV2ParamPack` calls, so the shader ABI ordering is named and source-gated without
-    prematurely introducing a full dynamic parameter-schema system. A later scalar-control cleanup
-    moved variant-specific slider state behind `CustomEffectV2ScalarControl`, so those demos no
-    longer expose raw `Model<Vec<f32>>` fields, direct scalar `models_mut().insert(vec![...])`
-    allocation, or variant reset writes through `reset.set_model(&self.foo, ...)`.
+    prematurely introducing a full dynamic parameter-schema system. Scalar-control cleanup moved
+    variant-specific slider state and the shared common `uv_span` slider behind
+    `CustomEffectV2ScalarControl`, so those demos no longer expose raw `Model<Vec<f32>>` fields,
+    direct scalar `models_mut().insert(vec![...])` allocation, or variant/common reset writes
+    through raw `set_model(... vec![...])` calls.
   - Follow-up: those four web variants are now included in `tools/check_surface_policy.py` scan
     roots and classified as advanced/manual surfaces with explicit raw seams, owner, and retirement
     condition. The same gate now rejects direct reset/toggle writes through
@@ -199,9 +200,8 @@ Keep raw/shared-model mechanisms for now:
 
 Likely next cleanup slices:
 
-- Common custom-effect numeric-control cleanup if `uv_span()` should join the scalar-control binding
-  path, or a typed effect schema if defaults, diagnostics labels, and parameter ABI metadata need to
-  be shared across more than these four demos.
+- A typed custom-effect schema if defaults, diagnostics labels, numeric ranges, and parameter ABI
+  metadata need to be shared across more than these four demos.
 - Plot/chart family-specific bindings for remaining first-contact demos once their output/state
   contracts are named explicitly.
 

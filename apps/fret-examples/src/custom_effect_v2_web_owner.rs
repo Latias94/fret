@@ -82,6 +82,10 @@ impl CustomEffectV2ScalarControl {
     pub(crate) fn reset(&self, reset: &mut CustomEffectV2WebVariantReset<'_, '_>) -> bool {
         reset.set_model(&self.model, vec![self.default])
     }
+
+    fn reset_with_owner(&self, owner: &mut CustomEffectV2WebModelOwner<'_>) -> bool {
+        owner.set_model(&self.model, vec![self.default])
+    }
 }
 
 impl IntoFloatVecModel for CustomEffectV2ScalarControl {
@@ -204,7 +208,7 @@ impl CustomEffectV2WebControlBinding {
         self.common.sampling_open()
     }
 
-    pub(crate) fn uv_span(&self) -> &Model<Vec<f32>> {
+    pub(crate) fn uv_span(&self) -> &CustomEffectV2ScalarControl {
         self.common.uv_span()
     }
 
@@ -242,7 +246,7 @@ struct CustomEffectV2WebCommonControls {
     quality_open: Model<bool>,
     sampling: Model<Option<Arc<str>>>,
     sampling_open: Model<bool>,
-    uv_span: Model<Vec<f32>>,
+    uv_span: CustomEffectV2ScalarControl,
     debug_input: Model<bool>,
 }
 
@@ -256,7 +260,7 @@ impl CustomEffectV2WebCommonControls {
             quality_open: models.insert(false),
             sampling: models.insert(Some(Arc::from(defaults.sampling))),
             sampling_open: models.insert(false),
-            uv_span: models.insert(vec![defaults.uv_span]),
+            uv_span: CustomEffectV2ScalarControl::new(models, defaults.uv_span),
             debug_input: models.insert(defaults.debug_input),
         }
     }
@@ -289,7 +293,7 @@ impl CustomEffectV2WebCommonControls {
         &self.sampling_open
     }
 
-    fn uv_span(&self) -> &Model<Vec<f32>> {
+    fn uv_span(&self) -> &CustomEffectV2ScalarControl {
         &self.uv_span
     }
 
@@ -307,7 +311,7 @@ impl CustomEffectV2WebCommonControls {
         changed = owner.set_model(&self.mode, Some(Arc::from(defaults.mode))) || changed;
         changed = owner.set_model(&self.quality, Some(Arc::from(defaults.quality))) || changed;
         changed = owner.set_model(&self.sampling, Some(Arc::from(defaults.sampling))) || changed;
-        changed = owner.set_model(&self.uv_span, vec![defaults.uv_span]) || changed;
+        changed = self.uv_span.reset_with_owner(owner) || changed;
         owner.set_model(&self.debug_input, defaults.debug_input) || changed
     }
 }
@@ -329,6 +333,17 @@ pub(crate) trait CustomEffectV2WebVariantControls {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    struct NoopVariantControls;
+
+    impl CustomEffectV2WebVariantControls for NoopVariantControls {
+        fn reset_variant_controls(
+            &self,
+            _reset: &mut CustomEffectV2WebVariantReset<'_, '_>,
+        ) -> bool {
+            false
+        }
+    }
 
     #[test]
     fn param_pack_writes_values_flags_and_zero_padding() {
@@ -375,6 +390,33 @@ mod tests {
         assert_eq!(
             app.models().read(&slider_model, Clone::clone).unwrap(),
             vec![1.5]
+        );
+    }
+
+    #[test]
+    fn common_reset_restores_uv_span_scalar_control_default() {
+        let mut app = fret_app::App::new();
+        let binding = CustomEffectV2WebControlBinding::with_defaults(
+            app.models_mut(),
+            CustomEffectV2WebCommonDefaults {
+                uv_span: 0.75,
+                ..CustomEffectV2WebCommonDefaults::default()
+            },
+        );
+        let uv_span_model = binding.uv_span().values().clone();
+
+        assert!(
+            CustomEffectV2WebModelOwner::new(app.models_mut()).set_model(&uv_span_model, vec![0.2])
+        );
+        assert_eq!(
+            app.models().read(&uv_span_model, Clone::clone).unwrap(),
+            vec![0.2]
+        );
+
+        assert!(binding.reset_controls_in(app.models_mut(), &NoopVariantControls));
+        assert_eq!(
+            app.models().read(&uv_span_model, Clone::clone).unwrap(),
+            vec![0.75]
         );
     }
 }

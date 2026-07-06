@@ -244,7 +244,7 @@ impl CustomEffectV2WebDriver {
                 binding.mode(),
                 binding.quality(),
                 binding.sampling(),
-                binding.uv_span(),
+                binding.uv_span().values(),
                 controls.strength_px.values(),
                 controls.max_sample_offset_px.values(),
                 controls.tint_strength.values(),
@@ -283,7 +283,7 @@ impl CustomEffectV2WebDriver {
                         .as_ref()
                         .map(|value| value.to_string())
                         .unwrap_or_else(|| "linear".to_string()),
-                    uv_span: uv_span.first().copied().unwrap_or(1.0).clamp(0.05, 1.0),
+                    uv_span: binding.uv_span().clamped_value(uv_span, 0.05, 1.0),
                     strength_px: controls.strength_px.clamped_value(strength_px, 0.0, 24.0),
                     max_sample_offset_px: controls.max_sample_offset_px.clamped_value(
                         max_sample_offset_px,
