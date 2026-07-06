@@ -42,6 +42,6 @@ one contract.
 
 # Follow-Up
 
-The remaining custom-effect raw model pressure is variant-specific control state. Keep it in the
-demo variants until a typed control/schema surface can replace both the runtime models and the
-parameter ABI in one design.
+A follow-up cleanup now routes variant-specific slider state through
+`CustomEffectV2ScalarControl`, leaving the full effect-schema question deferred until it can own
+runtime controls, parameter ABI, diagnostics labels, defaults, and docs as one design.

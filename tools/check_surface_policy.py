@@ -289,6 +289,7 @@ CUSTOM_EFFECT_V2_WEB_ALLOWED_RAW_SEAMS = (
 )
 
 CUSTOM_EFFECT_V2_WEB_OWNER_HELPER_ALLOWED_RAW_SEAMS = (
+    "fret_app",
     "fret_core",
     "fret_runtime",
     "ModelStore",
@@ -304,26 +305,20 @@ CUSTOM_EFFECT_V2_WEB_RETIREMENT = (
 
 CUSTOM_EFFECT_V2_WEB_DEMO_REQUIRED_MARKERS = (
     "CustomEffectV2WebControlBinding",
+    "CustomEffectV2ScalarControl",
     "CustomEffectV2WebVariantControls",
-    "CustomEffectV2WebVariantReset",
     "impl CustomEffectV2WebVariantControls for DemoControls",
     "fn reset_variant_controls(",
-    "reset.set_model",
+    "CustomEffectV2ScalarControl::new(app.models_mut()",
     "binding: CustomEffectV2WebControlBinding",
     ".toggle_surface_in(",
     ".reset_controls_in(",
 )
 
 CUSTOM_EFFECT_V2_WEB_OWNER_HELPER_REQUIRED_MARKERS = (
-    "use fret_core::scene::EffectParamsV1",
     "struct CustomEffectV2ParamSlot",
-    "assert!(vec4 < 4)",
-    "assert!(lane < 4)",
     "struct CustomEffectV2ParamPack",
-    "EffectParamsV1::ZERO",
-    "fn with_value",
-    "fn with_flag",
-    "fn finish",
+    "struct CustomEffectV2ScalarControl",
     "struct CustomEffectV2WebControlBinding",
     "struct CustomEffectV2WebCommonControls",
     "struct CustomEffectV2WebModelOwner",
@@ -370,6 +365,18 @@ CUSTOM_EFFECT_V2_WEB_DEMO_FORBIDDEN_PATTERNS: tuple[tuple[str, re.Pattern[str]],
         "standalone-show-model",
         re.compile(r"\bshow\s*:\s*(?:fret_runtime::)?Model\s*<\s*bool\s*>"),
     ),
+    (
+        "raw-scalar-model-field",
+        re.compile(r"\bModel\s*<\s*Vec\s*<\s*f32\s*>\s*>"),
+    ),
+    (
+        "raw-scalar-model-insert",
+        re.compile(r"\bapp\s*\.\s*models_mut\s*\(\s*\)\s*\.\s*insert\s*\(\s*vec!\s*\["),
+    ),
+    (
+        "variant-reset-set-model",
+        re.compile(r"\breset\s*\.\s*set_model\s*\(\s*&\s*self\."),
+    ),
 )
 
 
@@ -380,7 +387,7 @@ def _fret_examples_custom_effect_v2_web_surface(filename: str, variant: str) -> 
         (
             f"{filename} remains classified as an advanced examples surface because the {variant} "
             "custom-effect v2 web proof owns manual runner/bootstrap, binding-backed common "
-            "parameter controls, variant-specific raw parameter models, and low-level "
+            "parameter controls, variant-specific scalar control bindings, and low-level "
             "effect-layer composition"
         ),
         owner=CUSTOM_EFFECT_V2_WEB_OWNER,

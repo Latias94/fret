@@ -15,8 +15,9 @@
 use std::sync::Arc;
 
 use crate::custom_effect_v2_web_owner::{
-    CustomEffectV2ParamPack, CustomEffectV2ParamSlot, CustomEffectV2WebControlBinding,
-    CustomEffectV2WebVariantControls, CustomEffectV2WebVariantReset,
+    CustomEffectV2ParamPack, CustomEffectV2ParamSlot, CustomEffectV2ScalarControl,
+    CustomEffectV2WebControlBinding, CustomEffectV2WebVariantControls,
+    CustomEffectV2WebVariantReset,
 };
 use fret::advanced::view::AppRenderDataExt as _;
 use fret_app::{App, Effect};
@@ -31,7 +32,7 @@ use fret_render::{
     ImageColorSpace, ImageDescriptor, Renderer, RendererCapabilities, WgpuContext,
     write_rgba8_texture_region,
 };
-use fret_runtime::{Model, PlatformCapabilities};
+use fret_runtime::PlatformCapabilities;
 use fret_ui::declarative;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, EffectLayerProps, Elements, FlexProps, LayoutStyle,
@@ -88,7 +89,7 @@ impl DemoEffectPack {
 
 #[derive(Debug, Clone)]
 struct DemoControls {
-    mix01: Model<Vec<f32>>,
+    mix01: CustomEffectV2ScalarControl,
 }
 
 const PARAM_MIX01: CustomEffectV2ParamSlot = CustomEffectV2ParamSlot::new(0, 0);
@@ -96,7 +97,7 @@ const PARAM_DEBUG_INPUT: CustomEffectV2ParamSlot = CustomEffectV2ParamSlot::new(
 
 impl CustomEffectV2WebVariantControls for DemoControls {
     fn reset_variant_controls(&self, reset: &mut CustomEffectV2WebVariantReset<'_, '_>) -> bool {
-        reset.set_model(&self.mix01, vec![0.65])
+        self.mix01.reset(reset)
     }
 }
 
@@ -158,7 +159,7 @@ impl CustomEffectV2IdentityWebDriver {
         let binding = CustomEffectV2WebControlBinding::new(app.models_mut());
 
         let controls = DemoControls {
-            mix01: app.models_mut().insert(vec![0.65]),
+            mix01: CustomEffectV2ScalarControl::new(app.models_mut(), 0.65),
         };
 
         CustomEffectV2IdentityWebWindowState {
@@ -181,7 +182,7 @@ impl CustomEffectV2IdentityWebDriver {
                 binding.quality(),
                 binding.sampling(),
                 binding.uv_span(),
-                &controls.mix01,
+                controls.mix01.values(),
                 binding.debug_input(),
             ),
             |(enabled, mode, quality, sampling, uv_span, mix01, debug_input)| {
@@ -200,7 +201,7 @@ impl CustomEffectV2IdentityWebDriver {
                         .map(|value| value.to_string())
                         .unwrap_or_else(|| "linear".to_string()),
                     uv_span: uv_span.first().copied().unwrap_or(1.0).clamp(0.05, 1.0),
-                    mix01: mix01.first().copied().unwrap_or(0.65).clamp(0.0, 1.0),
+                    mix01: controls.mix01.clamped_value(mix01, 0.0, 1.0),
                     debug_input,
                 }
             },

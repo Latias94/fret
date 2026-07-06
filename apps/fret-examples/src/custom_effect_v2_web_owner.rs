@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use fret_core::scene::EffectParamsV1;
 use fret_runtime::{Model, ModelStore};
+use fret_ui_shadcn::facade::IntoFloatVecModel;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) struct CustomEffectV2ParamSlot {
@@ -44,6 +45,54 @@ impl CustomEffectV2ParamPack {
 
     pub(crate) fn finish(self) -> EffectParamsV1 {
         self.params
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct CustomEffectV2ScalarControl {
+    model: Model<Vec<f32>>,
+    default: f32,
+}
+
+impl CustomEffectV2ScalarControl {
+    pub(crate) fn new(models: &mut ModelStore, default: f32) -> Self {
+        Self {
+            model: models.insert(vec![default]),
+            default,
+        }
+    }
+
+    pub(crate) fn values(&self) -> &Model<Vec<f32>> {
+        &self.model
+    }
+
+    pub(crate) fn clamped_value(&self, values: impl AsRef<[f32]>, min: f32, max: f32) -> f32 {
+        values
+            .as_ref()
+            .first()
+            .copied()
+            .unwrap_or(self.default)
+            .clamp(min, max)
+    }
+
+    pub(crate) fn rounded_u32_value(&self, values: impl AsRef<[f32]>, min: f32, max: f32) -> u32 {
+        self.clamped_value(values, min, max).round() as u32
+    }
+
+    pub(crate) fn reset(&self, reset: &mut CustomEffectV2WebVariantReset<'_, '_>) -> bool {
+        reset.set_model(&self.model, vec![self.default])
+    }
+}
+
+impl IntoFloatVecModel for CustomEffectV2ScalarControl {
+    fn into_float_vec_model(self) -> Model<Vec<f32>> {
+        self.model
+    }
+}
+
+impl IntoFloatVecModel for &CustomEffectV2ScalarControl {
+    fn into_float_vec_model(self) -> Model<Vec<f32>> {
+        self.model.clone()
     }
 }
 
@@ -311,5 +360,21 @@ mod tests {
     #[should_panic]
     fn param_slot_rejects_out_of_range_lane() {
         let _ = CustomEffectV2ParamSlot::new(0, 4);
+    }
+
+    #[test]
+    fn scalar_control_reads_clamps_rounds_and_converts_to_slider_model() {
+        let mut app = fret_app::App::new();
+        let control = CustomEffectV2ScalarControl::new(app.models_mut(), 1.5);
+
+        assert_eq!(control.clamped_value(&[], 0.0, 2.0), 1.5);
+        assert_eq!(control.clamped_value(&[3.0], 0.0, 2.0), 2.0);
+        assert_eq!(control.rounded_u32_value(&[2.6], 1.0, 4.0), 3);
+
+        let slider_model = (&control).into_float_vec_model();
+        assert_eq!(
+            app.models().read(&slider_model, Clone::clone).unwrap(),
+            vec![1.5]
+        );
     }
 }

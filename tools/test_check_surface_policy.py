@@ -819,6 +819,7 @@ class SurfacePolicyTests(unittest.TestCase):
             "custom-effect v2 web shared owner helper should be classified as an internal harness",
         )
         self.assertIn("ModelStore", helper_spec.allowed_raw_seams)
+        self.assertIn("fret_app", helper_spec.allowed_raw_seams)
         self.assertIn("fret_core", helper_spec.allowed_raw_seams)
         self.assertTrue(
             any(
@@ -939,13 +940,14 @@ class SurfacePolicyTests(unittest.TestCase):
                 root / "apps/fret-examples/src/custom_effect_v2_web_demo.rs",
                 """
                 use crate::custom_effect_v2_web_owner::{
+                    CustomEffectV2ScalarControl,
                     CustomEffectV2WebControlBinding,
                     CustomEffectV2WebVariantControls,
                     CustomEffectV2WebVariantReset,
                 };
 
                 struct DemoControls {
-                    strength: fret_runtime::Model<Vec<f32>>,
+                    strength: CustomEffectV2ScalarControl,
                 }
 
                 impl CustomEffectV2WebVariantControls for DemoControls {
@@ -953,7 +955,7 @@ class SurfacePolicyTests(unittest.TestCase):
                         &self,
                         reset: &mut CustomEffectV2WebVariantReset<'_, '_>,
                     ) -> bool {
-                        reset.set_model(&self.strength, vec![1.0])
+                        self.strength.reset(reset)
                     }
                 }
 
@@ -966,9 +968,14 @@ class SurfacePolicyTests(unittest.TestCase):
                     WindowState {
                         binding: CustomEffectV2WebControlBinding::new(app.models_mut()),
                         controls: DemoControls {
-                            strength: app.models_mut().insert(vec![1.0]),
+                            strength: CustomEffectV2ScalarControl::new(app.models_mut(), 1.0),
                         },
                     }
+                }
+
+                fn read(controls: &DemoControls, values: &[f32]) -> f32 {
+                    let _ = controls.strength.values();
+                    controls.strength.clamped_value(values, 0.0, 2.0)
                 }
 
                 fn ok(app: &mut fret_app::App, state: &WindowState) {
@@ -983,6 +990,7 @@ class SurfacePolicyTests(unittest.TestCase):
                 use std::sync::Arc;
                 use fret_core::scene::EffectParamsV1;
                 use fret_runtime::{Model, ModelStore};
+                use fret_ui_shadcn::facade::IntoFloatVecModel;
 
                 pub(crate) struct CustomEffectV2ParamSlot {
                     vec4: usize,
@@ -1031,6 +1039,61 @@ class SurfacePolicyTests(unittest.TestCase):
 
                     pub(crate) fn finish(self) -> EffectParamsV1 {
                         self.params
+                    }
+                }
+
+                pub(crate) struct CustomEffectV2ScalarControl {
+                    model: Model<Vec<f32>>,
+                    default: f32,
+                }
+
+                impl CustomEffectV2ScalarControl {
+                    pub(crate) fn new(models: &mut ModelStore, default: f32) -> Self {
+                        Self {
+                            model: models.insert(vec![default]),
+                            default,
+                        }
+                    }
+
+                    pub(crate) fn values(&self) -> &Model<Vec<f32>> {
+                        &self.model
+                    }
+
+                    pub(crate) fn clamped_value(
+                        &self,
+                        values: &[f32],
+                        min: f32,
+                        max: f32,
+                    ) -> f32 {
+                        values.first().copied().unwrap_or(self.default).clamp(min, max)
+                    }
+
+                    pub(crate) fn rounded_u32_value(
+                        &self,
+                        values: &[f32],
+                        min: f32,
+                        max: f32,
+                    ) -> u32 {
+                        self.clamped_value(values, min, max).round() as u32
+                    }
+
+                    pub(crate) fn reset(
+                        &self,
+                        reset: &mut CustomEffectV2WebVariantReset<'_, '_>,
+                    ) -> bool {
+                        reset.set_model(&self.model, vec![self.default])
+                    }
+                }
+
+                impl IntoFloatVecModel for CustomEffectV2ScalarControl {
+                    fn into_float_vec_model(self) -> Model<Vec<f32>> {
+                        self.model
+                    }
+                }
+
+                impl IntoFloatVecModel for &CustomEffectV2ScalarControl {
+                    fn into_float_vec_model(self) -> Model<Vec<f32>> {
+                        self.model.clone()
                     }
                 }
 
@@ -1107,6 +1170,13 @@ class SurfacePolicyTests(unittest.TestCase):
                         reset: &mut CustomEffectV2WebVariantReset<'_, '_>,
                     ) -> bool;
                 }
+
+                #[cfg(test)]
+                mod tests {
+                    fn scalar_control_uses_app_model_store() {
+                        let _ = fret_app::App::new();
+                    }
+                }
                 """,
             )
 
@@ -1119,7 +1189,7 @@ class SurfacePolicyTests(unittest.TestCase):
                         "advanced_manual",
                         "fixture custom-effect v2 web surface",
                         owner="examples-custom-effect-v2-web",
-                        allowed_raw_seams=("fret_app", "fret_runtime"),
+                        allowed_raw_seams=("fret_app",),
                         retirement=POLICY.CUSTOM_EFFECT_V2_WEB_RETIREMENT,
                     )
                 ],
@@ -1129,7 +1199,7 @@ class SurfacePolicyTests(unittest.TestCase):
                         "internal_harness",
                         "fixture custom-effect v2 web owner helper",
                         owner="examples-custom-effect-v2-web",
-                        allowed_raw_seams=("fret_core", "fret_runtime", "ModelStore"),
+                        allowed_raw_seams=("fret_app", "fret_core", "fret_runtime", "ModelStore"),
                     )
                 ],
                 policy_recipe_surfaces=[],

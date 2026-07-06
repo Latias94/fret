@@ -12,8 +12,9 @@
 use std::sync::Arc;
 
 use crate::custom_effect_v2_web_owner::{
-    CustomEffectV2ParamPack, CustomEffectV2ParamSlot, CustomEffectV2WebControlBinding,
-    CustomEffectV2WebVariantControls, CustomEffectV2WebVariantReset,
+    CustomEffectV2ParamPack, CustomEffectV2ParamSlot, CustomEffectV2ScalarControl,
+    CustomEffectV2WebControlBinding, CustomEffectV2WebVariantControls,
+    CustomEffectV2WebVariantReset,
 };
 use fret::advanced::view::AppRenderDataExt as _;
 use fret_app::{App, Effect};
@@ -27,7 +28,7 @@ use fret_render::{
     ImageColorSpace, ImageDescriptor, Renderer, RendererCapabilities, WgpuContext,
     write_rgba8_texture_region,
 };
-use fret_runtime::{Model, PlatformCapabilities};
+use fret_runtime::PlatformCapabilities;
 use fret_ui::declarative;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, EffectLayerProps, Elements, FlexProps, LayoutStyle,
@@ -103,9 +104,9 @@ impl DemoEffectPack {
 
 #[derive(Debug, Clone)]
 struct DemoControls {
-    strength: Model<Vec<f32>>,
-    shininess: Model<Vec<f32>>,
-    mix01: Model<Vec<f32>>,
+    strength: CustomEffectV2ScalarControl,
+    shininess: CustomEffectV2ScalarControl,
+    mix01: CustomEffectV2ScalarControl,
 }
 
 const PARAM_STRENGTH: CustomEffectV2ParamSlot = CustomEffectV2ParamSlot::new(0, 0);
@@ -116,9 +117,9 @@ const PARAM_DEBUG_INPUT: CustomEffectV2ParamSlot = CustomEffectV2ParamSlot::new(
 impl CustomEffectV2WebVariantControls for DemoControls {
     fn reset_variant_controls(&self, reset: &mut CustomEffectV2WebVariantReset<'_, '_>) -> bool {
         let mut changed = false;
-        changed = reset.set_model(&self.strength, vec![0.95]) || changed;
-        changed = reset.set_model(&self.shininess, vec![36.0]) || changed;
-        reset.set_model(&self.mix01, vec![1.0]) || changed
+        changed = self.strength.reset(reset) || changed;
+        changed = self.shininess.reset(reset) || changed;
+        self.mix01.reset(reset) || changed
     }
 }
 
@@ -158,9 +159,9 @@ impl CustomEffectV2GlassChromeWebDriver {
                 binding.quality(),
                 binding.sampling(),
                 binding.uv_span(),
-                &controls.strength,
-                &controls.shininess,
-                &controls.mix01,
+                controls.strength.values(),
+                controls.shininess.values(),
+                controls.mix01.values(),
                 binding.debug_input(),
             ),
             |(
@@ -189,9 +190,9 @@ impl CustomEffectV2GlassChromeWebDriver {
                         .map(|value| value.to_string())
                         .unwrap_or_else(|| "linear".to_string()),
                     uv_span: uv_span.first().copied().unwrap_or(1.0).clamp(0.05, 1.0),
-                    strength: strength.first().copied().unwrap_or(0.95).clamp(0.0, 2.0),
-                    shininess: shininess.first().copied().unwrap_or(36.0).clamp(1.0, 128.0),
-                    mix01: mix01.first().copied().unwrap_or(1.0).clamp(0.0, 1.0),
+                    strength: controls.strength.clamped_value(strength, 0.0, 2.0),
+                    shininess: controls.shininess.clamped_value(shininess, 1.0, 128.0),
+                    mix01: controls.mix01.clamped_value(mix01, 0.0, 1.0),
                     debug_input,
                 }
             },
@@ -781,9 +782,9 @@ impl CustomEffectV2GlassChromeWebDriver {
 
         let binding = CustomEffectV2WebControlBinding::new(app.models_mut());
         let controls = DemoControls {
-            strength: app.models_mut().insert(vec![0.95]),
-            shininess: app.models_mut().insert(vec![36.0]),
-            mix01: app.models_mut().insert(vec![1.0]),
+            strength: CustomEffectV2ScalarControl::new(app.models_mut(), 0.95),
+            shininess: CustomEffectV2ScalarControl::new(app.models_mut(), 36.0),
+            mix01: CustomEffectV2ScalarControl::new(app.models_mut(), 1.0),
         };
 
         CustomEffectV2GlassChromeWebWindowState {

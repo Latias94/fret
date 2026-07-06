@@ -12,8 +12,9 @@
 use std::sync::Arc;
 
 use crate::custom_effect_v2_web_owner::{
-    CustomEffectV2ParamPack, CustomEffectV2ParamSlot, CustomEffectV2WebControlBinding,
-    CustomEffectV2WebVariantControls, CustomEffectV2WebVariantReset,
+    CustomEffectV2ParamPack, CustomEffectV2ParamSlot, CustomEffectV2ScalarControl,
+    CustomEffectV2WebControlBinding, CustomEffectV2WebVariantControls,
+    CustomEffectV2WebVariantReset,
 };
 use fret::advanced::view::AppRenderDataExt as _;
 use fret_app::{App, Effect};
@@ -28,7 +29,7 @@ use fret_render::{
     ImageColorSpace, ImageDescriptor, Renderer, RendererCapabilities, WgpuContext,
     write_rgba8_texture_region,
 };
-use fret_runtime::{Model, PlatformCapabilities};
+use fret_runtime::PlatformCapabilities;
 use fret_ui::declarative;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, EffectLayerProps, Elements, FlexProps, LayoutStyle,
@@ -132,13 +133,13 @@ impl DemoEffectPack {
 
 #[derive(Debug, Clone)]
 struct DemoControls {
-    strength_px: Model<Vec<f32>>,
-    max_sample_offset_px: Model<Vec<f32>>,
-    tint_strength: Model<Vec<f32>>,
-    blur_radius_px: Model<Vec<f32>>,
-    blur_downsample: Model<Vec<f32>>,
-    lens_corner_radius_px: Model<Vec<f32>>,
-    tile_corner_radius_px: Model<Vec<f32>>,
+    strength_px: CustomEffectV2ScalarControl,
+    max_sample_offset_px: CustomEffectV2ScalarControl,
+    tint_strength: CustomEffectV2ScalarControl,
+    blur_radius_px: CustomEffectV2ScalarControl,
+    blur_downsample: CustomEffectV2ScalarControl,
+    lens_corner_radius_px: CustomEffectV2ScalarControl,
+    tile_corner_radius_px: CustomEffectV2ScalarControl,
 }
 
 const PARAM_INTENSITY: CustomEffectV2ParamSlot = CustomEffectV2ParamSlot::new(0, 0);
@@ -148,13 +149,13 @@ const PARAM_DEBUG_INPUT: CustomEffectV2ParamSlot = CustomEffectV2ParamSlot::new(
 impl CustomEffectV2WebVariantControls for DemoControls {
     fn reset_variant_controls(&self, reset: &mut CustomEffectV2WebVariantReset<'_, '_>) -> bool {
         let mut changed = false;
-        changed = reset.set_model(&self.strength_px, vec![0.85]) || changed;
-        changed = reset.set_model(&self.max_sample_offset_px, vec![0.0]) || changed;
-        changed = reset.set_model(&self.tint_strength, vec![0.5]) || changed;
-        changed = reset.set_model(&self.blur_radius_px, vec![0.0]) || changed;
-        changed = reset.set_model(&self.blur_downsample, vec![1.0]) || changed;
-        changed = reset.set_model(&self.lens_corner_radius_px, vec![24.0]) || changed;
-        reset.set_model(&self.tile_corner_radius_px, vec![18.0]) || changed
+        changed = self.strength_px.reset(reset) || changed;
+        changed = self.max_sample_offset_px.reset(reset) || changed;
+        changed = self.tint_strength.reset(reset) || changed;
+        changed = self.blur_radius_px.reset(reset) || changed;
+        changed = self.blur_downsample.reset(reset) || changed;
+        changed = self.lens_corner_radius_px.reset(reset) || changed;
+        self.tile_corner_radius_px.reset(reset) || changed
     }
 }
 
@@ -222,13 +223,13 @@ impl CustomEffectV2LutWebDriver {
         let binding = CustomEffectV2WebControlBinding::new(app.models_mut());
 
         let controls = DemoControls {
-            strength_px: app.models_mut().insert(vec![0.85]),
-            max_sample_offset_px: app.models_mut().insert(vec![0.0]),
-            tint_strength: app.models_mut().insert(vec![0.5]),
-            blur_radius_px: app.models_mut().insert(vec![0.0]),
-            blur_downsample: app.models_mut().insert(vec![1.0]),
-            lens_corner_radius_px: app.models_mut().insert(vec![24.0]),
-            tile_corner_radius_px: app.models_mut().insert(vec![18.0]),
+            strength_px: CustomEffectV2ScalarControl::new(app.models_mut(), 0.85),
+            max_sample_offset_px: CustomEffectV2ScalarControl::new(app.models_mut(), 0.0),
+            tint_strength: CustomEffectV2ScalarControl::new(app.models_mut(), 0.5),
+            blur_radius_px: CustomEffectV2ScalarControl::new(app.models_mut(), 0.0),
+            blur_downsample: CustomEffectV2ScalarControl::new(app.models_mut(), 1.0),
+            lens_corner_radius_px: CustomEffectV2ScalarControl::new(app.models_mut(), 24.0),
+            tile_corner_radius_px: CustomEffectV2ScalarControl::new(app.models_mut(), 18.0),
         };
 
         CustomEffectV2LutWebWindowState {
@@ -251,13 +252,13 @@ impl CustomEffectV2LutWebDriver {
                 binding.quality(),
                 binding.sampling(),
                 binding.uv_span(),
-                &controls.strength_px,
-                &controls.max_sample_offset_px,
-                &controls.tint_strength,
-                &controls.blur_radius_px,
-                &controls.blur_downsample,
-                &controls.lens_corner_radius_px,
-                &controls.tile_corner_radius_px,
+                controls.strength_px.values(),
+                controls.max_sample_offset_px.values(),
+                controls.tint_strength.values(),
+                controls.blur_radius_px.values(),
+                controls.blur_downsample.values(),
+                controls.lens_corner_radius_px.values(),
+                controls.tile_corner_radius_px.values(),
                 binding.debug_input(),
             ),
             |(
@@ -290,38 +291,35 @@ impl CustomEffectV2LutWebDriver {
                         .map(|value| value.to_string())
                         .unwrap_or_else(|| "linear".to_string()),
                     uv_span: uv_span.first().copied().unwrap_or(1.0).clamp(0.05, 1.0),
-                    intensity: strength_px.first().copied().unwrap_or(0.85).clamp(0.0, 1.0),
-                    max_sample_offset_px: max_sample_offset_px
-                        .first()
-                        .copied()
-                        .unwrap_or(0.0)
-                        .clamp(0.0, 96.0),
-                    contrast01: tint_strength
-                        .first()
-                        .copied()
-                        .unwrap_or(0.5)
-                        .clamp(0.0, 1.0),
-                    blur_radius_px: blur_radius_px
-                        .first()
-                        .copied()
-                        .unwrap_or(0.0)
-                        .clamp(0.0, 48.0),
-                    blur_downsample: blur_downsample
-                        .first()
-                        .copied()
-                        .unwrap_or(1.0)
-                        .round()
-                        .clamp(1.0, 4.0) as u32,
-                    lens_corner_radius_px: lens_corner_radius_px
-                        .first()
-                        .copied()
-                        .unwrap_or(24.0)
-                        .clamp(0.0, 64.0),
-                    tile_corner_radius_px: tile_corner_radius_px
-                        .first()
-                        .copied()
-                        .unwrap_or(18.0)
-                        .clamp(0.0, 64.0),
+                    intensity: controls.strength_px.clamped_value(strength_px, 0.0, 1.0),
+                    max_sample_offset_px: controls.max_sample_offset_px.clamped_value(
+                        max_sample_offset_px,
+                        0.0,
+                        96.0,
+                    ),
+                    contrast01: controls
+                        .tint_strength
+                        .clamped_value(tint_strength, 0.0, 1.0),
+                    blur_radius_px: controls.blur_radius_px.clamped_value(
+                        blur_radius_px,
+                        0.0,
+                        48.0,
+                    ),
+                    blur_downsample: controls.blur_downsample.rounded_u32_value(
+                        blur_downsample,
+                        1.0,
+                        4.0,
+                    ),
+                    lens_corner_radius_px: controls.lens_corner_radius_px.clamped_value(
+                        lens_corner_radius_px,
+                        0.0,
+                        64.0,
+                    ),
+                    tile_corner_radius_px: controls.tile_corner_radius_px.clamped_value(
+                        tile_corner_radius_px,
+                        0.0,
+                        64.0,
+                    ),
                     debug_input,
                 }
             },

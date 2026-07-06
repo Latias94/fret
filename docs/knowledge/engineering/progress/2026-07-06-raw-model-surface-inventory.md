@@ -108,7 +108,10 @@ Keep raw/shared-model mechanisms for now:
     in each demo behind `CustomEffectV2WebVariantReset`. Follow-up tightening also moved raw
     `EffectParamsV1 { vec4s: ... }` literals behind explicit `CustomEffectV2ParamSlot` /
     `CustomEffectV2ParamPack` calls, so the shader ABI ordering is named and source-gated without
-    prematurely introducing a full dynamic parameter-schema system.
+    prematurely introducing a full dynamic parameter-schema system. A later scalar-control cleanup
+    moved variant-specific slider state behind `CustomEffectV2ScalarControl`, so those demos no
+    longer expose raw `Model<Vec<f32>>` fields, direct scalar `models_mut().insert(vec![...])`
+    allocation, or variant reset writes through `reset.set_model(&self.foo, ...)`.
   - Follow-up: those four web variants are now included in `tools/check_surface_policy.py` scan
     roots and classified as advanced/manual surfaces with explicit raw seams, owner, and retirement
     condition. The same gate now rejects direct reset/toggle writes through
@@ -196,8 +199,9 @@ Keep raw/shared-model mechanisms for now:
 
 Likely next cleanup slices:
 
-- Typed custom-effect control/schema contracts if the V2 web variants need to share defaults,
-  diagnostics labels, and parameter ABI metadata across more than these four demos.
+- Common custom-effect numeric-control cleanup if `uv_span()` should join the scalar-control binding
+  path, or a typed effect schema if defaults, diagnostics labels, and parameter ABI metadata need to
+  be shared across more than these four demos.
 - Plot/chart family-specific bindings for remaining first-contact demos once their output/state
   contracts are named explicitly.
 
