@@ -13,6 +13,21 @@ This is not a progress tracker. It is an audit baseline so future refactors do n
 - advanced/manual-runtime interop,
 - shared retained runtime state owned by framework-level widgets.
 
+## Current Status
+
+This audit is a 2026-03 baseline. Several plot and chart examples named below have since moved from
+raw app-facing `Model<T>` fields to family-specific binding handles. Use the newer progress
+inventory for current decisions:
+
+- `docs/knowledge/engineering/progress/2026-07-06-raw-model-surface-inventory.md`
+- `docs/knowledge/engineering/progress/2026-07-06-chart-declarative-binding.md`
+- `docs/knowledge/engineering/progress/2026-07-06-chart-binding-output.md`
+- `docs/knowledge/engineering/progress/2026-07-06-chart-advanced-surface-policy.md`
+
+The remaining chart raw-props examples are now source-policy classified by contract: adapter smoke,
+multi-grid/overlay composition, linked multi-axis coordination, and stress/perf harnesses. Do not
+use this baseline alone to decide whether a current chart or plot demo should keep raw model seams.
+
 ## Executive Summary
 
 The LocalState-first cleanup for canonical app-path examples is effectively complete.
