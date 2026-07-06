@@ -2233,11 +2233,6 @@ fn selected_public_model_backed_seams_stay_on_audited_allowlist() {
             ][..],
         ),
         (
-            "data_grid_canvas.rs",
-            DATA_GRID_CANVAS_RS,
-            &["pub fn output_model(mut self, output: Model<DataGridCanvasOutput>) -> Self"][..],
-        ),
-        (
             "data_table_recipes.rs",
             DATA_TABLE_RECIPES_RS,
             &[
@@ -2671,6 +2666,38 @@ fn data_table_surfaces_keep_narrow_table_state_bridges() {
             );
         }
     }
+}
+
+#[test]
+fn data_grid_canvas_output_uses_narrow_output_bridge() {
+    let lib_rs = normalize_ws(LIB_RS);
+    assert!(
+        lib_rs.contains(&normalize_ws(
+            "pub use crate::data_grid_canvas::{ DataGridCanvas, DataGridCanvasAxis, DataGridCanvasOutput, IntoDataGridCanvasOutputModel, };"
+        )),
+        "facade should re-export the dedicated data-grid output bridge so LocalState output handles stay discoverable"
+    );
+
+    let normalized = normalize_ws(DATA_GRID_CANVAS_RS);
+    for marker in [
+        "pub trait IntoDataGridCanvasOutputModel {",
+        "fn into_data_grid_canvas_output_model(self) -> Model<DataGridCanvasOutput>;",
+        "impl IntoDataGridCanvasOutputModel for Model<DataGridCanvasOutput>",
+        "impl IntoDataGridCanvasOutputModel for &Model<DataGridCanvasOutput>",
+        "pub fn output_model(mut self, output: impl IntoDataGridCanvasOutputModel) -> Self",
+    ] {
+        assert!(
+            normalized.contains(&normalize_ws(marker)),
+            "DataGridCanvas should keep a dedicated output bridge instead of exposing only raw Model<DataGridCanvasOutput>"
+        );
+    }
+
+    assert!(
+        !normalized.contains(&normalize_ws(
+            "pub fn output_model(mut self, output: Model<DataGridCanvasOutput>) -> Self"
+        )),
+        "DataGridCanvas should not force app-facing callers through the raw output model type"
+    );
 }
 
 #[test]

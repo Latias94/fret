@@ -120,6 +120,22 @@ def main() -> None:
                 "fret_ui_kit::declarative::table::TableDebugIds::default()",
             ],
         ),
+        SourceCheck(
+            Path("apps/fret-examples/src/canvas_datagrid_stress_demo.rs"),
+            required=[
+                "use fret::app::{AppLocalStateExt as _, AppLocalStateTxnExt as _, LocalState};",
+                "grid_output: LocalState<shadcn::DataGridCanvasOutput>,",
+                "let grid_output = app.local_state(shadcn::DataGridCanvasOutput::default());",
+                "let grid = app.local_state_txn(|tx| tx.value_or_default(&state.grid_output));",
+                "let grid = state.grid_output.layout_value(cx);",
+                ".output_model(state.grid_output.clone())",
+            ],
+            forbidden=[
+                "grid_output: Model<shadcn::DataGridCanvasOutput>,",
+                "app.models_mut().insert(shadcn::DataGridCanvasOutput::default())",
+                ".read(&state.grid_output, |v| *v)",
+            ],
+        ),
     ]
 
     failures: list[str] = []

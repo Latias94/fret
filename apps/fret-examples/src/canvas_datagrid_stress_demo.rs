@@ -1,5 +1,6 @@
 use anyhow::Context as _;
 use fret::advanced::view::AppRenderDataExt as _;
+use fret::app::{AppLocalStateExt as _, AppLocalStateTxnExt as _, LocalState};
 use fret_app::{App, CommandId, Effect, Model, WindowRequest};
 use fret_core::{AppWindowId, Event, Px};
 use fret_launch::{
@@ -63,7 +64,7 @@ pub struct CanvasDataGridStressWindowState {
     variable_sizes: Model<bool>,
     clamp_rows: Model<bool>,
     revision: Model<u64>,
-    grid_output: Model<shadcn::DataGridCanvasOutput>,
+    grid_output: LocalState<shadcn::DataGridCanvasOutput>,
     grid_hist: VecDeque<shadcn::DataGridCanvasOutput>,
     grid_hist_window: usize,
     frame: u64,
@@ -96,9 +97,7 @@ impl CanvasDataGridStressDriver {
             .models_mut()
             .insert(parse_env_bool("FRET_CANVAS_GRID_CLAMP_ROWS"));
         let revision = app.models_mut().insert(1u64);
-        let grid_output = app
-            .models_mut()
-            .insert(shadcn::DataGridCanvasOutput::default());
+        let grid_output = app.local_state(shadcn::DataGridCanvasOutput::default());
         let grid_hist_window = parse_env_usize("FRET_CANVAS_GRID_STATS_WINDOW").unwrap_or(120);
 
         let exit_after_frames = parse_env_u64("FRET_CANVAS_GRID_EXIT_AFTER_FRAMES");
@@ -150,10 +149,7 @@ fn gpu_frame_prepare(
         return;
     }
 
-    let grid = app
-        .models()
-        .read(&state.grid_output, |v| *v)
-        .unwrap_or_default();
+    let grid = app.local_state_txn(|tx| tx.value_or_default(&state.grid_output));
     state.grid_hist.push_back(grid);
     while state.grid_hist.len() > state.grid_hist_window {
         state.grid_hist.pop_front();
@@ -333,20 +329,12 @@ fn render(
 
     let root = declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
         .render_root("canvas-datagrid-stress", |cx| {
-            let (variable, clamp_rows, revision, grid): (
-                bool,
-                bool,
-                u64,
-                shadcn::DataGridCanvasOutput,
-            ) = cx.data().selector_model_layout(
-                (
-                    &state.variable_sizes,
-                    &state.clamp_rows,
-                    &state.revision,
-                    &state.grid_output,
-                ),
-                |(variable, clamp_rows, revision, grid)| (variable, clamp_rows, revision, grid),
-            );
+            let (variable, clamp_rows, revision): (bool, bool, u64) =
+                cx.data().selector_model_layout(
+                    (&state.variable_sizes, &state.clamp_rows, &state.revision),
+                    |(variable, clamp_rows, revision)| (variable, clamp_rows, revision),
+                );
+            let grid = state.grid_output.layout_value(cx);
 
             let theme = cx.theme().snapshot();
             let padding = theme.metric_token("metric.padding.md");

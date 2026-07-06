@@ -69,6 +69,28 @@ impl fret_ui_kit::declarative::table::IntoTableViewOutputModel
     }
 }
 
+#[cfg(feature = "shadcn")]
+impl fret_ui_shadcn::facade::IntoDataGridCanvasOutputModel
+    for LocalState<fret_ui_shadcn::facade::DataGridCanvasOutput>
+{
+    fn into_data_grid_canvas_output_model(
+        self,
+    ) -> Model<fret_ui_shadcn::facade::DataGridCanvasOutput> {
+        self.clone_model()
+    }
+}
+
+#[cfg(feature = "shadcn")]
+impl fret_ui_shadcn::facade::IntoDataGridCanvasOutputModel
+    for &LocalState<fret_ui_shadcn::facade::DataGridCanvasOutput>
+{
+    fn into_data_grid_canvas_output_model(
+        self,
+    ) -> Model<fret_ui_shadcn::facade::DataGridCanvasOutput> {
+        self.clone_model()
+    }
+}
+
 #[cfg(feature = "imui")]
 impl fret_ui_kit::imui::IntoImUiBoolModel for LocalState<bool> {
     fn into_imui_bool_model(self) -> Model<bool> {

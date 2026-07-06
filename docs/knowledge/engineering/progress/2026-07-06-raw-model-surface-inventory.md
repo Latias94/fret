@@ -85,6 +85,10 @@ Keep raw/shared-model mechanisms for now:
     has been refreshed from the old `layout_read_ref_in(...)` / `advanced::prelude::LocalState`
     markers to the current app-facing `LocalState` API and now forbids raw
     `Model<DataTableViewOutput>` plumbing in this example.
+  - Follow-up: `DataGridCanvas::output_model(...)` now accepts the dedicated
+    `IntoDataGridCanvasOutputModel` bridge, and `fret::app::LocalState<DataGridCanvasOutput>`
+    implements it. `canvas_datagrid_stress_demo.rs` uses `LocalState` for grid telemetry output
+    while preserving raw stress-control models for variable sizing, clamping, and revision state.
   - Keep raw model seams in lower-level retained table, data-grid, stress, or canvas-grid surfaces
     only when their component contract still names the shared retained state explicitly.
 - Custom effect demos such as `custom_effect_v2_*`. They expose effect parameter models and reset

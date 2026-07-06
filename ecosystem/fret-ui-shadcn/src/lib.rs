@@ -398,7 +398,9 @@ pub mod facade {
         ContextMenuSeparator, ContextMenuShortcut, ContextMenuSub, ContextMenuSubContent,
         ContextMenuSubTrigger, ContextMenuTrigger,
     };
-    pub use crate::data_grid_canvas::{DataGridCanvas, DataGridCanvasAxis, DataGridCanvasOutput};
+    pub use crate::data_grid_canvas::{
+        DataGridCanvas, DataGridCanvasAxis, DataGridCanvasOutput, IntoDataGridCanvasOutputModel,
+    };
     pub use crate::data_table::{DataTable, DataTableVirtualizationStrategy};
     pub use crate::data_table_controls::{
         DataTableColumnOption, DataTableGlobalFilterInput, DataTableRowState,

@@ -24,6 +24,7 @@ inventory for current decisions:
 - `docs/knowledge/engineering/progress/2026-07-06-chart-binding-output.md`
 - `docs/knowledge/engineering/progress/2026-07-06-chart-advanced-surface-policy.md`
 - `docs/knowledge/engineering/progress/2026-07-06-datatable-output-local-state.md`
+- `docs/knowledge/engineering/progress/2026-07-06-datagrid-output-local-state.md`
 
 The remaining chart raw-props examples are now source-policy classified by contract. Adapter smoke
 charts have moved behind `ChartCanvasPanelBinding`, and multi-grid/overlay composition has moved
@@ -35,6 +36,11 @@ The `datatable_demo.rs` output handle has also moved behind app-facing
 `LocalState<DataTableViewOutput>`. Raw table/data-grid model seams still exist in lower-level table
 and canvas-grid stress/composition surfaces, but the shadcn `DataTable` example is no longer a raw
 output-model exception.
+
+The canvas data-grid telemetry output now follows the same rule:
+`DataGridCanvas::output_model(...)` accepts a named output bridge, and
+`canvas_datagrid_stress_demo.rs` uses `LocalState<DataGridCanvasOutput>` for the grid output handle
+while keeping raw stress-control models where the perf harness still needs them.
 
 ## Executive Summary
 
@@ -132,6 +138,8 @@ Evidence:
 Audit judgment:
 
 - `datatable_demo.rs` uses `LocalState<DataTableViewOutput>` for the shadcn table output path,
+- `canvas_datagrid_stress_demo.rs` uses `LocalState<DataGridCanvasOutput>` for data-grid telemetry
+  output,
 - raw `Model<T>` remains acceptable in retained table/data-grid stress or lower-level composition
   surfaces when the component contract still requires it,
 - future cleanup should happen at the retained table/data-grid surface, not by forcing example-local

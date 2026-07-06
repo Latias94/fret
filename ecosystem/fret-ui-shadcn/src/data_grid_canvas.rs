@@ -53,6 +53,26 @@ pub struct DataGridCanvasOutput {
     pub build_visible_items_us: u32,
 }
 
+/// Narrow bridge for data-grid telemetry output handles.
+///
+/// This mirrors the table output bridge: app-facing code can pass a `LocalState` through the
+/// `fret` facade, while lower-level/manual code can still use `Model<DataGridCanvasOutput>`.
+pub trait IntoDataGridCanvasOutputModel {
+    fn into_data_grid_canvas_output_model(self) -> Model<DataGridCanvasOutput>;
+}
+
+impl IntoDataGridCanvasOutputModel for Model<DataGridCanvasOutput> {
+    fn into_data_grid_canvas_output_model(self) -> Model<DataGridCanvasOutput> {
+        self
+    }
+}
+
+impl IntoDataGridCanvasOutputModel for &Model<DataGridCanvasOutput> {
+    fn into_data_grid_canvas_output_model(self) -> Model<DataGridCanvasOutput> {
+        self.clone()
+    }
+}
+
 #[derive(Clone)]
 pub struct DataGridCanvasAxis {
     pub keys: Arc<Vec<u64>>,
@@ -166,8 +186,8 @@ impl DataGridCanvas {
         self
     }
 
-    pub fn output_model(mut self, output: Model<DataGridCanvasOutput>) -> Self {
-        self.output = Some(output);
+    pub fn output_model(mut self, output: impl IntoDataGridCanvasOutputModel) -> Self {
+        self.output = Some(output.into_data_grid_canvas_output_model());
         self
     }
 
