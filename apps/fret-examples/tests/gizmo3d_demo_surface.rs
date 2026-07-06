@@ -104,3 +104,40 @@ fn gizmo3d_demo_routes_basic_keyboard_mutations_through_binding() {
         );
     }
 }
+
+#[test]
+fn gizmo3d_demo_routes_visual_keyboard_mutations_through_binding() {
+    let source = compact(include_str!("../src/gizmo3d_demo.rs"));
+
+    for needle in [
+        "state.demo.cycle_visual_preset(app,modifiers.shift);",
+        "state.demo.cycle_size_policy(app);",
+        "state.demo.adjust_size_policy_fraction(app,-step);",
+        "state.demo.adjust_size_policy_fraction(app,step);",
+        "state.demo.adjust_gizmo_size_px(app,-step_screen_px);",
+        "state.demo.adjust_gizmo_size_px(app,step_screen_px);",
+        "state.demo.adjust_gizmo_stroke_px(app,-step_screen_px);",
+        "state.demo.adjust_gizmo_stroke_px(app,step_screen_px);",
+    ] {
+        assert!(
+            source.contains(needle),
+            "gizmo3d_demo visual keyboard mutations should route through binding methods; missing `{needle}`"
+        );
+    }
+
+    for legacy in [
+        "key:fret_core::KeyCode::KeyG,modifiers,repeat:false,..}=>{let_=state.demo.update(app,|m,_cx|{ifm.is_busy(){return;}ifmodifiers.shift{",
+        "key:fret_core::KeyCode::KeyV,repeat:false,..}=>{let_=state.demo.update(app,|m,_cx|{ifm.is_busy(){return;}m.gizmo_mut().config.size_policy=",
+        "key:fret_core::KeyCode::Semicolon,modifiers,repeat:false,..}=>{letstep=ifmodifiers.shift{0.25}else{0.05};let_=state.demo.update(app,|m,_cx|{ifm.is_busy(){return;}matchm.gizmo_mut().config.size_policy",
+        "key:fret_core::KeyCode::Quote,modifiers,repeat:false,..}=>{letstep=ifmodifiers.shift{0.25}else{0.05};let_=state.demo.update(app,|m,_cx|{ifm.is_busy(){return;}matchm.gizmo_mut().config.size_policy",
+        "key:fret_core::KeyCode::Minus,modifiers,repeat:false,..}=>{letstep_screen_px=ifmodifiers.shift{16.0}else{4.0};let_=state.demo.update(app,|m,_cx|{ifm.is_busy(){return;}letcursor_units_per_screen_px=",
+        "key:fret_core::KeyCode::Equal,modifiers,repeat:false,..}=>{letstep_screen_px=ifmodifiers.shift{16.0}else{4.0};let_=state.demo.update(app,|m,_cx|{ifm.is_busy(){return;}letcursor_units_per_screen_px=",
+        "key:fret_core::KeyCode::Comma,modifiers,repeat:false,..}=>{letstep_screen_px=ifmodifiers.shift{2.0}else{1.0};let_=state.demo.update(app,|m,_cx|{ifm.is_busy(){return;}letcursor_units_per_screen_px=",
+        "key:fret_core::KeyCode::Period,modifiers,repeat:false,..}=>{letstep_screen_px=ifmodifiers.shift{2.0}else{1.0};let_=state.demo.update(app,|m,_cx|{ifm.is_busy(){return;}letcursor_units_per_screen_px=",
+    ] {
+        assert!(
+            !source.contains(legacy),
+            "gizmo3d_demo should not keep direct visual keyboard model writes in event branches; unexpected `{legacy}`"
+        );
+    }
+}

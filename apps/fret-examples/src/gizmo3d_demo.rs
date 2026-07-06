@@ -2091,6 +2091,150 @@ impl Gizmo3dDemoModelBinding {
         });
     }
 
+    fn cycle_visual_preset(&self, app: &mut App, view_gizmo: bool) {
+        let _ = self.update(app, |model, _cx| {
+            if model.is_busy() {
+                return;
+            }
+
+            if view_gizmo {
+                model.view_gizmo_visual_preset_index =
+                    (model.view_gizmo_visual_preset_index + 1) % ViewGizmoVisualPreset::ALL.len();
+                let cursor_units_per_screen_px =
+                    model.gizmo_cursor_units_per_screen_px.clamp(0.1, 16.0);
+                let visuals =
+                    ViewGizmoVisualPreset::ALL[model.view_gizmo_visual_preset_index].visuals();
+                model.view_gizmo.config.margin_px = visuals.margin_px * cursor_units_per_screen_px;
+                model.view_gizmo.config.size_px = visuals.size_px * cursor_units_per_screen_px;
+                model.view_gizmo.config.pick_padding_px =
+                    visuals.pick_padding_px * cursor_units_per_screen_px;
+                model.view_gizmo.config.center_button_radius_px =
+                    visuals.center_button_radius_px * cursor_units_per_screen_px;
+                model.view_gizmo.config.face_color = visuals.face_color;
+                model.view_gizmo.config.edge_color = visuals.edge_color;
+                model.view_gizmo.config.hover_color = visuals.hover_color;
+                model.view_gizmo.config.x_color = visuals.x_color;
+                model.view_gizmo.config.y_color = visuals.y_color;
+                model.view_gizmo.config.z_color = visuals.z_color;
+            } else {
+                model.gizmo_visual_preset_index =
+                    (model.gizmo_visual_preset_index + 1) % GizmoVisualPreset::ALL.len();
+                let cursor_units_per_screen_px =
+                    model.gizmo_cursor_units_per_screen_px.clamp(0.1, 16.0);
+                let preset = GizmoVisualPreset::ALL[model.gizmo_visual_preset_index];
+                let visuals = preset.visuals();
+                let gizmo = model.gizmo_mut();
+                gizmo.set_part_visuals(preset.part_visuals());
+                gizmo.config.size_px = visuals.size_px * cursor_units_per_screen_px;
+                gizmo.config.pick_radius_px = visuals.pick_radius_px * cursor_units_per_screen_px;
+                gizmo.config.line_thickness_px =
+                    visuals.line_thickness_px * cursor_units_per_screen_px;
+                gizmo.config.bounds_handle_size_px =
+                    visuals.bounds_handle_size_px * cursor_units_per_screen_px;
+                gizmo.config.show_occluded = visuals.show_occluded;
+                gizmo.config.occluded_alpha = visuals.occluded_alpha;
+                gizmo.config.x_color = visuals.x_color;
+                gizmo.config.y_color = visuals.y_color;
+                gizmo.config.z_color = visuals.z_color;
+                gizmo.config.hover_color = visuals.hover_color;
+            }
+        });
+    }
+
+    fn cycle_size_policy(&self, app: &mut App) {
+        let _ = self.update(app, |model, _cx| {
+            if model.is_busy() {
+                return;
+            }
+            model.gizmo_mut().config.size_policy = match model.gizmo().config.size_policy {
+                GizmoSizePolicy::ConstantPixels => {
+                    GizmoSizePolicy::PixelsClampedBySelectionBounds {
+                        min_fraction_of_max_extent: 0.0,
+                        max_fraction_of_max_extent: 1.50,
+                    }
+                }
+                GizmoSizePolicy::PixelsClampedBySelectionBounds { .. } => {
+                    GizmoSizePolicy::SelectionBounds {
+                        fraction_of_max_extent: 1.2,
+                    }
+                }
+                GizmoSizePolicy::SelectionBounds { .. } => GizmoSizePolicy::ConstantPixels,
+            };
+        });
+    }
+
+    fn adjust_size_policy_fraction(&self, app: &mut App, delta: f32) {
+        let _ = self.update(app, |model, _cx| {
+            if model.is_busy() {
+                return;
+            }
+            match model.gizmo_mut().config.size_policy {
+                GizmoSizePolicy::SelectionBounds {
+                    ref mut fraction_of_max_extent,
+                } => {
+                    *fraction_of_max_extent = (*fraction_of_max_extent + delta).clamp(0.05, 5.0);
+                }
+                GizmoSizePolicy::PixelsClampedBySelectionBounds {
+                    ref mut min_fraction_of_max_extent,
+                    ref mut max_fraction_of_max_extent,
+                } if delta < 0.0 => {
+                    *min_fraction_of_max_extent = (*min_fraction_of_max_extent + delta)
+                        .clamp(0.0, *max_fraction_of_max_extent);
+                }
+                GizmoSizePolicy::PixelsClampedBySelectionBounds {
+                    ref mut min_fraction_of_max_extent,
+                    ref mut max_fraction_of_max_extent,
+                } => {
+                    *max_fraction_of_max_extent = (*max_fraction_of_max_extent + delta)
+                        .clamp(*min_fraction_of_max_extent, 5.0);
+                }
+                GizmoSizePolicy::ConstantPixels => {}
+            }
+        });
+    }
+
+    fn adjust_gizmo_size_px(&self, app: &mut App, delta_screen_px: f32) {
+        let _ = self.update(app, |model, _cx| {
+            if model.is_busy() {
+                return;
+            }
+            let cursor_units_per_screen_px =
+                model.gizmo_cursor_units_per_screen_px.clamp(0.1, 16.0);
+            let delta = delta_screen_px * cursor_units_per_screen_px;
+            let min = 24.0 * cursor_units_per_screen_px;
+            let max = 256.0 * cursor_units_per_screen_px;
+            let size_px = model.gizmo().config.size_px;
+            model.gizmo_mut().config.size_px = (size_px + delta).clamp(min, max);
+        });
+    }
+
+    fn adjust_gizmo_stroke_px(&self, app: &mut App, delta_screen_px: f32) {
+        let _ = self.update(app, |model, _cx| {
+            if model.is_busy() {
+                return;
+            }
+            let cursor_units_per_screen_px =
+                model.gizmo_cursor_units_per_screen_px.clamp(0.1, 16.0);
+            let delta = delta_screen_px * cursor_units_per_screen_px;
+            let thickness_min = 1.0 * cursor_units_per_screen_px;
+            let thickness_max = 24.0 * cursor_units_per_screen_px;
+            let pick_radius_min = 4.0 * cursor_units_per_screen_px;
+            let pick_radius_max = 32.0 * cursor_units_per_screen_px;
+            let handle_min = 6.0 * cursor_units_per_screen_px;
+            let handle_max = 32.0 * cursor_units_per_screen_px;
+            let line_thickness_px = model.gizmo().config.line_thickness_px;
+            let pick_radius_px = model.gizmo().config.pick_radius_px;
+            let bounds_handle_size_px = model.gizmo().config.bounds_handle_size_px;
+            let gizmo = model.gizmo_mut();
+            gizmo.config.line_thickness_px =
+                (line_thickness_px + delta).clamp(thickness_min, thickness_max);
+            gizmo.config.pick_radius_px =
+                (pick_radius_px + delta).clamp(pick_radius_min, pick_radius_max);
+            gizmo.config.bounds_handle_size_px =
+                (bounds_handle_size_px + delta).clamp(handle_min, handle_max);
+        });
+    }
+
     fn read<H: ModelHost, R>(
         &self,
         host: &mut H,
@@ -3116,54 +3260,7 @@ fn handle_event(
             repeat: false,
             ..
         } => {
-            let _ = state.demo.update(app, |m, _cx| {
-                if m.is_busy() {
-                    return;
-                }
-
-                if modifiers.shift {
-                    m.view_gizmo_visual_preset_index =
-                        (m.view_gizmo_visual_preset_index + 1) % ViewGizmoVisualPreset::ALL.len();
-                    let cursor_units_per_screen_px =
-                        m.gizmo_cursor_units_per_screen_px.clamp(0.1, 16.0);
-                    let visuals =
-                        ViewGizmoVisualPreset::ALL[m.view_gizmo_visual_preset_index].visuals();
-                    m.view_gizmo.config.margin_px = visuals.margin_px * cursor_units_per_screen_px;
-                    m.view_gizmo.config.size_px = visuals.size_px * cursor_units_per_screen_px;
-                    m.view_gizmo.config.pick_padding_px =
-                        visuals.pick_padding_px * cursor_units_per_screen_px;
-                    m.view_gizmo.config.center_button_radius_px =
-                        visuals.center_button_radius_px * cursor_units_per_screen_px;
-                    m.view_gizmo.config.face_color = visuals.face_color;
-                    m.view_gizmo.config.edge_color = visuals.edge_color;
-                    m.view_gizmo.config.hover_color = visuals.hover_color;
-                    m.view_gizmo.config.x_color = visuals.x_color;
-                    m.view_gizmo.config.y_color = visuals.y_color;
-                    m.view_gizmo.config.z_color = visuals.z_color;
-                } else {
-                    m.gizmo_visual_preset_index =
-                        (m.gizmo_visual_preset_index + 1) % GizmoVisualPreset::ALL.len();
-                    let cursor_units_per_screen_px =
-                        m.gizmo_cursor_units_per_screen_px.clamp(0.1, 16.0);
-                    let preset = GizmoVisualPreset::ALL[m.gizmo_visual_preset_index];
-                    let visuals = preset.visuals();
-                    let gizmo = m.gizmo_mut();
-                    gizmo.set_part_visuals(preset.part_visuals());
-                    gizmo.config.size_px = visuals.size_px * cursor_units_per_screen_px;
-                    gizmo.config.pick_radius_px =
-                        visuals.pick_radius_px * cursor_units_per_screen_px;
-                    gizmo.config.line_thickness_px =
-                        visuals.line_thickness_px * cursor_units_per_screen_px;
-                    gizmo.config.bounds_handle_size_px =
-                        visuals.bounds_handle_size_px * cursor_units_per_screen_px;
-                    gizmo.config.show_occluded = visuals.show_occluded;
-                    gizmo.config.occluded_alpha = visuals.occluded_alpha;
-                    gizmo.config.x_color = visuals.x_color;
-                    gizmo.config.y_color = visuals.y_color;
-                    gizmo.config.z_color = visuals.z_color;
-                    gizmo.config.hover_color = visuals.hover_color;
-                }
-            });
+            state.demo.cycle_visual_preset(app, modifiers.shift);
             app.request_redraw(window);
         }
         Event::KeyDown {
@@ -3171,25 +3268,7 @@ fn handle_event(
             repeat: false,
             ..
         } => {
-            let _ = state.demo.update(app, |m, _cx| {
-                if m.is_busy() {
-                    return;
-                }
-                m.gizmo_mut().config.size_policy = match m.gizmo().config.size_policy {
-                    GizmoSizePolicy::ConstantPixels => {
-                        GizmoSizePolicy::PixelsClampedBySelectionBounds {
-                            min_fraction_of_max_extent: 0.0,
-                            max_fraction_of_max_extent: 1.50,
-                        }
-                    }
-                    GizmoSizePolicy::PixelsClampedBySelectionBounds { .. } => {
-                        GizmoSizePolicy::SelectionBounds {
-                            fraction_of_max_extent: 1.2,
-                        }
-                    }
-                    GizmoSizePolicy::SelectionBounds { .. } => GizmoSizePolicy::ConstantPixels,
-                };
-            });
+            state.demo.cycle_size_policy(app);
             app.request_redraw(window);
         }
         Event::KeyDown {
@@ -3199,26 +3278,7 @@ fn handle_event(
             ..
         } => {
             let step = if modifiers.shift { 0.25 } else { 0.05 };
-            let _ = state.demo.update(app, |m, _cx| {
-                if m.is_busy() {
-                    return;
-                }
-                match m.gizmo_mut().config.size_policy {
-                    GizmoSizePolicy::SelectionBounds {
-                        ref mut fraction_of_max_extent,
-                    } => {
-                        *fraction_of_max_extent = (*fraction_of_max_extent - step).clamp(0.05, 5.0);
-                    }
-                    GizmoSizePolicy::PixelsClampedBySelectionBounds {
-                        ref mut min_fraction_of_max_extent,
-                        max_fraction_of_max_extent,
-                    } => {
-                        *min_fraction_of_max_extent = (*min_fraction_of_max_extent - step)
-                            .clamp(0.0, max_fraction_of_max_extent);
-                    }
-                    GizmoSizePolicy::ConstantPixels => {}
-                }
-            });
+            state.demo.adjust_size_policy_fraction(app, -step);
             app.request_redraw(window);
         }
         Event::KeyDown {
@@ -3228,26 +3288,7 @@ fn handle_event(
             ..
         } => {
             let step = if modifiers.shift { 0.25 } else { 0.05 };
-            let _ = state.demo.update(app, |m, _cx| {
-                if m.is_busy() {
-                    return;
-                }
-                match m.gizmo_mut().config.size_policy {
-                    GizmoSizePolicy::SelectionBounds {
-                        ref mut fraction_of_max_extent,
-                    } => {
-                        *fraction_of_max_extent = (*fraction_of_max_extent + step).clamp(0.05, 5.0);
-                    }
-                    GizmoSizePolicy::PixelsClampedBySelectionBounds {
-                        min_fraction_of_max_extent,
-                        ref mut max_fraction_of_max_extent,
-                    } => {
-                        *max_fraction_of_max_extent = (*max_fraction_of_max_extent + step)
-                            .clamp(min_fraction_of_max_extent, 5.0);
-                    }
-                    GizmoSizePolicy::ConstantPixels => {}
-                }
-            });
+            state.demo.adjust_size_policy_fraction(app, step);
             app.request_redraw(window);
         }
         Event::KeyDown {
@@ -3257,17 +3298,7 @@ fn handle_event(
             ..
         } => {
             let step_screen_px = if modifiers.shift { 16.0 } else { 4.0 };
-            let _ = state.demo.update(app, |m, _cx| {
-                if m.is_busy() {
-                    return;
-                }
-                let cursor_units_per_screen_px =
-                    m.gizmo_cursor_units_per_screen_px.clamp(0.1, 16.0);
-                let step = step_screen_px * cursor_units_per_screen_px;
-                let min = 24.0 * cursor_units_per_screen_px;
-                let max = 256.0 * cursor_units_per_screen_px;
-                m.gizmo_mut().config.size_px = (m.gizmo().config.size_px - step).clamp(min, max);
-            });
+            state.demo.adjust_gizmo_size_px(app, -step_screen_px);
             app.request_redraw(window);
         }
         Event::KeyDown {
@@ -3277,17 +3308,7 @@ fn handle_event(
             ..
         } => {
             let step_screen_px = if modifiers.shift { 16.0 } else { 4.0 };
-            let _ = state.demo.update(app, |m, _cx| {
-                if m.is_busy() {
-                    return;
-                }
-                let cursor_units_per_screen_px =
-                    m.gizmo_cursor_units_per_screen_px.clamp(0.1, 16.0);
-                let step = step_screen_px * cursor_units_per_screen_px;
-                let min = 24.0 * cursor_units_per_screen_px;
-                let max = 256.0 * cursor_units_per_screen_px;
-                m.gizmo_mut().config.size_px = (m.gizmo().config.size_px + step).clamp(min, max);
-            });
+            state.demo.adjust_gizmo_size_px(app, step_screen_px);
             app.request_redraw(window);
         }
         Event::KeyDown {
@@ -3297,26 +3318,7 @@ fn handle_event(
             ..
         } => {
             let step_screen_px = if modifiers.shift { 2.0 } else { 1.0 };
-            let _ = state.demo.update(app, |m, _cx| {
-                if m.is_busy() {
-                    return;
-                }
-                let cursor_units_per_screen_px =
-                    m.gizmo_cursor_units_per_screen_px.clamp(0.1, 16.0);
-                let step = step_screen_px * cursor_units_per_screen_px;
-                let thickness_min = 1.0 * cursor_units_per_screen_px;
-                let thickness_max = 24.0 * cursor_units_per_screen_px;
-                let pick_radius_min = 4.0 * cursor_units_per_screen_px;
-                let pick_radius_max = 32.0 * cursor_units_per_screen_px;
-                let handle_min = 6.0 * cursor_units_per_screen_px;
-                let handle_max = 32.0 * cursor_units_per_screen_px;
-                m.gizmo_mut().config.line_thickness_px =
-                    (m.gizmo().config.line_thickness_px - step).clamp(thickness_min, thickness_max);
-                m.gizmo_mut().config.pick_radius_px = (m.gizmo().config.pick_radius_px - step)
-                    .clamp(pick_radius_min, pick_radius_max);
-                m.gizmo_mut().config.bounds_handle_size_px =
-                    (m.gizmo().config.bounds_handle_size_px - step).clamp(handle_min, handle_max);
-            });
+            state.demo.adjust_gizmo_stroke_px(app, -step_screen_px);
             app.request_redraw(window);
         }
         Event::KeyDown {
@@ -3326,26 +3328,7 @@ fn handle_event(
             ..
         } => {
             let step_screen_px = if modifiers.shift { 2.0 } else { 1.0 };
-            let _ = state.demo.update(app, |m, _cx| {
-                if m.is_busy() {
-                    return;
-                }
-                let cursor_units_per_screen_px =
-                    m.gizmo_cursor_units_per_screen_px.clamp(0.1, 16.0);
-                let step = step_screen_px * cursor_units_per_screen_px;
-                let thickness_min = 1.0 * cursor_units_per_screen_px;
-                let thickness_max = 24.0 * cursor_units_per_screen_px;
-                let pick_radius_min = 4.0 * cursor_units_per_screen_px;
-                let pick_radius_max = 32.0 * cursor_units_per_screen_px;
-                let handle_min = 6.0 * cursor_units_per_screen_px;
-                let handle_max = 32.0 * cursor_units_per_screen_px;
-                m.gizmo_mut().config.line_thickness_px =
-                    (m.gizmo().config.line_thickness_px + step).clamp(thickness_min, thickness_max);
-                m.gizmo_mut().config.pick_radius_px = (m.gizmo().config.pick_radius_px + step)
-                    .clamp(pick_radius_min, pick_radius_max);
-                m.gizmo_mut().config.bounds_handle_size_px =
-                    (m.gizmo().config.bounds_handle_size_px + step).clamp(handle_min, handle_max);
-            });
+            state.demo.adjust_gizmo_stroke_px(app, step_screen_px);
             app.request_redraw(window);
         }
         Event::KeyDown {
