@@ -506,17 +506,19 @@ fn error_bars_demo_uses_manual_harness_declarative_error_bars_plot_panel() {
     let source = compact(include_str!("../src/error_bars_demo.rs"));
 
     for needle in [
-        "usefret_plot::declarative::{ErrorBarsPlotPanelProps,error_bars_plot_panel_in};",
+        "usefret_plot::ErrorBarsPlotPanelBinding;",
+        "usefret_plot::declarative::error_bars_plot_panel_in;",
         "usefret_plot::models::{ErrorBar,ErrorBarsPlotModel,ErrorBarsSeries,YAxis};",
         "usefret_ui::{UiTree,declarative};",
+        "plot:ErrorBarsPlotPanelBinding",
+        "ErrorBarsPlotPanelBinding::new(app,ErrorBarsPlotModel::from_series(vec![",
         "ErrorBarsPlotModel::from_series(vec![",
         "ErrorBarsSeries::new(",
         ".y_errors(Arc::from(left_y_errors))",
         ".x_errors(Arc::from(left_x_errors))",
         "declarative::RenderRootContext::new(&mutstate.ui,app,services,window,bounds).render_root(\"error-bars-demo\"",
-        "ErrorBarsPlotPanelProps::new(plot.clone())",
-        ".state(plot_state.clone())",
-        ".output(plot_output.clone())",
+        "plot.panel_props()",
+        "state.plot.output_untracked(app)",
         "vec![error_bars_plot_panel_in(cx,props)]",
     ] {
         assert!(
@@ -531,6 +533,12 @@ fn error_bars_demo_uses_manual_harness_declarative_error_bars_plot_panel() {
         "ErrorBarsPlotCanvas",
         "PlotCanvas",
         "create_node_retained(",
+        "fret_runtime::Model<",
+        "ErrorBarsPlotPanelProps::new(",
+        ".state(plot_state.clone())",
+        ".output(plot_output.clone())",
+        "app.models_mut().insert(PlotState::default())",
+        "app.models_mut().insert(PlotOutput::default())",
     ] {
         assert!(
             !source.contains(legacy),

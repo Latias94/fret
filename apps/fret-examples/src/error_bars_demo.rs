@@ -5,11 +5,11 @@ use fret_core::{AppWindowId, Event};
 use fret_launch::{
     FnDriver, WinitEventContext, WinitHotReloadContext, WinitRenderContext, WinitRunnerConfig,
 };
+use fret_plot::ErrorBarsPlotPanelBinding;
 use fret_plot::cartesian::DataPoint;
-use fret_plot::declarative::{ErrorBarsPlotPanelProps, error_bars_plot_panel_in};
+use fret_plot::declarative::error_bars_plot_panel_in;
 use fret_plot::models::{ErrorBar, ErrorBarsPlotModel, ErrorBarsSeries, YAxis};
 use fret_plot::series::Series;
-use fret_plot::state::{PlotOutput, PlotState};
 use fret_plot::style::LinePlotStyle;
 use fret_runtime::PlatformCapabilities;
 use fret_ui::{UiTree, declarative};
@@ -18,9 +18,7 @@ use std::sync::Arc;
 struct ErrorBarsDemoWindowState {
     ui: UiTree<App>,
     root: Option<fret_core::NodeId>,
-    plot: fret_runtime::Model<ErrorBarsPlotModel>,
-    plot_state: fret_runtime::Model<PlotState>,
-    plot_output: fret_runtime::Model<PlotOutput>,
+    plot: ErrorBarsPlotPanelBinding,
     last_logged_output_revision: u64,
 }
 
@@ -53,9 +51,9 @@ impl ErrorBarsDemoDriver {
             left_x_errors.push(ErrorBar::symmetric(ex));
         }
 
-        let plot = app
-            .models_mut()
-            .insert(ErrorBarsPlotModel::from_series(vec![
+        let plot = ErrorBarsPlotPanelBinding::new(
+            app,
+            ErrorBarsPlotModel::from_series(vec![
                 ErrorBarsSeries::new(
                     "measurement (x/y errors)",
                     Series::from_points_sorted(left_points, true),
@@ -72,10 +70,8 @@ impl ErrorBarsDemoDriver {
                 .y_errors(Arc::from(right_y_errors))
                 .cap_size(fret_core::Px(6.0))
                 .marker_radius(fret_core::Px(3.5)),
-            ]));
-
-        let plot_state = app.models_mut().insert(PlotState::default());
-        let plot_output = app.models_mut().insert(PlotOutput::default());
+            ]),
+        );
 
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
@@ -84,8 +80,6 @@ impl ErrorBarsDemoDriver {
             ui,
             root: None,
             plot,
-            plot_state,
-            plot_output,
             last_logged_output_revision: 0,
         }
     }
@@ -139,10 +133,7 @@ fn handle_event(
                 event,
                 Event::Pointer(fret_core::PointerEvent::Up { .. }) | Event::KeyDown { .. }
             ) {
-                let output = state
-                    .plot_output
-                    .read(app, |_app, o| *o)
-                    .unwrap_or_default();
+                let output = state.plot.output_untracked(app);
                 if output.revision != state.last_logged_output_revision {
                     state.last_logged_output_revision = output.revision;
                     if let Some(query) = output.snapshot.query {
@@ -179,14 +170,9 @@ fn render(
             declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
                 .render_root("error-bars-demo", {
                     let plot = state.plot.clone();
-                    let plot_state = state.plot_state.clone();
-                    let plot_output = state.plot_output.clone();
                     move |cx| {
                         let style = LinePlotStyle::default();
-                        let props = ErrorBarsPlotPanelProps::new(plot.clone())
-                            .style(style)
-                            .state(plot_state.clone())
-                            .output(plot_output.clone());
+                        let props = plot.panel_props().style(style);
                         vec![error_bars_plot_panel_in(cx, props)]
                     }
                 });

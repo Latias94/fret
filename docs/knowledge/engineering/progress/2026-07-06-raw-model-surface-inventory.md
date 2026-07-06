@@ -35,6 +35,9 @@ Keep raw/shared-model mechanisms for now:
     reads. Keep explicit raw histogram props in component tests and advanced composition paths.
   - Follow-up: `stems_demo.rs` now uses `StemsPlotPanelBinding`, following the same private binding
     core. Keep explicit raw stems props in component tests and advanced composition paths.
+  - Follow-up: `error_bars_demo.rs` now uses `ErrorBarsPlotPanelBinding`. The plot binding wrapper
+    generation has moved behind a private macro so new app-facing plot family bindings stay named
+    and family-specific without copying the raw model/state/output glue.
   - Follow-up: `chart_declarative_demo.rs` now uses `ChartCanvasPanelBinding`, so the default
     FretApp chart example no longer imports `fret_runtime::Model` or wires
     `ChartCanvasPanelProps::engine` directly. Keep explicit raw chart panel props in stress,

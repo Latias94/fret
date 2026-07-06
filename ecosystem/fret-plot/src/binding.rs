@@ -3,8 +3,10 @@
 use fret_runtime::{Model, ModelHost};
 use fret_ui::{ElementContextAccess, Invalidation, UiHost};
 
-use crate::declarative::{HistogramPlotPanelProps, LinePlotPanelProps, StemsPlotPanelProps};
-use crate::models::{HistogramPlotModel, LinePlotModel, StemsPlotModel};
+use crate::declarative::{
+    ErrorBarsPlotPanelProps, HistogramPlotPanelProps, LinePlotPanelProps, StemsPlotPanelProps,
+};
+use crate::models::{ErrorBarsPlotModel, HistogramPlotModel, LinePlotModel, StemsPlotModel};
 use crate::state::{PlotOutput, PlotState};
 
 #[derive(Clone)]
@@ -51,218 +53,121 @@ impl<M: 'static> PlotPanelBindingCore<M> {
     }
 }
 
-/// App-facing handle for a line plot panel plus its caller-owned interaction state.
-///
-/// `LinePlotPanelProps` remains the component-author surface and still exposes raw model handles
-/// for advanced composition. This binding is the default app/cookbook surface: callers store one
-/// handle, pass it to a panel adapter, and read plot output without naming `Model<T>` directly.
-#[derive(Clone)]
-pub struct LinePlotPanelBinding {
-    core: PlotPanelBindingCore<LinePlotModel>,
+macro_rules! define_plot_panel_binding {
+    ($(#[$type_meta:meta])* $binding:ident, $model:ty, $props:ty) => {
+        $(#[$type_meta])*
+        #[derive(Clone)]
+        pub struct $binding {
+            core: PlotPanelBindingCore<$model>,
+        }
+
+        impl $binding {
+            /// Insert the plot model, interaction state, and output channel into a model host.
+            #[track_caller]
+            pub fn new(host: &mut impl ModelHost, model: $model) -> Self {
+                Self {
+                    core: PlotPanelBindingCore::new(host, model),
+                }
+            }
+
+            /// Build declarative panel props wired to this binding's model, state, and output channel.
+            pub fn panel_props(&self) -> $props {
+                <$props>::new(self.core.model.clone())
+                    .state(self.core.state.clone())
+                    .output(self.core.output.clone())
+            }
+
+            /// Read the latest plot output through a layout invalidation tracked read.
+            pub fn output_layout<'a, H, Cx>(&self, cx: &mut Cx) -> PlotOutput
+            where
+                H: UiHost + 'a,
+                Cx: ElementContextAccess<'a, H>,
+            {
+                self.core.output_layout(cx)
+            }
+
+            /// Read the latest plot output through a paint invalidation tracked read.
+            pub fn output_paint<'a, H, Cx>(&self, cx: &mut Cx) -> PlotOutput
+            where
+                H: UiHost + 'a,
+                Cx: ElementContextAccess<'a, H>,
+            {
+                self.core.output_paint(cx)
+            }
+
+            /// Read the latest plot output without registering a UI invalidation dependency.
+            ///
+            /// This is intended for event handlers, diagnostics, and logging code that needs to
+            /// observe interaction output outside a render/layout context.
+            pub fn output_untracked(&self, host: &impl ModelHost) -> PlotOutput {
+                self.core.output_untracked(host)
+            }
+
+            /// Advanced bridge for component authors that already own raw model handles.
+            ///
+            /// Prefer [`Self::new`] for app code. This method exists so advanced plot coordinators
+            /// can graduate to the binding surface without rebuilding already-shared plot models.
+            pub fn from_models(
+                model: Model<$model>,
+                state: Model<PlotState>,
+                output: Model<PlotOutput>,
+            ) -> Self {
+                Self {
+                    core: PlotPanelBindingCore {
+                        model,
+                        state,
+                        output,
+                    },
+                }
+            }
+        }
+    };
 }
 
-impl LinePlotPanelBinding {
-    /// Insert the plot model, interaction state, and output channel into a model host.
-    #[track_caller]
-    pub fn new(host: &mut impl ModelHost, model: LinePlotModel) -> Self {
-        Self {
-            core: PlotPanelBindingCore::new(host, model),
-        }
-    }
-
-    /// Build declarative panel props wired to this binding's model, state, and output channel.
-    pub fn panel_props(&self) -> LinePlotPanelProps {
-        LinePlotPanelProps::new(self.core.model.clone())
-            .state(self.core.state.clone())
-            .output(self.core.output.clone())
-    }
-
-    /// Read the latest plot output through a layout invalidation tracked read.
-    pub fn output_layout<'a, H, Cx>(&self, cx: &mut Cx) -> PlotOutput
-    where
-        H: UiHost + 'a,
-        Cx: ElementContextAccess<'a, H>,
-    {
-        self.core.output_layout(cx)
-    }
-
-    /// Read the latest plot output through a paint invalidation tracked read.
-    pub fn output_paint<'a, H, Cx>(&self, cx: &mut Cx) -> PlotOutput
-    where
-        H: UiHost + 'a,
-        Cx: ElementContextAccess<'a, H>,
-    {
-        self.core.output_paint(cx)
-    }
-
-    /// Read the latest plot output without registering a UI invalidation dependency.
+define_plot_panel_binding!(
+    /// App-facing handle for a line plot panel plus its caller-owned interaction state.
     ///
-    /// This is intended for event handlers, diagnostics, and logging code that needs to observe
-    /// interaction output outside a render/layout context.
-    pub fn output_untracked(&self, host: &impl ModelHost) -> PlotOutput {
-        self.core.output_untracked(host)
-    }
+    /// `LinePlotPanelProps` remains the component-author surface and still exposes raw model
+    /// handles for advanced composition. This binding is the default app/cookbook surface: callers
+    /// store one handle, pass it to a panel adapter, and read plot output without naming `Model<T>`
+    /// directly.
+    LinePlotPanelBinding,
+    LinePlotModel,
+    LinePlotPanelProps
+);
 
-    /// Advanced bridge for component authors that already own raw model handles.
+define_plot_panel_binding!(
+    /// App-facing handle for a histogram plot panel plus its caller-owned interaction state.
     ///
-    /// Prefer [`Self::new`] for app code. This method exists so advanced plot coordinators can
-    /// graduate to the binding surface without rebuilding already-shared plot models.
-    pub fn from_models(
-        model: Model<LinePlotModel>,
-        state: Model<PlotState>,
-        output: Model<PlotOutput>,
-    ) -> Self {
-        Self {
-            core: PlotPanelBindingCore {
-                model,
-                state,
-                output,
-            },
-        }
-    }
-}
+    /// `HistogramPlotPanelProps` remains the component-author surface and still exposes raw model
+    /// handles for advanced composition. This binding is the default app/cookbook surface for a
+    /// standalone histogram panel.
+    HistogramPlotPanelBinding,
+    HistogramPlotModel,
+    HistogramPlotPanelProps
+);
 
-/// App-facing handle for a histogram plot panel plus its caller-owned interaction state.
-///
-/// `HistogramPlotPanelProps` remains the component-author surface and still exposes raw model
-/// handles for advanced composition. This binding is the default app/cookbook surface for a
-/// standalone histogram panel.
-#[derive(Clone)]
-pub struct HistogramPlotPanelBinding {
-    core: PlotPanelBindingCore<HistogramPlotModel>,
-}
-
-impl HistogramPlotPanelBinding {
-    /// Insert the plot model, interaction state, and output channel into a model host.
-    #[track_caller]
-    pub fn new(host: &mut impl ModelHost, model: HistogramPlotModel) -> Self {
-        Self {
-            core: PlotPanelBindingCore::new(host, model),
-        }
-    }
-
-    /// Build declarative panel props wired to this binding's model, state, and output channel.
-    pub fn panel_props(&self) -> HistogramPlotPanelProps {
-        HistogramPlotPanelProps::new(self.core.model.clone())
-            .state(self.core.state.clone())
-            .output(self.core.output.clone())
-    }
-
-    /// Read the latest plot output through a layout invalidation tracked read.
-    pub fn output_layout<'a, H, Cx>(&self, cx: &mut Cx) -> PlotOutput
-    where
-        H: UiHost + 'a,
-        Cx: ElementContextAccess<'a, H>,
-    {
-        self.core.output_layout(cx)
-    }
-
-    /// Read the latest plot output through a paint invalidation tracked read.
-    pub fn output_paint<'a, H, Cx>(&self, cx: &mut Cx) -> PlotOutput
-    where
-        H: UiHost + 'a,
-        Cx: ElementContextAccess<'a, H>,
-    {
-        self.core.output_paint(cx)
-    }
-
-    /// Read the latest plot output without registering a UI invalidation dependency.
+define_plot_panel_binding!(
+    /// App-facing handle for a stems plot panel plus its caller-owned interaction state.
     ///
-    /// This is intended for event handlers, diagnostics, and logging code that needs to observe
-    /// interaction output outside a render/layout context.
-    pub fn output_untracked(&self, host: &impl ModelHost) -> PlotOutput {
-        self.core.output_untracked(host)
-    }
+    /// `StemsPlotPanelProps` remains the component-author surface and still exposes raw model
+    /// handles for advanced composition. This binding is the default app/cookbook surface for a
+    /// standalone stems panel.
+    StemsPlotPanelBinding,
+    StemsPlotModel,
+    StemsPlotPanelProps
+);
 
-    /// Advanced bridge for component authors that already own raw model handles.
+define_plot_panel_binding!(
+    /// App-facing handle for an error-bars plot panel plus its caller-owned interaction state.
     ///
-    /// Prefer [`Self::new`] for app code. This method exists so advanced plot coordinators can
-    /// graduate to the binding surface without rebuilding already-shared plot models.
-    pub fn from_models(
-        model: Model<HistogramPlotModel>,
-        state: Model<PlotState>,
-        output: Model<PlotOutput>,
-    ) -> Self {
-        Self {
-            core: PlotPanelBindingCore {
-                model,
-                state,
-                output,
-            },
-        }
-    }
-}
-
-/// App-facing handle for a stems plot panel plus its caller-owned interaction state.
-///
-/// `StemsPlotPanelProps` remains the component-author surface and still exposes raw model handles
-/// for advanced composition. This binding is the default app/cookbook surface for a standalone
-/// stems panel.
-#[derive(Clone)]
-pub struct StemsPlotPanelBinding {
-    core: PlotPanelBindingCore<StemsPlotModel>,
-}
-
-impl StemsPlotPanelBinding {
-    /// Insert the plot model, interaction state, and output channel into a model host.
-    #[track_caller]
-    pub fn new(host: &mut impl ModelHost, model: StemsPlotModel) -> Self {
-        Self {
-            core: PlotPanelBindingCore::new(host, model),
-        }
-    }
-
-    /// Build declarative panel props wired to this binding's model, state, and output channel.
-    pub fn panel_props(&self) -> StemsPlotPanelProps {
-        StemsPlotPanelProps::new(self.core.model.clone())
-            .state(self.core.state.clone())
-            .output(self.core.output.clone())
-    }
-
-    /// Read the latest plot output through a layout invalidation tracked read.
-    pub fn output_layout<'a, H, Cx>(&self, cx: &mut Cx) -> PlotOutput
-    where
-        H: UiHost + 'a,
-        Cx: ElementContextAccess<'a, H>,
-    {
-        self.core.output_layout(cx)
-    }
-
-    /// Read the latest plot output through a paint invalidation tracked read.
-    pub fn output_paint<'a, H, Cx>(&self, cx: &mut Cx) -> PlotOutput
-    where
-        H: UiHost + 'a,
-        Cx: ElementContextAccess<'a, H>,
-    {
-        self.core.output_paint(cx)
-    }
-
-    /// Read the latest plot output without registering a UI invalidation dependency.
-    ///
-    /// This is intended for event handlers, diagnostics, and logging code that needs to observe
-    /// interaction output outside a render/layout context.
-    pub fn output_untracked(&self, host: &impl ModelHost) -> PlotOutput {
-        self.core.output_untracked(host)
-    }
-
-    /// Advanced bridge for component authors that already own raw model handles.
-    ///
-    /// Prefer [`Self::new`] for app code. This method exists so advanced plot coordinators can
-    /// graduate to the binding surface without rebuilding already-shared plot models.
-    pub fn from_models(
-        model: Model<StemsPlotModel>,
-        state: Model<PlotState>,
-        output: Model<PlotOutput>,
-    ) -> Self {
-        Self {
-            core: PlotPanelBindingCore {
-                model,
-                state,
-                output,
-            },
-        }
-    }
-}
+    /// `ErrorBarsPlotPanelProps` remains the component-author surface and still exposes raw model
+    /// handles for advanced composition. This binding is the default app/cookbook surface for a
+    /// standalone error-bars panel.
+    ErrorBarsPlotPanelBinding,
+    ErrorBarsPlotModel,
+    ErrorBarsPlotPanelProps
+);
 
 #[cfg(test)]
 mod tests {
@@ -272,12 +177,16 @@ mod tests {
 
     use crate::cartesian::DataPoint;
     use crate::models::{
-        HistogramPlotModel, HistogramSeries, LinePlotModel, LineSeries, StemsPlotModel, StemsSeries,
+        ErrorBar, ErrorBarsPlotModel, ErrorBarsSeries, HistogramPlotModel, HistogramSeries,
+        LinePlotModel, LineSeries, StemsPlotModel, StemsSeries,
     };
     use crate::series::Series;
     use crate::state::PlotOutput;
 
-    use super::{HistogramPlotPanelBinding, LinePlotPanelBinding, StemsPlotPanelBinding};
+    use super::{
+        ErrorBarsPlotPanelBinding, HistogramPlotPanelBinding, LinePlotPanelBinding,
+        StemsPlotPanelBinding,
+    };
 
     #[derive(Default)]
     struct TestHost {
@@ -319,6 +228,22 @@ mod tests {
                 true,
             ),
         )])
+    }
+
+    fn sample_error_bars_model() -> ErrorBarsPlotModel {
+        ErrorBarsPlotModel::from_series(vec![
+            ErrorBarsSeries::new(
+                "sample",
+                Series::from_points_sorted(
+                    vec![DataPoint { x: 0.0, y: 1.0 }, DataPoint { x: 1.0, y: 2.0 }],
+                    true,
+                ),
+            )
+            .y_errors(Arc::from([
+                ErrorBar::symmetric(0.1),
+                ErrorBar::symmetric(0.2),
+            ])),
+        ])
     }
 
     #[test]
@@ -430,5 +355,42 @@ mod tests {
             .expect("output model update should succeed");
 
         assert_eq!(binding.output_untracked(&host).revision, 12);
+    }
+
+    #[test]
+    fn error_bars_plot_binding_creates_props_with_state_and_output_without_public_raw_handles() {
+        let mut host = TestHost::default();
+
+        let binding = ErrorBarsPlotPanelBinding::new(&mut host, sample_error_bars_model());
+        let props = binding.panel_props();
+
+        assert!(props.state.is_some());
+        assert!(props.output.is_some());
+        assert!(
+            host.models()
+                .read(&props.model, |model| model.series.len())
+                .is_ok()
+        );
+    }
+
+    #[test]
+    fn error_bars_plot_binding_reads_output_without_exposing_output_model_handle() {
+        let mut host = TestHost::default();
+
+        let binding = ErrorBarsPlotPanelBinding::new(&mut host, sample_error_bars_model());
+        let props = binding.panel_props();
+        let output = props
+            .output
+            .expect("binding props should include output model");
+        output
+            .update(&mut host, |output, _cx| {
+                *output = PlotOutput {
+                    revision: 18,
+                    ..Default::default()
+                };
+            })
+            .expect("output model update should succeed");
+
+        assert_eq!(binding.output_untracked(&host).revision, 18);
     }
 }
