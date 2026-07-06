@@ -198,6 +198,11 @@ fn plot_stress_demo_uses_manual_harness_declarative_line_plot_panel() {
     for needle in [
         "usefret_plot::declarative::{LinePlotPanelProps,line_plot_panel_in};",
         "usefret_plot::models::{LinePlotModel,LineSeries};",
+        "structPlotStressModelOwner{",
+        "fnanimate_enabled(&self,app:&App)->bool",
+        "fntoggle_animate(&self,app:&mutApp)",
+        "fnshift_plot_bounds_for_animation(&self,app:&mutApp,frame:u64)",
+        "state.models.plot_model()",
         "LinePlotModel::from_series_with_bounds(",
         "LineSeries::new(label,data)",
         "declarative::RenderRootContext::new(&mutstate.ui,app,services,window,bounds)",
@@ -217,6 +222,9 @@ fn plot_stress_demo_uses_manual_harness_declarative_line_plot_panel() {
         "LinePlotCanvas",
         "PlotCanvas",
         "create_node_retained(",
+        "app.models().read(&state.animate",
+        "app.models_mut().update(&state.animate",
+        "app.models_mut().update(&state.plot",
     ] {
         assert!(
             !source.contains(legacy),

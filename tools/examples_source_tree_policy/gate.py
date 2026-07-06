@@ -762,13 +762,16 @@ DRIVER_OWNED_SOURCE_SLICES = [
         EXAMPLES_SRC / "plot_stress_demo.rs",
         "fn maybe_animate_bounds(",
         "fn gpu_ready(",
-        ["let animate = app.models().read(&state.animate, |v| *v).unwrap_or(false);"],
+        [
+            "state.models.animate_enabled(app)",
+            "shift_plot_bounds_for_animation(app, state.frame)",
+        ],
     ),
     (
         EXAMPLES_SRC / "plot_stress_demo.rs",
         "fn render(driver: &mut PlotStressDriver, context: WinitRenderContext<'_, PlotStressWindowState>) {",
         "fn window_create_spec(",
-        ["let animate = app.models().read(&state.animate, |v| *v).unwrap_or(false);"],
+        ["let animate = state.models.animate_enabled(app);"],
     ),
 ]
 

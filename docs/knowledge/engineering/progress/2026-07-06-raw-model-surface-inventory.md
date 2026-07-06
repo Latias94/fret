@@ -48,6 +48,9 @@ Keep raw/shared-model mechanisms for now:
   - Follow-up: `stairs_demo.rs` now uses `LinePlotPanelBinding`; step mode stays a normal
     declarative props option layered on top of the default app-facing binding rather than a reason
     to expose raw state/output models.
+  - Follow-up: `plot_stress_demo.rs` remains a maintainer/perf harness because it mutates plot
+    bounds from the driver loop, but its raw plot/animation models now live behind
+    `PlotStressModelOwner` instead of scattered `app.models()` reads and writes.
   - Follow-up: `chart_declarative_demo.rs` now uses `ChartCanvasPanelBinding`, so the default
     FretApp chart example no longer imports `fret_runtime::Model` or wires
     `ChartCanvasPanelProps::engine` directly. Keep explicit raw chart panel props in stress,

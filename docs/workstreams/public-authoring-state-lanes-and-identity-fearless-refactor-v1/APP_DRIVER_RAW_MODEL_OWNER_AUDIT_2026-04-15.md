@@ -79,11 +79,15 @@ improve authoring clarity.
 
 ### 4. Plot stress driver helpers are raw by design
 
-`plot_stress_demo` reads `state.animate` from raw `app.models()` inside the driver-side animation
-and reporting helpers.
+`plot_stress_demo` keeps the stress plot model and animation toggle behind `PlotStressModelOwner`.
+The owner still holds raw model handles because the driver deliberately mutates plot bounds from the
+frame loop to force path rebuilds, but the rest of the harness now calls named helpers such as
+`animate_enabled(...)`, `toggle_animate(...)`, and `shift_plot_bounds_for_animation(...)` instead
+of scattering raw `app.models()` reads and writes through render/reporting code.
 
-Those helpers run in the frame/driver loop, outside declarative render ownership, so the raw
-store surface remains the right one.
+Those helpers run in the frame/driver loop, outside declarative render ownership, so the raw owner
+surface remains intentional. The source-policy gate checks the named owner helper calls rather than
+the old inline `app.models().read(...)` markers.
 
 ### 5. Retained/component owners are out of scope here
 

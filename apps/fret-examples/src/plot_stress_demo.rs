@@ -11,7 +11,7 @@ use fret_plot::models::{LinePlotModel, LineSeries};
 use fret_plot::series::Series;
 use fret_plot::style::LinePlotStyle;
 use fret_render::{Renderer, WgpuContext};
-use fret_runtime::PlatformCapabilities;
+use fret_runtime::{Model, PlatformCapabilities};
 use fret_ui::{UiTree, declarative};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -35,14 +35,53 @@ const DEFAULT_SERIES: usize = 3;
 pub struct PlotStressWindowState {
     ui: UiTree<App>,
     root: Option<fret_core::NodeId>,
-    plot: fret_runtime::Model<LinePlotModel>,
-    animate: fret_runtime::Model<bool>,
+    models: PlotStressModelOwner,
     max_frames: Option<u64>,
     frame: u64,
     last_report: Option<Instant>,
     last_renderer_report: Option<Instant>,
     render_time_accum: Duration,
     render_frames_accum: u64,
+}
+
+struct PlotStressModelOwner {
+    plot: Model<LinePlotModel>,
+    animate: Model<bool>,
+}
+
+impl PlotStressModelOwner {
+    fn new(app: &mut App, points: usize, series: usize) -> Self {
+        Self {
+            plot: app
+                .models_mut()
+                .insert(PlotStressDriver::build_plot_model(points, series)),
+            animate: app.models_mut().insert(true),
+        }
+    }
+
+    fn plot_model(&self) -> Model<LinePlotModel> {
+        self.plot.clone()
+    }
+
+    fn animate_enabled(&self, app: &App) -> bool {
+        self.animate.read_ref(app, |value| *value).unwrap_or(false)
+    }
+
+    fn toggle_animate(&self, app: &mut App) {
+        let _ = self.animate.update(app, |value, _cx| *value = !*value);
+    }
+
+    fn shift_plot_bounds_for_animation(&self, app: &mut App, frame: u64) {
+        let _ = self.plot.update(app, |model, _cx| {
+            let span = (model.data_bounds.x_max - model.data_bounds.x_min).max(1e-6);
+            let shift = span * 0.05;
+            let phase = ((frame / 120) % 2) == 1;
+            let dir = if phase { 1.0 } else { -1.0 };
+            model.data_bounds.x_min = (model.data_bounds.x_min + shift * dir).max(0.0);
+            model.data_bounds.x_max =
+                (model.data_bounds.x_max + shift * dir).max(model.data_bounds.x_min + 1e-6);
+        });
+    }
 }
 
 #[derive(Default)]
@@ -131,8 +170,7 @@ impl PlotStressDriver {
     }
 
     fn maybe_animate_bounds(state: &mut PlotStressWindowState, app: &mut App) {
-        let animate = app.models().read(&state.animate, |v| *v).unwrap_or(false);
-        if !animate {
+        if !state.models.animate_enabled(app) {
             return;
         }
 
@@ -141,15 +179,9 @@ impl PlotStressDriver {
             return;
         }
 
-        let _ = app.models_mut().update(&state.plot, |m| {
-            let span = (m.data_bounds.x_max - m.data_bounds.x_min).max(1e-6);
-            let shift = span * 0.05;
-            let phase = ((state.frame / 120) % 2) == 1;
-            let dir = if phase { 1.0 } else { -1.0 };
-            m.data_bounds.x_min = (m.data_bounds.x_min + shift * dir).max(0.0);
-            m.data_bounds.x_max =
-                (m.data_bounds.x_max + shift * dir).max(m.data_bounds.x_min + 1e-6);
-        });
+        state
+            .models
+            .shift_plot_bounds_for_animation(app, state.frame);
     }
 }
 
@@ -167,11 +199,7 @@ fn create_window_state(
     app: &mut App,
     window: AppWindowId,
 ) -> PlotStressWindowState {
-    let plot = app.models_mut().insert(PlotStressDriver::build_plot_model(
-        driver.points,
-        driver.series,
-    ));
-    let animate = app.models_mut().insert(true);
+    let models = PlotStressModelOwner::new(app, driver.points, driver.series);
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
@@ -179,8 +207,7 @@ fn create_window_state(
     PlotStressWindowState {
         ui,
         root: None,
-        plot,
-        animate,
+        models,
         max_frames: driver.max_frames,
         frame: 0,
         last_report: None,
@@ -315,7 +342,7 @@ fn handle_event(
         }
         Event::KeyDown { key, repeat, .. } if !*repeat => match *key {
             fret_core::KeyCode::Space => {
-                let _ = app.models_mut().update(&state.animate, |v| *v = !*v);
+                state.models.toggle_animate(app);
                 app.request_redraw(window);
                 return;
             }
@@ -347,7 +374,7 @@ fn render(driver: &mut PlotStressDriver, context: WinitRenderContext<'_, PlotStr
         state.last_report = Some(Instant::now());
     }
 
-    let plot = state.plot.clone();
+    let plot = state.models.plot_model();
     let root = declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
         .render_root("plot-stress-demo", move |cx| {
             let style = LinePlotStyle::default();
@@ -379,7 +406,7 @@ fn render(driver: &mut PlotStressDriver, context: WinitRenderContext<'_, PlotStr
             state.render_time_accum.as_secs_f64() * 1_000_000.0 / state.render_frames_accum as f64
         };
 
-        let animate = app.models().read(&state.animate, |v| *v).unwrap_or(false);
+        let animate = state.models.animate_enabled(app);
 
         try_println!(
             "frames={} points={} series={} animate={} avg_driver_render={:.1}us",
