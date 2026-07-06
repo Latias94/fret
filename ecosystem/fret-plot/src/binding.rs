@@ -4,9 +4,12 @@ use fret_runtime::{Model, ModelHost};
 use fret_ui::{ElementContextAccess, Invalidation, UiHost};
 
 use crate::declarative::{
-    ErrorBarsPlotPanelProps, HistogramPlotPanelProps, LinePlotPanelProps, StemsPlotPanelProps,
+    BarsPlotPanelProps, ErrorBarsPlotPanelProps, HistogramPlotPanelProps, LinePlotPanelProps,
+    StemsPlotPanelProps,
 };
-use crate::models::{ErrorBarsPlotModel, HistogramPlotModel, LinePlotModel, StemsPlotModel};
+use crate::models::{
+    BarsPlotModel, ErrorBarsPlotModel, HistogramPlotModel, LinePlotModel, StemsPlotModel,
+};
 use crate::state::{PlotOutput, PlotState};
 
 #[derive(Clone)]
@@ -169,6 +172,17 @@ define_plot_panel_binding!(
     ErrorBarsPlotPanelProps
 );
 
+define_plot_panel_binding!(
+    /// App-facing handle for a bars plot panel plus its caller-owned interaction state.
+    ///
+    /// `BarsPlotPanelProps` remains the component-author surface and still exposes raw model
+    /// handles for advanced composition. This binding is the default app/cookbook surface for
+    /// standalone grouped or stacked bars panels.
+    BarsPlotPanelBinding,
+    BarsPlotModel,
+    BarsPlotPanelProps
+);
+
 #[cfg(test)]
 mod tests {
     use std::sync::Arc;
@@ -177,15 +191,16 @@ mod tests {
 
     use crate::cartesian::DataPoint;
     use crate::models::{
-        ErrorBar, ErrorBarsPlotModel, ErrorBarsSeries, HistogramPlotModel, HistogramSeries,
-        LinePlotModel, LineSeries, StemsPlotModel, StemsSeries,
+        BarSeries, BarsPlotModel, ErrorBar, ErrorBarsPlotModel, ErrorBarsSeries,
+        HistogramPlotModel, HistogramSeries, LinePlotModel, LineSeries, StemsPlotModel,
+        StemsSeries,
     };
     use crate::series::Series;
     use crate::state::PlotOutput;
 
     use super::{
-        ErrorBarsPlotPanelBinding, HistogramPlotPanelBinding, LinePlotPanelBinding,
-        StemsPlotPanelBinding,
+        BarsPlotPanelBinding, ErrorBarsPlotPanelBinding, HistogramPlotPanelBinding,
+        LinePlotPanelBinding, StemsPlotPanelBinding,
     };
 
     #[derive(Default)]
@@ -244,6 +259,16 @@ mod tests {
                 ErrorBar::symmetric(0.2),
             ])),
         ])
+    }
+
+    fn sample_bars_model() -> BarsPlotModel {
+        BarsPlotModel::from_series(vec![BarSeries::new(
+            "sample",
+            Series::from_points_sorted(
+                vec![DataPoint { x: 0.0, y: 1.0 }, DataPoint { x: 1.0, y: 2.0 }],
+                true,
+            ),
+        )])
     }
 
     #[test]
@@ -392,5 +417,42 @@ mod tests {
             .expect("output model update should succeed");
 
         assert_eq!(binding.output_untracked(&host).revision, 18);
+    }
+
+    #[test]
+    fn bars_plot_binding_creates_props_with_state_and_output_without_public_raw_handles() {
+        let mut host = TestHost::default();
+
+        let binding = BarsPlotPanelBinding::new(&mut host, sample_bars_model());
+        let props = binding.panel_props();
+
+        assert!(props.state.is_some());
+        assert!(props.output.is_some());
+        assert!(
+            host.models()
+                .read(&props.model, |model| model.series.len())
+                .is_ok()
+        );
+    }
+
+    #[test]
+    fn bars_plot_binding_reads_output_without_exposing_output_model_handle() {
+        let mut host = TestHost::default();
+
+        let binding = BarsPlotPanelBinding::new(&mut host, sample_bars_model());
+        let props = binding.panel_props();
+        let output = props
+            .output
+            .expect("binding props should include output model");
+        output
+            .update(&mut host, |output, _cx| {
+                *output = PlotOutput {
+                    revision: 32,
+                    ..Default::default()
+                };
+            })
+            .expect("output model update should succeed");
+
+        assert_eq!(binding.output_untracked(&host).revision, 32);
     }
 }

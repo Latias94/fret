@@ -595,15 +595,16 @@ fn grouped_bars_demo_uses_manual_harness_declarative_bars_plot_panel() {
     let source = compact(include_str!("../src/grouped_bars_demo.rs"));
 
     for needle in [
-        "usefret_plot::declarative::{BarsPlotPanelProps,bars_plot_panel_in};",
+        "usefret_plot::BarsPlotPanelBinding;",
+        "usefret_plot::declarative::bars_plot_panel_in;",
         "usefret_plot::models::{BarsPlotModel,CategoryBarSeries};",
         "usefret_ui::{UiTree,declarative};",
+        "plot:BarsPlotPanelBinding",
         "CategoryBarSeries::new(",
-        "BarsPlotModel::grouped_categories(categories,series,0.75,0.18,0.0)",
+        "BarsPlotPanelBinding::new(app,BarsPlotModel::grouped_categories(categories,series,0.75,0.18,0.0),)",
         "declarative::RenderRootContext::new(&mutstate.ui,app,services,window,bounds).render_root(\"grouped-bars-demo\"",
-        "BarsPlotPanelProps::new(plot.clone())",
-        ".state(plot_state.clone())",
-        ".output(plot_output.clone())",
+        "plot.panel_props()",
+        "state.plot.output_untracked(app)",
         "vec![bars_plot_panel_in(cx,props)]",
     ] {
         assert!(
@@ -618,6 +619,12 @@ fn grouped_bars_demo_uses_manual_harness_declarative_bars_plot_panel() {
         "BarsPlotCanvas",
         "PlotCanvas",
         "create_node_retained(",
+        "fret_runtime::Model<",
+        "BarsPlotPanelProps::new(",
+        ".state(plot_state.clone())",
+        ".output(plot_output.clone())",
+        "app.models_mut().insert(PlotState::default())",
+        "app.models_mut().insert(PlotOutput::default())",
     ] {
         assert!(
             !source.contains(legacy),
@@ -631,15 +638,16 @@ fn stacked_bars_demo_uses_manual_harness_declarative_bars_plot_panel() {
     let source = compact(include_str!("../src/stacked_bars_demo.rs"));
 
     for needle in [
-        "usefret_plot::declarative::{BarsPlotPanelProps,bars_plot_panel_in};",
+        "usefret_plot::BarsPlotPanelBinding;",
+        "usefret_plot::declarative::bars_plot_panel_in;",
         "usefret_plot::models::{BarsPlotModel,CategoryBarSeries};",
         "usefret_ui::{UiTree,declarative};",
+        "plot:BarsPlotPanelBinding",
         "CategoryBarSeries::new(",
-        "BarsPlotModel::stacked_categories(categories,series,0.8)",
+        "BarsPlotPanelBinding::new(app,BarsPlotModel::stacked_categories(categories,series,0.8),)",
         "declarative::RenderRootContext::new(&mutstate.ui,app,services,window,bounds).render_root(\"stacked-bars-demo\"",
-        "BarsPlotPanelProps::new(plot.clone())",
-        ".state(plot_state.clone())",
-        ".output(plot_output.clone())",
+        "plot.panel_props()",
+        "state.plot.output_untracked(app)",
         "vec![bars_plot_panel_in(cx,props)]",
     ] {
         assert!(
@@ -654,6 +662,12 @@ fn stacked_bars_demo_uses_manual_harness_declarative_bars_plot_panel() {
         "BarsPlotCanvas",
         "PlotCanvas",
         "create_node_retained(",
+        "fret_runtime::Model<",
+        "BarsPlotPanelProps::new(",
+        ".state(plot_state.clone())",
+        ".output(plot_output.clone())",
+        "app.models_mut().insert(PlotState::default())",
+        "app.models_mut().insert(PlotOutput::default())",
     ] {
         assert!(
             !source.contains(legacy),

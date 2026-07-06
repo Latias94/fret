@@ -6,10 +6,10 @@ use fret_core::{AppWindowId, Event};
 use fret_launch::{
     FnDriver, WinitEventContext, WinitHotReloadContext, WinitRenderContext, WinitRunnerConfig,
 };
-use fret_plot::declarative::{BarsPlotPanelProps, bars_plot_panel_in};
+use fret_plot::BarsPlotPanelBinding;
+use fret_plot::declarative::bars_plot_panel_in;
 use fret_plot::models::{BarsPlotModel, CategoryBarSeries};
 use fret_plot::series::SeriesId;
-use fret_plot::state::{PlotOutput, PlotState};
 use fret_plot::style::{LinePlotStyle, SeriesTooltipMode};
 use fret_runtime::PlatformCapabilities;
 use fret_ui::{UiTree, declarative};
@@ -18,9 +18,7 @@ use std::sync::Arc;
 struct GroupedBarsDemoWindowState {
     ui: UiTree<App>,
     root: Option<fret_core::NodeId>,
-    plot: fret_runtime::Model<BarsPlotModel>,
-    plot_state: fret_runtime::Model<PlotState>,
-    plot_output: fret_runtime::Model<PlotOutput>,
+    plot: BarsPlotPanelBinding,
     last_logged_output_revision: u64,
 }
 
@@ -67,10 +65,10 @@ impl GroupedBarsDemoDriver {
                 }),
         ];
 
-        let model = BarsPlotModel::grouped_categories(categories, series, 0.75, 0.18, 0.0);
-        let plot = app.models_mut().insert(model);
-        let plot_state = app.models_mut().insert(PlotState::default());
-        let plot_output = app.models_mut().insert(PlotOutput::default());
+        let plot = BarsPlotPanelBinding::new(
+            app,
+            BarsPlotModel::grouped_categories(categories, series, 0.75, 0.18, 0.0),
+        );
 
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
@@ -79,8 +77,6 @@ impl GroupedBarsDemoDriver {
             ui,
             root: None,
             plot,
-            plot_state,
-            plot_output,
             last_logged_output_revision: 0,
         }
     }
@@ -134,10 +130,7 @@ fn handle_event(
                 event,
                 Event::Pointer(fret_core::PointerEvent::Up { .. }) | Event::KeyDown { .. }
             ) {
-                let output = state
-                    .plot_output
-                    .read(app, |_app, o| *o)
-                    .unwrap_or_default();
+                let output = state.plot.output_untracked(app);
                 if output.revision != state.last_logged_output_revision {
                     state.last_logged_output_revision = output.revision;
                     if let Some(query) = output.snapshot.query {
@@ -174,17 +167,12 @@ fn render(
             declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
                 .render_root("grouped-bars-demo", {
                     let plot = state.plot.clone();
-                    let plot_state = state.plot_state.clone();
-                    let plot_output = state.plot_output.clone();
                     move |cx| {
                         let style = LinePlotStyle {
                             series_tooltip: SeriesTooltipMode::NearestAtCursor,
                             ..Default::default()
                         };
-                        let props = BarsPlotPanelProps::new(plot.clone())
-                            .style(style)
-                            .state(plot_state.clone())
-                            .output(plot_output.clone());
+                        let props = plot.panel_props().style(style);
                         vec![bars_plot_panel_in(cx, props)]
                     }
                 });

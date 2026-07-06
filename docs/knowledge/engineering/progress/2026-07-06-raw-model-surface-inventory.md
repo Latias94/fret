@@ -38,6 +38,9 @@ Keep raw/shared-model mechanisms for now:
   - Follow-up: `error_bars_demo.rs` now uses `ErrorBarsPlotPanelBinding`. The plot binding wrapper
     generation has moved behind a private macro so new app-facing plot family bindings stay named
     and family-specific without copying the raw model/state/output glue.
+  - Follow-up: `grouped_bars_demo.rs` and `stacked_bars_demo.rs` now use
+    `BarsPlotPanelBinding`, sharing one app-facing surface over `BarsPlotModel` while keeping raw
+    `BarsPlotPanelProps` available for advanced composition.
   - Follow-up: `chart_declarative_demo.rs` now uses `ChartCanvasPanelBinding`, so the default
     FretApp chart example no longer imports `fret_runtime::Model` or wires
     `ChartCanvasPanelProps::engine` directly. Keep explicit raw chart panel props in stress,
