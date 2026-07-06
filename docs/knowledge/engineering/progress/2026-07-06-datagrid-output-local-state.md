@@ -43,6 +43,6 @@ bridge keeps the public API discoverable while preserving the internal retained 
 
 # Next
 
-Keep `table_stress_demo.rs` on its current stress/perf raw model path until there is a named table
-stress owner contract. Do not migrate it mechanically if doing so would change perf baseline
-semantics.
+`table_stress_demo.rs` now has a named local stress contract through `TableStressControls`. Keep it
+on the retained stress/perf path rather than mechanically converting it to `LocalState`, and use
+similarly narrow contracts for future data-grid stress controls.

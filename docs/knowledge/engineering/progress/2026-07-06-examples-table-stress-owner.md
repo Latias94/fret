@@ -34,8 +34,21 @@ debugging. The local owner helper makes those shared-model mutations named and s
   `items_revision` increment.
 - `cargo nextest run -p fret-examples --test table_stress_demo_surface --no-fail-fast` passes.
 
+# Controls Binding Follow-Up
+
+Branch `refactor/table-stress-controls` keeps the retained stress-harness classification but moves
+the table state and item revision models behind `TableStressControls`.
+
+- Startup model allocation now happens in `TableStressControls::new(...)`.
+- `TableStressWindowState` stores one `controls` field instead of separate `Model<TableState>` and
+  `Model<u64>` fields.
+- Keyboard events call semantic controls methods instead of passing model handles through
+  `TableStressDriver` helpers.
+- Render uses `render_snapshot(...)` for layout subscriptions/readout state and `table_model()`
+  only at the retained table component seam.
+
 # Next
 
-Do not mechanically convert retained table stress state to `LocalState`. If the remaining
-data-grid/table stress surfaces keep exposing raw models to ordinary app examples, design a named
-binding contract first.
+Do not mechanically convert retained table stress state to `LocalState`. `TableStressControls` is
+the named local contract for this perf harness; future table/data-grid cleanup should add similarly
+narrow bindings only when the retained-state semantics stay explicit.

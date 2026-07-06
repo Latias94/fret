@@ -36,7 +36,7 @@ fn table_stress_demo_keeps_fixed_table_text_on_roles() {
 }
 
 #[test]
-fn table_stress_demo_model_writes_stay_behind_owner_helper() {
+fn table_stress_demo_model_state_stays_behind_controls_binding() {
     let source = include_str!("../src/table_stress_demo.rs");
     let production_source = source
         .split("#[cfg(test)]")
@@ -47,6 +47,14 @@ fn table_stress_demo_model_writes_stay_behind_owner_helper() {
 
     for needle in [
         "usefret_runtime::{ModelStore,PlatformCapabilities};",
+        "structTableStressControls{",
+        "table_state:Model<TableState>,",
+        "items_revision:Model<u64>,",
+        "controls:TableStressControls,",
+        "fnnew(models:&mutModelStore,row_count:usize)->Self{",
+        "fnrender_snapshot(&self,cx:&mutElementContext<'_,App>)->TableStressSnapshot{",
+        "lettable_state=state.controls.table_model();",
+        "letcontrols=state.controls.render_snapshot(cx);",
         "structTableStressModelOwner<'a>{",
         "models:&'amutModelStore,",
         "fnupdate_table_state(&mutself,state:&Model<TableState>,f:implFnOnce(&mutTableState),)->bool{",
@@ -55,20 +63,33 @@ fn table_stress_demo_model_writes_stay_behind_owner_helper() {
         "fntoggle_global_filter(&mutself,state:&Model<TableState>)->bool{",
         "fnclear_filters(&mutself,state:&Model<TableState>)->bool{",
         "fnbump_items_revision(&mutself,revision:&Model<u64>)->bool{",
-        "TableStressModelOwner::new(app.models_mut()).toggle_sorting(state);",
-        "TableStressModelOwner::new(app.models_mut()).toggle_role_filter(state);",
-        "TableStressModelOwner::new(app.models_mut()).toggle_global_filter(state);",
-        "TableStressModelOwner::new(app.models_mut()).clear_filters(state);",
-        "TableStressModelOwner::new(app.models_mut()).bump_items_revision(revision);",
-        "TableStressDriver::bump_items_revision(app,&state.items_revision);",
+        "TableStressModelOwner::new(app.models_mut()).toggle_sorting(&self.table_state)",
+        "TableStressModelOwner::new(app.models_mut()).toggle_role_filter(&self.table_state)",
+        "TableStressModelOwner::new(app.models_mut()).toggle_global_filter(&self.table_state)",
+        "TableStressModelOwner::new(app.models_mut()).clear_filters(&self.table_state)",
+        "TableStressModelOwner::new(app.models_mut()).bump_items_revision(&self.items_revision)",
+        "state.controls.toggle_sorting(app);",
+        "state.controls.toggle_role_filter(app);",
+        "state.controls.toggle_global_filter(app);",
+        "state.controls.clear_filters(app);",
+        "state.controls.bump_items_revision(app);",
     ] {
         assert!(
             compact_source.contains(needle),
-            "table stress demo should route table model writes through its owner helper; missing `{needle}`"
+            "table stress demo should route table model state through its controls binding; missing `{needle}`"
         );
     }
 
     for forbidden in [
+        "table_state:Model<TableState>,rows:",
+        "items_revision:Model<u64>,scroll:",
+        "&state.table_state",
+        "&state.items_revision",
+        "TableStressDriver::toggle_sorting",
+        "TableStressDriver::toggle_role_filter",
+        "TableStressDriver::toggle_global_filter",
+        "TableStressDriver::clear_filters",
+        "TableStressDriver::bump_items_revision",
         "models_mut().update(",
         "models_mut().update::<",
         "models_mut().update_any(",

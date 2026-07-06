@@ -82,10 +82,9 @@ struct DemoRow {
 
 pub struct TableStressWindowState {
     ui: UiTree<App>,
-    table_state: Model<TableState>,
+    controls: TableStressControls,
     rows: Arc<[DemoRow]>,
     columns: Arc<[ColumnDef<DemoRow>]>,
-    items_revision: Model<u64>,
     scroll: VirtualListScrollHandle,
     started_at: Instant,
     frame: u64,
@@ -106,6 +105,19 @@ pub struct TableStressWindowState {
     alloc_last_layout_bytes: u64,
     alloc_last_paint_calls: u64,
     alloc_last_paint_bytes: u64,
+}
+
+struct TableStressControls {
+    table_state: Model<TableState>,
+    items_revision: Model<u64>,
+}
+
+struct TableStressSnapshot {
+    selected: usize,
+    sorting: Option<(Arc<str>, bool)>,
+    role_filter: Option<Value>,
+    global_filter: Option<Value>,
+    items_revision: u64,
 }
 
 struct TableStressModelOwner<'a> {
@@ -201,6 +213,84 @@ impl<'a> TableStressModelOwner<'a> {
     }
 }
 
+impl TableStressControls {
+    fn new(models: &mut ModelStore, row_count: usize) -> Self {
+        let mut table_state = TableState::default();
+        table_state.pagination.page_size = row_count;
+        table_state.column_sizing.insert("id".into(), 72.0);
+        table_state.column_sizing.insert("name".into(), 200.0);
+        table_state.column_sizing.insert("role".into(), 140.0);
+        table_state.column_sizing.insert("score".into(), 100.0);
+        table_state.column_pinning = ColumnPinningState {
+            left: vec!["id".into()],
+            right: vec!["score".into()],
+        };
+
+        Self {
+            table_state: models.insert(table_state),
+            items_revision: models.insert(1u64),
+        }
+    }
+
+    fn table_model(&self) -> Model<TableState> {
+        self.table_state.clone()
+    }
+
+    fn toggle_sorting(&self, app: &mut App) -> bool {
+        TableStressModelOwner::new(app.models_mut()).toggle_sorting(&self.table_state)
+    }
+
+    fn toggle_role_filter(&self, app: &mut App) -> bool {
+        TableStressModelOwner::new(app.models_mut()).toggle_role_filter(&self.table_state)
+    }
+
+    fn toggle_global_filter(&self, app: &mut App) -> bool {
+        TableStressModelOwner::new(app.models_mut()).toggle_global_filter(&self.table_state)
+    }
+
+    fn clear_filters(&self, app: &mut App) -> bool {
+        TableStressModelOwner::new(app.models_mut()).clear_filters(&self.table_state)
+    }
+
+    fn bump_items_revision(&self, app: &mut App) -> bool {
+        TableStressModelOwner::new(app.models_mut()).bump_items_revision(&self.items_revision)
+    }
+
+    fn render_snapshot(&self, cx: &mut ElementContext<'_, App>) -> TableStressSnapshot {
+        cx.observe_model(&self.table_state, Invalidation::Layout);
+        cx.observe_model(&self.items_revision, Invalidation::Layout);
+
+        let (selected, sorting, role_filter, global_filter) = cx
+            .app
+            .models()
+            .read(&self.table_state, |st| {
+                let selected = st.row_selection.len();
+                let sorting = st.sorting.first().map(|s| (s.column.clone(), s.desc));
+                let role_filter = st
+                    .column_filters
+                    .iter()
+                    .find(|f| f.column.as_ref() == "role")
+                    .map(|f| f.value.clone());
+                let global_filter = st.global_filter.clone();
+                (selected, sorting, role_filter, global_filter)
+            })
+            .unwrap_or((0, None, None, None));
+        let items_revision = cx
+            .app
+            .models()
+            .read(&self.items_revision, |v| *v)
+            .unwrap_or(0);
+
+        TableStressSnapshot {
+            selected,
+            sorting,
+            role_filter,
+            global_filter,
+            items_revision,
+        }
+    }
+}
+
 #[derive(Default)]
 pub struct TableStressDriver;
 
@@ -239,18 +329,7 @@ impl TableStressDriver {
             );
         }
 
-        let mut table_state = TableState::default();
-        table_state.pagination.page_size = rows.len();
-        table_state.column_sizing.insert("id".into(), 72.0);
-        table_state.column_sizing.insert("name".into(), 200.0);
-        table_state.column_sizing.insert("role".into(), 140.0);
-        table_state.column_sizing.insert("score".into(), 100.0);
-        table_state.column_pinning = ColumnPinningState {
-            left: vec!["id".into()],
-            right: vec!["score".into()],
-        };
-        let table_state = app.models_mut().insert(table_state);
-        let items_revision = app.models_mut().insert(1u64);
+        let controls = TableStressControls::new(app.models_mut(), rows.len());
 
         let helper = create_column_helper::<DemoRow>();
         let columns: Arc<[ColumnDef<DemoRow>]> = Arc::from(
@@ -277,10 +356,9 @@ impl TableStressDriver {
 
         TableStressWindowState {
             ui,
-            table_state,
+            controls,
             rows,
             columns,
-            items_revision,
             scroll: VirtualListScrollHandle::new(),
             started_at,
             frame: 0,
@@ -302,26 +380,6 @@ impl TableStressDriver {
             alloc_last_paint_calls: 0,
             alloc_last_paint_bytes: 0,
         }
-    }
-
-    fn toggle_sorting(app: &mut App, state: &Model<TableState>) {
-        let _ = TableStressModelOwner::new(app.models_mut()).toggle_sorting(state);
-    }
-
-    fn toggle_role_filter(app: &mut App, state: &Model<TableState>) {
-        let _ = TableStressModelOwner::new(app.models_mut()).toggle_role_filter(state);
-    }
-
-    fn toggle_global_filter(app: &mut App, state: &Model<TableState>) {
-        let _ = TableStressModelOwner::new(app.models_mut()).toggle_global_filter(state);
-    }
-
-    fn clear_filters(app: &mut App, state: &Model<TableState>) {
-        let _ = TableStressModelOwner::new(app.models_mut()).clear_filters(state);
-    }
-
-    fn bump_items_revision(app: &mut App, revision: &Model<u64>) {
-        let _ = TableStressModelOwner::new(app.models_mut()).bump_items_revision(revision);
     }
 }
 
@@ -496,27 +554,27 @@ fn handle_event(
                 return;
             }
             fret_core::KeyCode::KeyS => {
-                TableStressDriver::toggle_sorting(app, &state.table_state);
+                let _ = state.controls.toggle_sorting(app);
                 app.request_redraw(window);
                 return;
             }
             fret_core::KeyCode::KeyF => {
-                TableStressDriver::toggle_role_filter(app, &state.table_state);
+                let _ = state.controls.toggle_role_filter(app);
                 app.request_redraw(window);
                 return;
             }
             fret_core::KeyCode::KeyG => {
-                TableStressDriver::toggle_global_filter(app, &state.table_state);
+                let _ = state.controls.toggle_global_filter(app);
                 app.request_redraw(window);
                 return;
             }
             fret_core::KeyCode::KeyC => {
-                TableStressDriver::clear_filters(app, &state.table_state);
+                let _ = state.controls.clear_filters(app);
                 app.request_redraw(window);
                 return;
             }
             fret_core::KeyCode::KeyR => {
-                TableStressDriver::bump_items_revision(app, &state.items_revision);
+                let _ = state.controls.bump_items_revision(app);
                 app.request_redraw(window);
                 return;
             }
@@ -567,34 +625,7 @@ fn render(
     let root =
             declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
                 .render_root("table-stress-demo", |cx| {
-                    cx.observe_model(&state.table_state, Invalidation::Layout);
-                    cx.observe_model(&state.items_revision, Invalidation::Layout);
-
-                    let (selected, sorting, role_filter, global_filter) = cx
-                        .app
-                        .models()
-                        .read(&state.table_state, |st| {
-                            let selected = st.row_selection.len();
-                            let sorting = st.sorting.first().map(|s| (s.column.clone(), s.desc));
-                            let role_filter = st
-                                .column_filters
-                                .iter()
-                                .find(|f| f.column.as_ref() == "role")
-                                .map(|f| f.value.clone());
-                            let global_filter = st.global_filter.clone();
-                            (selected, sorting, role_filter, global_filter)
-                        })
-                        .unwrap_or((
-                            0,
-                            None,
-                            None,
-                            None,
-                        ));
-                    let items_revision = cx
-                        .app
-                        .models()
-                        .read(&state.items_revision, |v| *v)
-                        .unwrap_or(0);
+                    let controls = state.controls.render_snapshot(cx);
 
                     let theme = cx.theme_snapshot();
 
@@ -610,20 +641,27 @@ fn render(
                     table_slot.overflow = Overflow::Clip;
 
                     let scroll = state.scroll.clone();
-                    let table_state = state.table_state.clone();
+                    let table_state = state.controls.table_model();
                     let rows = state.rows.clone();
 
-                    let sorting_col = sorting.as_ref().map(|(c, _)| c.as_ref()).unwrap_or("<none>");
-                    let sorting_dir = sorting
+                    let sorting_col = controls
+                        .sorting
+                        .as_ref()
+                        .map(|(c, _)| c.as_ref())
+                        .unwrap_or("<none>");
+                    let sorting_dir = controls
+                        .sorting
                         .as_ref()
                         .map(|(_, desc)| if *desc { "desc" } else { "asc" })
                         .unwrap_or("");
-                    let sorting_sep = if sorting.is_some() { ":" } else { "" };
-                    let role_filter = role_filter
+                    let sorting_sep = if controls.sorting.is_some() { ":" } else { "" };
+                    let role_filter = controls
+                        .role_filter
                         .as_ref()
                         .map(|v| v.as_str().unwrap_or("<non-string>"))
                         .unwrap_or("<none>");
-                    let global_filter = global_filter
+                    let global_filter = controls
+                        .global_filter
                         .as_ref()
                         .and_then(|v| v.as_str())
                         .unwrap_or("<none>");
@@ -631,13 +669,13 @@ fn render(
                     let header: Arc<str> = Arc::from(format!(
                         "Table stress demo | rows={} | selected={} | sorting={}{}{} | role_filter={} | global_filter={} | items_rev={} | alloc/frame={} ({} B) render={} ({} B) layout={} ({} B) paint={} ({} B) | [S]=toggle sort | [F]=toggle role filter | [G]=toggle global filter | [C]=clear filters | [R]=bump items_rev | [Home]/[End] | [Esc]=close",
                         rows.len(),
-                        selected,
+                        controls.selected,
                         sorting_col,
                         sorting_sep,
                         sorting_dir,
                         role_filter,
                         global_filter,
-                        items_revision,
+                        controls.items_revision,
                         state.alloc_last_calls,
                         state.alloc_last_bytes,
                         state.alloc_last_render_calls,
@@ -702,7 +740,7 @@ fn render(
                                                     columns.as_ref(),
                                                     table_state.clone(),
                                                     &scroll,
-                                                    items_revision,
+                                                    controls.items_revision,
                                                     &|row: &DemoRow, _i| RowKey(row.id as u64),
                                                     None,
                                                     fret_ui_kit::declarative::table::TableViewProps {
@@ -916,61 +954,60 @@ pub fn run() -> anyhow::Result<()> {
 mod tests {
     use super::*;
 
-    fn table_state_snapshot(models: &ModelStore, state: &Model<TableState>) -> TableState {
-        models.read(state, Clone::clone).unwrap()
+    fn table_state_snapshot(models: &ModelStore, controls: &TableStressControls) -> TableState {
+        models.read(&controls.table_state, Clone::clone).unwrap()
     }
 
     #[test]
-    fn table_stress_model_owner_preserves_command_state_transitions() {
-        let mut models = ModelStore::default();
-        let table_state = models.insert(TableState::default());
-        let revision = models.insert(u64::MAX);
+    fn table_stress_controls_preserve_command_state_transitions() {
+        let mut app = App::new();
+        let controls = TableStressControls::new(app.models_mut(), 10);
 
-        assert!(TableStressModelOwner::new(&mut models).toggle_sorting(&table_state));
-        let state = table_state_snapshot(&models, &table_state);
+        assert!(controls.toggle_sorting(&mut app));
+        let state = table_state_snapshot(app.models(), &controls);
         assert_eq!(state.sorting.len(), 1);
         assert_eq!(state.sorting[0].column.as_ref(), "score");
         assert!(!state.sorting[0].desc);
 
-        assert!(TableStressModelOwner::new(&mut models).toggle_sorting(&table_state));
-        let state = table_state_snapshot(&models, &table_state);
+        assert!(controls.toggle_sorting(&mut app));
+        let state = table_state_snapshot(app.models(), &controls);
         assert_eq!(state.sorting.len(), 1);
         assert_eq!(state.sorting[0].column.as_ref(), "score");
         assert!(state.sorting[0].desc);
 
-        assert!(TableStressModelOwner::new(&mut models).toggle_sorting(&table_state));
-        let state = table_state_snapshot(&models, &table_state);
+        assert!(controls.toggle_sorting(&mut app));
+        let state = table_state_snapshot(app.models(), &controls);
         assert!(state.sorting.is_empty());
 
-        models
-            .update(&table_state, |state| {
+        app.models_mut()
+            .update(&controls.table_state, |state| {
                 state.pagination.page_index = 8;
             })
             .unwrap();
-        assert!(TableStressModelOwner::new(&mut models).toggle_role_filter(&table_state));
-        let state = table_state_snapshot(&models, &table_state);
+        assert!(controls.toggle_role_filter(&mut app));
+        let state = table_state_snapshot(app.models(), &controls);
         assert_eq!(state.column_filters.len(), 1);
         assert_eq!(state.column_filters[0].column.as_ref(), "role");
         assert_eq!(state.column_filters[0].value.as_str(), Some("Admin"));
         assert_eq!(state.pagination.page_index, 0);
 
-        models
-            .update(&table_state, |state| {
+        app.models_mut()
+            .update(&controls.table_state, |state| {
                 state.pagination.page_index = 5;
             })
             .unwrap();
-        assert!(TableStressModelOwner::new(&mut models).toggle_role_filter(&table_state));
-        let state = table_state_snapshot(&models, &table_state);
+        assert!(controls.toggle_role_filter(&mut app));
+        let state = table_state_snapshot(app.models(), &controls);
         assert!(state.column_filters.is_empty());
         assert_eq!(state.pagination.page_index, 0);
 
-        models
-            .update(&table_state, |state| {
+        app.models_mut()
+            .update(&controls.table_state, |state| {
                 state.pagination.page_index = 3;
             })
             .unwrap();
-        assert!(TableStressModelOwner::new(&mut models).toggle_global_filter(&table_state));
-        let state = table_state_snapshot(&models, &table_state);
+        assert!(controls.toggle_global_filter(&mut app));
+        let state = table_state_snapshot(app.models(), &controls);
         assert_eq!(
             state
                 .global_filter
@@ -980,18 +1017,21 @@ mod tests {
         );
         assert_eq!(state.pagination.page_index, 0);
 
-        models
-            .update(&table_state, |state| {
+        app.models_mut()
+            .update(&controls.table_state, |state| {
                 state.pagination.page_index = 2;
             })
             .unwrap();
-        assert!(TableStressModelOwner::new(&mut models).clear_filters(&table_state));
-        let state = table_state_snapshot(&models, &table_state);
+        assert!(controls.clear_filters(&mut app));
+        let state = table_state_snapshot(app.models(), &controls);
         assert!(state.column_filters.is_empty());
         assert!(state.global_filter.is_none());
         assert_eq!(state.pagination.page_index, 0);
 
-        assert!(TableStressModelOwner::new(&mut models).bump_items_revision(&revision));
-        assert_eq!(models.get_copied(&revision), Some(0));
+        app.models_mut()
+            .update(&controls.items_revision, |revision| *revision = u64::MAX)
+            .unwrap();
+        assert!(controls.bump_items_revision(&mut app));
+        assert_eq!(app.models().get_copied(&controls.items_revision), Some(0));
     }
 }

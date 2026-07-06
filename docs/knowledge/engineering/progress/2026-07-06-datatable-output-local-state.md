@@ -39,5 +39,6 @@ requires shared retained state. Do not use `datatable_demo.rs` as precedent for 
 # Next
 
 Keep `table_demo.rs`, `table_stress_demo.rs`, and `canvas_datagrid_stress_demo.rs` classified by
-their retained/stress contracts. Migrate only after a named table/data-grid binding or owner
-contract exists.
+their retained/stress contracts. `table_stress_demo.rs` now names its local stress state through
+`TableStressControls`; migrate other retained/data-grid stress seams only after an equally explicit
+binding or owner contract exists.

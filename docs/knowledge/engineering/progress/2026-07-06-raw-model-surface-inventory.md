@@ -105,7 +105,9 @@ Keep raw/shared-model mechanisms for now:
     writes for sorting, role/global filters, clearing filters, and `items_revision` now route
     through the demo-local `TableStressModelOwner` helper. Its source-surface test forbids direct
     `models_mut().update(...)`, generic/update-any variants, and UFCS `ModelStore` bypasses in the
-    production demo source.
+    production demo source. A later tightening added `TableStressControls`, so startup allocation,
+    command writes, render subscriptions, and readout snapshots now sit behind one demo-local
+    controls binding while preserving the retained table component seam.
   - Keep raw model seams in lower-level retained table, data-grid, stress, or canvas-grid surfaces
     only when their component contract still names the shared retained state explicitly.
 - Custom effect demos such as `custom_effect_v2_*`. They expose effect parameter models and reset
