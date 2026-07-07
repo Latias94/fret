@@ -1067,7 +1067,7 @@ INTERNAL_HARNESS_SURFACES: tuple[SurfacePath, ...] = (
         "lib.rs",
         "the examples crate root owns shared native/web harness helpers, launch glue, and theme "
         "interop helpers for demo shells",
-        ("fret::advanced", "fret_app", "fret_core", "fret_launch"),
+        ("fret::advanced", "fret_app", "fret_core", "fret_launch", "fret_runtime"),
         owner="examples-harness-root",
     ),
     _fret_examples_internal_harness(
@@ -1624,24 +1624,16 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
     ),
     _fret_examples_advanced_surface(
         "plot_image_demo.rs",
-        "the plot image overlay proof still exposes advanced web/demo-shell launch helpers for "
-        "wasm integration while the native run path uses the default FretApp view facade",
-        (
-            "fret::advanced",
-            "fret_launch",
-            "fret_runtime",
-        ),
+        "the plot image overlay proof still exposes demo-shell launch signatures for wasm "
+        "integration while the native run path and view driver use default app helpers",
+        ("fret_launch",),
         owner="examples-plot-image-demo",
     ),
     _fret_examples_advanced_surface(
         "tags_demo.rs",
-        "the plot tags/text overlay proof still exposes advanced web/demo-shell launch helpers "
-        "for wasm integration while the native run path uses the default FretApp view facade",
-        (
-            "fret::advanced",
-            "fret_launch",
-            "fret_runtime",
-        ),
+        "the plot tags/text overlay proof still exposes demo-shell launch signatures for wasm "
+        "integration while the native run path and view driver use default app helpers",
+        ("fret_launch",),
         owner="examples-plot-tags-demo",
     ),
     _fret_examples_advanced_surface(

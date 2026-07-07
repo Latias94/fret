@@ -43,6 +43,39 @@ pub(crate) fn run_native_with_fn_driver_with_hooks<D: 'static, S: 'static>(
     .map_err(anyhow::Error::from)
 }
 
+pub(crate) fn build_default_view_demo_app() -> fret_app::App {
+    let mut app = fret_app::App::new();
+    app.set_global(fret_runtime::PlatformCapabilities::default());
+    app
+}
+
+pub(crate) fn build_default_view_demo_runner_config(
+    title: impl Into<String>,
+    size: (f64, f64),
+) -> fret_launch::WinitRunnerConfig {
+    fret_launch::WinitRunnerConfig {
+        main_window_title: title.into(),
+        main_window_size: fret_launch::WindowLogicalSize::new(size.0, size.1),
+        ..Default::default()
+    }
+}
+
+pub(crate) fn build_default_view_demo_fn_driver<V: fret::app::View>(
+    root_name: &'static str,
+) -> impl fret_launch::WinitAppDriver {
+    fret_bootstrap::ui_app_driver::UiAppDriver::new(
+        root_name,
+        fret::advanced::view::view_init_window::<V>,
+        fret::advanced::view::view_view::<V>,
+    )
+    .on_preferences(
+        fret_bootstrap::ui_app_driver::default_on_preferences::<
+            fret::advanced::view::ViewWindowState<V>,
+        >,
+    )
+    .into_fn_driver()
+}
+
 pub(crate) fn parse_editor_theme_preset_key(
     key: &str,
 ) -> Option<fret_ui_editor::theme::EditorThemePresetV1> {

@@ -1050,6 +1050,14 @@ class SurfacePolicyTests(unittest.TestCase):
             )
             self.assertTrue(spec.allowed_raw_seams)
             self.assertTrue(spec.retirement)
+        for path in {
+            "apps/fret-examples/src/plot_image_demo.rs",
+            "apps/fret-examples/src/tags_demo.rs",
+        }:
+            spec = next(
+                spec for spec in POLICY.ADVANCED_MANUAL_SURFACES if spec.path == path
+            )
+            self.assertEqual(spec.allowed_raw_seams, ("fret_launch",))
         for path in editor_notes_paths:
             self.assertTrue(
                 any(spec.path == path for spec in POLICY.ADVANCED_MANUAL_SURFACES),
@@ -1227,12 +1235,19 @@ class SurfacePolicyTests(unittest.TestCase):
                 for spec in POLICY.INTERNAL_HARNESS_SURFACES
             )
         )
-        self.assertTrue(
-            any(
-                spec.path == "apps/fret-examples/src/lib.rs"
+        harness_root_spec = next(
+            (
+                spec
                 for spec in POLICY.INTERNAL_HARNESS_SURFACES
-            )
+                if spec.path == "apps/fret-examples/src/lib.rs"
+            ),
+            None,
         )
+        self.assertIsNotNone(
+            harness_root_spec,
+            "examples crate root should be classified as an internal harness",
+        )
+        self.assertIn("fret_runtime", harness_root_spec.allowed_raw_seams)
         container_query_docking_spec = next(
             (
                 spec

@@ -1,7 +1,6 @@
 use anyhow::Context as _;
 use fret::app::prelude::*;
 use fret::app::{RenderContextAccess as _, ui_assets};
-use fret_bootstrap::ui_app_driver;
 use fret_plot::LinePlotPanelBinding;
 use fret_plot::cartesian::{AxisScale, DataPoint, DataRect};
 use fret_plot::declarative::line_plot_panel_in;
@@ -10,7 +9,6 @@ use fret_plot::plot::axis::{AxisLabelFormatter, AxisNumberFormat};
 use fret_plot::series::Series;
 use fret_plot::state::{PlotImage, PlotImageLayer};
 use fret_plot::style::{LinePlotStyle, SeriesTooltipMode};
-use fret_runtime::PlatformCapabilities;
 
 struct PlotImageDemoView {
     plot: LinePlotPanelBinding,
@@ -45,31 +43,15 @@ impl PlotImageDemoView {
 }
 
 pub fn build_app() -> fret::app::App {
-    let mut app = fret::app::App::new();
-    app.set_global(PlatformCapabilities::default());
-    app
+    crate::build_default_view_demo_app()
 }
 
 pub fn build_runner_config() -> fret_launch::WinitRunnerConfig {
-    fret_launch::WinitRunnerConfig {
-        main_window_title: "fret-demo plot_image_demo".to_string(),
-        main_window_size: fret_launch::WindowLogicalSize::new(960.0, 640.0),
-        ..Default::default()
-    }
+    crate::build_default_view_demo_runner_config("fret-demo plot_image_demo", (960.0, 640.0))
 }
 
 pub fn build_fn_driver() -> impl fret_launch::WinitAppDriver {
-    ui_app_driver::UiAppDriver::new(
-        "plot-image-demo",
-        fret::advanced::view::view_init_window::<PlotImageDemoView>,
-        fret::advanced::view::view_view::<PlotImageDemoView>,
-    )
-    .on_preferences(
-        ui_app_driver::default_on_preferences::<
-            fret::advanced::view::ViewWindowState<PlotImageDemoView>,
-        >,
-    )
-    .into_fn_driver()
+    crate::build_default_view_demo_fn_driver::<PlotImageDemoView>("plot-image-demo")
 }
 
 #[cfg(not(target_arch = "wasm32"))]

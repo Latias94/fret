@@ -72,6 +72,9 @@ fn tags_demo_uses_default_declarative_line_plot_panel() {
         "text:vec![",
         "fret_plot::state::PlotText::new(50.0,-0.75,fret_plot::models::YAxis::Left,\"PlotTextat(50,-0.75)\",)",
         "LinePlotPanelBinding::new_with_state(app,model,state)",
+        "crate::build_default_view_demo_app()",
+        "crate::build_default_view_demo_runner_config(\"fret-demotags_demo\",(960.0,640.0))",
+        "crate::build_default_view_demo_fn_driver::<TagsDemoView>(\"tags-demo\")",
         "self.plot.panel_props()",
         "line_plot_panel_in(cx,props).into()",
     ] {
@@ -100,6 +103,12 @@ fn tags_demo_uses_default_declarative_line_plot_panel() {
         "LinePlotPanelProps::new(self.model.clone())",
         ".state(self.plot_state.clone())",
         ".output(self.plot_output.clone())",
+        "usefret_bootstrap::ui_app_driver;",
+        "ui_app_driver::UiAppDriver::new(",
+        "usefret_runtime::PlatformCapabilities;",
+        "fret::advanced::view::view_init_window",
+        "fret::advanced::view::view_view",
+        "fret::advanced::view::ViewWindowState",
     ] {
         assert!(
             !source.contains(legacy),
@@ -130,6 +139,9 @@ fn plot_image_demo_uses_default_declarative_line_plot_panel() {
         "PlotImage::new(",
         "PlotImageLayer::BelowGrid",
         "AxisLabelFormatter::number(AxisNumberFormat::Fixed(2))",
+        "crate::build_default_view_demo_app()",
+        "crate::build_default_view_demo_runner_config(\"fret-demoplot_image_demo\",(960.0,640.0))",
+        "crate::build_default_view_demo_fn_driver::<PlotImageDemoView>(\"plot-image-demo\")",
         "self.plot.panel_props()",
         ".y_axis_labels(AxisLabelFormatter::number(AxisNumberFormat::Fixed(2)))",
         "line_plot_panel_in(cx,props).into()",
@@ -166,6 +178,12 @@ fn plot_image_demo_uses_default_declarative_line_plot_panel() {
         "LinePlotPanelProps::new(self.model.clone())",
         ".state(self.plot_state.clone())",
         ".output(self.plot_output.clone())",
+        "usefret_bootstrap::ui_app_driver;",
+        "ui_app_driver::UiAppDriver::new(",
+        "usefret_runtime::PlatformCapabilities;",
+        "fret::advanced::view::view_init_window",
+        "fret::advanced::view::view_view",
+        "fret::advanced::view::ViewWindowState",
     ] {
         assert!(
             !source.contains(legacy),
