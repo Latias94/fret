@@ -112,8 +112,11 @@ examples in `repo-ref/ui`.
 
 ## Validation
 
-- `cargo test -p fret-ui-shadcn --lib select`
-- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app select_page_uses_typed_doc_sections_for_app_facing_snippets --status-level fail`
+- `cargo nextest run -p fret-ui-gallery --test select_docs_surface`
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app select_page_uses_typed_doc_sections_for_app_facing_snippets`
+- `cargo nextest run -p fret-ui-shadcn --lib select::tests`
+- `cargo nextest run -p fret-ui-kit --lib select_item_aligned_items_height_uses_larger_listbox_or_scroll_extent`
+- `cargo nextest run -p fret-ui-headless --lib vertical_keeps_natural_items_height_when_leading_label_forces_top_clamp`
 - `CARGO_TARGET_DIR=target-codex-fretboard cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/select/ui-gallery-select-label-click-focus.json --dir target/fret-diag-select-label-focus-20260320-1 --launch -- env CARGO_TARGET_DIR=target-codex-ui-gallery-select cargo run -p fret-ui-gallery`
 - `cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/select/ui-gallery-select-docs-screenshots.json --dir target/fret-diag-select-docs-rich-items --session-auto --timeout-ms 240000 --launch -- cargo run -p fret-ui-gallery`
 - Contract test: `select_disabled_hides_content_even_when_open_model_true`
@@ -122,17 +125,14 @@ examples in `repo-ref/ui`.
 - Trigger chrome + focus ring gates: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_control_chrome`
   (`web_vs_fret_select_scrollable_trigger_chrome_matches`, `web_vs_fret_select_demo_aria_invalid_border_color_matches`,
   `web_vs_fret_select_demo_focus_ring_matches`, `web_vs_fret_select_demo_aria_invalid_focus_ring_matches`).
-- Overlay surface/shadow gates: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_chrome`
-  (`web_vs_fret_select_scrollable_surface_colors_match_web`, `web_vs_fret_select_scrollable_surface_colors_match_web_dark`,
-  `web_vs_fret_select_scrollable_shadow_matches_web`, `web_vs_fret_select_scrollable_shadow_matches_web_dark`,
-  `web_vs_fret_select_scrollable_small_viewport_surface_colors_match_web`, `web_vs_fret_select_scrollable_small_viewport_surface_colors_match_web_dark`,
-  `web_vs_fret_select_scrollable_small_viewport_shadow_matches_web`, `web_vs_fret_select_scrollable_small_viewport_shadow_matches_web_dark`,
-  `web_vs_fret_select_scrollable_tiny_viewport_surface_colors_match_web`, `web_vs_fret_select_scrollable_tiny_viewport_surface_colors_match_web_dark`,
-  `web_vs_fret_select_scrollable_tiny_viewport_shadow_matches_web`, `web_vs_fret_select_scrollable_tiny_viewport_shadow_matches_web_dark`).
-- Highlighted option chrome gates (hover/highlight background + text color): `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_chrome`
-  (`web_vs_fret_select_demo_highlighted_option_chrome_matches_web`, `web_vs_fret_select_demo_highlighted_option_chrome_matches_web_dark`,
-  `web_vs_fret_select_scrollable_highlighted_option_chrome_matches_web`, `web_vs_fret_select_scrollable_highlighted_option_chrome_matches_web_dark`).
-- Web goldens (placement + scroll-button geometry): `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_placement`
+- Focused overlay chrome gate:
+  `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_overlay_chrome web_vs_fret_select_overlay_chrome_cases_match_web_fixtures`
+  (surface/shadow plus highlighted option chrome cases).
+- Focused web layout gate:
+  `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout web_vs_fret_layout_select_scrollable_trigger_size`.
+- Focused web placement gate:
+  `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_overlay_placement web_vs_fret_select_cases_match_web_fixtures`
+  (placement + scroll-button geometry).
   - Evidence:
     - `goldens/shadcn-web/v4/new-york-v4/select-demo.open.json`
     - `goldens/shadcn-web/v4/new-york-v4/select-scrollable.open.json`
@@ -144,6 +144,9 @@ examples in `repo-ref/ui`.
     - `web_vs_fret_select_demo_open_option_metrics_match`
     - `web_vs_fret_select_scrollable_listbox_width_matches`
     - `web_vs_fret_select_scrollable_listbox_option_insets_match` (plus small/tiny viewport variants)
+- Matrix packet: `docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/select_agent_packet_p0_v1.json`
+  (all validation gates are `pass`, with no `needs_live_measurement`, `mismatch`, or `blocked`
+  status counts).
 
 ## Follow-ups (recommended)
 
