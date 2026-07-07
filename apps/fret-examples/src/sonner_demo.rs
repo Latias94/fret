@@ -4,6 +4,7 @@ use std::time::Duration;
 #[cfg(not(target_arch = "wasm32"))]
 use anyhow::Context as _;
 use fret::advanced::view::{AppUiRenderRootState, render_root_with_app_ui};
+use fret::app::text;
 use fret::app::{AppLocalStateTxnExt as _, LocalState};
 use fret_app::{App, CommandId, Effect, WindowRequest};
 use fret_core::{AppWindowId, Edges, Event, Px, Rect, UiServices};
@@ -17,7 +18,6 @@ use fret_ui::action::UiActionHostAdapter;
 use fret_ui::declarative;
 use fret_ui::element::{CrossAlign, FlexProps, LayoutStyle, MainAlign};
 use fret_ui_kit::OverlayController;
-use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_shadcn::facade as shadcn;
 
 pub struct SonnerDemoWindowState {
@@ -96,11 +96,8 @@ impl SonnerDemoDriver {
                         },
                         |cx| {
                             vec![
-                                decl_text::text_section_chrome_label(
-                                    cx,
-                                    "Sonner (shadcn/ui) demo",
-                                ),
-                                decl_text::text_control_readout(cx, format!(
+                                text::section_chrome_label(cx, "Sonner (shadcn/ui) demo"),
+                                text::control_readout(cx, format!(
                                     "promise active: {promise_active} | last action: {last_action_value}"
                                 )),
                                 cx.flex(
