@@ -2622,6 +2622,225 @@ class SurfacePolicyTests(unittest.TestCase):
                 ]
             )
 
+    def test_plot_drag_legacy_retained_authoring_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-examples/src/drag_demo.rs",
+                """
+                use fret_plot::LinePlotPanelBinding;
+                use fret_plot::declarative::line_plot_panel_in;
+                use fret_plot::declarative::LinePlotPanelProps;
+                use fret_plot::models::{LinePlotModel, LineSeries};
+                use fret_plot::retained;
+                use fret_plot::retained::LinePlotCanvas;
+                use fret_runtime::Model;
+                use fret_ui::{UiTree, declarative};
+
+                pub struct DragDemoWindowState {
+                    ui: UiTree<App>,
+                    plot: LinePlotPanelBinding,
+                    plot_state: Model<PlotState>,
+                }
+
+                impl DragDemoDriver {
+                    fn apply_drag(state: &mut PlotState, drag: PlotDragOutput) {
+                        match drag {
+                            PlotDragOutput::LineX { .. } => {}
+                            PlotDragOutput::LineY { .. } => {}
+                            PlotDragOutput::Point { .. } => {}
+                            PlotDragOutput::Rect { .. } => {}
+                        }
+                    }
+
+                    fn build_ui(app: &mut App) -> DragDemoWindowState {
+                        let model = LinePlotModel::from_series(vec![
+                            LineSeries::new("signal", data),
+                        ]);
+                        let state = PlotState::default();
+                        let plot = LinePlotPanelBinding::new_with_state(app, model, state);
+                        DragDemoWindowState {
+                            ui: UiTree::new(),
+                            plot,
+                            plot_state: app.models_mut().insert(PlotState::default()),
+                        }
+                    }
+                }
+
+                fn handle_event(app: &mut App, state: &mut DragDemoWindowState) {
+                    let output = state.plot.output_untracked(app);
+                    if let Some(drag) = output.snapshot.drag {
+                        let _ = state.plot.update_state(app, |s| {
+                            DragDemoDriver::apply_drag(s, drag);
+                        });
+                    }
+                }
+
+                fn render(
+                    app: &mut App,
+                    services: &mut Services,
+                    window: AppWindowId,
+                    bounds: Rect,
+                    state: &mut DragDemoWindowState,
+                ) {
+                    let plot = state.plot.clone();
+                    let root = declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
+                        .render_root("drag-demo", move |cx| {
+                            let style = LinePlotStyle::default();
+                            let props = plot.panel_props().style(style);
+                            vec![line_plot_panel_in(cx, props)]
+                        });
+                    let _ = root;
+                }
+
+                struct LegacyDragPlot {
+                    plot: fret_runtime::Model<LinePlotModel>,
+                    output: Model<PlotOutput>,
+                }
+
+                fn bad(
+                    app: &mut App,
+                    plot: Model<LinePlotModel>,
+                    plot_state: Model<PlotState>,
+                    plot_output: Model<PlotOutput>,
+                    state: &mut DragDemoWindowState,
+                ) {
+                    let _ = retained::legacy();
+                    let _ = fret_plot::retained::legacy();
+                    let _ = LinePlotCanvas;
+                    let _ = PlotCanvas;
+                    create_node_retained();
+                    let _props = LinePlotPanelProps::new(plot.clone())
+                        .state(plot_state.clone())
+                        .output(plot_output.clone());
+                    state.plot_state.update(app, |_| {});
+                    let _ = app.models_mut().insert(PlotOutput::default());
+                }
+                """,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/drag_demo.rs",
+                        "advanced_manual",
+                        "fixture plot drag demo",
+                        owner="examples-plot-drag-demo",
+                        allowed_raw_seams=("fret_runtime", "fret_ui", "UiTree"),
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            owner_violations = [
+                violation
+                for violation in violations
+                if violation.rule
+                == "advanced-surface-plot-drag-declarative-binding-boundary"
+            ]
+            self.assertGreaterEqual(len(owner_violations), 8)
+            messages = "\n".join(violation.message for violation in owner_violations)
+            self.assertIn("fret_plot::retained", messages)
+            self.assertIn("LinePlotCanvas", messages)
+            self.assertIn("PlotOutput", messages)
+            self.assertIn("LinePlotPanelProps", messages)
+            self.assertIn("state.plot_state.update", messages)
+
+    def test_plot_drag_declarative_binding_surface_is_allowed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-examples/src/drag_demo.rs",
+                """
+                use fret_plot::LinePlotPanelBinding;
+                use fret_plot::declarative::line_plot_panel_in;
+                use fret_plot::models::{LinePlotModel, LineSeries};
+                use fret_ui::{UiTree, declarative};
+
+                pub struct DragDemoWindowState {
+                    ui: UiTree<App>,
+                    plot: LinePlotPanelBinding,
+                }
+
+                impl DragDemoDriver {
+                    fn apply_drag(state: &mut PlotState, drag: PlotDragOutput) {
+                        match drag {
+                            PlotDragOutput::LineX { .. } => {}
+                            PlotDragOutput::LineY { .. } => {}
+                            PlotDragOutput::Point { .. } => {}
+                            PlotDragOutput::Rect { .. } => {}
+                        }
+                    }
+
+                    fn build_ui(app: &mut App) -> DragDemoWindowState {
+                        let model = LinePlotModel::from_series(vec![
+                            LineSeries::new("signal", data),
+                        ]);
+                        let state = PlotState::default();
+                        let plot = LinePlotPanelBinding::new_with_state(app, model, state);
+                        DragDemoWindowState {
+                            ui: UiTree::new(),
+                            plot,
+                        }
+                    }
+                }
+
+                fn handle_event(app: &mut App, state: &mut DragDemoWindowState) {
+                    let output = state.plot.output_untracked(app);
+                    if let Some(drag) = output.snapshot.drag {
+                        let _ = state.plot.update_state(app, |s| {
+                            DragDemoDriver::apply_drag(s, drag);
+                        });
+                    }
+                }
+
+                fn render(
+                    app: &mut App,
+                    services: &mut Services,
+                    window: AppWindowId,
+                    bounds: Rect,
+                    state: &mut DragDemoWindowState,
+                ) {
+                    let plot = state.plot.clone();
+                    let root = declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
+                        .render_root("drag-demo", move |cx| {
+                            let style = LinePlotStyle::default();
+                            let props = plot.panel_props().style(style);
+                            vec![line_plot_panel_in(cx, props)]
+                        });
+                    let _ = root;
+                }
+                """,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/drag_demo.rs",
+                        "advanced_manual",
+                        "fixture plot drag demo",
+                        owner="examples-plot-drag-demo",
+                        allowed_raw_seams=("fret_ui", "UiTree"),
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            self.assertFalse(
+                [
+                    violation
+                    for violation in violations
+                    if violation.rule
+                    == "advanced-surface-plot-drag-declarative-binding-boundary"
+                ]
+            )
+
     def test_plot_stress_legacy_retained_authoring_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

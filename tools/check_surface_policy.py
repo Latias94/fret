@@ -728,6 +728,39 @@ PLOT_STRESS_FORBIDDEN_COMPACT_MARKERS = (
     "app.models_mut().update(&state.plot",
 )
 
+PLOT_DRAG_OWNER = "examples-plot-drag-demo"
+
+PLOT_DRAG_REQUIRED_COMPACT_MARKERS = (
+    "usefret_plot::LinePlotPanelBinding;",
+    "usefret_plot::declarative::line_plot_panel_in;",
+    "plot:LinePlotPanelBinding",
+    "LinePlotPanelBinding::new_with_state(app,model,state)",
+    "declarative::RenderRootContext::new(&mutstate.ui,app,services,window,bounds)",
+    "state.plot.output_untracked(app)",
+    "state.plot.update_state(app,|s|{",
+    "plot.panel_props().style(style)",
+    "vec![line_plot_panel_in(cx,props)]",
+    "PlotDragOutput::LineX",
+    "PlotDragOutput::LineY",
+    "PlotDragOutput::Point",
+    "PlotDragOutput::Rect",
+)
+
+PLOT_DRAG_FORBIDDEN_COMPACT_MARKERS = (
+    "usefret_plot::retained",
+    "fret_plot::retained::",
+    "LinePlotCanvas",
+    "PlotCanvas",
+    "create_node_retained(",
+    "fret_runtime::Model<",
+    "PlotOutput",
+    "LinePlotPanelProps::new(plot.clone())",
+    ".state(plot_state.clone())",
+    ".output(plot_output.clone())",
+    "state.plot_state.update(app",
+    "app.models_mut().insert(PlotOutput::default())",
+)
+
 CHART_STRESS_OWNER = "examples-chart-stress"
 
 CHART_STRESS_REQUIRED_COMPACT_MARKERS = (
@@ -2131,7 +2164,7 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
             "FnDriver",
             "UiTree",
         ),
-        owner="examples-plot-drag-demo",
+        owner=PLOT_DRAG_OWNER,
     ),
     _fret_examples_advanced_surface(
         "markdown_demo.rs",
@@ -3239,6 +3272,54 @@ def _scan_plot_stress_declarative_binding_boundary(
     return violations
 
 
+def _scan_plot_drag_declarative_binding_boundary(
+    root: Path, spec: SurfacePath
+) -> list[SurfaceViolation]:
+    if spec.owner != PLOT_DRAG_OWNER:
+        return []
+
+    violations: list[SurfaceViolation] = []
+    for path in _iter_source_files(root / spec.path):
+        text = _read_text(path)
+        production_text = text.split("#[cfg(test)]", 1)[0]
+        compact_production = _compact_source(production_text)
+        missing_markers = [
+            marker
+            for marker in PLOT_DRAG_REQUIRED_COMPACT_MARKERS
+            if marker not in compact_production
+        ]
+        if missing_markers:
+            violations.append(
+                SurfaceViolation(
+                    rule="advanced-surface-plot-drag-declarative-binding-boundary",
+                    path=path,
+                    line_no=1,
+                    message=(
+                        "Plot drag demo must keep drag output reads, state feedback writes, "
+                        "and panel authoring on LinePlotPanelBinding; "
+                        f"missing compact markers: {', '.join(missing_markers)}"
+                    ),
+                )
+            )
+
+        for marker in PLOT_DRAG_FORBIDDEN_COMPACT_MARKERS:
+            if marker not in compact_production:
+                continue
+            violations.append(
+                SurfaceViolation(
+                    rule="advanced-surface-plot-drag-declarative-binding-boundary",
+                    path=path,
+                    line_no=1,
+                    message=(
+                        "Plot drag demo must not expose retained/manual plot state or output "
+                        f"wiring; compact `{marker}` bypasses the LinePlotPanelBinding boundary"
+                    ),
+                )
+            )
+
+    return violations
+
+
 def _scan_chart_stress_declarative_binding_boundary(
     root: Path, spec: SurfacePath
 ) -> list[SurfaceViolation]:
@@ -4273,6 +4354,7 @@ def _scan_classified_raw_surface(root: Path, spec: SurfacePath) -> list[SurfaceV
     violations.extend(_scan_hotpatch_smoke_owner_boundary(root, spec))
     violations.extend(_scan_docking_arbitration_controls_boundary(root, spec))
     violations.extend(_scan_plot_stress_declarative_binding_boundary(root, spec))
+    violations.extend(_scan_plot_drag_declarative_binding_boundary(root, spec))
     violations.extend(_scan_chart_stress_declarative_binding_boundary(root, spec))
     violations.extend(_scan_chart_multi_axis_linked_binding_boundary(root, spec))
     violations.extend(_scan_echarts_adapter_binding_boundary(root, spec))
