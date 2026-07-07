@@ -21,6 +21,7 @@ Radix semantics, and Base UI `Tooltip.Root` lifecycle behavior.
 ## Fret implementation anchors
 
 - Component code: `ecosystem/fret-ui-shadcn/src/tooltip.rs`
+- Declarative semantics invalidation: `crates/fret-ui/src/declarative/mount.rs`
 - Hover intent and delay group: `ecosystem/fret-ui-kit/src/headless/hover_intent.rs`
 - Overlay policy and placement helpers: `ecosystem/fret-ui-kit/src/overlay.rs`
 
@@ -44,6 +45,10 @@ Radix semantics, and Base UI `Tooltip.Root` lifecycle behavior.
 - Pass: The first-party `Usage` snippet now wraps its local example in `TooltipProvider` so the
   code tab stays standalone and copyable while still teaching the default `Tooltip::new(...)`
   root lane.
+- Pass: Tooltip dismissal clears the trigger's described-by relationship on Escape and outside
+  press in the same post-dismiss frame. The underlying `Pressable` declarative diff now treats
+  a11y relation changes as semantic invalidations, so dynamic `aria-describedby`-style relations
+  do not reuse stale semantics snapshots.
 - Note: Fret intentionally does not add a separate generic `children([...])` / `compose()` root
   builder for `Tooltip` today. Unlike modal overlays that need explicit portal/overlay/content
   slot assembly, tooltip authoring is already expressed by the root's required trigger/content
@@ -76,11 +81,10 @@ Radix semantics, and Base UI `Tooltip.Root` lifecycle behavior.
 
 ## Validation
 
-- `cargo nextest run -p fret-ui-shadcn tooltip_open_change_handlers_can_be_set`
-- `cargo nextest run -p fret-ui-shadcn tooltip_open_change_events_emit_change_and_complete_after_settle`
-- `cargo nextest run -p fret-ui-shadcn tooltip_open_change_reason_mapping_covers_dismiss_reasons`
-- `cargo nextest run -p fret-ui-shadcn tooltip_open_change_reason_for_transition_uses_trigger_and_close_reason`
-- `cargo test -p fret-ui-gallery --test tooltip_docs_surface`
+- `cargo nextest run -p fret-ui --lib declarative::tests::semantics::declarative_pressable_a11y_relation_changes_refresh_semantics_snapshot`
+- `cargo nextest run -p fret-ui-shadcn --lib tooltip::tests`
+- `cargo nextest run -p fret-ui-shadcn --test tooltip_hover_and_escape`
+- `cargo nextest run -p fret-ui-gallery --test tooltip_docs_surface`
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_overlay_chrome tooltip::fixtures`
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_overlay_placement misc_overlays::fixtures::web_vs_fret_misc_overlays_tooltip_cases_match_web_fixtures`
 - `cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery-tooltip-docs-smoke.json --dir target/fret-diag --session-auto --pack --ai-packet --launch -- cargo run -p fret-ui-gallery`
-- Overlay layout and chrome parity continue to be validated in
-  `web_vs_fret_overlay_placement` / `web_vs_fret_overlay_chrome` tooltip gates.

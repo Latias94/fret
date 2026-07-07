@@ -30,7 +30,10 @@ use fret_ui::element::{
     SpinnerProps, SvgIconProps,
 };
 use fret_ui::overlay_placement::{Align, Side};
-use fret_ui::{ElementContext, ElementContextAccess, Invalidation, Theme, ThemeSnapshot, UiHost};
+use fret_ui::{
+    ElementContext, ElementContextAccess, GlobalElementId, Invalidation, Theme, ThemeSnapshot,
+    UiHost,
+};
 
 use crate::overlay_motion;
 
@@ -176,26 +179,28 @@ fn tooltip_diamond_arrow_options(
     (options, Px(protrusion.0 + 2.0))
 }
 
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+struct TooltipTriggerEventState {
+    has_pointer_move_opened: bool,
+    suppress_hover_open: bool,
+    suppress_focus_open: bool,
+    close_requested: bool,
+    close_reason: Option<TooltipOpenChangeReason>,
+}
+
 #[derive(Clone)]
 struct TooltipTriggerEventModels {
-    has_pointer_move_opened: Model<bool>,
+    state: Model<TooltipTriggerEventState>,
     pointer_transit_geometry: Model<Option<(Rect, Rect)>>,
-    suppress_hover_open: Model<bool>,
-    suppress_focus_open: Model<bool>,
-    close_requested: Model<bool>,
-    close_reason: Model<Option<TooltipOpenChangeReason>>,
 }
 
 fn tooltip_trigger_event_models<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
+    tooltip_id: GlobalElementId,
 ) -> TooltipTriggerEventModels {
     TooltipTriggerEventModels {
-        has_pointer_move_opened: cx.local_model_keyed("has_pointer_move_opened", || false),
+        state: cx.model_for(tooltip_id, TooltipTriggerEventState::default),
         pointer_transit_geometry: tooltip_provider::pointer_transit_geometry_model(cx),
-        suppress_hover_open: cx.local_model_keyed("suppress_hover_open", || false),
-        suppress_focus_open: cx.local_model_keyed("suppress_focus_open", || false),
-        close_requested: cx.local_model_keyed("close_requested", || false),
-        close_reason: cx.local_model_keyed("close_reason", || None),
     }
 }
 
@@ -877,32 +882,19 @@ impl Tooltip {
         cx.hover_region(HoverRegionProps { layout }, move |cx, hovered| {
             let hovered = hovered && pointer_can_hover;
             let focused = cx.is_focused_element(trigger_id);
-            let event_models = tooltip_trigger_event_models(cx);
             let tooltip_id = cx.root_id();
+            let event_models = tooltip_trigger_event_models(cx, tooltip_id);
 
             let open = cx.model_for(tooltip_id, || false);
             let open_now = cx.watch_model(&open).layout().copied().unwrap_or(false);
 
-            let close_requested = cx
-                .watch_model(&event_models.close_requested)
+            let event_state = cx
+                .watch_model(&event_models.state)
                 .layout()
                 .copied()
-                .unwrap_or(false);
-            let has_pointer_move_opened = cx
-                .watch_model(&event_models.has_pointer_move_opened)
-                .layout()
-                .copied()
-                .unwrap_or(false);
-            let suppress_hover_open = cx
-                .watch_model(&event_models.suppress_hover_open)
-                .layout()
-                .copied()
-                .unwrap_or(false);
-            let suppress_focus_open = cx
-                .watch_model(&event_models.suppress_focus_open)
-                .layout()
-                .copied()
-                .unwrap_or(false);
+                .unwrap_or_default();
+            let close_requested = event_state.close_requested;
+            let close_reason_for_open_change = event_state.close_reason;
 
             let left_hover = cx.slot_state(TooltipTriggerHoverEdgeState::default, |st| {
                 let left = st.was_hovered && !hovered;
@@ -911,9 +903,9 @@ impl Tooltip {
             });
 
             let mut gates = TooltipTriggerIntentGates {
-                has_pointer_move_opened,
-                suppress_hover_open,
-                suppress_focus_open,
+                has_pointer_move_opened: event_state.has_pointer_move_opened,
+                suppress_hover_open: event_state.suppress_hover_open,
+                suppress_focus_open: event_state.suppress_focus_open,
             };
             let prev = gates;
             gates = gates.on_left_hover(left_hover);
@@ -922,39 +914,16 @@ impl Tooltip {
                 gates.on_close_requested(close_requested, focused);
             gates = gates_after_close;
 
-            if gates.has_pointer_move_opened != prev.has_pointer_move_opened {
-                let _ = cx
-                    .app
-                    .models_mut()
-                    .update(&event_models.has_pointer_move_opened, |v| {
-                        *v = gates.has_pointer_move_opened
-                    });
-            }
-            if gates.suppress_hover_open != prev.suppress_hover_open {
-                let _ = cx
-                    .app
-                    .models_mut()
-                    .update(&event_models.suppress_hover_open, |v| {
-                        *v = gates.suppress_hover_open
-                    });
-            }
-            if gates.suppress_focus_open != prev.suppress_focus_open {
-                let _ = cx
-                    .app
-                    .models_mut()
-                    .update(&event_models.suppress_focus_open, |v| {
-                        *v = gates.suppress_focus_open
-                    });
-            }
-            if clear_close_requested {
-                let _ = cx
-                    .app
-                    .models_mut()
-                    .update(&event_models.close_requested, |v| *v = false);
-                let _ = cx
-                    .app
-                    .models_mut()
-                    .update(&event_models.close_reason, |v| *v = None);
+            if gates != prev || clear_close_requested {
+                let _ = cx.app.models_mut().update(&event_models.state, |st| {
+                    st.has_pointer_move_opened = gates.has_pointer_move_opened;
+                    st.suppress_hover_open = gates.suppress_hover_open;
+                    st.suppress_focus_open = gates.suppress_focus_open;
+                    if clear_close_requested {
+                        st.close_requested = false;
+                        st.close_reason = None;
+                    }
+                });
             }
 
             let provider_cfg = tooltip_provider::current_config(cx);
@@ -1042,16 +1011,11 @@ impl Tooltip {
                     safe_hover_buffer: Px(5.0),
                 },
             );
-            let close_reason_for_open_change = cx
-                .watch_model(&event_models.close_reason)
-                .layout()
-                .copied()
-                .unwrap_or(None);
             if update.open {
-                let _ = cx
-                    .app
-                    .models_mut()
-                    .update(&event_models.close_reason, |v| *v = None);
+                let _ = cx.app.models_mut().update(&event_models.state, |st| {
+                    st.close_requested = false;
+                    st.close_reason = None;
+                });
             }
 
             scheduling::set_continuous_frames(cx, update.wants_continuous_ticks);
@@ -1066,31 +1030,18 @@ impl Tooltip {
             cx.pressable_add_on_pointer_down_for(
                 trigger_id,
                 Arc::new({
-                    let close_requested = event_models.close_requested.clone();
-                    let close_reason = event_models.close_reason.clone();
-                    let suppress_focus_open = event_models.suppress_focus_open.clone();
-                    let has_pointer_move_opened = event_models.has_pointer_move_opened.clone();
-                    let suppress_hover_open = event_models.suppress_hover_open.clone();
+                    let state = event_models.state.clone();
                     move |host, acx, down| {
-                        if down.pointer_type != PointerType::Touch {
-                            let _ = host.models_mut().update(&close_requested, |v| *v = true);
-                            let _ = host.models_mut().update(&close_reason, |v| {
-                                *v = Some(TooltipOpenChangeReason::TriggerPress)
-                            });
-                        }
-                        let _ = host
-                            .models_mut()
-                            .update(&suppress_focus_open, |v| *v = true);
-                        let gate = host
-                            .models_mut()
-                            .read(&has_pointer_move_opened, |v| *v)
-                            .ok()
-                            .unwrap_or(false);
-                        if gate {
-                            let _ = host
-                                .models_mut()
-                                .update(&suppress_hover_open, |v| *v = true);
-                        }
+                        let _ = host.models_mut().update(&state, |st| {
+                            if down.pointer_type != PointerType::Touch {
+                                st.close_requested = true;
+                                st.close_reason = Some(TooltipOpenChangeReason::TriggerPress);
+                            }
+                            st.suppress_focus_open = true;
+                            if st.has_pointer_move_opened {
+                                st.suppress_hover_open = true;
+                            }
+                        });
                         host.request_redraw(acx.window);
                         fret_ui::action::PressablePointerDownResult::Continue
                     }
@@ -1100,17 +1051,13 @@ impl Tooltip {
             cx.pressable_add_on_activate_for(
                 trigger_id,
                 Arc::new({
-                    let close_requested = event_models.close_requested.clone();
-                    let close_reason = event_models.close_reason.clone();
-                    let suppress_focus_open = event_models.suppress_focus_open.clone();
+                    let state = event_models.state.clone();
                     move |host, acx, _reason| {
-                        let _ = host.models_mut().update(&close_requested, |v| *v = true);
-                        let _ = host.models_mut().update(&close_reason, |v| {
-                            *v = Some(TooltipOpenChangeReason::TriggerPress)
+                        let _ = host.models_mut().update(&state, |st| {
+                            st.close_requested = true;
+                            st.close_reason = Some(TooltipOpenChangeReason::TriggerPress);
+                            st.suppress_focus_open = true;
                         });
-                        let _ = host
-                            .models_mut()
-                            .update(&suppress_focus_open, |v| *v = true);
                         host.request_redraw(acx.window);
                     }
                 }),
@@ -1119,30 +1066,30 @@ impl Tooltip {
             cx.key_add_on_key_down_for(
                 trigger_id,
                 Arc::new({
-                    let close_requested = event_models.close_requested.clone();
-                    let close_reason = event_models.close_reason.clone();
-                    let suppress_focus_open = event_models.suppress_focus_open.clone();
+                    let state = event_models.state.clone();
                     move |host, acx, down| {
                         if down.repeat || down.key != KeyCode::Escape {
                             return false;
                         }
-                        let _ = host.models_mut().update(&close_requested, |v| *v = true);
-                        let _ = host.models_mut().update(&close_reason, |v| {
-                            *v = Some(TooltipOpenChangeReason::EscapeKey)
+                        let _ = host.models_mut().update(&state, |st| {
+                            st.close_requested = true;
+                            st.close_reason = Some(TooltipOpenChangeReason::EscapeKey);
+                            st.suppress_focus_open = true;
                         });
-                        let _ = host
-                            .models_mut()
-                            .update(&suppress_focus_open, |v| *v = true);
                         host.request_redraw(acx.window);
                         true
                     }
                 }),
             );
 
+            let state_for_pointer_move = event_models.state.clone();
+            let pointer_transit_geometry_for_pointer_move =
+                event_models.pointer_transit_geometry.clone();
             let trigger = cx.pointer_region(PointerRegionProps::default(), move |cx| {
                 cx.pointer_region_on_pointer_move(Arc::new({
-                    let has_pointer_move_opened = event_models.has_pointer_move_opened.clone();
-                    let pointer_transit_geometry = event_models.pointer_transit_geometry.clone();
+                    let state = state_for_pointer_move.clone();
+                    let pointer_transit_geometry =
+                        pointer_transit_geometry_for_pointer_move.clone();
                     let last_pointer = last_pointer_for_trigger.clone();
                     move |host, acx, mv| {
                         if mv.pointer_type == PointerType::Touch {
@@ -1170,12 +1117,12 @@ impl Tooltip {
                         }
                         let already = host
                             .models_mut()
-                            .read(&has_pointer_move_opened, |v| *v)
+                            .read(&state, |st| st.has_pointer_move_opened)
                             .ok()
                             .unwrap_or(false);
                         if !already {
-                            let _ = host.models_mut().update(&has_pointer_move_opened, |v| {
-                                *v = true;
+                            let _ = host.models_mut().update(&state, |st| {
+                                st.has_pointer_move_opened = true;
                             });
                             host.request_redraw(acx.window);
                         }
@@ -1413,14 +1360,17 @@ impl Tooltip {
             );
             request.trigger = Some(trigger_id);
             request.dismissible_on_dismiss_request = Some(radix_dismissable_layer::handler({
-                let close_requested = event_models.close_requested.clone();
-                let close_reason = event_models.close_reason.clone();
+                let state = event_models.state.clone();
                 move |host, acx, _reason| {
                     let reason = tooltip_open_change_reason_from_dismiss_reason(_reason.reason);
-                    let _ = host.models_mut().update(&close_requested, |v| *v = true);
-                    let _ = host
-                        .models_mut()
-                        .update(&close_reason, |v| *v = Some(reason));
+                    let _ = host.models_mut().update(&state, |st| {
+                        st.close_requested = true;
+                        st.close_reason = Some(reason);
+                        st.suppress_focus_open = true;
+                        if st.has_pointer_move_opened {
+                            st.suppress_hover_open = true;
+                        }
+                    });
                     host.request_redraw(acx.window);
                 }
             }));

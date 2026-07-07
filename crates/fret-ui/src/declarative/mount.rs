@@ -2805,6 +2805,22 @@ fn declarative_instance_change_mask(
                 paint_changed = true;
             }
         }
+        (ElementInstance::Pressable(a), ElementInstance::Pressable(b)) => {
+            if a.enabled != b.enabled || a.focusable != b.focusable {
+                layout_changed = true;
+                paint_changed = true;
+                semantics_changed = true;
+            }
+            if a.focus_ring != b.focus_ring
+                || a.focus_ring_always_paint != b.focus_ring_always_paint
+                || a.focus_ring_bounds != b.focus_ring_bounds
+            {
+                paint_changed = true;
+            }
+            if pressable_a11y_semantics_changed(&a.a11y, &b.a11y) {
+                semantics_changed = true;
+            }
+        }
         (ElementInstance::ManagedSurface(_), ElementInstance::ManagedSurface(_)) => {
             // Managed surface hooks are opaque element-state closures. They can capture host policy
             // inputs that are not represented in `ManagedSurfaceProps`, so each declarative render
@@ -2836,6 +2852,34 @@ fn declarative_instance_change_mask(
         mask |= INVALIDATION_TEXT_CONTENT;
     }
     mask
+}
+
+fn pressable_a11y_semantics_changed(
+    a: &crate::element::PressableA11y,
+    b: &crate::element::PressableA11y,
+) -> bool {
+    a.role != b.role
+        || a.label != b.label
+        || a.value != b.value
+        || a.state_description != b.state_description
+        || a.level != b.level
+        || a.test_id != b.test_id
+        || a.hidden != b.hidden
+        || a.visited != b.visited
+        || a.multiselectable != b.multiselectable
+        || a.required != b.required
+        || a.invalid != b.invalid
+        || a.selected != b.selected
+        || a.expanded != b.expanded
+        || a.checked != b.checked
+        || a.checked_state != b.checked_state
+        || a.pressed_state != b.pressed_state
+        || a.active_descendant != b.active_descendant
+        || a.labelled_by_element != b.labelled_by_element
+        || a.described_by_element != b.described_by_element
+        || a.controls_element != b.controls_element
+        || a.pos_in_set != b.pos_in_set
+        || a.set_size != b.set_size
 }
 
 fn text_content_update_can_skip_layout(
@@ -2903,6 +2947,8 @@ fn apply_pending_invalidations<H: UiHost>(ui: &mut UiTree<H>, pending: &mut Hash
     for (node, mask) in pending.drain() {
         let detail = if (mask & INVALIDATION_TEXT_CONTENT) != 0 {
             UiDebugInvalidationDetail::DeclarativeTextContentChanged
+        } else if (mask & INVALIDATION_SEMANTICS) != 0 {
+            UiDebugInvalidationDetail::DeclarativeSemanticsChanged
         } else {
             UiDebugInvalidationDetail::DeclarativeInstanceChanged
         };

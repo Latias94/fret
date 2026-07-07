@@ -96,6 +96,7 @@ pub enum UiDebugInvalidationDetail {
     InputModalityPolicy,
     AnimationFrameRequest,
     DeclarativeInstanceChanged,
+    DeclarativeSemanticsChanged,
     DeclarativeTextContentChanged,
 }
 
@@ -154,6 +155,7 @@ impl UiDebugInvalidationDetail {
             Self::InputModalityPolicy => Some("input_modality_policy"),
             Self::AnimationFrameRequest => Some("animation_frame_request"),
             Self::DeclarativeInstanceChanged => Some("declarative_instance_changed"),
+            Self::DeclarativeSemanticsChanged => Some("declarative_semantics_changed"),
             Self::DeclarativeTextContentChanged => Some("declarative_text_content_changed"),
         }
     }

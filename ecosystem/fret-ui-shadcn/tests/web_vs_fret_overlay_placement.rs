@@ -13,9 +13,9 @@ use fret_core::{
 use fret_runtime::{Effect, Model};
 use fret_ui::element::{
     AnyElement, ColumnProps, ContainerProps, CrossAlign, GridProps, LayoutStyle, Length, MainAlign,
-    MarginEdge, RowProps, TextProps,
+    MarginEdge, PressableA11y, PressableProps, RowProps, TextProps,
 };
-use fret_ui::elements::{GlobalElementId, bounds_for_element};
+use fret_ui::elements::{GlobalElementId, bounds_for_element, current_bounds_for_element};
 use fret_ui::scroll::ScrollHandle;
 use fret_ui::tree::UiTree;
 use fret_ui::{ElementContext, UiHost};
@@ -10229,6 +10229,34 @@ fn assert_tooltip_demo_overlay_placement_matches(web_name: &str) {
     let trigger_id_out: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
     let content_id_out: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
 
+    fn build_trigger(
+        cx: &mut ElementContext<'_, App>,
+        trigger_id_out: Rc<Cell<Option<GlobalElementId>>>,
+        trigger_w: f32,
+        trigger_h: f32,
+    ) -> AnyElement {
+        let mut layout = LayoutStyle::default();
+        layout.size.width = Length::Px(Px(trigger_w));
+        layout.size.height = Length::Px(Px(trigger_h));
+        cx.pressable_with_id(
+            PressableProps {
+                layout,
+                enabled: true,
+                focusable: true,
+                a11y: PressableA11y {
+                    role: Some(SemanticsRole::Button),
+                    label: Some(Arc::from("Hover")),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            move |cx, _st, id| {
+                trigger_id_out.set(Some(id));
+                vec![cx.text("Hover")]
+            },
+        )
+    }
+
     render_frame(
         &mut ui,
         &mut app,
@@ -10240,15 +10268,7 @@ fn assert_tooltip_demo_overlay_placement_matches(web_name: &str) {
         |cx| {
             let trigger_id_out = trigger_id_out.clone();
             let content_id_out = content_id_out.clone();
-            let trigger = shadcn::Button::new("Hover")
-                .variant(shadcn::ButtonVariant::Outline)
-                .refine_layout(
-                    fret_ui_kit::LayoutRefinement::default()
-                        .w_px(Px(trigger_w))
-                        .h_px(Px(trigger_h)),
-                )
-                .into_element(cx);
-            trigger_id_out.set(Some(trigger.id));
+            let trigger = build_trigger(cx, trigger_id_out, trigger_w, trigger_h);
             let content = shadcn::TooltipContent::new(vec![cx.text("Add to library")])
                 .refine_layout(
                     fret_ui_kit::LayoutRefinement::default()
@@ -10257,15 +10277,16 @@ fn assert_tooltip_demo_overlay_placement_matches(web_name: &str) {
                 )
                 .into_element(cx);
             content_id_out.set(Some(content.id));
-            let tooltip = shadcn::Tooltip::new(cx, trigger, content).into_element(cx);
+            let tooltip = shadcn::Tooltip::new(cx, trigger, content)
+                .open_delay_frames(0)
+                .close_delay_frames(0)
+                .into_element(cx);
             vec![pad_root(cx, Px(0.0), tooltip)]
         },
     );
 
     let trigger_element = trigger_id_out.get().expect("tooltip trigger element id");
-    let trigger_node = fret_ui::elements::node_for_element(&mut app, window, trigger_element)
-        .expect("tooltip trigger node");
-    ui.set_focus(Some(trigger_node));
+    ui.request_focus_element(&mut app, trigger_element);
 
     let settle_frames = crate::shadcn_motion::ticks_100() + 2;
     for tick in 0..settle_frames {
@@ -10281,15 +10302,7 @@ fn assert_tooltip_demo_overlay_placement_matches(web_name: &str) {
             |cx| {
                 let trigger_id_out = trigger_id_out.clone();
                 let content_id_out = content_id_out.clone();
-                let trigger = shadcn::Button::new("Hover")
-                    .variant(shadcn::ButtonVariant::Outline)
-                    .refine_layout(
-                        fret_ui_kit::LayoutRefinement::default()
-                            .w_px(Px(trigger_w))
-                            .h_px(Px(trigger_h)),
-                    )
-                    .into_element(cx);
-                trigger_id_out.set(Some(trigger.id));
+                let trigger = build_trigger(cx, trigger_id_out, trigger_w, trigger_h);
                 let content = shadcn::TooltipContent::new(vec![cx.text("Add to library")])
                     .refine_layout(
                         fret_ui_kit::LayoutRefinement::default()
@@ -10298,7 +10311,10 @@ fn assert_tooltip_demo_overlay_placement_matches(web_name: &str) {
                     )
                     .into_element(cx);
                 content_id_out.set(Some(content.id));
-                let tooltip = shadcn::Tooltip::new(cx, trigger, content).into_element(cx);
+                let tooltip = shadcn::Tooltip::new(cx, trigger, content)
+                    .open_delay_frames(0)
+                    .close_delay_frames(0)
+                    .into_element(cx);
                 vec![pad_root(cx, Px(0.0), tooltip)]
             },
         );
@@ -10307,10 +10323,12 @@ fn assert_tooltip_demo_overlay_placement_matches(web_name: &str) {
     let trigger_element = trigger_id_out.get().expect("tooltip trigger element id");
     let content_element = content_id_out.get().expect("tooltip content element id");
 
-    let trigger_bounds =
-        bounds_for_element(&mut app, window, trigger_element).expect("tooltip trigger bounds");
-    let portal_bounds =
-        bounds_for_element(&mut app, window, content_element).expect("tooltip content bounds");
+    let trigger_bounds = bounds_for_element(&mut app, window, trigger_element)
+        .or_else(|| current_bounds_for_element(&mut app, window, trigger_element))
+        .expect("tooltip trigger bounds");
+    let portal_bounds = bounds_for_element(&mut app, window, content_element)
+        .or_else(|| current_bounds_for_element(&mut app, window, content_element))
+        .expect("tooltip content bounds");
 
     let debug = std::env::var("FRET_DEBUG_OVERLAY_PLACEMENT")
         .ok()

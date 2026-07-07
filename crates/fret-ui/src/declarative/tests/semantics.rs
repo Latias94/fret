@@ -487,6 +487,86 @@ fn pressable_semantics_exposes_label_and_value_separately() {
 }
 
 #[test]
+fn declarative_pressable_a11y_relation_changes_refresh_semantics_snapshot() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(100.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    fn render(
+        ui: &mut UiTree<TestHost>,
+        app: &mut TestHost,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        described: bool,
+    ) {
+        let root = render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "a11y-pressable-described-by-diff",
+            |cx| {
+                let description = cx.text("Helpful description").test_id("description");
+                let mut props = crate::element::PressableProps::default();
+                props.layout.size.width = Length::Px(Px(140.0));
+                props.layout.size.height = Length::Px(Px(32.0));
+                props.a11y = crate::element::PressableA11y {
+                    role: Some(fret_core::SemanticsRole::Button),
+                    label: Some(Arc::from("Trigger")),
+                    described_by_element: described.then_some(description.id.0),
+                    ..Default::default()
+                };
+
+                vec![description, cx.pressable(props, |_cx, _state| Vec::new())]
+            },
+        );
+        ui.set_root(root);
+    }
+
+    render(&mut ui, &mut app, &mut services, window, bounds, true);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot");
+    let description = snap
+        .nodes
+        .iter()
+        .find(|n| n.test_id.as_deref() == Some("description"))
+        .expect("description node")
+        .id;
+    let trigger = snap
+        .nodes
+        .iter()
+        .find(|n| n.label.as_deref() == Some("Trigger"))
+        .expect("trigger node");
+    assert!(trigger.described_by.contains(&description));
+
+    render(&mut ui, &mut app, &mut services, window, bounds, false);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot");
+    let trigger = snap
+        .nodes
+        .iter()
+        .find(|n| n.label.as_deref() == Some("Trigger"))
+        .expect("trigger node");
+    assert!(
+        trigger.described_by.is_empty(),
+        "expected described-by relation to clear after Pressable a11y update"
+    );
+}
+
+#[test]
 fn declarative_scrollbar_emits_role_and_scroll_metadata() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

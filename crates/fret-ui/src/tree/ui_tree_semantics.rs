@@ -69,7 +69,8 @@ impl<H: UiHost> UiTree<H> {
 
         if matches!(
             detail,
-            UiDebugInvalidationDetail::DeclarativeTextContentChanged
+            UiDebugInvalidationDetail::DeclarativeSemanticsChanged
+                | UiDebugInvalidationDetail::DeclarativeTextContentChanged
         ) {
             return true;
         }
