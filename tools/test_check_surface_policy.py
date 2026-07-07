@@ -867,11 +867,17 @@ class SurfacePolicyTests(unittest.TestCase):
             "apps/fret-examples/src/streaming_image_demo.rs",
             "apps/fret-examples/src/streaming_nv12_demo.rs",
         }
+        smoke_effects_paths = {
+            "apps/fret-examples/src/effects_demo.rs",
+            "apps/fret-examples/src/first_frame_smoke_demo.rs",
+        }
         for path in custom_effect_v2_web_paths:
             self.assertIn(path, POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS)
         for path in custom_effect_reference_paths:
             self.assertIn(path, POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS)
         for path in streaming_import_paths:
+            self.assertIn(path, POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS)
+        for path in smoke_effects_paths:
             self.assertIn(path, POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS)
         self.assertTrue(
             any(
@@ -1008,6 +1014,18 @@ class SurfacePolicyTests(unittest.TestCase):
             )
             self.assertIn("streaming image upload", spec.reason)
             self.assertTrue(spec.allowed_raw_seams)
+        self.assertTrue(
+            any(
+                spec.path == "apps/fret-examples/src/effects_demo.rs"
+                for spec in POLICY.RENDERER_LAB_SURFACES
+            )
+        )
+        self.assertTrue(
+            any(
+                spec.path == "apps/fret-examples/src/first_frame_smoke_demo.rs"
+                for spec in POLICY.INTERNAL_HARNESS_SURFACES
+            )
+        )
         helper_spec = next(
             (
                 spec
@@ -3159,6 +3177,7 @@ class SurfacePolicyTests(unittest.TestCase):
             "apps/fret-cookbook/examples/compositing_alpha_basics.rs",
             "apps/fret-cookbook/examples/customv1_basics.rs",
             "apps/fret-cookbook/examples/image_asset_cache_basics.rs",
+            "apps/fret-examples/src/effects_demo.rs",
         }
 
         self.assertTrue(expected.issubset(renderer_lab_paths))

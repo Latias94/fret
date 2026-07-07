@@ -966,6 +966,22 @@ def _fret_examples_internal_harness(
     )
 
 
+def _fret_examples_renderer_lab_surface(
+    path: str,
+    reason: str,
+    allowed_raw_seams: tuple[str, ...],
+    owner: str | None = None,
+) -> SurfacePath:
+    stem = path.removesuffix(".rs").replace("/", "-").replace("_", "-")
+    return SurfacePath(
+        f"apps/fret-examples/src/{path}",
+        "renderer_lab",
+        f"{path} remains classified as a renderer lab because {reason}",
+        owner=owner or f"examples-{stem}",
+        allowed_raw_seams=allowed_raw_seams,
+    )
+
+
 COMPARISON_SURFACES: tuple[SurfacePath, ...] = (
     _fret_examples_comparison_surface(
         "api_workbench_lite_demo.rs",
@@ -1043,6 +1059,13 @@ INTERNAL_HARNESS_SURFACES: tuple[SurfacePath, ...] = (
         "interop helpers for demo shells",
         ("fret::advanced", "fret_app", "fret_core", "fret_launch"),
         owner="examples-harness-root",
+    ),
+    _fret_examples_internal_harness(
+        "first_frame_smoke_demo.rs",
+        "the first-frame smoke harness owns manual FnDriver startup, explicit render hooks, and "
+        "auto-close behavior for launch/backend validation",
+        ("fret_app", "fret_core", "fret_launch", "FnDriver"),
+        owner="examples-first-frame-smoke",
     ),
     _fret_examples_internal_harness(
         "docking_arbitration_demo.rs",
@@ -1166,6 +1189,13 @@ INTERNAL_HARNESS_SURFACES: tuple[SurfacePath, ...] = (
 
 
 RENDERER_LAB_SURFACES: tuple[SurfacePath, ...] = (
+    _fret_examples_renderer_lab_surface(
+        "effects_demo.rs",
+        "it owns manual FnDriver renderer hooks, direct SceneOp effect composition, and "
+        "env-driven renderer perf reporting rather than an app-authoring lesson",
+        ("fret_app", "fret_core", "fret_launch", "FnDriver"),
+        owner="examples-effects-renderer-lab",
+    ),
     _cookbook_renderer_lab_surface(
         "compositing_alpha_basics.rs",
         "it is a deterministic screenshot baseline for straight-vs-premultiplied alpha renderer "
@@ -1721,6 +1751,8 @@ PUBLIC_EXAMPLE_SCAN_ROOTS: tuple[str, ...] = (
         f"apps/fret-examples/src/{filename}"
         for filename in STREAMING_IMPORT_DEMO_FILENAMES
     ),
+    "apps/fret-examples/src/effects_demo.rs",
+    "apps/fret-examples/src/first_frame_smoke_demo.rs",
     "apps/fret-examples/src/custom_effect_v2_web_demo.rs",
     "apps/fret-examples/src/custom_effect_v2_identity_web_demo.rs",
     "apps/fret-examples/src/custom_effect_v2_lut_web_demo.rs",
