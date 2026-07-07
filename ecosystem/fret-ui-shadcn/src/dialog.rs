@@ -2670,16 +2670,32 @@ mod tests {
             .into_element(cx)
         });
 
-        let stack = el
+        let stack_shell = el
             .children
             .first()
-            .expect("expected dialog header inner stack");
+            .expect("expected dialog header stack shell");
+        let ElementKind::Container(shell_props) = &stack_shell.kind else {
+            panic!(
+                "expected dialog header stack shell to be a Container, got {:?}",
+                stack_shell.kind
+            );
+        };
+        assert_eq!(shell_props.layout.size.width, Length::Fill);
+        assert_eq!(shell_props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+
+        let stack = stack_shell
+            .children
+            .first()
+            .expect("expected dialog header inner flex stack");
         let ElementKind::Flex(props) = &stack.kind else {
             panic!(
                 "expected dialog header inner stack to be Flex, got {:?}",
                 stack.kind
             );
         };
+        assert_eq!(props.direction, fret_core::Axis::Vertical);
+        assert_eq!(props.align, CrossAlign::Stretch);
+        assert_eq!(props.justify, MainAlign::Start);
         assert_eq!(props.layout.size.width, Length::Fill);
         assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
     }

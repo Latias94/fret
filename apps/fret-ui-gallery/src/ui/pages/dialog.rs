@@ -35,7 +35,7 @@ pub(super) fn preview_dialog(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
 
     let notes = doc_layout::notes_block([
         "API reference: `ecosystem/fret-ui-shadcn/src/dialog.rs`. Reference stack: shadcn/base Dialog docs and examples, the default registry recipe, Radix Primitives dialog semantics, and Base UI dialog ownership.",
-        "Preview mirrors the shadcn/base Dialog docs path after `Installation`: `Demo`, `Usage`, `Custom Close Button`, `No Close Button`, `Sticky Footer`, `Scrollable Content`, `RTL`, and `API Reference`.",
+        "Preview mirrors the shadcn/base Dialog docs path after `Installation` through `RTL`, then keeps the in-tree `Nested Combobox` modal-boundary proof before `API Reference` and explicit Fret follow-ups.",
         "`Usage` is the default copyable path; `Parts` stays as the advanced adapter section for explicit `DialogTrigger` / `DialogPortal` / `DialogOverlay` ownership.",
         "`Usage` now teaches the root `children([...])` path plus deferred `content_with(...)` / `with_children(...)` composition because it is closer to upstream nested children composition and keeps `DialogClose::from_scope()` in scope for footer actions.",
         "Demo, Custom Close Button, and RTL now follow the upstream docs example copy and width caps more closely, including `sm:max-w-[425px]`, `sm:max-w-md`, and `sm:max-w-sm`-shaped content widths.",

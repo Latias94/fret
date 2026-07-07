@@ -106,9 +106,10 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
   `fret-ui` dialog mechanism. Radix/Base UI-aligned modal semantics, outside-press dismissal,
   dismissal interception, and trigger focus restore are already handled in `fret-ui-kit` /
   `fret-ui-shadcn`.
-- Pass: UI Gallery now mirrors the shadcn/base docs path through `API Reference` before explicit
-  Fret follow-ups, and `Parts` remains the focused advanced ownership lane instead of replacing the
-  default docs path.
+- Pass: UI Gallery now mirrors the shadcn/base docs path through `RTL`, keeps the in-tree
+  `Nested Combobox` modal-boundary proof before `API Reference`, and then lists explicit Fret
+  follow-ups. `Parts` remains the focused advanced ownership lane instead of replacing the default
+  docs path.
 - Pass: Docs-path snippets now keep the primary `Save changes` action as a normal action button in
   the demo/RTL examples rather than teaching it as an implicit close affordance.
 - Pass: Docs-path examples now track upstream copy and width caps more closely for `Demo`,
@@ -122,21 +123,22 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 ## Validation
 
 - `cargo check -p fret-ui-shadcn`
-- `cargo nextest run -p fret-ui-shadcn dialog::tests`
+- `cargo nextest run -p fret-ui-shadcn --lib dialog::tests`
 - `cargo test -p fret-ui-shadcn --lib dialog::tests::dialog_content_build_accepts_builder_first_sections_surface -- --exact`
 - `cargo test -p fret-ui-shadcn --lib dialog::tests::dialog_handle_detached_trigger_restores_focus_to_activated_trigger -- --exact`
-- `cargo test -p fret-ui-gallery dialog -- --nocapture`
-- `cargo test -p fret-ui-gallery --test dialog_docs_surface -- --nocapture`
+- `cargo nextest run -p fret-ui-gallery --test dialog_docs_surface`
+- `cargo nextest run -p fret-ui-gallery --test dialog_diag_surface`
 - Contract test: `dialog_disable_pointer_dismissal_alias_maps_overlay_closable`
 - Contract test: `dialog_open_change_events_emit_change_and_complete_after_settle`
 - Contract test: `dialog_open_change_events_complete_without_animation`
 - Contract test: `dialog_content_default_close_button_closes`
 - Contract test: `dialog_content_show_close_button_false_hides_default_close`
-- Shadcn Web chrome gate: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_chrome`
-  (`web_vs_fret_dialog_demo_panel_chrome_matches`).
-- Shadcn Web placement gate: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_placement`
-  (`web_vs_fret_dialog_demo_overlay_center_matches`).
-- Radix Web overlay geometry gate: `cargo nextest run -p fret-ui-shadcn --test radix_web_overlay_geometry`
+- Shadcn Web chrome gate:
+  `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_overlay_chrome dialog::fixtures`.
+- Shadcn Web placement gate:
+  `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_overlay_placement misc_overlays::fixtures::web_vs_fret_misc_overlays_dialog_cases_match_web_fixtures`.
+- Radix Web overlay geometry gate:
+  `cargo nextest run -p fret-ui-shadcn --features web-goldens --test radix_web_overlay_geometry`
   (`radix_web_dialog_open_geometry_matches_fret`).
 - Gallery diag gate: `tools/diag-scripts/ui-gallery/dialog/ui-gallery-dialog-default-close-click.json`
 - Gallery docs-surface gate: `tools/diag-scripts/ui-gallery/overlay/ui-gallery-dialog-docs-order-smoke.json`

@@ -11,7 +11,8 @@ fn dialog_page_documents_source_axes_and_children_api_decision() {
         "`Dialog::children([...])` is the default copyable root path for part-based composition, and `DialogPart` is available on the curated `shadcn` facade so the default import lane stays copyable.",
         "`DialogPart::content_with(...)` plus `DialogContent::with_children(...)`, `DialogHeader::with_children(...)`, and `DialogFooter::with_children(...)` form the default copyable content lane when child parts need the current dialog scope.",
         "`Dialog::children([...])` is already the warranted composable root API here because the component owns Trigger/Portal/Overlay/Content parts and the scope-sensitive `DialogClose::from_scope()` buttons must stay inside `DialogContent`; no broader untyped JSX-style root children API is warranted beyond the typed `DialogPart` lane.",
-        "Preview mirrors the shadcn/base Dialog docs path after `Installation`: `Demo`, `Usage`, `Custom Close Button`, `No Close Button`, `Sticky Footer`, `Scrollable Content`, `RTL`, and `API Reference`.",
+        "Preview mirrors the shadcn/base Dialog docs path after `Installation` through `RTL`, then keeps the in-tree `Nested Combobox` modal-boundary proof before `API Reference` and explicit Fret follow-ups.",
+        "Nested overlay ownership while a modal dialog barrier is active.",
         "`Usage` is the default copyable path; `Parts` stays as the advanced adapter section for explicit `DialogTrigger` / `DialogPortal` / `DialogOverlay` ownership.",
         "Radix Primitives and Base UI agree on the relevant semantics axis here: modal dialog, outside press dismisses by default, dismissal can be intercepted, and focus restores to the trigger on close. Those outcomes are already handled in `fret-ui-kit` / `fret-ui-shadcn`, so this page is now mainly a docs/public-surface alignment task rather than a `fret-ui` mechanism bug.",
         "`Detached Trigger` is now the focused Base UI-style follow-up for opener/content split ownership; it stays outside the default shadcn/base docs path and does not change the typed `DialogPart` default lane.",
@@ -21,6 +22,7 @@ fn dialog_page_documents_source_axes_and_children_api_decision() {
         ".test_id_prefix(\"ui-gallery-dialog-sticky-footer-docsec\")",
         ".test_id_prefix(\"ui-gallery-dialog-scrollable-docsec\")",
         ".test_id_prefix(\"ui-gallery-dialog-rtl-docsec\")",
+        ".test_id_prefix(\"ui-gallery-dialog-nested-combobox-docsec\")",
         ".test_id_prefix(\"ui-gallery-dialog-parts-docsec\")",
         ".test_id_prefix(\"ui-gallery-dialog-detached-trigger-docsec\")",
     ] {
@@ -41,6 +43,7 @@ fn dialog_page_documents_source_axes_and_children_api_decision() {
             sticky_footer,
             scrollable_content,
             rtl,
+            nested_combobox,
             api_reference,
             extras,
             parts,
@@ -66,7 +69,7 @@ fn dialog_docs_path_snippets_stay_copyable_and_docs_aligned() {
     let rtl = include_str!("../src/ui/snippets/dialog/rtl.rs");
 
     for needle in [
-        "use fret::{UiChild, AppComponentCx};",
+        "use fret::{AppComponentCx, UiChild};",
         "use fret_ui_shadcn::facade as shadcn;",
         "shadcn::Dialog::new_controllable(cx, None, false)",
         ".children([",
