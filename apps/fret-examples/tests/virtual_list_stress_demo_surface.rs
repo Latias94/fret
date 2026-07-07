@@ -8,11 +8,12 @@ fn virtual_list_stress_demo_keeps_fixed_row_text_on_roles() {
     let source = compact(source);
 
     for needle in [
-        "usefret_ui_kit::declarative::textasdecl_text;",
-        "fnvirtual_list_stress_readout_text<H:fret_ui::UiHost>(",
-        "fnvirtual_list_stress_row_label_text<H:fret_ui::UiHost>(",
-        "decl_text::text_control_readout(cx,text)",
-        "decl_text::text_list_row_label(cx,text)",
+        "usefret::app::{AppRenderContext,text};",
+        "fnvirtual_list_stress_readout_text<'a,Cx>(",
+        "fnvirtual_list_stress_row_label_text<'a,Cx>(",
+        "Cx:AppRenderContext<'a>,",
+        "text::control_readout(cx,text)",
+        "text::list_row_label(cx,text)",
         "virtual_list_stress_readout_text(cx,header)",
         "letlabel=Arc::<str>::from(format!(\"Row{id}(tall={tall_rows_enabled})\"));",
         "vec![virtual_list_stress_row_label_text(cx,label)]",
@@ -26,6 +27,10 @@ fn virtual_list_stress_demo_keeps_fixed_row_text_on_roles() {
     for needle in [
         "cx.text(header)",
         "vec![cx.text(Arc::<str>::from(format!(\"Row{id}(tall={tall_rows_enabled})\")))]",
+        "usefret_ui_kit::declarative::textasdecl_text;",
+        "decl_text::",
+        "text_control_readout(",
+        "text_list_row_label(",
     ] {
         assert!(
             !source.contains(needle),

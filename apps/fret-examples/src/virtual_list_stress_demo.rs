@@ -1,5 +1,6 @@
 use anyhow::Context as _;
 use fret::advanced::view::AppRenderDataExt as _;
+use fret::app::{AppRenderContext, text};
 use fret_app::{App, CommandId, Effect, Model, WindowRequest};
 use fret_core::{AppWindowId, Event, Px};
 use fret_launch::{
@@ -15,24 +16,23 @@ use fret_ui::element::{
 };
 use fret_ui::{ElementContext, Invalidation, UiTree, VirtualListScrollHandle};
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
-use fret_ui_kit::declarative::text as decl_text;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 const LIST_LEN: usize = 100_000;
 
-fn virtual_list_stress_readout_text<H: fret_ui::UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    text: impl Into<Arc<str>>,
-) -> AnyElement {
-    decl_text::text_control_readout(cx, text)
+fn virtual_list_stress_readout_text<'a, Cx>(cx: &mut Cx, text: impl Into<Arc<str>>) -> AnyElement
+where
+    Cx: AppRenderContext<'a>,
+{
+    text::control_readout(cx, text)
 }
 
-fn virtual_list_stress_row_label_text<H: fret_ui::UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    text: impl Into<Arc<str>>,
-) -> AnyElement {
-    decl_text::text_list_row_label(cx, text)
+fn virtual_list_stress_row_label_text<'a, Cx>(cx: &mut Cx, text: impl Into<Arc<str>>) -> AnyElement
+where
+    Cx: AppRenderContext<'a>,
+{
+    text::list_row_label(cx, text)
 }
 
 struct VirtualListStressControls {
