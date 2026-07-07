@@ -512,6 +512,17 @@ def _fret_examples_manual_chart_surface(filename: str) -> SurfacePath:
             MANUAL_CHART_ALLOWED_RAW_SEAMS,
             owner=CHART_BARS_OWNER,
         )
+    if filename == "category_line_demo.rs":
+        return _fret_examples_advanced_surface(
+            filename,
+            (
+                "it owns a manual category-line chart runner with FnDriver/UiTree lifecycle "
+                "while category axis, data zoom, initial window, and panel wiring route "
+                "through ChartCanvasPanelBinding"
+            ),
+            MANUAL_CHART_ALLOWED_RAW_SEAMS,
+            owner=CHART_CATEGORY_LINE_OWNER,
+        )
     stem = filename.removesuffix(".rs").replace("_", "-")
     return _fret_examples_advanced_surface(
         filename,
@@ -1638,6 +1649,26 @@ CHART_BARS_FORBIDDEN_COMPACT_MARKERS = (
     "create_node_retained(",
 )
 
+CHART_CATEGORY_LINE_OWNER = "examples-chart-category-line"
+
+CHART_CATEGORY_LINE_REQUIRED_COMPACT_MARKERS = (
+    "usefret_chart::{ChartCanvasPanelBinding,chart_canvas_panel};",
+    "chart:ChartCanvasPanelBinding",
+    "fnbuild_chart()->(ChartEngine,ChartSpec)",
+    "AxisScale::Category(delinea::CategoryAxisScale{categories})",
+    "data_zoom_x:vec![DataZoomXSpec{",
+    "engine.apply_action(Action::SetDataWindowX{",
+    "window:Some(DataWindow{min:16.0,max:64.0,})",
+    "letchart=ChartCanvasPanelBinding::new(app,spec,engine);",
+    "fret_ui::declarative::render_root(",
+    "\"category-line-demo-root\"",
+    "chart.observe_engine_paint(cx);",
+    "letprops=chart.panel_props();",
+    "vec![chart_canvas_panel(cx,props)]",
+)
+
+CHART_CATEGORY_LINE_FORBIDDEN_COMPACT_MARKERS = CHART_BARS_FORBIDDEN_COMPACT_MARKERS
+
 CHART_CANVAS_BINDING_BOUNDARIES: tuple[CompactSourceBoundary, ...] = (
     CompactSourceBoundary(
         owner=CHART_BARS_OWNER,
@@ -1651,6 +1682,21 @@ CHART_CANVAS_BINDING_BOUNDARIES: tuple[CompactSourceBoundary, ...] = (
         forbidden_message_template=(
             "Bars chart demo must not expose retained/manual chart canvas state or output "
             "wiring; compact `{marker}` bypasses the ChartCanvasPanelBinding boundary"
+        ),
+    ),
+    CompactSourceBoundary(
+        owner=CHART_CATEGORY_LINE_OWNER,
+        rule="advanced-surface-chart-category-line-declarative-binding-boundary",
+        required_markers=CHART_CATEGORY_LINE_REQUIRED_COMPACT_MARKERS,
+        forbidden_markers=CHART_CATEGORY_LINE_FORBIDDEN_COMPACT_MARKERS,
+        missing_message_template=(
+            "Category-line chart demo must keep category axis, data zoom, initial "
+            "window, and panel wiring on ChartCanvasPanelBinding; "
+            "missing compact markers: {missing_markers}"
+        ),
+        forbidden_message_template=(
+            "Category-line chart demo must not expose retained/manual chart canvas "
+            "state or output wiring; compact `{marker}` bypasses the ChartCanvasPanelBinding boundary"
         ),
     ),
 )

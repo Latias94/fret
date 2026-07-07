@@ -1018,6 +1018,55 @@ fn bars_demo_uses_manual_harness_declarative_chart_canvas_panel_binding() {
 }
 
 #[test]
+fn category_line_demo_uses_manual_harness_declarative_chart_canvas_panel_binding() {
+    let source = compact(include_str!("../src/category_line_demo.rs"));
+
+    for needle in [
+        "usefret_chart::{ChartCanvasPanelBinding,chart_canvas_panel};",
+        "chart:ChartCanvasPanelBinding",
+        "fnbuild_chart()->(ChartEngine,ChartSpec)",
+        "AxisScale::Category(delinea::CategoryAxisScale{categories})",
+        "data_zoom_x:vec![DataZoomXSpec{",
+        "engine.apply_action(Action::SetDataWindowX{",
+        "window:Some(DataWindow{min:16.0,max:64.0,})",
+        "letchart=ChartCanvasPanelBinding::new(app,spec,engine);",
+        "fret_ui::declarative::render_root(",
+        "\"category-line-demo-root\"",
+        "chart.observe_engine_paint(cx);",
+        "letprops=chart.panel_props();",
+        "vec![chart_canvas_panel(cx,props)]",
+    ] {
+        assert!(
+            source.contains(needle),
+            "category_line_demo manual harness should use declarative chart canvas binding authoring; missing `{needle}`"
+        );
+    }
+
+    for legacy in [
+        "usefret_chart::{ChartCanvasPanelProps,chart_canvas_panel};",
+        "usefret_chart::retained",
+        "fret_chart::retained::",
+        "fret_runtime::Model<",
+        "engine:Model<ChartEngine>",
+        "output:Model<ChartCanvasOutput>",
+        "app.models_mut().insert(engine)",
+        "app.models_mut().insert(ChartEngine::",
+        "ChartCanvasPanelProps::new(",
+        "props.engine=Some(engine);",
+        ".output_model(",
+        "cx.observe_model(&engine",
+        "ChartCanvas::new(",
+        "ChartCanvas::create_node(",
+        "create_node_retained(",
+    ] {
+        assert!(
+            !source.contains(legacy),
+            "category_line_demo should not teach retained/manual chart canvas authoring; unexpected `{legacy}`"
+        );
+    }
+}
+
+#[test]
 fn docs_index_separates_default_app_plot_demo_from_manual_harnesses() {
     let docs = include_str!("../../../docs/README.md");
     let default_app =
