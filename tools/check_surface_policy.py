@@ -591,30 +591,44 @@ CUSTOM_EFFECT_WEB_REFERENCE_ALLOWED_RAW_SEAMS = (
     "FnDriver",
 )
 
+CUSTOM_EFFECT_REFERENCE_SURFACES_BY_FILENAME = {
+    "custom_effect_v1_demo.rs": (
+        "examples-custom-effect-v1-native",
+        "the custom-effect V1 native reference keeps explicit effect/runtime ownership to validate "
+        "EffectParamsV1 shader ABI wiring for the bounded custom-effect contract instead of "
+        "teaching default app authoring",
+        CUSTOM_EFFECT_NATIVE_REFERENCE_ALLOWED_RAW_SEAMS,
+    ),
+    "custom_effect_v2_demo.rs": (
+        "examples-custom-effect-v2-native",
+        "the custom-effect V2 native reference keeps explicit effect/runtime ownership to validate "
+        "user-image sampling and renderer/effect ABI wiring for the bounded custom-effect contract "
+        "instead of teaching default app authoring",
+        CUSTOM_EFFECT_NATIVE_REFERENCE_ALLOWED_RAW_SEAMS,
+    ),
+    "custom_effect_v3_demo.rs": (
+        "examples-custom-effect-v3-native",
+        "the custom-effect V3 native reference keeps explicit effect/runtime ownership to validate "
+        "diagnostic source binding and renderer/effect ABI wiring for the bounded custom-effect "
+        "contract instead of teaching default app authoring",
+        CUSTOM_EFFECT_NATIVE_REFERENCE_ALLOWED_RAW_SEAMS,
+    ),
+    "custom_effect_v3_web_demo.rs": (
+        "examples-custom-effect-v3-web",
+        "the custom-effect V3 web reference owns manual web runner/bootstrap, direct "
+        "scene/effect composition, and validation for the bounded custom-effect contract",
+        CUSTOM_EFFECT_WEB_REFERENCE_ALLOWED_RAW_SEAMS,
+    ),
+}
+
 
 def _fret_examples_custom_effect_reference_surface(filename: str) -> SurfacePath:
-    stem = filename.removesuffix(".rs").replace("_", "-")
-    if filename == "custom_effect_v3_web_demo.rs":
-        return _fret_examples_advanced_surface(
-            filename,
-            (
-                "the custom-effect V3 web reference owns manual web runner/bootstrap, direct "
-                "scene/effect composition, and validation for the bounded custom-effect contract"
-            ),
-            CUSTOM_EFFECT_WEB_REFERENCE_ALLOWED_RAW_SEAMS,
-            owner=f"examples-{stem}",
-        )
-
-    variant = filename.removesuffix("_demo.rs").replace("_", " ")
+    owner, reason, allowed_raw_seams = CUSTOM_EFFECT_REFERENCE_SURFACES_BY_FILENAME[filename]
     return _fret_examples_advanced_surface(
         filename,
-        (
-            f"the {variant} reference keeps explicit effect/runtime ownership to validate "
-            "renderer/effect ABI wiring for the bounded custom-effect contract instead of "
-            "teaching default app authoring"
-        ),
-        CUSTOM_EFFECT_NATIVE_REFERENCE_ALLOWED_RAW_SEAMS,
-        owner=f"examples-{stem}",
+        reason,
+        allowed_raw_seams,
+        owner=owner,
     )
 
 

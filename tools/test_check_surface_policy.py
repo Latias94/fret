@@ -1331,10 +1331,22 @@ class SurfacePolicyTests(unittest.TestCase):
             "apps/fret-examples/src/custom_effect_v2_glass_chrome_web_demo.rs",
         }
         custom_effect_reference_paths = {
-            "apps/fret-examples/src/custom_effect_v1_demo.rs",
-            "apps/fret-examples/src/custom_effect_v2_demo.rs",
-            "apps/fret-examples/src/custom_effect_v3_demo.rs",
-            "apps/fret-examples/src/custom_effect_v3_web_demo.rs",
+            "apps/fret-examples/src/custom_effect_v1_demo.rs": (
+                "examples-custom-effect-v1-native",
+                "EffectParamsV1",
+            ),
+            "apps/fret-examples/src/custom_effect_v2_demo.rs": (
+                "examples-custom-effect-v2-native",
+                "user-image sampling",
+            ),
+            "apps/fret-examples/src/custom_effect_v3_demo.rs": (
+                "examples-custom-effect-v3-native",
+                "diagnostic source binding",
+            ),
+            "apps/fret-examples/src/custom_effect_v3_web_demo.rs": (
+                "examples-custom-effect-v3-web",
+                "manual web runner/bootstrap",
+            ),
         }
         streaming_import_paths = {
             "apps/fret-examples/src/streaming_i420_demo.rs": (
@@ -1642,7 +1654,7 @@ class SurfacePolicyTests(unittest.TestCase):
             self.assertIsNotNone(spec, f"{path} should be classified as advanced/manual")
             self.assertIn("custom-effect parameter/control binding", spec.retirement)
             self.assertTrue(spec.allowed_raw_seams)
-        for path in custom_effect_reference_paths:
+        for path, (owner, reason_token) in custom_effect_reference_paths.items():
             spec = next(
                 (
                     spec
@@ -1654,7 +1666,9 @@ class SurfacePolicyTests(unittest.TestCase):
             self.assertIsNotNone(
                 spec, f"{path} should be classified as an advanced custom-effect reference"
             )
+            self.assertEqual(owner, spec.owner)
             self.assertIn("bounded custom-effect contract", spec.reason)
+            self.assertIn(reason_token, spec.reason)
             self.assertTrue(spec.allowed_raw_seams)
         for path, (owner, effect_name) in streaming_import_paths.items():
             spec = next(
