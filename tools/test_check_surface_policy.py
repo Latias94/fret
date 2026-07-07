@@ -2350,6 +2350,237 @@ class SurfacePolicyTests(unittest.TestCase):
                 ]
             )
 
+    def test_plot3d_raw_model_authoring_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-examples/src/plot3d_demo.rs",
+                """
+                use fret_plot3d::{Plot3dPanelBinding, Plot3dStyle, Plot3dViewport, plot3d_panel};
+                use fret_plot3d::{Plot3dModel, Plot3dPanelProps, Plot3dStyle, Plot3dViewport, plot3d_panel};
+                use fret_runtime::Model;
+                use fret_ui::{UiTree, declarative};
+
+                struct Plot3dDemoWindowState {
+                    ui: UiTree<App>,
+                    plot: Plot3dPanelBinding,
+                    target: ViewportRenderTarget,
+                }
+
+                impl Plot3dDemoDriver {
+                    fn build_ui(app: &mut App) -> Plot3dDemoWindowState {
+                        let plot = Plot3dPanelBinding::new(
+                            app,
+                            Plot3dViewport {
+                                target: RenderTargetId::default(),
+                                target_px_size: (960, 540),
+                                fit: fret_core::ViewportFit::Contain,
+                                opacity: 1.0,
+                            },
+                        );
+
+                        Plot3dDemoWindowState {
+                            ui: UiTree::new(),
+                            plot,
+                            target: ViewportRenderTarget::new(
+                                wgpu::TextureFormat::Bgra8UnormSrgb,
+                                RenderTargetColorSpace::Srgb,
+                            ),
+                        }
+                    }
+
+                    fn ensure_target(
+                        app: &mut App,
+                        state: &mut Plot3dDemoWindowState,
+                    ) {
+                        let desired_size = state.plot.viewport_untracked(app).target_px_size;
+                        let (id, view) = state.target.ensure_size(
+                            context,
+                            renderer,
+                            desired_size,
+                            Some("plot3d demo target"),
+                        );
+                        let new_size = state.target.size();
+                        let _ = state.plot.sync_viewport_target(app, id, new_size);
+                    }
+                }
+
+                fn record_engine_frame() -> EngineFrameUpdate {
+                    EngineFrameUpdate {
+                        target_updates: Vec::new(),
+                        command_buffers: vec![encoder.finish()],
+                        keepalive: Vec::new(),
+                    }
+                }
+
+                fn render(
+                    app: &mut App,
+                    services: &mut Services,
+                    window: AppWindowId,
+                    bounds: Rect,
+                    state: &mut Plot3dDemoWindowState,
+                ) {
+                    declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
+                        .render_root("plot3d-demo", |cx| {
+                            let style = Plot3dStyle::default();
+                            vec![plot3d_panel(cx, state.plot.panel_props().style(style))]
+                        });
+                }
+
+                struct LegacyPlot3dState {
+                    plot: fret_runtime::Model<Plot3dModel>,
+                }
+
+                fn bad(app: &mut App, state: &mut LegacyPlot3dState) {
+                    let plot = app.models_mut().insert(Plot3dModel {
+                        viewport: Plot3dViewport::default(),
+                    });
+                    let _ = state.plot.read(app, |_app, model| model.viewport);
+                    let _ = state.plot.update(app, |model, _cx| {
+                        model.viewport.opacity = 0.5;
+                        true
+                    });
+                    let _props = Plot3dPanelProps::new(state.plot.clone());
+                    let _ = plot3d_panel_with_model(cx, plot.clone());
+                    let _ = Plot3dPanelBinding::from_model(plot);
+                }
+                """,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/plot3d_demo.rs",
+                        "advanced_manual",
+                        "fixture plot3d demo",
+                        owner="examples-plot3d",
+                        allowed_raw_seams=(
+                            "fret_core",
+                            "fret_runtime",
+                            "fret_ui",
+                            "UiTree",
+                        ),
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            owner_violations = [
+                violation
+                for violation in violations
+                if violation.rule == "advanced-surface-plot3d-panel-binding-boundary"
+            ]
+            self.assertGreaterEqual(len(owner_violations), 6)
+            messages = "\n".join(violation.message for violation in owner_violations)
+            self.assertIn("fret_runtime::Model<Plot3dModel>", messages)
+            self.assertIn("Plot3dPanelProps::new", messages)
+            self.assertIn("plot3d_panel_with_model", messages)
+            self.assertIn("Plot3dPanelBinding::from_model", messages)
+
+    def test_plot3d_binding_surface_is_allowed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-examples/src/plot3d_demo.rs",
+                """
+                use fret_plot3d::{Plot3dPanelBinding, Plot3dStyle, Plot3dViewport, plot3d_panel};
+                use fret_ui::{UiTree, declarative};
+
+                struct Plot3dDemoWindowState {
+                    ui: UiTree<App>,
+                    plot: Plot3dPanelBinding,
+                    target: ViewportRenderTarget,
+                }
+
+                impl Plot3dDemoDriver {
+                    fn build_ui(app: &mut App) -> Plot3dDemoWindowState {
+                        let plot = Plot3dPanelBinding::new(
+                            app,
+                            Plot3dViewport {
+                                target: RenderTargetId::default(),
+                                target_px_size: (960, 540),
+                                fit: fret_core::ViewportFit::Contain,
+                                opacity: 1.0,
+                            },
+                        );
+
+                        Plot3dDemoWindowState {
+                            ui: UiTree::new(),
+                            plot,
+                            target: ViewportRenderTarget::new(
+                                wgpu::TextureFormat::Bgra8UnormSrgb,
+                                RenderTargetColorSpace::Srgb,
+                            ),
+                        }
+                    }
+
+                    fn ensure_target(
+                        app: &mut App,
+                        state: &mut Plot3dDemoWindowState,
+                    ) {
+                        let desired_size = state.plot.viewport_untracked(app).target_px_size;
+                        let (id, view) = state.target.ensure_size(
+                            context,
+                            renderer,
+                            desired_size,
+                            Some("plot3d demo target"),
+                        );
+                        let new_size = state.target.size();
+                        let _ = state.plot.sync_viewport_target(app, id, new_size);
+                    }
+                }
+
+                fn record_engine_frame() -> EngineFrameUpdate {
+                    EngineFrameUpdate {
+                        target_updates: Vec::new(),
+                        command_buffers: vec![encoder.finish()],
+                        keepalive: Vec::new(),
+                    }
+                }
+
+                fn render(
+                    app: &mut App,
+                    services: &mut Services,
+                    window: AppWindowId,
+                    bounds: Rect,
+                    state: &mut Plot3dDemoWindowState,
+                ) {
+                    declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
+                        .render_root("plot3d-demo", |cx| {
+                            let style = Plot3dStyle::default();
+                            vec![plot3d_panel(cx, state.plot.panel_props().style(style))]
+                        });
+                }
+                """,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/plot3d_demo.rs",
+                        "advanced_manual",
+                        "fixture plot3d demo",
+                        owner="examples-plot3d",
+                        allowed_raw_seams=("fret_core", "fret_ui", "UiTree"),
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            self.assertFalse(
+                [
+                    violation
+                    for violation in violations
+                    if violation.rule == "advanced-surface-plot3d-panel-binding-boundary"
+                ]
+            )
+
     def test_embedded_viewport_direct_model_updates_are_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

@@ -545,6 +545,17 @@ def _fret_examples_manual_chart_surface(filename: str) -> SurfacePath:
             MANUAL_CHART_ALLOWED_RAW_SEAMS,
             owner=CHART_HORIZONTAL_BARS_OWNER,
         )
+    if filename == "plot3d_demo.rs":
+        return _fret_examples_advanced_surface(
+            filename,
+            (
+                "it owns a manual Plot3D viewport runner with FnDriver/UiTree lifecycle "
+                "and engine-frame render-target allocation while viewport state and "
+                "panel wiring route through Plot3dPanelBinding"
+            ),
+            MANUAL_CHART_ALLOWED_RAW_SEAMS,
+            owner=PLOT3D_PANEL_OWNER,
+        )
     stem = filename.removesuffix(".rs").replace("_", "-")
     return _fret_examples_advanced_surface(
         filename,
@@ -1597,6 +1608,57 @@ PLOT_DECLARATIVE_BINDING_BOUNDARIES: tuple[CompactSourceBoundary, ...] = (
         forbidden_message_template=(
             "Histogram2D demo must not expose retained/manual plot state or output "
             "wiring; compact `{marker}` bypasses the Histogram2DPlotPanelBinding boundary"
+        ),
+    ),
+)
+
+PLOT3D_PANEL_OWNER = "examples-plot3d"
+
+PLOT3D_PANEL_REQUIRED_COMPACT_MARKERS = (
+    "usefret_plot3d::{Plot3dPanelBinding,Plot3dStyle,Plot3dViewport,plot3d_panel};",
+    "plot:Plot3dPanelBinding,",
+    "target:ViewportRenderTarget,",
+    "Plot3dPanelBinding::new(app,Plot3dViewport{",
+    "target_px_size:(960,540)",
+    "fit:fret_core::ViewportFit::Contain",
+    "ViewportRenderTarget::new(wgpu::TextureFormat::Bgra8UnormSrgb,RenderTargetColorSpace::Srgb,)",
+    "fnensure_target(",
+    "state.plot.viewport_untracked(app).target_px_size",
+    "state.target.ensure_size(",
+    "state.plot.sync_viewport_target(app,id,new_size)",
+    "fnrecord_engine_frame(",
+    "EngineFrameUpdate{",
+    "command_buffers:vec![encoder.finish()],",
+    '.render_root("plot3d-demo",|cx|{',
+    "letstyle=Plot3dStyle::default();",
+    "vec![plot3d_panel(cx,state.plot.panel_props().style(style))]",
+)
+
+PLOT3D_PANEL_FORBIDDEN_COMPACT_MARKERS = (
+    "plot:fret_runtime::Model<Plot3dModel>",
+    "usefret_plot3d::{Plot3dModel,Plot3dPanelProps,Plot3dStyle,Plot3dViewport,plot3d_panel};",
+    "app.models_mut().insert(Plot3dModel{",
+    "state.plot.read(app,",
+    "state.plot.update(app,",
+    "Plot3dPanelProps::new(",
+    "plot3d_panel_with_model(",
+    "Plot3dPanelBinding::from_model(",
+)
+
+PLOT3D_PANEL_BINDING_BOUNDARIES: tuple[CompactSourceBoundary, ...] = (
+    CompactSourceBoundary(
+        owner=PLOT3D_PANEL_OWNER,
+        rule="advanced-surface-plot3d-panel-binding-boundary",
+        required_markers=PLOT3D_PANEL_REQUIRED_COMPACT_MARKERS,
+        forbidden_markers=PLOT3D_PANEL_FORBIDDEN_COMPACT_MARKERS,
+        missing_message_template=(
+            "Plot3D demo must keep viewport model state, render-target sync, "
+            "engine-frame hook output, and panel wiring on Plot3dPanelBinding; "
+            "missing compact markers: {missing_markers}"
+        ),
+        forbidden_message_template=(
+            "Plot3D demo must not expose raw Plot3D model handles or direct panel "
+            "props in app code; compact `{marker}` bypasses the Plot3dPanelBinding boundary"
         ),
     ),
 )
@@ -4474,6 +4536,15 @@ def _scan_plot_declarative_binding_boundaries(
     return violations
 
 
+def _scan_plot3d_panel_binding_boundaries(
+    root: Path, spec: SurfacePath
+) -> list[SurfaceViolation]:
+    violations: list[SurfaceViolation] = []
+    for boundary in PLOT3D_PANEL_BINDING_BOUNDARIES:
+        violations.extend(_scan_compact_source_boundary(root, spec, boundary))
+    return violations
+
+
 def _scan_chart_stress_declarative_binding_boundary(
     root: Path, spec: SurfacePath
 ) -> list[SurfaceViolation]:
@@ -5611,6 +5682,7 @@ def _scan_classified_raw_surface(root: Path, spec: SurfacePath) -> list[SurfaceV
     violations.extend(_scan_hotpatch_smoke_owner_boundary(root, spec))
     violations.extend(_scan_docking_arbitration_controls_boundary(root, spec))
     violations.extend(_scan_plot_declarative_binding_boundaries(root, spec))
+    violations.extend(_scan_plot3d_panel_binding_boundaries(root, spec))
     violations.extend(_scan_chart_stress_declarative_binding_boundary(root, spec))
     violations.extend(_scan_chart_canvas_binding_boundaries(root, spec))
     violations.extend(_scan_chart_multi_axis_linked_binding_boundary(root, spec))
