@@ -3,6 +3,7 @@
 //! authoring path for node-graph apps.
 //! Prefer the declarative node-graph surfaces for normal downstream guidance.
 use fret::app::prelude::*;
+use fret::app::{AppElement, AppRenderContext, text};
 use fret_imui::prelude::UiWriter as _;
 use fret_node::core::{
     CanvasPoint, Edge, EdgeId, EdgeKind, Graph, GraphId, Node, NodeId, NodeKindKey, Port,
@@ -10,8 +11,6 @@ use fret_node::core::{
 };
 use fret_node::io::{NodeGraphEditorConfig, NodeGraphViewState};
 use fret_runtime::Model;
-use fret_ui::{ElementContext, UiHost};
-use fret_ui_kit::declarative::text as decl_text;
 use serde_json::Value;
 
 struct ImUiNodeGraphView {
@@ -20,11 +19,12 @@ struct ImUiNodeGraphView {
     editor_config: Model<NodeGraphEditorConfig>,
 }
 
-fn compat_section_text<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    text: impl Into<std::sync::Arc<str>>,
-) -> fret_ui::element::AnyElement {
-    decl_text::text_section_chrome_label(cx, text)
+fn compat_section_text<'a, Cx, T>(cx: &mut Cx, text: T) -> AppElement
+where
+    Cx: AppRenderContext<'a>,
+    T: Into<std::sync::Arc<str>>,
+{
+    text::section_chrome_label(cx, text)
 }
 
 pub fn run() -> anyhow::Result<()> {

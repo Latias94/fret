@@ -1685,12 +1685,9 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
     _fret_examples_advanced_surface(
         "imui_node_graph_demo.rs",
         "the IMUI node-graph compatibility proof intentionally retains raw Model handles and "
-        "host-generic ElementContext helpers until declarative node-graph surfaces replace it",
+        "retained node-graph bridge wiring until declarative node-graph surfaces replace it",
         (
             "fret_runtime",
-            "fret_ui",
-            "AnyElement",
-            "ElementContext",
         ),
         owner="examples-imui-node-graph-compat",
     ),

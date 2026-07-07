@@ -1076,6 +1076,16 @@ class SurfacePolicyTests(unittest.TestCase):
         self.assertIn("device-shell", editor_device_shell_spec.reason)
         self.assertNotIn("AnyElement", editor_device_shell_spec.allowed_raw_seams)
         self.assertNotIn("ElementContext", editor_device_shell_spec.allowed_raw_seams)
+        imui_node_graph_spec = next(
+            spec
+            for spec in POLICY.ADVANCED_MANUAL_SURFACES
+            if spec.path == "apps/fret-examples/src/imui_node_graph_demo.rs"
+        )
+        self.assertIn("node-graph", imui_node_graph_spec.reason)
+        self.assertIn("fret_runtime", imui_node_graph_spec.allowed_raw_seams)
+        self.assertNotIn("fret_ui", imui_node_graph_spec.allowed_raw_seams)
+        self.assertNotIn("AnyElement", imui_node_graph_spec.allowed_raw_seams)
+        self.assertNotIn("ElementContext", imui_node_graph_spec.allowed_raw_seams)
         for path in default_plot_overlay_paths:
             self.assertTrue(
                 any(spec.path == path for spec in POLICY.DEFAULT_AUTHORING_SURFACES),
