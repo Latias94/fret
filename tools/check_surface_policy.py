@@ -380,6 +380,34 @@ CUSTOM_EFFECT_V2_WEB_DEMO_FORBIDDEN_PATTERNS: tuple[tuple[str, re.Pattern[str]],
     ),
 )
 
+GIZMO3D_OWNER = "examples-gizmo3d"
+
+GIZMO3D_DEMO_REQUIRED_MARKERS = (
+    "struct Gizmo3dDemoModelBinding",
+    "model: fret_runtime::Model<Gizmo3dDemoModel>",
+    "fn handle_viewport_input(",
+    "fn step_frame_animation(",
+    "fn frame_render_snapshot(",
+    "model.handle_viewport_input(app, &event)",
+    "state.demo.step_frame_animation(app, Instant::now())",
+    "state.demo.frame_render_snapshot(app, size)",
+)
+
+GIZMO3D_DEMO_FORBIDDEN_RAW_UPDATE_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
+    (
+        "state.demo.update",
+        re.compile(r"\bstate\s*\.\s*demo\s*\.\s*update\s*\(\s*app\s*,"),
+    ),
+    (
+        "demo.update",
+        re.compile(r"\bdemo\s*\.\s*update\s*\(\s*app\s*,"),
+    ),
+    (
+        "model.update",
+        re.compile(r"\bmodel\s*\.\s*update\s*\(\s*app\s*,"),
+    ),
+)
+
 
 def _fret_examples_custom_effect_v2_web_surface(filename: str, variant: str) -> SurfacePath:
     return SurfacePath(
@@ -1194,6 +1222,52 @@ def _scan_custom_effect_v2_web_owner_boundary(
     return violations
 
 
+def _scan_gizmo3d_owner_boundary(root: Path, spec: SurfacePath) -> list[SurfaceViolation]:
+    if spec.owner != GIZMO3D_OWNER:
+        return []
+
+    violations: list[SurfaceViolation] = []
+    for path in _iter_source_files(root / spec.path):
+        text = _read_text(path)
+        missing_markers = [
+            marker for marker in GIZMO3D_DEMO_REQUIRED_MARKERS if marker not in text
+        ]
+        if missing_markers:
+            violations.append(
+                SurfaceViolation(
+                    rule="advanced-surface-gizmo3d-owner-boundary",
+                    path=path,
+                    line_no=1,
+                    message=(
+                        "gizmo3d demo model access must stay behind "
+                        f"Gizmo3dDemoModelBinding; missing binding markers: {', '.join(missing_markers)}"
+                    ),
+                )
+            )
+
+        for line_no, line in _code_lines_for_scan(path, text):
+            if path.suffix == ".rs" and _is_rust_source_line_ignorable(line):
+                continue
+            for seam, pattern in GIZMO3D_DEMO_FORBIDDEN_RAW_UPDATE_PATTERNS:
+                if not pattern.search(line):
+                    continue
+                violations.append(
+                    SurfaceViolation(
+                        rule="advanced-surface-gizmo3d-owner-boundary",
+                        path=path,
+                        line_no=line_no,
+                        message=(
+                            "gizmo3d app/driver model writes must use named "
+                            f"Gizmo3dDemoModelBinding methods; direct `{seam}` bypasses the owner boundary"
+                        ),
+                        source=line.strip(),
+                    )
+                )
+                break
+
+    return violations
+
+
 def _scan_default_authoring_surface(root: Path, spec: SurfacePath) -> list[SurfaceViolation]:
     violations: list[SurfaceViolation] = []
     for path in _iter_source_files(root / spec.path):
@@ -1252,6 +1326,7 @@ def _scan_classified_raw_surface(root: Path, spec: SurfacePath) -> list[SurfaceV
                     )
                 )
     violations.extend(_scan_custom_effect_v2_web_owner_boundary(root, spec))
+    violations.extend(_scan_gizmo3d_owner_boundary(root, spec))
     for seam in sorted(allowed_raw_seams - used_raw_seams):
         violations.append(
             SurfaceViolation(

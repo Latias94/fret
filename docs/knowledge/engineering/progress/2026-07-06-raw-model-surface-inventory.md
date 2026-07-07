@@ -114,7 +114,8 @@ Keep raw/shared-model mechanisms for now:
     frame animation and draw snapshot updates behind binding methods. `gizmo3d_demo.rs` now has no
     app-side direct `state.demo.update(...)` or `model.update(...)` callers outside
     `Gizmo3dDemoModelBinding`; remaining `self.update(...)` calls are the binding's internal model
-    mechanism.
+    mechanism. `tools/check_surface_policy.py` now gates this owner boundary for the
+    `examples-gizmo3d` surface so future direct app/driver updates fail the source-policy check.
 - Table/data-grid demos.
   - Follow-up: `datatable_demo.rs` now uses `LocalState<shadcn::DataTableViewOutput>` and
     `app.local_state(...)` for the shadcn `DataTable` output handle. The retained table source gate

@@ -1267,6 +1267,143 @@ class SurfacePolicyTests(unittest.TestCase):
                 ]
             )
 
+    def test_gizmo3d_direct_demo_model_updates_are_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-examples/src/gizmo3d_demo.rs",
+                """
+                struct Gizmo3dDemoModel;
+                struct Gizmo3dDemoModelBinding {
+                    model: fret_runtime::Model<Gizmo3dDemoModel>,
+                }
+
+                fn handle_required_markers(
+                    app: &mut fret_app::App,
+                    state: &WindowState,
+                    model: Gizmo3dDemoModelBinding,
+                ) {
+                    let _ = model.handle_viewport_input(app, &event);
+                    let _ = state.demo.step_frame_animation(app, Instant::now());
+                    let _ = state.demo.frame_render_snapshot(app, size);
+                }
+
+                impl Gizmo3dDemoModelBinding {
+                    fn handle_viewport_input(
+                        &self,
+                    ) {}
+
+                    fn step_frame_animation(
+                        &self,
+                    ) {}
+
+                    fn frame_render_snapshot(
+                        &self,
+                    ) {}
+                }
+
+                fn bad(app: &mut fret_app::App, state: &WindowState, model: Gizmo3dDemoModelBinding) {
+                    let _ = state.demo.update(app, |m, _cx| m.cancel());
+                    let _ = model.update(app, |m, _cx| m.cancel());
+                }
+                """,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/gizmo3d_demo.rs",
+                        "advanced_manual",
+                        "fixture gizmo3d proof surface",
+                        owner="examples-gizmo3d",
+                        allowed_raw_seams=("fret_app", "fret_runtime"),
+                        retirement=POLICY.FRET_EXAMPLES_ADVANCED_RETIREMENT,
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            gizmo_violations = [
+                violation
+                for violation in violations
+                if violation.rule == "advanced-surface-gizmo3d-owner-boundary"
+            ]
+            self.assertEqual(2, len(gizmo_violations))
+            messages = "\n".join(violation.message for violation in gizmo_violations)
+            self.assertIn("state.demo.update", messages)
+            self.assertIn("model.update", messages)
+
+    def test_gizmo3d_binding_owner_surface_is_allowed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-examples/src/gizmo3d_demo.rs",
+                """
+                struct Gizmo3dDemoModel;
+                struct Gizmo3dFrameRenderSnapshot;
+                struct Gizmo3dDemoModelBinding {
+                    model: fret_runtime::Model<Gizmo3dDemoModel>,
+                }
+
+                impl Gizmo3dDemoModelBinding {
+                    fn handle_viewport_input(
+                        &self,
+                        app: &mut fret_app::App,
+                    ) {
+                        let _ = self.update(app, |model, _cx| model.cancel());
+                    }
+
+                    fn step_frame_animation(
+                        &self,
+                        app: &mut fret_app::App,
+                    ) {
+                        let _ = self.update(app, |model, _cx| model.cancel());
+                    }
+
+                    fn frame_render_snapshot(
+                        &self,
+                        app: &mut fret_app::App,
+                    ) -> Gizmo3dFrameRenderSnapshot {
+                        self.update(app, |model, _cx| model.snapshot()).unwrap()
+                    }
+                }
+
+                fn ok(app: &mut fret_app::App, state: &WindowState, model: Gizmo3dDemoModelBinding) {
+                    let _ = model.handle_viewport_input(app, &event);
+                    let _ = state.demo.step_frame_animation(app, Instant::now());
+                    let _ = state.demo.frame_render_snapshot(app, size);
+                }
+                """,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/gizmo3d_demo.rs",
+                        "advanced_manual",
+                        "fixture gizmo3d proof surface",
+                        owner="examples-gizmo3d",
+                        allowed_raw_seams=("fret_app", "fret_runtime"),
+                        retirement=POLICY.FRET_EXAMPLES_ADVANCED_RETIREMENT,
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            self.assertFalse(
+                [
+                    violation
+                    for violation in violations
+                    if violation.rule == "advanced-surface-gizmo3d-owner-boundary"
+                ]
+            )
+
     def test_migrated_cookbook_examples_are_default_clean(self) -> None:
         migrated = {
             "apps/fret-cookbook/examples/async_inbox_basics.rs",
