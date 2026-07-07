@@ -523,6 +523,17 @@ def _fret_examples_manual_chart_surface(filename: str) -> SurfacePath:
             MANUAL_CHART_ALLOWED_RAW_SEAMS,
             owner=CHART_CATEGORY_LINE_OWNER,
         )
+    if filename == "horizontal_bars_demo.rs":
+        return _fret_examples_advanced_surface(
+            filename,
+            (
+                "it owns a manual horizontal-bars chart runner with FnDriver/UiTree lifecycle "
+                "while category axis, stacked bar series, visual map, and panel wiring route "
+                "through ChartCanvasPanelBinding"
+            ),
+            MANUAL_CHART_ALLOWED_RAW_SEAMS,
+            owner=CHART_HORIZONTAL_BARS_OWNER,
+        )
     stem = filename.removesuffix(".rs").replace("_", "-")
     return _fret_examples_advanced_surface(
         filename,
@@ -1669,6 +1680,27 @@ CHART_CATEGORY_LINE_REQUIRED_COMPACT_MARKERS = (
 
 CHART_CATEGORY_LINE_FORBIDDEN_COMPACT_MARKERS = CHART_BARS_FORBIDDEN_COMPACT_MARKERS
 
+CHART_HORIZONTAL_BARS_OWNER = "examples-chart-horizontal-bars"
+
+CHART_HORIZONTAL_BARS_REQUIRED_COMPACT_MARKERS = (
+    "usefret_chart::{ChartCanvasPanelBinding,chart_canvas_panel};",
+    "chart:ChartCanvasPanelBinding",
+    "fnbuild_chart()->(ChartEngine,ChartSpec)",
+    "AxisScale::Category(delinea::CategoryAxisScale{categories})",
+    "visual_maps:vec![VisualMapSpec{",
+    "mode:VisualMapMode::Continuous",
+    "opacity_mul_range:Some((0.2,1.0))",
+    "stack:Some(stack_id)",
+    "letchart=ChartCanvasPanelBinding::new(app,spec,engine);",
+    "fret_ui::declarative::render_root(",
+    "\"horizontal-bars-demo-root\"",
+    "chart.observe_engine_paint(cx);",
+    "letprops=chart.panel_props();",
+    "vec![chart_canvas_panel(cx,props)]",
+)
+
+CHART_HORIZONTAL_BARS_FORBIDDEN_COMPACT_MARKERS = CHART_BARS_FORBIDDEN_COMPACT_MARKERS
+
 CHART_CANVAS_BINDING_BOUNDARIES: tuple[CompactSourceBoundary, ...] = (
     CompactSourceBoundary(
         owner=CHART_BARS_OWNER,
@@ -1696,6 +1728,21 @@ CHART_CANVAS_BINDING_BOUNDARIES: tuple[CompactSourceBoundary, ...] = (
         ),
         forbidden_message_template=(
             "Category-line chart demo must not expose retained/manual chart canvas "
+            "state or output wiring; compact `{marker}` bypasses the ChartCanvasPanelBinding boundary"
+        ),
+    ),
+    CompactSourceBoundary(
+        owner=CHART_HORIZONTAL_BARS_OWNER,
+        rule="advanced-surface-chart-horizontal-bars-declarative-binding-boundary",
+        required_markers=CHART_HORIZONTAL_BARS_REQUIRED_COMPACT_MARKERS,
+        forbidden_markers=CHART_HORIZONTAL_BARS_FORBIDDEN_COMPACT_MARKERS,
+        missing_message_template=(
+            "Horizontal-bars chart demo must keep category axis, stacked bar series, "
+            "visual map, and panel wiring on ChartCanvasPanelBinding; "
+            "missing compact markers: {missing_markers}"
+        ),
+        forbidden_message_template=(
+            "Horizontal-bars chart demo must not expose retained/manual chart canvas "
             "state or output wiring; compact `{marker}` bypasses the ChartCanvasPanelBinding boundary"
         ),
     ),
