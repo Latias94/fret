@@ -4278,6 +4278,204 @@ class SurfacePolicyTests(unittest.TestCase):
                 ]
             )
 
+    def test_plot_shaded_legacy_retained_authoring_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-examples/src/shaded_demo.rs",
+                """
+                use fret_plot::ShadedPlotPanelBinding;
+                use fret_plot::declarative::{ShadedPlotPanelProps, shaded_plot_panel_in};
+                use fret_plot::models::{ShadedPlotModel, ShadedSeries};
+                use fret_plot::plot::axis::{AxisLabelFormatter, TimeAxisFormat};
+                use fret_plot::retained;
+                use fret_runtime::Model;
+                use fret_ui::{UiTree, declarative};
+
+                struct ShadedDemoWindowState {
+                    ui: UiTree<App>,
+                    plot: ShadedPlotPanelBinding,
+                }
+
+                impl ShadedDemoDriver {
+                    fn build_ui(app: &mut App) -> ShadedDemoWindowState {
+                        let plot = ShadedPlotPanelBinding::new(
+                            app,
+                            ShadedPlotModel::from_series(vec![
+                                ShadedSeries::new("band", upper, lower),
+                            ]),
+                        );
+                        ShadedDemoWindowState {
+                            ui: UiTree::new(),
+                            plot,
+                        }
+                    }
+                }
+
+                fn handle_event(app: &mut App, state: &mut ShadedDemoWindowState) {
+                    let _ = state.plot.output_untracked(app);
+                }
+
+                fn render(
+                    app: &mut App,
+                    services: &mut Services,
+                    window: AppWindowId,
+                    bounds: Rect,
+                    state: &mut ShadedDemoWindowState,
+                ) {
+                    let plot = state.plot.clone();
+                    let root = declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
+                        .render_root("shaded-demo", move |cx| {
+                            let style = LinePlotStyle::default();
+                            let props = plot
+                                .panel_props()
+                                .style(style)
+                                .x_axis_labels(AxisLabelFormatter::time_seconds(TimeAxisFormat {
+                                    base_seconds: 1_700_000_000.0,
+                                }));
+                            vec![shaded_plot_panel_in(cx, props)]
+                        });
+                    let _ = root;
+                }
+
+                struct LegacyShadedPlot {
+                    plot: fret_runtime::Model<ShadedPlotModel>,
+                    output: Model<PlotOutput>,
+                }
+
+                fn bad(
+                    app: &mut App,
+                    plot: Model<ShadedPlotModel>,
+                    plot_state: Model<PlotState>,
+                    plot_output: Model<PlotOutput>,
+                ) {
+                    let _ = retained::legacy();
+                    let _ = fret_plot::retained::legacy();
+                    let _ = ShadedPlotCanvas;
+                    let _ = PlotCanvas;
+                    create_node_retained();
+                    let _props = ShadedPlotPanelProps::new(plot.clone())
+                        .state(plot_state.clone())
+                        .output(plot_output.clone());
+                    let _ = app.models_mut().insert(PlotState::default());
+                    let _ = app.models_mut().insert(PlotOutput::default());
+                }
+                """,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/shaded_demo.rs",
+                        "advanced_manual",
+                        "fixture shaded plot demo",
+                        owner="examples-plot-shaded",
+                        allowed_raw_seams=("fret_runtime", "fret_ui", "UiTree"),
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            owner_violations = [
+                violation
+                for violation in violations
+                if violation.rule == "advanced-surface-plot-shaded-declarative-binding-boundary"
+            ]
+            self.assertGreaterEqual(len(owner_violations), 8)
+            messages = "\n".join(violation.message for violation in owner_violations)
+            self.assertIn("fret_plot::retained", messages)
+            self.assertIn("ShadedPlotCanvas", messages)
+            self.assertIn("PlotCanvas", messages)
+            self.assertIn("PlotOutput", messages)
+            self.assertIn("ShadedPlotPanelProps", messages)
+
+    def test_plot_shaded_declarative_binding_surface_is_allowed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-examples/src/shaded_demo.rs",
+                """
+                use fret_plot::ShadedPlotPanelBinding;
+                use fret_plot::declarative::shaded_plot_panel_in;
+                use fret_plot::models::{ShadedPlotModel, ShadedSeries};
+                use fret_plot::plot::axis::{AxisLabelFormatter, TimeAxisFormat};
+                use fret_ui::{UiTree, declarative};
+
+                struct ShadedDemoWindowState {
+                    ui: UiTree<App>,
+                    plot: ShadedPlotPanelBinding,
+                }
+
+                impl ShadedDemoDriver {
+                    fn build_ui(app: &mut App) -> ShadedDemoWindowState {
+                        let plot = ShadedPlotPanelBinding::new(
+                            app,
+                            ShadedPlotModel::from_series(vec![
+                                ShadedSeries::new("band", upper, lower),
+                            ]),
+                        );
+                        ShadedDemoWindowState {
+                            ui: UiTree::new(),
+                            plot,
+                        }
+                    }
+                }
+
+                fn handle_event(app: &mut App, state: &mut ShadedDemoWindowState) {
+                    let _ = state.plot.output_untracked(app);
+                }
+
+                fn render(
+                    app: &mut App,
+                    services: &mut Services,
+                    window: AppWindowId,
+                    bounds: Rect,
+                    state: &mut ShadedDemoWindowState,
+                ) {
+                    let plot = state.plot.clone();
+                    let root = declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
+                        .render_root("shaded-demo", move |cx| {
+                            let style = LinePlotStyle::default();
+                            let props = plot
+                                .panel_props()
+                                .style(style)
+                                .x_axis_labels(AxisLabelFormatter::time_seconds(TimeAxisFormat {
+                                    base_seconds: 1_700_000_000.0,
+                                }));
+                            vec![shaded_plot_panel_in(cx, props)]
+                        });
+                    let _ = root;
+                }
+                """,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/shaded_demo.rs",
+                        "advanced_manual",
+                        "fixture shaded plot demo",
+                        owner="examples-plot-shaded",
+                        allowed_raw_seams=("fret_ui", "UiTree"),
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            self.assertFalse(
+                [
+                    violation
+                    for violation in violations
+                    if violation.rule == "advanced-surface-plot-shaded-declarative-binding-boundary"
+                ]
+            )
+
     def test_plot_stress_legacy_retained_authoring_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

@@ -413,6 +413,17 @@ def _fret_examples_manual_chart_surface(filename: str) -> SurfacePath:
             MANUAL_CHART_ALLOWED_RAW_SEAMS,
             owner=PLOT_STAIRS_OWNER,
         )
+    if filename == "shaded_demo.rs":
+        return _fret_examples_advanced_surface(
+            filename,
+            (
+                "it owns a manual shaded-plot runner with FnDriver/UiTree lifecycle while "
+                "shaded model, query output reads, axis labels, and panel wiring route through "
+                "ShadedPlotPanelBinding"
+            ),
+            MANUAL_CHART_ALLOWED_RAW_SEAMS,
+            owner=PLOT_SHADED_OWNER,
+        )
     stem = filename.removesuffix(".rs").replace("_", "-")
     return _fret_examples_advanced_surface(
         filename,
@@ -1002,6 +1013,38 @@ PLOT_STAIRS_FORBIDDEN_COMPACT_MARKERS = (
     "app.models_mut().insert(PlotOutput::default())",
 )
 
+PLOT_SHADED_OWNER = "examples-plot-shaded"
+
+PLOT_SHADED_REQUIRED_COMPACT_MARKERS = (
+    "usefret_plot::ShadedPlotPanelBinding;",
+    "usefret_plot::declarative::shaded_plot_panel_in;",
+    "usefret_plot::models::{ShadedPlotModel,ShadedSeries};",
+    "usefret_ui::{UiTree,declarative};",
+    "plot:ShadedPlotPanelBinding",
+    "ShadedPlotPanelBinding::new(app,ShadedPlotModel::from_series(vec![",
+    "ShadedPlotModel::from_series(vec![",
+    "ShadedSeries::new(",
+    "declarative::RenderRootContext::new(&mutstate.ui,app,services,window,bounds).render_root(\"shaded-demo\"",
+    "plot.panel_props()",
+    ".x_axis_labels(AxisLabelFormatter::time_seconds(TimeAxisFormat{",
+    "state.plot.output_untracked(app)",
+    "vec![shaded_plot_panel_in(cx,props)]",
+)
+
+PLOT_SHADED_FORBIDDEN_COMPACT_MARKERS = (
+    "usefret_plot::retained",
+    "fret_plot::retained::",
+    "ShadedPlotCanvas",
+    "PlotCanvas",
+    "create_node_retained(",
+    "fret_runtime::Model<",
+    "ShadedPlotPanelProps::new(",
+    ".state(plot_state.clone())",
+    ".output(plot_output.clone())",
+    "app.models_mut().insert(PlotState::default())",
+    "app.models_mut().insert(PlotOutput::default())",
+)
+
 PLOT_DECLARATIVE_BINDING_BOUNDARIES: tuple[CompactSourceBoundary, ...] = (
     CompactSourceBoundary(
         owner=PLOT_STRESS_OWNER,
@@ -1102,6 +1145,20 @@ PLOT_DECLARATIVE_BINDING_BOUNDARIES: tuple[CompactSourceBoundary, ...] = (
         forbidden_message_template=(
             "Stairs plot demo must not expose retained/manual plot state or output "
             "wiring; compact `{marker}` bypasses the LinePlotPanelBinding boundary"
+        ),
+    ),
+    CompactSourceBoundary(
+        owner=PLOT_SHADED_OWNER,
+        rule="advanced-surface-plot-shaded-declarative-binding-boundary",
+        required_markers=PLOT_SHADED_REQUIRED_COMPACT_MARKERS,
+        forbidden_markers=PLOT_SHADED_FORBIDDEN_COMPACT_MARKERS,
+        missing_message_template=(
+            "Shaded plot demo must keep shaded model authoring, axis labels, and query "
+            "output reads on ShadedPlotPanelBinding; missing compact markers: {missing_markers}"
+        ),
+        forbidden_message_template=(
+            "Shaded plot demo must not expose retained/manual plot state or output "
+            "wiring; compact `{marker}` bypasses the ShadedPlotPanelBinding boundary"
         ),
     ),
 )
