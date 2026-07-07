@@ -381,6 +381,17 @@ def _fret_examples_manual_chart_surface(filename: str) -> SurfacePath:
             MANUAL_CHART_ALLOWED_RAW_SEAMS,
             owner=PLOT_LINKED_CURSOR_OWNER,
         )
+    if filename == "stems_demo.rs":
+        return _fret_examples_advanced_surface(
+            filename,
+            (
+                "it owns a manual stems-plot runner with FnDriver/UiTree lifecycle while "
+                "stems model, query output reads, and panel wiring route through "
+                "StemsPlotPanelBinding"
+            ),
+            MANUAL_CHART_ALLOWED_RAW_SEAMS,
+            owner=PLOT_STEMS_OWNER,
+        )
     stem = filename.removesuffix(".rs").replace("_", "-")
     return _fret_examples_advanced_surface(
         filename,
@@ -907,6 +918,35 @@ PLOT_LINKED_CURSOR_FORBIDDEN_COMPACT_MARKERS = (
     ".output(top_output)",
     ".state(bottom_state.clone())",
     ".output(bottom_output.clone())",
+)
+
+PLOT_STEMS_OWNER = "examples-plot-stems"
+
+PLOT_STEMS_REQUIRED_COMPACT_MARKERS = (
+    "usefret_plot::StemsPlotPanelBinding;",
+    "usefret_plot::declarative::stems_plot_panel_in;",
+    "usefret_plot::models::{StemsPlotModel,StemsSeries};",
+    "usefret_ui::{UiTree,declarative};",
+    "plot:StemsPlotPanelBinding",
+    "StemsPlotModel::from_series(",
+    "StemsSeries::new(",
+    "StemsPlotPanelBinding::new(app,StemsPlotModel::from_series(series))",
+    "declarative::RenderRootContext::new(&mutstate.ui,app,services,window,bounds).render_root(\"stems-demo\"",
+    "plot.panel_props()",
+    "state.plot.output_untracked(app)",
+    "vec![stems_plot_panel_in(cx,props)]",
+)
+
+PLOT_STEMS_FORBIDDEN_COMPACT_MARKERS = (
+    "usefret_plot::retained",
+    "fret_plot::retained::",
+    "StemsPlotCanvas",
+    "PlotCanvas",
+    "create_node_retained(",
+    "fret_runtime::Model<",
+    "StemsPlotPanelProps::new(",
+    "app.models_mut().insert(PlotState::default())",
+    "app.models_mut().insert(PlotOutput::default())",
 )
 
 CHART_STRESS_OWNER = "examples-chart-stress"
@@ -3801,6 +3841,54 @@ def _scan_plot_linked_cursor_declarative_binding_boundary(
     return violations
 
 
+def _scan_plot_stems_declarative_binding_boundary(
+    root: Path, spec: SurfacePath
+) -> list[SurfaceViolation]:
+    if spec.owner != PLOT_STEMS_OWNER:
+        return []
+
+    violations: list[SurfaceViolation] = []
+    for path in _iter_source_files(root / spec.path):
+        text = _read_text(path)
+        production_text = text.split("#[cfg(test)]", 1)[0]
+        compact_production = _compact_source(production_text)
+        missing_markers = [
+            marker
+            for marker in PLOT_STEMS_REQUIRED_COMPACT_MARKERS
+            if marker not in compact_production
+        ]
+        if missing_markers:
+            violations.append(
+                SurfaceViolation(
+                    rule="advanced-surface-plot-stems-declarative-binding-boundary",
+                    path=path,
+                    line_no=1,
+                    message=(
+                        "Stems plot demo must keep query output reads and panel authoring "
+                        "on StemsPlotPanelBinding; "
+                        f"missing compact markers: {', '.join(missing_markers)}"
+                    ),
+                )
+            )
+
+        for marker in PLOT_STEMS_FORBIDDEN_COMPACT_MARKERS:
+            if marker not in compact_production:
+                continue
+            violations.append(
+                SurfaceViolation(
+                    rule="advanced-surface-plot-stems-declarative-binding-boundary",
+                    path=path,
+                    line_no=1,
+                    message=(
+                        "Stems plot demo must not expose retained/manual plot state or output "
+                        f"wiring; compact `{marker}` bypasses the StemsPlotPanelBinding boundary"
+                    ),
+                )
+            )
+
+    return violations
+
+
 def _scan_chart_stress_declarative_binding_boundary(
     root: Path, spec: SurfacePath
 ) -> list[SurfaceViolation]:
@@ -4933,6 +5021,7 @@ def _scan_classified_raw_surface(root: Path, spec: SurfacePath) -> list[SurfaceV
     violations.extend(_scan_plot_inf_lines_declarative_binding_boundary(root, spec))
     violations.extend(_scan_plot_area_declarative_binding_boundary(root, spec))
     violations.extend(_scan_plot_linked_cursor_declarative_binding_boundary(root, spec))
+    violations.extend(_scan_plot_stems_declarative_binding_boundary(root, spec))
     violations.extend(_scan_chart_stress_declarative_binding_boundary(root, spec))
     violations.extend(_scan_chart_multi_axis_linked_binding_boundary(root, spec))
     violations.extend(_scan_echarts_adapter_binding_boundary(root, spec))

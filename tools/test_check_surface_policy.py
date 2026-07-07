@@ -3914,6 +3914,184 @@ class SurfacePolicyTests(unittest.TestCase):
                 ]
             )
 
+    def test_plot_stems_legacy_retained_authoring_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-examples/src/stems_demo.rs",
+                """
+                use fret_plot::StemsPlotPanelBinding;
+                use fret_plot::declarative::{StemsPlotPanelProps, stems_plot_panel_in};
+                use fret_plot::models::{StemsPlotModel, StemsSeries};
+                use fret_plot::retained;
+                use fret_runtime::Model;
+                use fret_ui::{UiTree, declarative};
+
+                struct StemsDemoWindowState {
+                    ui: UiTree<App>,
+                    plot: StemsPlotPanelBinding,
+                }
+
+                impl StemsDemoDriver {
+                    fn build_ui(app: &mut App) -> StemsDemoWindowState {
+                        let series = vec![
+                            StemsSeries::new("stems", data),
+                        ];
+                        let plot = StemsPlotPanelBinding::new(app, StemsPlotModel::from_series(series));
+                        StemsDemoWindowState {
+                            ui: UiTree::new(),
+                            plot,
+                        }
+                    }
+                }
+
+                fn handle_event(app: &mut App, state: &mut StemsDemoWindowState) {
+                    let _ = state.plot.output_untracked(app);
+                }
+
+                fn render(
+                    app: &mut App,
+                    services: &mut Services,
+                    window: AppWindowId,
+                    bounds: Rect,
+                    state: &mut StemsDemoWindowState,
+                ) {
+                    let plot = state.plot.clone();
+                    let root = declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
+                        .render_root("stems-demo", move |cx| {
+                            let style = LinePlotStyle::default();
+                            let props = plot.panel_props().style(style);
+                            vec![stems_plot_panel_in(cx, props)]
+                        });
+                    let _ = root;
+                }
+
+                struct LegacyStemsPlot {
+                    plot: fret_runtime::Model<StemsPlotModel>,
+                    output: Model<PlotOutput>,
+                }
+
+                fn bad(
+                    app: &mut App,
+                    plot: Model<StemsPlotModel>,
+                ) {
+                    let _ = retained::legacy();
+                    let _ = fret_plot::retained::legacy();
+                    let _ = StemsPlotCanvas;
+                    let _ = PlotCanvas;
+                    create_node_retained();
+                    let _props = StemsPlotPanelProps::new(plot.clone());
+                    let _ = app.models_mut().insert(PlotState::default());
+                    let _ = app.models_mut().insert(PlotOutput::default());
+                }
+                """,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/stems_demo.rs",
+                        "advanced_manual",
+                        "fixture stems plot demo",
+                        owner="examples-plot-stems",
+                        allowed_raw_seams=("fret_runtime", "fret_ui", "UiTree"),
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            owner_violations = [
+                violation
+                for violation in violations
+                if violation.rule == "advanced-surface-plot-stems-declarative-binding-boundary"
+            ]
+            self.assertGreaterEqual(len(owner_violations), 7)
+            messages = "\n".join(violation.message for violation in owner_violations)
+            self.assertIn("fret_plot::retained", messages)
+            self.assertIn("StemsPlotCanvas", messages)
+            self.assertIn("PlotCanvas", messages)
+            self.assertIn("PlotOutput", messages)
+            self.assertIn("StemsPlotPanelProps", messages)
+
+    def test_plot_stems_declarative_binding_surface_is_allowed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-examples/src/stems_demo.rs",
+                """
+                use fret_plot::StemsPlotPanelBinding;
+                use fret_plot::declarative::stems_plot_panel_in;
+                use fret_plot::models::{StemsPlotModel, StemsSeries};
+                use fret_ui::{UiTree, declarative};
+
+                struct StemsDemoWindowState {
+                    ui: UiTree<App>,
+                    plot: StemsPlotPanelBinding,
+                }
+
+                impl StemsDemoDriver {
+                    fn build_ui(app: &mut App) -> StemsDemoWindowState {
+                        let series = vec![
+                            StemsSeries::new("stems", data),
+                        ];
+                        let plot = StemsPlotPanelBinding::new(app, StemsPlotModel::from_series(series));
+                        StemsDemoWindowState {
+                            ui: UiTree::new(),
+                            plot,
+                        }
+                    }
+                }
+
+                fn handle_event(app: &mut App, state: &mut StemsDemoWindowState) {
+                    let _ = state.plot.output_untracked(app);
+                }
+
+                fn render(
+                    app: &mut App,
+                    services: &mut Services,
+                    window: AppWindowId,
+                    bounds: Rect,
+                    state: &mut StemsDemoWindowState,
+                ) {
+                    let plot = state.plot.clone();
+                    let root = declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
+                        .render_root("stems-demo", move |cx| {
+                            let style = LinePlotStyle::default();
+                            let props = plot.panel_props().style(style);
+                            vec![stems_plot_panel_in(cx, props)]
+                        });
+                    let _ = root;
+                }
+                """,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/stems_demo.rs",
+                        "advanced_manual",
+                        "fixture stems plot demo",
+                        owner="examples-plot-stems",
+                        allowed_raw_seams=("fret_ui", "UiTree"),
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            self.assertFalse(
+                [
+                    violation
+                    for violation in violations
+                    if violation.rule == "advanced-surface-plot-stems-declarative-binding-boundary"
+                ]
+            )
+
     def test_plot_stress_legacy_retained_authoring_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
