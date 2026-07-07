@@ -2622,6 +2622,271 @@ class SurfacePolicyTests(unittest.TestCase):
                 ]
             )
 
+    def test_workspace_shell_driver_direct_model_writes_are_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-examples/src/workspace_shell_demo/driver.rs",
+                """
+                use fret_runtime::{ModelStore, PlatformCapabilities};
+
+                struct WorkspaceShellModelBundle {}
+                impl WorkspaceShellModelBundle {
+                    fn new(
+                        models: &mut ModelStore,
+                        window_layout: WorkspaceWindowLayout,
+                        file_tree_items: Vec<TreeItem>,
+                        file_tree_state: TreeState,
+                    ) -> Self {
+                        Self {}
+                    }
+                }
+
+                struct WorkspaceShellModelOwner<'a> {
+                    models: &'a mut ModelStore,
+                }
+
+                impl<'a> WorkspaceShellModelOwner<'a> {
+                    fn new(models: &'a mut ModelStore) -> Self {
+                        Self { models }
+                    }
+
+                    fn update<T: Any, R>(&mut self, model: &Model<T>, f: impl FnOnce(&mut T) -> R) -> Option<R> {
+                        None
+                    }
+
+                    fn set<T: Any>(&mut self, model: &Model<T>, value: T) -> bool {
+                        true
+                    }
+
+                    fn update_window_layout<R>(
+                        &mut self,
+                        state: &WorkspaceShellWindowState,
+                        f: impl FnOnce(&mut WorkspaceWindowLayout) -> R,
+                    ) -> Option<R> {
+                        None
+                    }
+
+                    fn open_dirty_close_prompt(&mut self, state: &WorkspaceShellWindowState, prompt: WorkspaceShellDirtyClosePrompt) {}
+                    fn clear_dirty_close_prompt(&mut self, state: &WorkspaceShellWindowState) {}
+                    fn toggle_tabstrip_two_row_pinned(&mut self, model: &Model<bool>) -> bool { true }
+                }
+
+                fn workspace_shell_update_window_layout<R>(
+                    app: &mut App,
+                    state: &WorkspaceShellWindowState,
+                    f: impl FnOnce(&mut WorkspaceWindowLayout) -> R,
+                ) -> Option<R> {
+                    WorkspaceShellModelOwner::new(app.models_mut()).update_window_layout(state, f)
+                }
+
+                fn workspace_shell_open_dirty_close_prompt(app: &mut App, state: &WorkspaceShellWindowState, prompt: WorkspaceShellDirtyClosePrompt) {
+                    WorkspaceShellModelOwner::new(app.models_mut()).open_dirty_close_prompt(state, prompt);
+                }
+
+                fn workspace_shell_clear_dirty_close_prompt(app: &mut App, state: &WorkspaceShellWindowState) {
+                    WorkspaceShellModelOwner::new(app.models_mut()).clear_dirty_close_prompt(state);
+                }
+
+                fn workspace_shell_host_clear_dirty_close_prompt(
+                    host: &mut dyn Host,
+                    prompt_model: &Model<Option<WorkspaceShellDirtyClosePrompt>>,
+                    open_model: &Model<bool>,
+                ) {
+                    let mut owner = WorkspaceShellModelOwner::new(host.models_mut());
+                    let _ = owner.set(prompt_model, None);
+                    let _ = owner.set(open_model, false);
+                }
+
+                fn build_ui(app: &mut App, window_layout: WorkspaceWindowLayout, items_value: Vec<TreeItem>, state_value: TreeState) {
+                    let models = WorkspaceShellModelBundle::new(
+                        app.models_mut(),
+                        window_layout,
+                        items_value,
+                        state_value,
+                    );
+                    let _ = models;
+                }
+
+                fn on_close(host: &mut dyn Host, prompt_model: Model<Option<WorkspaceShellDirtyClosePrompt>>, open_model: Model<bool>) {
+                    workspace_shell_host_clear_dirty_close_prompt(host, &prompt_model, &open_model,);
+                }
+
+                fn open_prompt(app: &mut App, state: &WorkspaceShellWindowState, req: Request) {
+                    workspace_shell_open_dirty_close_prompt(app, state, WorkspaceShellDirtyClosePrompt::window_close(req),);
+                    workspace_shell_clear_dirty_close_prompt(app, state);
+                }
+
+                fn toggle(app: &mut App, state: &WorkspaceShellWindowState) {
+                    WorkspaceShellModelOwner::new(app.models_mut()).toggle_tabstrip_two_row_pinned(&state.tabstrip_two_row_pinned);
+                }
+
+                fn bad(app: &mut App, state: &WorkspaceShellWindowState) {
+                    let _ = app.models_mut().update(&state.tabstrip_two_row_pinned, |_| true);
+                    let _ = ModelStore::update(app.models_mut(), &state.tabstrip_two_row_pinned, |_| true);
+                    let mut store = app.models_mut();
+                    let _ = store.update(&state.tabstrip_two_row_pinned, |_| true);
+                    let _ = app.models_mut().insert(false);
+                }
+                """,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/workspace_shell_demo",
+                        "advanced_manual",
+                        "fixture workspace shell surface",
+                        owner="examples-workspace-shell",
+                        allowed_raw_seams=("fret_runtime", "ModelStore"),
+                        retirement=POLICY.FRET_EXAMPLES_ADVANCED_RETIREMENT,
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            owner_violations = [
+                violation
+                for violation in violations
+                if violation.rule == "advanced-surface-workspace-shell-driver-owner-boundary"
+            ]
+            self.assertEqual(4, len(owner_violations))
+            messages = "\n".join(violation.message for violation in owner_violations)
+            self.assertIn("models_mut().update", messages)
+            self.assertIn("ModelStore::update", messages)
+            self.assertIn("ModelStore alias", messages)
+            self.assertIn("models_mut().insert", messages)
+
+    def test_workspace_shell_driver_owner_surface_is_allowed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-examples/src/workspace_shell_demo/driver.rs",
+                """
+                use fret_runtime::{ModelStore, PlatformCapabilities};
+
+                struct WorkspaceShellModelBundle {}
+                impl WorkspaceShellModelBundle {
+                    fn new(
+                        models: &mut ModelStore,
+                        window_layout: WorkspaceWindowLayout,
+                        file_tree_items: Vec<TreeItem>,
+                        file_tree_state: TreeState,
+                    ) -> Self {
+                        Self {}
+                    }
+                }
+
+                struct WorkspaceShellModelOwner<'a> {
+                    models: &'a mut ModelStore,
+                }
+
+                impl<'a> WorkspaceShellModelOwner<'a> {
+                    fn new(models: &'a mut ModelStore) -> Self {
+                        Self { models }
+                    }
+
+                    fn update<T: Any, R>(&mut self, model: &Model<T>, f: impl FnOnce(&mut T) -> R) -> Option<R> {
+                        None
+                    }
+
+                    fn set<T: Any>(&mut self, model: &Model<T>, value: T) -> bool {
+                        true
+                    }
+
+                    fn update_window_layout<R>(
+                        &mut self,
+                        state: &WorkspaceShellWindowState,
+                        f: impl FnOnce(&mut WorkspaceWindowLayout) -> R,
+                    ) -> Option<R> {
+                        None
+                    }
+
+                    fn open_dirty_close_prompt(&mut self, state: &WorkspaceShellWindowState, prompt: WorkspaceShellDirtyClosePrompt) {}
+                    fn clear_dirty_close_prompt(&mut self, state: &WorkspaceShellWindowState) {}
+                    fn toggle_tabstrip_two_row_pinned(&mut self, model: &Model<bool>) -> bool { true }
+                }
+
+                fn workspace_shell_update_window_layout<R>(
+                    app: &mut App,
+                    state: &WorkspaceShellWindowState,
+                    f: impl FnOnce(&mut WorkspaceWindowLayout) -> R,
+                ) -> Option<R> {
+                    WorkspaceShellModelOwner::new(app.models_mut()).update_window_layout(state, f)
+                }
+
+                fn workspace_shell_open_dirty_close_prompt(app: &mut App, state: &WorkspaceShellWindowState, prompt: WorkspaceShellDirtyClosePrompt) {
+                    WorkspaceShellModelOwner::new(app.models_mut()).open_dirty_close_prompt(state, prompt);
+                }
+
+                fn workspace_shell_clear_dirty_close_prompt(app: &mut App, state: &WorkspaceShellWindowState) {
+                    WorkspaceShellModelOwner::new(app.models_mut()).clear_dirty_close_prompt(state);
+                }
+
+                fn workspace_shell_host_clear_dirty_close_prompt(
+                    host: &mut dyn Host,
+                    prompt_model: &Model<Option<WorkspaceShellDirtyClosePrompt>>,
+                    open_model: &Model<bool>,
+                ) {
+                    let mut owner = WorkspaceShellModelOwner::new(host.models_mut());
+                    let _ = owner.set(prompt_model, None);
+                    let _ = owner.set(open_model, false);
+                }
+
+                fn build_ui(app: &mut App, window_layout: WorkspaceWindowLayout, items_value: Vec<TreeItem>, state_value: TreeState) {
+                    let models = WorkspaceShellModelBundle::new(
+                        app.models_mut(),
+                        window_layout,
+                        items_value,
+                        state_value,
+                    );
+                    let _ = models;
+                }
+
+                fn on_close(host: &mut dyn Host, prompt_model: Model<Option<WorkspaceShellDirtyClosePrompt>>, open_model: Model<bool>) {
+                    workspace_shell_host_clear_dirty_close_prompt(host, &prompt_model, &open_model,);
+                }
+
+                fn open_prompt(app: &mut App, state: &WorkspaceShellWindowState, req: Request) {
+                    workspace_shell_open_dirty_close_prompt(app, state, WorkspaceShellDirtyClosePrompt::window_close(req),);
+                    workspace_shell_clear_dirty_close_prompt(app, state);
+                }
+
+                fn toggle(app: &mut App, state: &WorkspaceShellWindowState) {
+                    WorkspaceShellModelOwner::new(app.models_mut()).toggle_tabstrip_two_row_pinned(&state.tabstrip_two_row_pinned);
+                }
+                """,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/workspace_shell_demo",
+                        "advanced_manual",
+                        "fixture workspace shell surface",
+                        owner="examples-workspace-shell",
+                        allowed_raw_seams=("fret_runtime", "ModelStore"),
+                        retirement=POLICY.FRET_EXAMPLES_ADVANCED_RETIREMENT,
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            self.assertFalse(
+                [
+                    violation
+                    for violation in violations
+                    if violation.rule
+                    == "advanced-surface-workspace-shell-driver-owner-boundary"
+                ]
+            )
+
     def test_components_gallery_direct_model_writes_are_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

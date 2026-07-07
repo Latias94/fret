@@ -690,6 +690,58 @@ DOCKING_ARBITRATION_FORBIDDEN_RAW_WRITE_PATTERNS: tuple[
     ),
 )
 
+WORKSPACE_SHELL_OWNER = "examples-workspace-shell"
+
+WORKSPACE_SHELL_DRIVER_REQUIRED_COMPACT_MARKERS = (
+    "structWorkspaceShellModelBundle{",
+    "fnnew(models:&mutModelStore,window_layout:WorkspaceWindowLayout,file_tree_items:Vec<TreeItem>,file_tree_state:TreeState,)->Self{",
+    "letmodels=WorkspaceShellModelBundle::new(app.models_mut(),window_layout,items_value,state_value,);",
+    "structWorkspaceShellModelOwner<'a>{",
+    "models:&'amutModelStore,",
+    "fnupdate<T:Any,R>(&mutself,model:&Model<T>,f:implFnOnce(&mutT)->R)->Option<R>{",
+    "fnset<T:Any>(&mutself,model:&Model<T>,value:T)->bool{",
+    "fnupdate_window_layout<R>(",
+    "fnopen_dirty_close_prompt(",
+    "fnclear_dirty_close_prompt(",
+    "fntoggle_tabstrip_two_row_pinned(&mutself,model:&Model<bool>)->bool{",
+    "fnworkspace_shell_update_window_layout<R>(",
+    "fnworkspace_shell_open_dirty_close_prompt(",
+    "fnworkspace_shell_clear_dirty_close_prompt(",
+    "fnworkspace_shell_host_clear_dirty_close_prompt(",
+    "workspace_shell_host_clear_dirty_close_prompt(host,&prompt_model,&open_model,);",
+    "workspace_shell_open_dirty_close_prompt(app,state,WorkspaceShellDirtyClosePrompt::window_close(req),);",
+    "workspace_shell_clear_dirty_close_prompt(app,state);",
+    "WorkspaceShellModelOwner::new(app.models_mut()).toggle_tabstrip_two_row_pinned(&state.tabstrip_two_row_pinned);",
+)
+
+WORKSPACE_SHELL_DRIVER_FORBIDDEN_COMPACT_MARKERS = (
+    "fnworkspace_shell_update_model",
+    "fnworkspace_shell_host_update_model",
+    "fnworkspace_shell_set_model",
+    "fnworkspace_shell_host_set_model",
+)
+
+WORKSPACE_SHELL_DRIVER_FORBIDDEN_RAW_WRITE_PATTERNS: tuple[
+    tuple[str, re.Pattern[str]], ...
+] = (
+    (
+        "models_mut().update",
+        re.compile(
+            r"\bmodels_mut\s*\(\s*\)\s*\.\s*update(?:_any)?\s*(?:::\s*<[^>]*>)?\s*\("
+        ),
+    ),
+    (
+        "models_mut().insert",
+        re.compile(r"\bmodels_mut\s*\(\s*\)\s*\.\s*insert\s*\("),
+    ),
+    (
+        "ModelStore::update",
+        re.compile(
+            r"(?:\bModelStore\s*::\s*|<\s*ModelStore\s*>\s*::\s*)update(?:_any)?\s*(?:::\s*<[^>]*>)?\s*\("
+        ),
+    ),
+)
+
 WINDOW_HIT_TEST_PROBE_OWNER = "examples-window-hit-test-probe"
 
 WINDOW_HIT_TEST_PROBE_REQUIRED_MARKERS = (
@@ -1505,7 +1557,7 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
             "workspace shell proof owns manual launch, UiTree, frame lifecycle, command "
             "dispatch, overlay, virtual-list, and diagnostics seams directly"
         ),
-        owner="examples-workspace-shell",
+        owner=WORKSPACE_SHELL_OWNER,
         allowed_raw_seams=(
             "fret::advanced",
             "fret_app",
@@ -2750,7 +2802,7 @@ def _scan_docking_arbitration_controls_boundary(
             if "=" not in rest:
                 continue
             alias, rhs = rest.split("=", 1)
-            if "models_mut()" not in rhs:
+            if not re.fullmatch(r"(?:[A-Za-z_][A-Za-z0-9_]*\.)?models_mut\(\)", rhs):
                 continue
             model_store_aliases.append(alias.strip().removeprefix("mut"))
 
@@ -2772,6 +2824,113 @@ def _scan_docking_arbitration_controls_boundary(
                             "docking arbitration diagnostic model writes must route through "
                             f"DockingArbitrationControls; ModelStore alias `{forbidden}` "
                             "bypasses the controls boundary"
+                        ),
+                    )
+                )
+
+    return violations
+
+
+def _scan_workspace_shell_driver_owner_boundary(
+    root: Path, spec: SurfacePath
+) -> list[SurfaceViolation]:
+    if spec.owner != WORKSPACE_SHELL_OWNER:
+        return []
+
+    violations: list[SurfaceViolation] = []
+    for path in _iter_source_files(root / spec.path):
+        if path.name != "driver.rs":
+            continue
+
+        text = _read_text(path)
+        production_text = text.split("#[cfg(test)]", 1)[0]
+        compact_production = _compact_source(production_text)
+        missing_markers = [
+            marker
+            for marker in WORKSPACE_SHELL_DRIVER_REQUIRED_COMPACT_MARKERS
+            if marker not in compact_production
+        ]
+        if missing_markers:
+            violations.append(
+                SurfaceViolation(
+                    rule="advanced-surface-workspace-shell-driver-owner-boundary",
+                    path=path,
+                    line_no=1,
+                    message=(
+                        "workspace shell driver model allocation and writes must stay behind "
+                        f"WorkspaceShellModelBundle/Owner; missing compact markers: "
+                        f"{', '.join(missing_markers)}"
+                    ),
+                )
+            )
+
+        for marker in WORKSPACE_SHELL_DRIVER_FORBIDDEN_COMPACT_MARKERS:
+            if marker not in compact_production:
+                continue
+            violations.append(
+                SurfaceViolation(
+                    rule="advanced-surface-workspace-shell-driver-owner-boundary",
+                    path=path,
+                    line_no=1,
+                    message=(
+                        "workspace shell driver must not regress to raw helper or direct "
+                        f"ModelStore allocation seams; compact `{marker}` bypasses the owner boundary"
+                    ),
+                )
+            )
+
+        for line_no, line in _code_lines_for_scan(path, production_text):
+            if path.suffix == ".rs" and _is_rust_source_line_ignorable(line):
+                continue
+            for seam, pattern in WORKSPACE_SHELL_DRIVER_FORBIDDEN_RAW_WRITE_PATTERNS:
+                if not pattern.search(line):
+                    continue
+                violations.append(
+                    SurfaceViolation(
+                        rule="advanced-surface-workspace-shell-driver-owner-boundary",
+                        path=path,
+                        line_no=line_no,
+                        message=(
+                            "workspace shell driver model allocation and writes must route through "
+                            f"WorkspaceShellModelBundle/Owner; direct `{seam}` bypasses the owner boundary"
+                        ),
+                        source=line.strip(),
+                    )
+                )
+                break
+
+        model_store_aliases: list[str] = []
+        for statement in production_text.split(";"):
+            compact_statement = _compact_source(statement)
+            rest = compact_statement.removeprefix("let")
+            if rest == compact_statement:
+                continue
+            if "=" not in rest:
+                continue
+            alias, rhs = rest.split("=", 1)
+            if not re.fullmatch(r"(?:[A-Za-z_][A-Za-z0-9_]*\.)?models_mut\(\)", rhs):
+                continue
+            model_store_aliases.append(alias.strip().removeprefix("mut"))
+
+        for alias in model_store_aliases:
+            for forbidden in (
+                f"{alias}.update(",
+                f"{alias}.update::<",
+                f"{alias}.update_any(",
+                f"{alias}.update_any::<",
+                f"{alias}.insert(",
+            ):
+                if forbidden not in compact_production:
+                    continue
+                violations.append(
+                    SurfaceViolation(
+                        rule="advanced-surface-workspace-shell-driver-owner-boundary",
+                        path=path,
+                        line_no=1,
+                        message=(
+                            "workspace shell driver model allocation and writes must route through "
+                            f"WorkspaceShellModelBundle/Owner; ModelStore alias `{forbidden}` "
+                            "bypasses the owner boundary"
                         ),
                     )
                 )
@@ -3210,6 +3369,7 @@ def _scan_classified_raw_surface(root: Path, spec: SurfacePath) -> list[SurfaceV
     violations.extend(_scan_external_imports_owner_boundary(root, spec))
     violations.extend(_scan_hotpatch_smoke_owner_boundary(root, spec))
     violations.extend(_scan_docking_arbitration_controls_boundary(root, spec))
+    violations.extend(_scan_workspace_shell_driver_owner_boundary(root, spec))
     violations.extend(_scan_window_hit_test_probe_boundary(root, spec))
     violations.extend(_scan_components_gallery_owner_boundary(root, spec))
     violations.extend(_scan_virtual_list_stress_controls_boundary(root, spec))
