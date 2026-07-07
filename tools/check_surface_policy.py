@@ -490,6 +490,17 @@ def _fret_examples_manual_chart_surface(filename: str) -> SurfacePath:
             MANUAL_CHART_ALLOWED_RAW_SEAMS,
             owner=PLOT_HEATMAP_OWNER,
         )
+    if filename == "histogram2d_demo.rs":
+        return _fret_examples_advanced_surface(
+            filename,
+            (
+                "it owns a manual histogram2d runner with FnDriver/UiTree lifecycle while "
+                "histogram2d grid authoring, axis labels, and panel wiring route through "
+                "Histogram2DPlotPanelBinding"
+            ),
+            MANUAL_CHART_ALLOWED_RAW_SEAMS,
+            owner=PLOT_HISTOGRAM2D_OWNER,
+        )
     stem = filename.removesuffix(".rs").replace("_", "-")
     return _fret_examples_advanced_surface(
         filename,
@@ -1298,6 +1309,38 @@ PLOT_HEATMAP_FORBIDDEN_COMPACT_MARKERS = (
     "app.models_mut().insert(PlotOutput::default())",
 )
 
+PLOT_HISTOGRAM2D_OWNER = "examples-plot-histogram2d"
+
+PLOT_HISTOGRAM2D_REQUIRED_COMPACT_MARKERS = (
+    "usefret_plot::Histogram2DPlotPanelBinding;",
+    "usefret_plot::declarative::histogram2d_plot_panel_in;",
+    "usefret_plot::models::Histogram2DPlotModel;",
+    "usefret_ui::{UiTree,declarative};",
+    "plot:Histogram2DPlotPanelBinding",
+    "histogram2d_counts(Histogram2DConfig::new(bounds,256,192),points)",
+    "Histogram2DPlotModel::new(grid.data_bounds,grid.cols,grid.rows,grid.values)",
+    "Histogram2DPlotPanelBinding::new(app,model)",
+    "declarative::RenderRootContext::new(&mutstate.ui,app,services,window,bounds).render_root(\"histogram2d-demo\"",
+    "plot.panel_props()",
+    ".x_axis_labels(AxisLabelFormatter::number(AxisNumberFormat::Fixed(2)))",
+    ".y_axis_labels(AxisLabelFormatter::number(AxisNumberFormat::Fixed(2)))",
+    "vec![histogram2d_plot_panel_in(cx,props)]",
+)
+
+PLOT_HISTOGRAM2D_FORBIDDEN_COMPACT_MARKERS = (
+    "usefret_plot::retained",
+    "fret_plot::retained::",
+    "Histogram2DPlotCanvas",
+    "PlotCanvas",
+    "create_node_retained(",
+    "fret_runtime::Model<",
+    "Histogram2DPlotPanelProps::new(",
+    ".state(plot_state.clone())",
+    ".output(plot_output.clone())",
+    "app.models_mut().insert(PlotState::default())",
+    "app.models_mut().insert(PlotOutput::default())",
+)
+
 PLOT_DECLARATIVE_BINDING_BOUNDARIES: tuple[CompactSourceBoundary, ...] = (
     CompactSourceBoundary(
         owner=PLOT_STRESS_OWNER,
@@ -1496,6 +1539,20 @@ PLOT_DECLARATIVE_BINDING_BOUNDARIES: tuple[CompactSourceBoundary, ...] = (
         forbidden_message_template=(
             "Heatmap demo must not expose retained/manual plot state or output "
             "wiring; compact `{marker}` bypasses the HeatmapPlotPanelBinding boundary"
+        ),
+    ),
+    CompactSourceBoundary(
+        owner=PLOT_HISTOGRAM2D_OWNER,
+        rule="advanced-surface-plot-histogram2d-declarative-binding-boundary",
+        required_markers=PLOT_HISTOGRAM2D_REQUIRED_COMPACT_MARKERS,
+        forbidden_markers=PLOT_HISTOGRAM2D_FORBIDDEN_COMPACT_MARKERS,
+        missing_message_template=(
+            "Histogram2D demo must keep grid authoring, axis label props, and panel "
+            "authoring on Histogram2DPlotPanelBinding; missing compact markers: {missing_markers}"
+        ),
+        forbidden_message_template=(
+            "Histogram2D demo must not expose retained/manual plot state or output "
+            "wiring; compact `{marker}` bypasses the Histogram2DPlotPanelBinding boundary"
         ),
     ),
 )

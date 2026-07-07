@@ -5646,6 +5646,192 @@ class SurfacePolicyTests(unittest.TestCase):
                 ]
             )
 
+    def test_plot_histogram2d_legacy_retained_authoring_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-examples/src/histogram2d_demo.rs",
+                """
+                use fret_plot::Histogram2DPlotPanelBinding;
+                use fret_plot::declarative::{Histogram2DPlotPanelProps, histogram2d_plot_panel_in};
+                use fret_plot::models::Histogram2DPlotModel;
+                use fret_plot::plot::axis::{AxisLabelFormatter, AxisNumberFormat};
+                use fret_plot::plot::histogram2d::{Histogram2DConfig, histogram2d_counts};
+                use fret_plot::retained;
+                use fret_runtime::Model;
+                use fret_ui::{UiTree, declarative};
+
+                struct Histogram2DDemoWindowState {
+                    ui: UiTree<App>,
+                    plot: Histogram2DPlotPanelBinding,
+                }
+
+                impl Histogram2DDemoDriver {
+                    fn build_ui(app: &mut App) -> Histogram2DDemoWindowState {
+                        let bounds = DataRect::default();
+                        let points = Vec::new();
+                        let grid = histogram2d_counts(Histogram2DConfig::new(bounds, 256, 192), points);
+                        let model = Histogram2DPlotModel::new(grid.data_bounds, grid.cols, grid.rows, grid.values);
+                        let plot = Histogram2DPlotPanelBinding::new(app, model);
+                        Histogram2DDemoWindowState {
+                            ui: UiTree::new(),
+                            plot,
+                        }
+                    }
+                }
+
+                fn render(
+                    app: &mut App,
+                    services: &mut Services,
+                    window: AppWindowId,
+                    bounds: Rect,
+                    state: &mut Histogram2DDemoWindowState,
+                ) {
+                    let plot = state.plot.clone();
+                    let root = declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
+                        .render_root("histogram2d-demo", move |cx| {
+                            let props = plot
+                                .panel_props()
+                                .x_axis_labels(AxisLabelFormatter::number(AxisNumberFormat::Fixed(2)))
+                                .y_axis_labels(AxisLabelFormatter::number(AxisNumberFormat::Fixed(2)));
+                            vec![histogram2d_plot_panel_in(cx, props)]
+                        });
+                    let _ = root;
+                }
+
+                struct LegacyHistogram2DPlot {
+                    plot: fret_runtime::Model<Histogram2DPlotModel>,
+                    output: Model<PlotOutput>,
+                }
+
+                fn bad(
+                    app: &mut App,
+                    plot: Model<Histogram2DPlotModel>,
+                    plot_state: Model<PlotState>,
+                    plot_output: Model<PlotOutput>,
+                ) {
+                    let _ = retained::legacy();
+                    let _ = fret_plot::retained::legacy();
+                    let _ = Histogram2DPlotCanvas;
+                    let _ = PlotCanvas;
+                    create_node_retained();
+                    let _props = Histogram2DPlotPanelProps::new(plot.clone())
+                        .state(plot_state.clone())
+                        .output(plot_output.clone());
+                    let _ = app.models_mut().insert(PlotState::default());
+                    let _ = app.models_mut().insert(PlotOutput::default());
+                }
+                """,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/histogram2d_demo.rs",
+                        "advanced_manual",
+                        "fixture histogram2d plot demo",
+                        owner="examples-plot-histogram2d",
+                        allowed_raw_seams=("fret_runtime", "fret_ui", "UiTree"),
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            owner_violations = [
+                violation
+                for violation in violations
+                if violation.rule
+                == "advanced-surface-plot-histogram2d-declarative-binding-boundary"
+            ]
+            self.assertGreaterEqual(len(owner_violations), 8)
+            messages = "\n".join(violation.message for violation in owner_violations)
+            self.assertIn("fret_plot::retained", messages)
+            self.assertIn("Histogram2DPlotCanvas", messages)
+            self.assertIn("PlotCanvas", messages)
+            self.assertIn("PlotOutput", messages)
+            self.assertIn("Histogram2DPlotPanelProps", messages)
+
+    def test_plot_histogram2d_declarative_binding_surface_is_allowed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-examples/src/histogram2d_demo.rs",
+                """
+                use fret_plot::Histogram2DPlotPanelBinding;
+                use fret_plot::declarative::histogram2d_plot_panel_in;
+                use fret_plot::models::Histogram2DPlotModel;
+                use fret_plot::plot::axis::{AxisLabelFormatter, AxisNumberFormat};
+                use fret_plot::plot::histogram2d::{Histogram2DConfig, histogram2d_counts};
+                use fret_ui::{UiTree, declarative};
+
+                struct Histogram2DDemoWindowState {
+                    ui: UiTree<App>,
+                    plot: Histogram2DPlotPanelBinding,
+                }
+
+                impl Histogram2DDemoDriver {
+                    fn build_ui(app: &mut App) -> Histogram2DDemoWindowState {
+                        let bounds = DataRect::default();
+                        let points = Vec::new();
+                        let grid = histogram2d_counts(Histogram2DConfig::new(bounds, 256, 192), points);
+                        let model = Histogram2DPlotModel::new(grid.data_bounds, grid.cols, grid.rows, grid.values);
+                        let plot = Histogram2DPlotPanelBinding::new(app, model);
+                        Histogram2DDemoWindowState {
+                            ui: UiTree::new(),
+                            plot,
+                        }
+                    }
+                }
+
+                fn render(
+                    app: &mut App,
+                    services: &mut Services,
+                    window: AppWindowId,
+                    bounds: Rect,
+                    state: &mut Histogram2DDemoWindowState,
+                ) {
+                    let plot = state.plot.clone();
+                    let root = declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
+                        .render_root("histogram2d-demo", move |cx| {
+                            let props = plot
+                                .panel_props()
+                                .x_axis_labels(AxisLabelFormatter::number(AxisNumberFormat::Fixed(2)))
+                                .y_axis_labels(AxisLabelFormatter::number(AxisNumberFormat::Fixed(2)));
+                            vec![histogram2d_plot_panel_in(cx, props)]
+                        });
+                    let _ = root;
+                }
+                """,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/histogram2d_demo.rs",
+                        "advanced_manual",
+                        "fixture histogram2d plot demo",
+                        owner="examples-plot-histogram2d",
+                        allowed_raw_seams=("fret_ui", "UiTree"),
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            self.assertFalse(
+                [
+                    violation
+                    for violation in violations
+                    if violation.rule
+                    == "advanced-surface-plot-histogram2d-declarative-binding-boundary"
+                ]
+            )
+
     def test_plot_stress_legacy_retained_authoring_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
