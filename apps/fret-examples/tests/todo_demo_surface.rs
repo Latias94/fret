@@ -52,3 +52,36 @@ fn todo_demo_keeps_visible_text_on_roles() {
         );
     }
 }
+
+#[test]
+fn todo_demo_keeps_raw_view_runtime_harness_out_of_app_source() {
+    let compact_source = compact(include_str!("../src/todo_demo.rs"));
+    let compact_harness = compact(include_str!("../src/todo_demo_runtime_tests.rs"));
+
+    for legacy in [
+        "usefret::advanced::view::{",
+        "view_init_window::<TodoDemoView>",
+        "view_view(cx,state)",
+        "ViewWindowState<TodoDemoView>",
+        "UiTree::<App>::new()",
+        "usefret_runtime::{FrameId,TickId};",
+    ] {
+        assert!(
+            !compact_source.contains(legacy),
+            "todo demo app source should not own raw view runtime harness code; unexpected `{legacy}`"
+        );
+    }
+
+    for needle in [
+        "usefret::advanced::view::{AppUiRenderRootState,ViewWindowState,render_root_with_app_ui,view_init_window,view_view,};",
+        "fnrender_todo_demo_runtime_snapshot_for_frame(",
+        "view_init_window::<TodoDemoView>(&mutapp,window)",
+        "view_view(cx,state)",
+        "ui.set_view_cache_enabled(true);",
+    ] {
+        assert!(
+            compact_harness.contains(needle),
+            "todo demo runtime harness should retain cache transition coverage; missing `{needle}`"
+        );
+    }
+}

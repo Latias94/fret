@@ -1293,6 +1293,19 @@ INTERNAL_HARNESS_SURFACES: tuple[SurfacePath, ...] = (
         ("fret_launch",),
         owner="examples-simple-todo-driver",
     ),
+    _fret_examples_internal_harness(
+        "todo_demo_runtime_tests.rs",
+        "the todo demo runtime test harness owns direct view-runtime rendering, cache transition "
+        "checks, and fake UI services for semantics snapshots",
+        (
+            "fret::advanced",
+            "fret_core",
+            "fret_runtime",
+            "fret_ui",
+            "UiTree",
+        ),
+        owner="examples-todo-runtime-tests",
+    ),
 )
 
 
@@ -1390,14 +1403,12 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
     ),
     _fret_examples_advanced_surface(
         "todo_demo.rs",
-        "the app-facing view is also the semantics/runtime test harness for the golden-path demo",
+        "the app-facing view still owns low-level text/helper return boundaries while the raw "
+        "runtime cache tests live in the internal harness module",
         (
-            "fret::advanced",
             "fret_core",
-            "fret_runtime",
             "fret_ui",
             "AnyElement",
-            "UiTree",
         ),
         owner="examples-todo",
     ),

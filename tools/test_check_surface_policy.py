@@ -1242,6 +1242,37 @@ class SurfacePolicyTests(unittest.TestCase):
             "simple todo driver should stay classified as an internal harness",
         )
         self.assertEqual(simple_todo_driver_spec.allowed_raw_seams, ("fret_launch",))
+        todo_runtime_tests_spec = next(
+            (
+                spec
+                for spec in POLICY.INTERNAL_HARNESS_SURFACES
+                if spec.path == "apps/fret-examples/src/todo_demo_runtime_tests.rs"
+            ),
+            None,
+        )
+        self.assertIsNotNone(
+            todo_runtime_tests_spec,
+            "todo demo runtime tests should own the raw view-runtime harness",
+        )
+        self.assertIn("fret::advanced", todo_runtime_tests_spec.allowed_raw_seams)
+        self.assertIn("fret_runtime", todo_runtime_tests_spec.allowed_raw_seams)
+        self.assertIn("UiTree", todo_runtime_tests_spec.allowed_raw_seams)
+        todo_demo_spec = next(
+            (
+                spec
+                for spec in POLICY.ADVANCED_MANUAL_SURFACES
+                if spec.path == "apps/fret-examples/src/todo_demo.rs"
+            ),
+            None,
+        )
+        self.assertIsNotNone(
+            todo_demo_spec,
+            "todo demo should stay classified until its AnyElement helper returns are cleaned up",
+        )
+        self.assertEqual(
+            todo_demo_spec.allowed_raw_seams,
+            ("fret_core", "fret_ui", "AnyElement"),
+        )
         harness_root_spec = next(
             (
                 spec
