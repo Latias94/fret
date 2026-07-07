@@ -327,18 +327,37 @@ mod tests {
         assert!(lib_rs.contains("pub const PACK_METADATA: IconPackMetadata"));
         assert!(lib_rs.contains("pub const PACK: IconPackRegistration"));
         assert!(lib_rs.contains("pub const UI_SEMANTIC_ALIAS_PACK"));
+        assert!(lib_rs.contains("#[cfg(feature = \"app-integration\")]\npub mod advanced;"));
+        assert!(lib_rs.contains("#[cfg(feature = \"app-integration\")]\npub mod app;"));
+        assert!(!lib_rs.contains("pub fn install("));
+        assert!(!lib_rs.contains("pub fn install_app("));
+        assert!(!lib_rs.contains("pub fn install_with_ui_services("));
 
         let readme =
             std::fs::read_to_string(output_dir.join("README.md")).expect("generated README.md");
         assert!(readme.contains("`demo_icons::app::install(...)`"));
+        assert!(readme.contains("`demo_icons::advanced::install_with_ui_services(...)`"));
+        assert!(!readme.contains("`demo_icons::install_app(...)`"));
+        assert!(!readme.contains("`demo_icons::install(...)`"));
         assert!(
             readme.contains("`BootstrapBuilder::register_icon_pack_contract(demo_icons::PACK)`")
         );
         let app_rs =
             std::fs::read_to_string(output_dir.join("src/app.rs")).expect("generated app.rs");
+        assert!(app_rs.contains("pub fn install(app: &mut fret_app::App)"));
+        assert!(!app_rs.contains("pub fn install_app("));
+        assert!(!app_rs.contains("pub fn install_with_ui_services("));
         assert!(app_rs.contains("let frozen = icons.freeze().unwrap_or_else(|errors|"));
         assert!(app_rs.contains("panic_on_icon_registry_freeze_failure("));
         assert!(app_rs.contains("panic_on_icon_pack_metadata_conflict("));
+        let advanced_rs = std::fs::read_to_string(output_dir.join("src/advanced.rs"))
+            .expect("generated advanced.rs");
+        assert!(advanced_rs.contains(
+            "pub fn install_with_ui_services(app: &mut fret_app::App, _services: &mut dyn UiServices)"
+        ));
+        assert!(advanced_rs.contains("crate::app::install(app);"));
+        assert!(!advanced_rs.contains("pub fn install("));
+        assert!(!advanced_rs.contains("pub fn install_app("));
 
         let provenance = std::fs::read_to_string(output_dir.join("pack-provenance.json"))
             .expect("generated provenance json");
