@@ -1413,6 +1413,32 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
         _fret_examples_custom_effect_reference_surface(filename)
         for filename in CUSTOM_EFFECT_REFERENCE_DEMO_FILENAMES
     ),
+    _fret_examples_advanced_surface(
+        "liquid_glass_demo.rs",
+        "the liquid-glass reference owns explicit renderer capability checks, backdrop warp/custom "
+        "effect composition, and effect/control graph validation for the backdrop-warp contract",
+        (
+            "fret::advanced",
+            "fret_core",
+            "fret_runtime",
+            "fret_ui",
+            "AnyElement",
+            "ElementContext",
+        ),
+        owner="examples-liquid-glass-reference",
+    ),
+    _fret_examples_advanced_surface(
+        "postprocess_theme_demo.rs",
+        "the theme postprocess reference owns explicit renderer/theme bridge custom-effect "
+        "composition and high-ceiling postprocess controls",
+        (
+            "fret::advanced",
+            "fret_core",
+            "fret_ui",
+            "AnyElement",
+        ),
+        owner="examples-postprocess-theme-reference",
+    ),
     *(
         _fret_examples_streaming_import_surface(filename)
         for filename in STREAMING_IMPORT_DEMO_FILENAMES
@@ -1874,6 +1900,8 @@ PUBLIC_EXAMPLE_SCAN_ROOTS: tuple[str, ...] = (
     "apps/fret-examples/src/image_heavy_memory_demo.rs",
     "apps/fret-examples/src/text_heavy_memory_demo.rs",
     "apps/fret-examples/src/extras_marquee_perf_demo.rs",
+    "apps/fret-examples/src/liquid_glass_demo.rs",
+    "apps/fret-examples/src/postprocess_theme_demo.rs",
     "apps/fret-examples/src/custom_effect_v2_web_demo.rs",
     "apps/fret-examples/src/custom_effect_v2_identity_web_demo.rs",
     "apps/fret-examples/src/custom_effect_v2_lut_web_demo.rs",

@@ -886,6 +886,10 @@ class SurfacePolicyTests(unittest.TestCase):
             "apps/fret-examples/src/image_heavy_memory_demo.rs",
             "apps/fret-examples/src/text_heavy_memory_demo.rs",
         }
+        effect_reference_paths = {
+            "apps/fret-examples/src/liquid_glass_demo.rs",
+            "apps/fret-examples/src/postprocess_theme_demo.rs",
+        }
         for path in custom_effect_v2_web_paths:
             self.assertIn(path, POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS)
         for path in custom_effect_reference_paths:
@@ -899,6 +903,8 @@ class SurfacePolicyTests(unittest.TestCase):
         for path in text_input_conformance_paths:
             self.assertIn(path, POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS)
         for path in memory_perf_harness_paths:
+            self.assertIn(path, POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS)
+        for path in effect_reference_paths:
             self.assertIn(path, POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS)
         self.assertTrue(
             any(
@@ -1077,6 +1083,21 @@ class SurfacePolicyTests(unittest.TestCase):
                 "memory" in spec.reason or "perf" in spec.reason,
                 f"{path} should explain its memory/perf harness role",
             )
+            self.assertTrue(spec.allowed_raw_seams)
+        for path in effect_reference_paths:
+            spec = next(
+                (
+                    spec
+                    for spec in POLICY.ADVANCED_MANUAL_SURFACES
+                    if spec.path == path
+                ),
+                None,
+            )
+            self.assertIsNotNone(
+                spec, f"{path} should be classified as an advanced effect reference"
+            )
+            self.assertIn("renderer", spec.reason)
+            self.assertTrue(spec.retirement)
             self.assertTrue(spec.allowed_raw_seams)
         helper_spec = next(
             (
