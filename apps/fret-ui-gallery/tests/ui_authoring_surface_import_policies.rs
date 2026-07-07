@@ -54,6 +54,83 @@ fn assert_curated_facade_root_only(relative_paths: &[&str]) {
     }
 }
 
+fn documented_raw_shadcn_escape_hatch_reason(trimmed: &str) -> Option<&'static str> {
+    if trimmed.contains("shadcn::raw::typography::") {
+        return Some("raw typography prose helpers");
+    }
+    if trimmed.contains("shadcn::raw::icon::") {
+        return Some("low-level icon helper");
+    }
+    if trimmed.contains("shadcn::raw::extras::") {
+        return Some("explicit shadcn extras raw family");
+    }
+
+    for (needle, reason) in [
+        (
+            "use shadcn::raw::breadcrumb::primitives as bc;",
+            "breadcrumb primitive source-alignment alias",
+        ),
+        (
+            "use shadcn::raw::collapsible::primitives as shadcn_col;",
+            "collapsible primitive source-alignment alias",
+        ),
+        (
+            "shadcn::raw::accordion::composable",
+            "retired accordion raw-seam documentation",
+        ),
+        (
+            "shadcn::raw::collapsible::primitives::*",
+            "collapsible raw-seam documentation",
+        ),
+        (
+            "shadcn::raw::button::ButtonStyle::",
+            "button style refinement seam",
+        ),
+        (
+            "shadcn::raw::calendar::CalendarLocale::",
+            "calendar locale enum seam",
+        ),
+        (
+            "shadcn::raw::context_menu::ContextMenuItemVariant::",
+            "context-menu item variant seam",
+        ),
+        (
+            "shadcn::raw::dropdown_menu::DropdownMenuItemVariant::",
+            "dropdown-menu item variant seam",
+        ),
+        (
+            "shadcn::raw::experimental::DataGridElement::",
+            "experimental DataGrid element family",
+        ),
+        (
+            "shadcn::raw::experimental::DataGridRowState",
+            "experimental DataGrid row-state family",
+        ),
+        (
+            "shadcn::raw::menubar::MenubarItemVariant::",
+            "menubar item variant seam",
+        ),
+        (
+            "shadcn::raw::select::SelectPosition::",
+            "select positioning enum seam",
+        ),
+        (
+            "shadcn::raw::switch::SwitchStyle::",
+            "switch style refinement seam",
+        ),
+        (
+            "shadcn::raw::tabs::TabsOrientation::",
+            "tabs orientation enum seam",
+        ),
+    ] {
+        if trimmed.contains(needle) {
+            return Some(reason);
+        }
+    }
+
+    None
+}
+
 fn assert_only_documented_raw_shadcn_modules(path: &std::path::Path, source: &str) {
     for (line_idx, line) in source.lines().enumerate() {
         let trimmed = line.trim();
@@ -61,29 +138,44 @@ fn assert_only_documented_raw_shadcn_modules(path: &std::path::Path, source: &st
             continue;
         }
 
-        let allowed = trimmed.contains("shadcn::raw::typography::")
-            || trimmed.contains("shadcn::raw::accordion::")
-            || trimmed.contains("shadcn::raw::extras::")
-            || trimmed.contains("shadcn::raw::breadcrumb::")
-            || trimmed.contains("shadcn::raw::collapsible::")
-            || trimmed.contains("shadcn::raw::experimental::")
-            || trimmed.contains("shadcn::raw::icon::")
-            || trimmed.contains("shadcn::raw::button::")
-            || trimmed.contains("shadcn::raw::calendar::")
-            || trimmed.contains("shadcn::raw::context_menu::")
-            || trimmed.contains("shadcn::raw::dropdown_menu::")
-            || trimmed.contains("shadcn::raw::kbd::")
-            || trimmed.contains("shadcn::raw::menubar::")
-            || trimmed.contains("shadcn::raw::select::")
-            || trimmed.contains("shadcn::raw::switch::")
-            || trimmed.contains("shadcn::raw::tabs::")
-            || trimmed.contains("shadcn::raw::toggle_group::");
         assert!(
-            allowed,
-            "{}:{} used an undocumented shadcn raw escape hatch: {}",
+            documented_raw_shadcn_escape_hatch_reason(trimmed).is_some(),
+            "{}:{} used an unclassified shadcn raw escape hatch: {}",
             path.display(),
             line_idx + 1,
             trimmed
+        );
+    }
+}
+
+#[test]
+fn raw_shadcn_escape_hatch_gate_is_symbol_level_not_module_level() {
+    for allowed in [
+        "shadcn::raw::typography::muted(\"copy\")",
+        "shadcn::raw::icon::icon(cx, icon)",
+        "shadcn::raw::extras::Ticker::new(\"AAPL\")",
+        "use shadcn::raw::breadcrumb::primitives as bc;",
+        "use shadcn::raw::collapsible::primitives as shadcn_col;",
+        ".variant(shadcn::raw::dropdown_menu::DropdownMenuItemVariant::Destructive)",
+        ".position(shadcn::raw::select::SelectPosition::Popper)",
+        "let grid = shadcn::raw::experimental::DataGridElement::new(rows)",
+    ] {
+        assert!(
+            documented_raw_shadcn_escape_hatch_reason(allowed).is_some(),
+            "expected `{allowed}` to stay classified as an explicit raw escape hatch",
+        );
+    }
+
+    for forbidden in [
+        "shadcn::raw::kbd::KbdStyle::default()",
+        "shadcn::raw::toggle_group::ToggleGroupStyle::default()",
+        "shadcn::raw::experimental::UnclassifiedWidget::new()",
+        "shadcn::raw::button::UnclassifiedButtonPart::new()",
+        "use shadcn::raw::breadcrumb::private as bc;",
+    ] {
+        assert!(
+            documented_raw_shadcn_escape_hatch_reason(forbidden).is_none(),
+            "`{forbidden}` should not pass the raw escape hatch gate by module name alone",
         );
     }
 }

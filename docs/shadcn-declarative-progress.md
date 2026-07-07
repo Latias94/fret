@@ -253,9 +253,11 @@ Guidelines:
 - Non-curated seams should stay explicit in app code: use `fret_ui_shadcn::advanced::*` for
   environment / `UiServices` hooks, and use `shadcn::raw::*` only for the documented escape-hatch
   lanes (`typography` prose helpers, `extras`, breadcrumb primitives, the experimental
-  `DataGridElement` family, low-level icon helpers, and module-local advanced enums/styles such as
-  `raw::{button, calendar, context_menu, dropdown_menu, kbd, menubar, select, switch, tabs,
-  toggle_group}::*`) instead of importing `fret_ui_shadcn::*` directly.
+  `DataGridElement` / `DataGridRowState` family, low-level icon helpers, and symbol-level advanced
+  enums/styles such as `raw::button::ButtonStyle`, `raw::calendar::CalendarLocale`,
+  `raw::{context_menu, dropdown_menu, menubar}::*ItemVariant`, `raw::select::SelectPosition`,
+  `raw::switch::SwitchStyle`, and `raw::tabs::TabsOrientation`) instead of importing
+  `fret_ui_shadcn::*` directly.
 - Theme presets are no longer a parallel root lane either: first-party code should use
   `shadcn::themes::*` (or `fret_ui_shadcn::facade::themes::*` in non-aliased contexts), not the
   historical `fret_ui_shadcn::shadcn_themes::*` path.
