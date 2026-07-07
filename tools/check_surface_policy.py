@@ -632,17 +632,32 @@ STREAMING_IMPORT_ALLOWED_RAW_SEAMS = (
     "FnDriver",
 )
 
+STREAMING_IMPORT_SURFACES_BY_FILENAME = {
+    "streaming_i420_demo.rs": (
+        "examples-streaming-i420",
+        "the streaming I420 image upload proof owns manual FnDriver event/render hooks, direct "
+        "scene image ops, YUV plane generation, and runtime ImageUpdateI420 effects",
+    ),
+    "streaming_image_demo.rs": (
+        "examples-streaming-image",
+        "the streaming RGBA image upload proof owns manual FnDriver event/render hooks, direct "
+        "scene image ops, dynamic update rect generation, and runtime ImageUpdateRgba8 effects",
+    ),
+    "streaming_nv12_demo.rs": (
+        "examples-streaming-nv12",
+        "the streaming NV12 image upload proof owns manual FnDriver event/render hooks, direct "
+        "scene image ops, YUV plane generation, and runtime ImageUpdateNv12 effects",
+    ),
+}
+
 
 def _fret_examples_streaming_import_surface(filename: str) -> SurfacePath:
-    stem = filename.removesuffix(".rs").replace("_", "-")
+    owner, reason = STREAMING_IMPORT_SURFACES_BY_FILENAME[filename]
     return _fret_examples_advanced_surface(
         filename,
-        (
-            "the streaming image upload proof owns manual FnDriver event/render hooks, direct "
-            "scene image ops, and runtime image update effects"
-        ),
+        reason,
         STREAMING_IMPORT_ALLOWED_RAW_SEAMS,
-        owner=f"examples-{stem}",
+        owner=owner,
     )
 
 

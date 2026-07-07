@@ -1337,9 +1337,18 @@ class SurfacePolicyTests(unittest.TestCase):
             "apps/fret-examples/src/custom_effect_v3_web_demo.rs",
         }
         streaming_import_paths = {
-            "apps/fret-examples/src/streaming_i420_demo.rs",
-            "apps/fret-examples/src/streaming_image_demo.rs",
-            "apps/fret-examples/src/streaming_nv12_demo.rs",
+            "apps/fret-examples/src/streaming_i420_demo.rs": (
+                "examples-streaming-i420",
+                "ImageUpdateI420",
+            ),
+            "apps/fret-examples/src/streaming_image_demo.rs": (
+                "examples-streaming-image",
+                "ImageUpdateRgba8",
+            ),
+            "apps/fret-examples/src/streaming_nv12_demo.rs": (
+                "examples-streaming-nv12",
+                "ImageUpdateNv12",
+            ),
         }
         smoke_effects_paths = {
             "apps/fret-examples/src/effects_demo.rs",
@@ -1647,7 +1656,7 @@ class SurfacePolicyTests(unittest.TestCase):
             )
             self.assertIn("bounded custom-effect contract", spec.reason)
             self.assertTrue(spec.allowed_raw_seams)
-        for path in streaming_import_paths:
+        for path, (owner, effect_name) in streaming_import_paths.items():
             spec = next(
                 (
                     spec
@@ -1659,7 +1668,8 @@ class SurfacePolicyTests(unittest.TestCase):
             self.assertIsNotNone(
                 spec, f"{path} should be classified as an advanced streaming import surface"
             )
-            self.assertIn("streaming image upload", spec.reason)
+            self.assertEqual(owner, spec.owner)
+            self.assertIn(effect_name, spec.reason)
             self.assertTrue(spec.allowed_raw_seams)
         self.assertTrue(
             any(
