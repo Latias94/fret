@@ -75,12 +75,12 @@
     },
     {
       "type": "wait_until",
-      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-kbd-rtl-content" } },
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-kbd-api-reference-content" } },
       "timeout_frames": 240
     },
     {
       "type": "wait_until",
-      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-kbd-api-reference-content" } },
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-kbd-rtl-content" } },
       "timeout_frames": 240
     },
     { "type": "capture_bundle", "label": "ui-gallery-kbd-docs-smoke" }
