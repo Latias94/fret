@@ -1,4 +1,5 @@
 use anyhow::Context as _;
+use fret::app::{AppRenderContext, text};
 use fret_app::CreateWindowKind;
 use fret_app::{App, CommandId, Effect, Model, WindowRequest};
 use fret_bootstrap::ui_diagnostics::{UiDiagnosticsService, UiRealPerfSpanCaptureV1};
@@ -250,18 +251,18 @@ fn docking_arbitration_apply_min_constraints(
     sizes
 }
 
-fn docking_arbitration_readout_text<H: fret_ui::UiHost>(
-    cx: &mut fret_ui::ElementContext<'_, H>,
-    text: impl Into<Arc<str>>,
-) -> fret_ui::element::AnyElement {
-    fret_ui_kit::declarative::text::text_control_readout(cx, text)
+fn docking_arbitration_readout_text<'a, Cx>(cx: &mut Cx, text: impl Into<Arc<str>>) -> AnyElement
+where
+    Cx: AppRenderContext<'a>,
+{
+    text::control_readout(cx, text)
 }
 
-fn docking_arbitration_paragraph_text<H: fret_ui::UiHost>(
-    cx: &mut fret_ui::ElementContext<'_, H>,
-    text: impl Into<Arc<str>>,
-) -> fret_ui::element::AnyElement {
-    fret_ui_kit::declarative::text::text_paragraph(cx, text)
+fn docking_arbitration_paragraph_text<'a, Cx>(cx: &mut Cx, text: impl Into<Arc<str>>) -> AnyElement
+where
+    Cx: AppRenderContext<'a>,
+{
+    text::paragraph(cx, text)
 }
 
 fn viewport_left_panel_key() -> fret_core::PanelKey {

@@ -8,10 +8,12 @@ fn docking_arbitration_demo_keeps_body_and_state_text_on_roles() {
     let source = compact(source);
 
     for needle in [
-        "fndocking_arbitration_readout_text<H:fret_ui::UiHost>(",
-        "fndocking_arbitration_paragraph_text<H:fret_ui::UiHost>(",
-        "fret_ui_kit::declarative::text::text_control_readout(cx,text)",
-        "fret_ui_kit::declarative::text::text_paragraph(cx,text)",
+        "usefret::app::{AppRenderContext,text};",
+        "fndocking_arbitration_readout_text<'a,Cx>(",
+        "fndocking_arbitration_paragraph_text<'a,Cx>(",
+        "Cx:AppRenderContext<'a>,",
+        "text::control_readout(cx,text)",
+        "text::paragraph(cx,text)",
         "docking_arbitration_paragraph_text(cx,\"Non-modaloverlay(Popover).\")",
         ".map(|v|docking_arbitration_readout_text(cx,v))",
         "docking_arbitration_readout_text(cx,ifpopover_is_open{\"Popover:open\"}else{\"Popover:closed\"},)",
@@ -30,6 +32,8 @@ fn docking_arbitration_demo_keeps_body_and_state_text_on_roles() {
         "vec![cx.text(ifdrop_mask_left_disallowed",
         "cx.text(\"Non-modaloverlay(Popover).\")",
         ".map(|v|cx.text(v))",
+        "fret_ui_kit::declarative::text::text_control_readout(",
+        "fret_ui_kit::declarative::text::text_paragraph(",
     ] {
         assert!(
             !source.contains(needle),
