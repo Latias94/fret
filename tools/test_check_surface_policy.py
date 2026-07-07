@@ -770,6 +770,12 @@ class SurfacePolicyTests(unittest.TestCase):
             "apps/fret-examples/src/todo_demo.rs",
             POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS,
         )
+        query_paths = {
+            "apps/fret-examples/src/query_demo.rs",
+            "apps/fret-examples/src/query_async_tokio_demo.rs",
+        }
+        for path in query_paths:
+            self.assertIn(path, POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS)
         self.assertIn(
             "apps/fret-examples/src/plot_stress_demo.rs",
             POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS,
@@ -1144,6 +1150,15 @@ class SurfacePolicyTests(unittest.TestCase):
                 for spec in POLICY.DEFAULT_AUTHORING_SURFACES
             )
         )
+        for path in query_paths:
+            self.assertTrue(
+                any(spec.path == path for spec in POLICY.DEFAULT_AUTHORING_SURFACES),
+                f"{path} should stay classified as default-clean query authoring",
+            )
+            self.assertFalse(
+                any(spec.path == path for spec in POLICY.ADVANCED_MANUAL_SURFACES),
+                f"{path} should not require advanced/manual quarantine",
+            )
         self.assertFalse(
             any(
                 spec.path == "apps/fret-examples/src/simple_todo_demo.rs"

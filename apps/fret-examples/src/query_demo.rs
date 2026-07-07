@@ -1,15 +1,11 @@
 use std::sync::Arc;
-use std::time::Duration;
 
 use fret::app::RenderContextAccess as _;
 use fret::app::prelude::*;
+use fret::children::UiElementSinkExt as _;
 use fret::query::{QueryError, QueryKey, QueryPolicy, QueryRetryPolicy};
-use fret::style::{ColorRef, Space, ThemeSnapshot};
-use fret_core::Color;
-use fret_ui::element::AnyElement;
-use fret_ui::{ElementContext, UiHost};
-use fret_ui_kit::IntoUiElementInExt as _;
-use fret_ui_kit::declarative::text as decl_text;
+use fret::style::{Color, ColorRef, Space, ThemeSnapshot};
+use fret::time::{Duration, Instant};
 
 mod act {
     fret::actions!([
@@ -41,26 +37,32 @@ fn query_policy() -> QueryPolicy {
     }
 }
 
-fn query_readout_text<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    text: impl Into<Arc<str>>,
-) -> AnyElement {
-    decl_text::text_control_readout(cx, text)
+fn query_readout_text<'a, Cx, T>(cx: &mut Cx, text: T) -> impl UiChild + use<Cx, T>
+where
+    Cx: AppRenderContext<'a>,
+    T: Into<Arc<str>>,
+{
+    text::control_readout(cx, text)
 }
 
-fn query_readout_text_with_color<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    text: impl Into<Arc<str>>,
+fn query_readout_text_with_color<'a, Cx, T>(
+    cx: &mut Cx,
+    text: T,
     foreground: Color,
-) -> AnyElement {
-    query_readout_text(cx, text).inherit_foreground(foreground)
+) -> impl UiChild + use<Cx, T>
+where
+    Cx: AppRenderContext<'a>,
+    T: Into<Arc<str>>,
+{
+    text::control_readout(cx, text).inherit_foreground(foreground)
 }
 
-fn query_data_text<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    text: impl Into<Arc<str>>,
-) -> AnyElement {
-    decl_text::text_code_label(cx, text)
+fn query_data_text<'a, Cx, T>(cx: &mut Cx, text: T) -> impl UiChild + use<Cx, T>
+where
+    Cx: AppRenderContext<'a>,
+    T: Into<Arc<str>>,
+{
+    text::code_label(cx, text)
 }
 
 struct QueryDemoView;
@@ -96,8 +98,7 @@ impl View for QueryDemoView {
             if fail_mode {
                 return Err(QueryError::transient("simulated fetch error"));
             }
-            let label: Arc<str> =
-                Arc::from(format!("fetched at {:?}", fret_core::time::Instant::now()));
+            let label: Arc<str> = Arc::from(format!("fetched at {:?}", Instant::now()));
             Ok(DemoData { label })
         });
 
@@ -176,22 +177,27 @@ impl View for QueryDemoView {
         .into_element_in(cx);
 
         let detail_body = ui::v_flex_build(|cx, out| {
-            out.push(query_readout_text(cx, info_line));
-            out.push(query_data_text(cx, data_line));
-            out.push(query_readout_text_with_color(cx, error_line, error_color));
+            let info = query_readout_text(cx, info_line);
+            out.push_ui(cx, info);
+            let data = query_data_text(cx, data_line);
+            out.push_ui(cx, data);
+            let error = query_readout_text_with_color(cx, error_line, error_color);
+            out.push_ui(cx, error);
             if let Some(duration_line) = duration_line {
-                out.push(query_readout_text_with_color(
+                let duration = query_readout_text_with_color(
                     cx,
                     duration_line,
                     theme.color_token("muted-foreground"),
-                ));
+                );
+                out.push_ui(cx, duration);
             }
             if let Some(retry_line) = retry_line {
-                out.push(query_readout_text_with_color(
+                let retry = query_readout_text_with_color(
                     cx,
                     retry_line,
                     theme.color_token("muted-foreground"),
-                ));
+                );
+                out.push_ui(cx, retry);
             }
         })
         .gap(Space::N2)

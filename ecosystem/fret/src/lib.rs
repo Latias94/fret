@@ -169,6 +169,11 @@ pub mod semantics {
     pub use fret_ui::element::SemanticsDecoration;
 }
 
+/// Cross-platform time primitives for app code.
+pub mod time {
+    pub use fret_core::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+}
+
 /// Explicit style/token nouns for app code that customizes layout or chrome beyond the default lane.
 pub mod style {
     pub use fret_core::{Color, Corners, Edges, FontWeight, TextAlign, TextOverflow, TextWrap};
@@ -5072,6 +5077,10 @@ mod authoring_surface_policy_tests {
         assert!(LIB_RS.contains("pub use crate::AppComponentCx;"));
         assert!(LIB_RS.contains("pub use crate::AppRenderCx;"));
         assert!(LIB_RS.contains("pub use fret_core::{Color, Corners, Edges, FontWeight"));
+        assert!(
+            LIB_RS
+                .contains("pub use fret_core::time::{Duration, Instant, SystemTime, UNIX_EPOCH};")
+        );
         assert!(LIB_RS.contains(
             "AppLocalStateExt, AppLocalStateTxnExt, AppRenderActionsExt, AppRenderContext,"
         ));
@@ -5269,6 +5278,7 @@ mod authoring_surface_policy_tests {
             "pointer",
             "semantics",
             "style",
+            "time",
             "virtual_list",
             "in_window_menubar",
         ]
@@ -5374,6 +5384,11 @@ mod authoring_surface_policy_tests {
         assert!(root_header.contains("PointerMove, PointerRegion, PointerUp, Wheel,"));
         assert!(root_header.contains("pub use fret_core::SemanticsRole;"));
         assert!(root_header.contains("pub use fret_ui::element::SemanticsDecoration;"));
+        assert!(root_header.contains("pub mod time {"));
+        assert!(
+            root_header
+                .contains("pub use fret_core::time::{Duration, Instant, SystemTime, UNIX_EPOCH};")
+        );
         assert!(root_header.contains(
             "pub use fret_core::{Color, Corners, Edges, FontWeight, TextAlign, TextOverflow,"
         ));

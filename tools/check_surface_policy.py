@@ -196,6 +196,16 @@ DEFAULT_AUTHORING_SURFACES: tuple[SurfacePath, ...] = (
         "default_app_clean",
         "copyable simple-todo example view should stay on the app facade",
     ),
+    SurfacePath(
+        "apps/fret-examples/src/query_demo.rs",
+        "default_app_clean",
+        "default query/read-cache example should stay on app-facing data, time, and text facades",
+    ),
+    SurfacePath(
+        "apps/fret-examples/src/query_async_tokio_demo.rs",
+        "default_app_clean",
+        "default async query example should stay on app-facing data, time, and text facades",
+    ),
 )
 
 POLICY_RECIPE_SURFACES: tuple[SurfacePath, ...] = (
@@ -1869,6 +1879,8 @@ PUBLIC_EXAMPLE_SCAN_ROOTS: tuple[str, ...] = (
     "apps/fret-examples/src/lib.rs",
     "apps/fret-examples/src/api_workbench_lite_demo.rs",
     "apps/fret-examples/src/hello_world_compare_demo.rs",
+    "apps/fret-examples/src/query_demo.rs",
+    "apps/fret-examples/src/query_async_tokio_demo.rs",
     "apps/fret-examples/src/echarts_demo.rs",
     "apps/fret-examples/src/echarts_multi_grid_demo.rs",
     "apps/fret-examples/src/chart_multi_axis_demo.rs",
