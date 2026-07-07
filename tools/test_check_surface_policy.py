@@ -4092,6 +4092,192 @@ class SurfacePolicyTests(unittest.TestCase):
                 ]
             )
 
+    def test_plot_stairs_legacy_retained_authoring_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-examples/src/stairs_demo.rs",
+                """
+                use fret_plot::LinePlotPanelBinding;
+                use fret_plot::declarative::{LinePlotPanelProps, line_plot_panel_in};
+                use fret_plot::models::{LinePlotModel, LineSeries, StepMode};
+                use fret_plot::retained;
+                use fret_runtime::Model;
+                use fret_ui::{UiTree, declarative};
+
+                struct StairsDemoWindowState {
+                    ui: UiTree<App>,
+                    plot: LinePlotPanelBinding,
+                }
+
+                impl StairsDemoDriver {
+                    fn build_ui(app: &mut App) -> StairsDemoWindowState {
+                        let plot = LinePlotPanelBinding::new(
+                            app,
+                            LinePlotModel::from_series(vec![
+                                LineSeries::new("stairs", data),
+                            ]),
+                        );
+                        StairsDemoWindowState {
+                            ui: UiTree::new(),
+                            plot,
+                        }
+                    }
+                }
+
+                fn handle_event(app: &mut App, state: &mut StairsDemoWindowState) {
+                    let _ = state.plot.output_untracked(app);
+                }
+
+                fn render(
+                    app: &mut App,
+                    services: &mut Services,
+                    window: AppWindowId,
+                    bounds: Rect,
+                    state: &mut StairsDemoWindowState,
+                ) {
+                    let plot = state.plot.clone();
+                    let root = declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
+                        .render_root("stairs-demo", move |cx| {
+                            let style = LinePlotStyle::default();
+                            let props = plot.panel_props().step_mode(StepMode::Post).style(style);
+                            vec![line_plot_panel_in(cx, props)]
+                        });
+                    let _ = root;
+                }
+
+                struct LegacyStairsPlot {
+                    plot: fret_runtime::Model<LinePlotModel>,
+                    output: Model<PlotOutput>,
+                }
+
+                fn bad(
+                    app: &mut App,
+                    plot: Model<LinePlotModel>,
+                    plot_state: Model<PlotState>,
+                    plot_output: Model<PlotOutput>,
+                ) {
+                    let _ = retained::legacy();
+                    let _ = fret_plot::retained::legacy();
+                    let _ = StairsPlotCanvas;
+                    let _ = PlotCanvas;
+                    create_node_retained();
+                    let _props = LinePlotPanelProps::new(plot.clone())
+                        .state(plot_state.clone())
+                        .output(plot_output.clone());
+                    let _ = app.models_mut().insert(PlotState::default());
+                    let _ = app.models_mut().insert(PlotOutput::default());
+                }
+                """,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/stairs_demo.rs",
+                        "advanced_manual",
+                        "fixture stairs plot demo",
+                        owner="examples-plot-stairs",
+                        allowed_raw_seams=("fret_runtime", "fret_ui", "UiTree"),
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            owner_violations = [
+                violation
+                for violation in violations
+                if violation.rule == "advanced-surface-plot-stairs-declarative-binding-boundary"
+            ]
+            self.assertGreaterEqual(len(owner_violations), 8)
+            messages = "\n".join(violation.message for violation in owner_violations)
+            self.assertIn("fret_plot::retained", messages)
+            self.assertIn("StairsPlotCanvas", messages)
+            self.assertIn("PlotCanvas", messages)
+            self.assertIn("PlotOutput", messages)
+            self.assertIn("LinePlotPanelProps", messages)
+
+    def test_plot_stairs_declarative_binding_surface_is_allowed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-examples/src/stairs_demo.rs",
+                """
+                use fret_plot::LinePlotPanelBinding;
+                use fret_plot::declarative::line_plot_panel_in;
+                use fret_plot::models::{LinePlotModel, LineSeries, StepMode};
+                use fret_ui::{UiTree, declarative};
+
+                struct StairsDemoWindowState {
+                    ui: UiTree<App>,
+                    plot: LinePlotPanelBinding,
+                }
+
+                impl StairsDemoDriver {
+                    fn build_ui(app: &mut App) -> StairsDemoWindowState {
+                        let plot = LinePlotPanelBinding::new(
+                            app,
+                            LinePlotModel::from_series(vec![
+                                LineSeries::new("stairs", data),
+                            ]),
+                        );
+                        StairsDemoWindowState {
+                            ui: UiTree::new(),
+                            plot,
+                        }
+                    }
+                }
+
+                fn handle_event(app: &mut App, state: &mut StairsDemoWindowState) {
+                    let _ = state.plot.output_untracked(app);
+                }
+
+                fn render(
+                    app: &mut App,
+                    services: &mut Services,
+                    window: AppWindowId,
+                    bounds: Rect,
+                    state: &mut StairsDemoWindowState,
+                ) {
+                    let plot = state.plot.clone();
+                    let root = declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
+                        .render_root("stairs-demo", move |cx| {
+                            let style = LinePlotStyle::default();
+                            let props = plot.panel_props().step_mode(StepMode::Post).style(style);
+                            vec![line_plot_panel_in(cx, props)]
+                        });
+                    let _ = root;
+                }
+                """,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/stairs_demo.rs",
+                        "advanced_manual",
+                        "fixture stairs plot demo",
+                        owner="examples-plot-stairs",
+                        allowed_raw_seams=("fret_ui", "UiTree"),
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            self.assertFalse(
+                [
+                    violation
+                    for violation in violations
+                    if violation.rule == "advanced-surface-plot-stairs-declarative-binding-boundary"
+                ]
+            )
+
     def test_plot_stress_legacy_retained_authoring_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

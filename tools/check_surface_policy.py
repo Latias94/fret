@@ -402,6 +402,17 @@ def _fret_examples_manual_chart_surface(filename: str) -> SurfacePath:
             MANUAL_CHART_ALLOWED_RAW_SEAMS,
             owner=PLOT_STEMS_OWNER,
         )
+    if filename == "stairs_demo.rs":
+        return _fret_examples_advanced_surface(
+            filename,
+            (
+                "it owns a manual step-mode line-plot runner with FnDriver/UiTree lifecycle "
+                "while line model, query output reads, and panel wiring route through "
+                "LinePlotPanelBinding"
+            ),
+            MANUAL_CHART_ALLOWED_RAW_SEAMS,
+            owner=PLOT_STAIRS_OWNER,
+        )
     stem = filename.removesuffix(".rs").replace("_", "-")
     return _fret_examples_advanced_surface(
         filename,
@@ -959,6 +970,38 @@ PLOT_STEMS_FORBIDDEN_COMPACT_MARKERS = (
     "app.models_mut().insert(PlotOutput::default())",
 )
 
+PLOT_STAIRS_OWNER = "examples-plot-stairs"
+
+PLOT_STAIRS_REQUIRED_COMPACT_MARKERS = (
+    "usefret_plot::LinePlotPanelBinding;",
+    "usefret_plot::declarative::line_plot_panel_in;",
+    "usefret_plot::models::{LinePlotModel,LineSeries,StepMode};",
+    "usefret_ui::{UiTree,declarative};",
+    "plot:LinePlotPanelBinding",
+    "LinePlotPanelBinding::new(app,LinePlotModel::from_series(vec![",
+    "LinePlotModel::from_series(vec![",
+    "LineSeries::new(",
+    "declarative::RenderRootContext::new(&mutstate.ui,app,services,window,bounds).render_root(\"stairs-demo\"",
+    "plot.panel_props()",
+    ".step_mode(StepMode::Post)",
+    "state.plot.output_untracked(app)",
+    "vec![line_plot_panel_in(cx,props)]",
+)
+
+PLOT_STAIRS_FORBIDDEN_COMPACT_MARKERS = (
+    "usefret_plot::retained",
+    "fret_plot::retained::",
+    "StairsPlotCanvas",
+    "PlotCanvas",
+    "create_node_retained(",
+    "fret_runtime::Model<",
+    "LinePlotPanelProps::new(",
+    ".state(plot_state.clone())",
+    ".output(plot_output.clone())",
+    "app.models_mut().insert(PlotState::default())",
+    "app.models_mut().insert(PlotOutput::default())",
+)
+
 PLOT_DECLARATIVE_BINDING_BOUNDARIES: tuple[CompactSourceBoundary, ...] = (
     CompactSourceBoundary(
         owner=PLOT_STRESS_OWNER,
@@ -1045,6 +1088,20 @@ PLOT_DECLARATIVE_BINDING_BOUNDARIES: tuple[CompactSourceBoundary, ...] = (
         forbidden_message_template=(
             "Stems plot demo must not expose retained/manual plot state or output "
             "wiring; compact `{marker}` bypasses the StemsPlotPanelBinding boundary"
+        ),
+    ),
+    CompactSourceBoundary(
+        owner=PLOT_STAIRS_OWNER,
+        rule="advanced-surface-plot-stairs-declarative-binding-boundary",
+        required_markers=PLOT_STAIRS_REQUIRED_COMPACT_MARKERS,
+        forbidden_markers=PLOT_STAIRS_FORBIDDEN_COMPACT_MARKERS,
+        missing_message_template=(
+            "Stairs plot demo must keep step-mode panel authoring and query output reads "
+            "on LinePlotPanelBinding; missing compact markers: {missing_markers}"
+        ),
+        forbidden_message_template=(
+            "Stairs plot demo must not expose retained/manual plot state or output "
+            "wiring; compact `{marker}` bypasses the LinePlotPanelBinding boundary"
         ),
     ),
 )
