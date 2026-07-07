@@ -116,6 +116,7 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 
 ## Validation
 
+- Gallery docs-surface gate: `cargo nextest run -p fret-ui-gallery --test alert_dialog_docs_surface`
 - `cargo check -p fret-ui-shadcn`
 - `cargo check -p fret-ui-gallery`
 - `cargo test -p fret-ui-shadcn --lib alert_dialog::tests`
@@ -123,12 +124,15 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 - `cargo test -p fret-ui-shadcn --lib alert_dialog::tests::alert_dialog_content_new_accepts_composed_sections_and_test_id -- --exact`
 - Contract test: `alert_dialog_open_change_events_emit_change_and_complete_after_settle`
 - Contract test: `alert_dialog_open_change_events_complete_without_animation`
-- Shadcn Web chrome gate: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_chrome`
-  (`web_vs_fret_alert_dialog_demo_panel_chrome_matches`).
-- Shadcn Web placement gate: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_placement`
-  (`web_vs_fret_alert_dialog_demo_overlay_center_matches`).
+- Focused Shadcn Web chrome gate:
+  `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_overlay_chrome alert_dialog::fixtures`
+  (`alert_dialog::fixtures::web_vs_fret_alert_dialog_overlay_chrome_cases_match_web_fixtures`).
+- Focused Shadcn Web placement gate:
+  `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_overlay_placement misc_overlays::fixtures::web_vs_fret_misc_overlays_alert_dialog_cases_match_web_fixtures`
+  (`alert_dialog_demo_overlay_center` case without depending on unrelated misc overlay cases).
 - Radix Web overlay geometry gate: `cargo nextest run -p fret-ui-shadcn --test radix_web_overlay_geometry`
   (`radix_web_alert_dialog_open_geometry_matches_fret`).
+- Radix Web state gate: `cargo nextest run -p fret-ui-shadcn --test radix_web_primitives_state radix_web_alert_dialog_open_cancel_matches_fret`.
 - Focused grid recipe gate:
   `cargo nextest run -p fret-ui-shadcn --lib -E 'test(alert_dialog_footer_stacks_on_base_viewport_and_rows_on_sm) or test(alert_dialog_media_panel_stays_compact_within_default_width) or test(alert_dialog_small_media_panel_keeps_text_and_footer_within_compact_height)'`.
 - Overlay selectable-span state gate:
@@ -141,6 +145,8 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
   (passes against the real `ui-gallery-alert-dialog-destructive-description-link` selectable-text
   node; the remaining issue was in diagnostics timing/selector alignment, not in
   `fret-ui-shadcn` authoring).
+- Matrix packet: `docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/alert_dialog_agent_packet_p0_v1.json`
+  (all packet validation gates are `pass`).
 
 ## Authoring note: `from_scope(...)`
 

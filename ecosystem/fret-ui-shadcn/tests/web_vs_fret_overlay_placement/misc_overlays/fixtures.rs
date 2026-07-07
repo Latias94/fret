@@ -248,6 +248,16 @@ fn web_vs_fret_misc_overlays_command_dialog_cases_match_web_fixtures() {
 }
 
 #[test]
+fn web_vs_fret_misc_overlays_alert_dialog_cases_match_web_fixtures() {
+    run_misc_overlays_fixture_cases(|case| {
+        matches!(
+            case.recipe,
+            MiscOverlaysRecipe::AlertDialogDemoOverlayCenter
+        )
+    });
+}
+
+#[test]
 fn web_vs_fret_misc_overlays_drawer_cases_match_web_fixtures() {
     run_misc_overlays_fixture_cases(|case| {
         matches!(
