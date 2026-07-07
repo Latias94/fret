@@ -2887,6 +2887,456 @@ class SurfacePolicyTests(unittest.TestCase):
                 ]
             )
 
+    def test_api_workbench_direct_model_access_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-examples/src/api_workbench_lite_demo.rs",
+                """
+                use std::sync::Arc;
+
+                use fret::app::prelude::*;
+                use fret::app::{LocalState, LocalStateTxn};
+                use fret_ui_shadcn::facade as shadcn;
+
+                struct WorkbenchLocals {
+                    method: LocalState<Option<Arc<str>>>,
+                }
+
+                type ApiWorkbenchModelStore = fret_runtime::ModelStore;
+
+                struct ApiWorkbenchModelOwner<'a> {
+                    models: &'a mut ApiWorkbenchModelStore,
+                }
+
+                impl<'a> ApiWorkbenchModelOwner<'a> {
+                    fn new(models: &'a mut ApiWorkbenchModelStore) -> Self {
+                        Self { models }
+                    }
+
+                    fn request_snapshot(&mut self, locals: &WorkbenchLocals) -> Option<RequestSnapshot> {
+                        LocalStateTxn::with_model_store(self.models, |_tx| None)
+                    }
+
+                    fn prepare_request_submission_ui(&mut self, locals: &WorkbenchLocals) -> bool {
+                        LocalStateTxn::with_model_store(self.models, |_tx| true)
+                    }
+
+                    fn apply_response_snapshot(
+                        &mut self,
+                        locals: &WorkbenchLocals,
+                        state: MutationState<RequestSnapshot, ResponsePayload>,
+                    ) -> bool {
+                        LocalStateTxn::with_model_store(self.models, |_tx| true)
+                    }
+
+                    fn apply_collection(&mut self, locals: &WorkbenchLocals, preset_id: u8) -> bool {
+                        LocalStateTxn::with_model_store(self.models, |_tx| true)
+                    }
+
+                    fn submit_request(
+                        &mut self,
+                        window: WindowId,
+                        locals: &WorkbenchLocals,
+                        response_mutation: &MutationHandle<RequestSnapshot, ResponsePayload>,
+                        history_save_mutation: &MutationHandle<RequestSnapshot, ()>,
+                    ) -> bool {
+                        let snapshot = RequestSnapshot;
+                        let mut handled = self.prepare_request_submission_ui(locals);
+                        handled = history_save_mutation.submit(self.models, window, snapshot.clone()) || handled;
+                        handled = response_mutation.submit(self.models, window, snapshot) || handled;
+                        handled
+                    }
+
+                    fn retry_last_request(
+                        &mut self,
+                        window: WindowId,
+                        locals: &WorkbenchLocals,
+                        response_mutation: &MutationHandle<RequestSnapshot, ResponsePayload>,
+                        history_save_mutation: &MutationHandle<RequestSnapshot, ()>,
+                    ) -> bool {
+                        if !self.can_retry_last_request(response_mutation) {
+                            return false;
+                        }
+                        let mut handled = self.prepare_request_submission_ui(locals);
+                        handled = history_save_mutation.retry_last(self.models, window) || handled;
+                        handled = response_mutation.retry_last(self.models, window) || handled;
+                        handled
+                    }
+
+                    fn can_retry_last_request(
+                        &mut self,
+                        response_mutation: &MutationHandle<RequestSnapshot, ResponsePayload>,
+                    ) -> bool {
+                        self.models.read(response_mutation.model(), |_st| true).ok().unwrap_or(false)
+                    }
+
+                    fn load_history(
+                        &mut self,
+                        locals: &WorkbenchLocals,
+                        history_query: &QueryHandle<Vec<PersistedHistoryEntry>>,
+                        history_id: u64,
+                    ) -> bool {
+                        let _history = self.models.read(history_query.model(), Clone::clone).ok();
+                        LocalStateTxn::with_model_store(self.models, |_tx| true)
+                    }
+                }
+
+                impl WorkbenchLocals {
+                    fn new(cx: &mut AppUi<'_, '_>) -> Self {
+                        todo!()
+                    }
+                }
+
+                fn render(
+                    cx: &mut AppUi<'_, '_>,
+                    locals: WorkbenchLocals,
+                    response_mutation: MutationHandle<RequestSnapshot, ResponsePayload>,
+                    history_save_mutation: MutationHandle<RequestSnapshot, ()>,
+                    history_query: QueryHandle<Vec<PersistedHistoryEntry>>,
+                    window: WindowId,
+                ) {
+                    let _ = shadcn::Button::new("Send Request");
+                    let _ = cx.data().update_after_mutation_completion(
+                        1,
+                        &response_mutation,
+                        {
+                            let locals = locals.clone();
+                            move |models, state| {
+                                ApiWorkbenchModelOwner::new(models).apply_response_snapshot(&locals, state)
+                            }
+                        },
+                    );
+                    bind_actions(cx, &locals, &response_mutation, &history_save_mutation, &history_query, window);
+                }
+
+                fn bind_actions(
+                    cx: &mut AppUi<'_, '_>,
+                    locals: &WorkbenchLocals,
+                    response_mutation: &MutationHandle<RequestSnapshot, ResponsePayload>,
+                    history_save_mutation: &MutationHandle<RequestSnapshot, ()>,
+                    history_query: &QueryHandle<Vec<PersistedHistoryEntry>>,
+                    window: WindowId,
+                ) {
+                    cx.actions().models::<act::SendRequest>({
+                        let locals = locals.clone();
+                        let response_mutation = response_mutation.clone();
+                        let history_save_mutation = history_save_mutation.clone();
+                        move |models| {
+                            ApiWorkbenchModelOwner::new(models).submit_request(
+                                window,
+                                &locals,
+                                &response_mutation,
+                                &history_save_mutation,
+                            )
+                        }
+                    });
+                    cx.actions().models::<act::RetryLastRequest>({
+                        let locals = locals.clone();
+                        let response_mutation = response_mutation.clone();
+                        let history_save_mutation = history_save_mutation.clone();
+                        move |models| {
+                            ApiWorkbenchModelOwner::new(models).retry_last_request(
+                                window,
+                                &locals,
+                                &response_mutation,
+                                &history_save_mutation,
+                            )
+                        }
+                    });
+                    cx.actions().availability::<act::RetryLastRequest>({
+                        let response_mutation = response_mutation.clone();
+                        move |host, _acx| {
+                            ApiWorkbenchModelOwner::new(host.models_mut())
+                                .can_retry_last_request(&response_mutation)
+                        }
+                    });
+                    cx.actions().payload_models::<act::LoadCollection>({
+                        let locals = locals.clone();
+                        move |models, preset_id| {
+                            ApiWorkbenchModelOwner::new(models).apply_collection(&locals, preset_id)
+                        }
+                    });
+                    cx.actions().payload_models::<act::LoadHistory>({
+                        let locals = locals.clone();
+                        let history_query = history_query.clone();
+                        move |models, history_id| {
+                            ApiWorkbenchModelOwner::new(models).load_history(&locals, &history_query, history_id)
+                        }
+                    });
+                }
+
+                fn bad(app: &mut KernelApp, host: &mut Host, state: &State) {
+                    let _ = app.models_mut().update(&state.model, |_| true);
+                    let _ = app.models_mut().read(&state.model, |_| true);
+                    let _ = ModelStore::update(app.models_mut(), &state.model, |_| true);
+                    let _ = ModelStore::read(app.models_mut(), &state.model, |_| true);
+                    let _ = LocalStateTxn::with_model_store(app.models_mut(), |_tx| true);
+                    let mut store = host.models_mut();
+                    let _ = store.update(&state.model, |_| true);
+                    let _ = store.read(&state.model, |_| true);
+                }
+
+                fn main() {
+                    let _ = FretApp::new("api-workbench-lite");
+                }
+                """,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[],
+                comparison_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/api_workbench_lite_demo.rs",
+                        "comparison",
+                        "fixture API Workbench surface",
+                        owner="examples-api-workbench",
+                        allowed_raw_seams=(
+                            "fret_app",
+                            "fret_runtime",
+                            "fret_ui",
+                            "AnyElement",
+                            "ModelStore",
+                        ),
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            owner_violations = [
+                violation
+                for violation in violations
+                if violation.rule == "comparison-surface-api-workbench-model-owner-boundary"
+            ]
+            self.assertGreaterEqual(len(owner_violations), 7)
+            messages = "\n".join(violation.message for violation in owner_violations)
+            self.assertIn("models_mut().update", messages)
+            self.assertIn("models_mut().read", messages)
+            self.assertIn("ModelStore::update", messages)
+            self.assertIn("ModelStore::read", messages)
+            self.assertIn("LocalStateTxn::with_model_store", messages)
+            self.assertIn("ModelStore alias", messages)
+            self.assertIn("host.models_mut()", messages)
+
+    def test_api_workbench_owner_surface_is_allowed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-examples/src/api_workbench_lite_demo.rs",
+                """
+                use std::sync::Arc;
+
+                use fret::app::prelude::*;
+                use fret::app::{LocalState, LocalStateTxn};
+                use fret_ui_shadcn::facade as shadcn;
+
+                struct WorkbenchLocals {
+                    method: LocalState<Option<Arc<str>>>,
+                }
+
+                type ApiWorkbenchModelStore = fret_runtime::ModelStore;
+
+                struct ApiWorkbenchModelOwner<'a> {
+                    models: &'a mut ApiWorkbenchModelStore,
+                }
+
+                impl<'a> ApiWorkbenchModelOwner<'a> {
+                    fn new(models: &'a mut ApiWorkbenchModelStore) -> Self {
+                        Self { models }
+                    }
+
+                    fn request_snapshot(&mut self, locals: &WorkbenchLocals) -> Option<RequestSnapshot> {
+                        LocalStateTxn::with_model_store(self.models, |_tx| None)
+                    }
+
+                    fn prepare_request_submission_ui(&mut self, locals: &WorkbenchLocals) -> bool {
+                        LocalStateTxn::with_model_store(self.models, |_tx| true)
+                    }
+
+                    fn apply_response_snapshot(
+                        &mut self,
+                        locals: &WorkbenchLocals,
+                        state: MutationState<RequestSnapshot, ResponsePayload>,
+                    ) -> bool {
+                        LocalStateTxn::with_model_store(self.models, |_tx| true)
+                    }
+
+                    fn apply_collection(&mut self, locals: &WorkbenchLocals, preset_id: u8) -> bool {
+                        LocalStateTxn::with_model_store(self.models, |_tx| true)
+                    }
+
+                    fn submit_request(
+                        &mut self,
+                        window: WindowId,
+                        locals: &WorkbenchLocals,
+                        response_mutation: &MutationHandle<RequestSnapshot, ResponsePayload>,
+                        history_save_mutation: &MutationHandle<RequestSnapshot, ()>,
+                    ) -> bool {
+                        let snapshot = RequestSnapshot;
+                        let mut handled = self.prepare_request_submission_ui(locals);
+                        handled = history_save_mutation.submit(self.models, window, snapshot.clone()) || handled;
+                        handled = response_mutation.submit(self.models, window, snapshot) || handled;
+                        handled
+                    }
+
+                    fn retry_last_request(
+                        &mut self,
+                        window: WindowId,
+                        locals: &WorkbenchLocals,
+                        response_mutation: &MutationHandle<RequestSnapshot, ResponsePayload>,
+                        history_save_mutation: &MutationHandle<RequestSnapshot, ()>,
+                    ) -> bool {
+                        if !self.can_retry_last_request(response_mutation) {
+                            return false;
+                        }
+                        let mut handled = self.prepare_request_submission_ui(locals);
+                        handled = history_save_mutation.retry_last(self.models, window) || handled;
+                        handled = response_mutation.retry_last(self.models, window) || handled;
+                        handled
+                    }
+
+                    fn can_retry_last_request(
+                        &mut self,
+                        response_mutation: &MutationHandle<RequestSnapshot, ResponsePayload>,
+                    ) -> bool {
+                        self.models.read(response_mutation.model(), |_st| true).ok().unwrap_or(false)
+                    }
+
+                    fn load_history(
+                        &mut self,
+                        locals: &WorkbenchLocals,
+                        history_query: &QueryHandle<Vec<PersistedHistoryEntry>>,
+                        history_id: u64,
+                    ) -> bool {
+                        let _history = self.models.read(history_query.model(), Clone::clone).ok();
+                        LocalStateTxn::with_model_store(self.models, |_tx| true)
+                    }
+                }
+
+                impl WorkbenchLocals {
+                    fn new(cx: &mut AppUi<'_, '_>) -> Self {
+                        todo!()
+                    }
+                }
+
+                fn render(
+                    cx: &mut AppUi<'_, '_>,
+                    locals: WorkbenchLocals,
+                    response_mutation: MutationHandle<RequestSnapshot, ResponsePayload>,
+                    history_save_mutation: MutationHandle<RequestSnapshot, ()>,
+                    history_query: QueryHandle<Vec<PersistedHistoryEntry>>,
+                    window: WindowId,
+                ) {
+                    let _ = shadcn::Button::new("Send Request");
+                    let _ = cx.data().update_after_mutation_completion(
+                        1,
+                        &response_mutation,
+                        {
+                            let locals = locals.clone();
+                            move |models, state| {
+                                ApiWorkbenchModelOwner::new(models).apply_response_snapshot(&locals, state)
+                            }
+                        },
+                    );
+                    bind_actions(cx, &locals, &response_mutation, &history_save_mutation, &history_query, window);
+                }
+
+                fn bind_actions(
+                    cx: &mut AppUi<'_, '_>,
+                    locals: &WorkbenchLocals,
+                    response_mutation: &MutationHandle<RequestSnapshot, ResponsePayload>,
+                    history_save_mutation: &MutationHandle<RequestSnapshot, ()>,
+                    history_query: &QueryHandle<Vec<PersistedHistoryEntry>>,
+                    window: WindowId,
+                ) {
+                    cx.actions().models::<act::SendRequest>({
+                        let locals = locals.clone();
+                        let response_mutation = response_mutation.clone();
+                        let history_save_mutation = history_save_mutation.clone();
+                        move |models| {
+                            ApiWorkbenchModelOwner::new(models).submit_request(
+                                window,
+                                &locals,
+                                &response_mutation,
+                                &history_save_mutation,
+                            )
+                        }
+                    });
+                    cx.actions().models::<act::RetryLastRequest>({
+                        let locals = locals.clone();
+                        let response_mutation = response_mutation.clone();
+                        let history_save_mutation = history_save_mutation.clone();
+                        move |models| {
+                            ApiWorkbenchModelOwner::new(models).retry_last_request(
+                                window,
+                                &locals,
+                                &response_mutation,
+                                &history_save_mutation,
+                            )
+                        }
+                    });
+                    cx.actions().availability::<act::RetryLastRequest>({
+                        let response_mutation = response_mutation.clone();
+                        move |host, _acx| {
+                            ApiWorkbenchModelOwner::new(host.models_mut())
+                                .can_retry_last_request(&response_mutation)
+                        }
+                    });
+                    cx.actions().payload_models::<act::LoadCollection>({
+                        let locals = locals.clone();
+                        move |models, preset_id| {
+                            ApiWorkbenchModelOwner::new(models).apply_collection(&locals, preset_id)
+                        }
+                    });
+                    cx.actions().payload_models::<act::LoadHistory>({
+                        let locals = locals.clone();
+                        let history_query = history_query.clone();
+                        move |models, history_id| {
+                            ApiWorkbenchModelOwner::new(models).load_history(&locals, &history_query, history_id)
+                        }
+                    });
+                }
+
+                fn main() {
+                    let _ = FretApp::new("api-workbench-lite");
+                }
+                """,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[],
+                comparison_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/api_workbench_lite_demo.rs",
+                        "comparison",
+                        "fixture API Workbench surface",
+                        owner="examples-api-workbench",
+                        allowed_raw_seams=(
+                            "fret_app",
+                            "fret_runtime",
+                            "fret_ui",
+                            "AnyElement",
+                            "ModelStore",
+                        ),
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            self.assertFalse(
+                [
+                    violation
+                    for violation in violations
+                    if violation.rule == "comparison-surface-api-workbench-model-owner-boundary"
+                ]
+            )
+
     def test_genui_direct_model_access_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

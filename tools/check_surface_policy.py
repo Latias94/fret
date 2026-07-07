@@ -742,6 +742,127 @@ WORKSPACE_SHELL_DRIVER_FORBIDDEN_RAW_WRITE_PATTERNS: tuple[
     ),
 )
 
+API_WORKBENCH_OWNER = "examples-api-workbench"
+
+API_WORKBENCH_REQUIRED_COMPACT_MARKERS = (
+    "usefret::app::prelude::*;",
+    "usefret::app::{LocalState,LocalStateTxn};",
+    "usefret_ui_shadcn::facadeasshadcn;",
+    "structWorkbenchLocals{method:LocalState<Option<Arc<str>>>,",
+    "typeApiWorkbenchModelStore=fret_runtime::ModelStore;",
+    "structApiWorkbenchModelOwner<'a>{",
+    "models:&'amutApiWorkbenchModelStore,",
+    "fnrequest_snapshot(&mutself,locals:&WorkbenchLocals)->Option<RequestSnapshot>{",
+    "fnprepare_request_submission_ui(&mutself,locals:&WorkbenchLocals)->bool{",
+    "fnapply_response_snapshot(",
+    "fnapply_collection(&mutself,locals:&WorkbenchLocals,preset_id:u8)->bool{",
+    "fnsubmit_request(",
+    "fnretry_last_request(",
+    "fncan_retry_last_request(",
+    "fnload_history(",
+    "implWorkbenchLocals{",
+    "ApiWorkbenchModelOwner::new(models).apply_response_snapshot(&locals,state)",
+    "ApiWorkbenchModelOwner::new(models).submit_request(",
+    "ApiWorkbenchModelOwner::new(models).retry_last_request(",
+    "ApiWorkbenchModelOwner::new(host.models_mut()).can_retry_last_request(",
+    "ApiWorkbenchModelOwner::new(models).apply_collection(&locals,preset_id)",
+    "ApiWorkbenchModelOwner::new(models).load_history(&locals,&history_query,history_id)",
+    "FretApp::new(\"api-workbench-lite\")",
+)
+
+API_WORKBENCH_OWNER_RAW_BOUNDARY_MARKERS = (
+    "fret_runtime::ModelStore",
+    "ApiWorkbenchModelStore",
+    "LocalStateTxn::with_model_store",
+    "history_save_mutation.submit(self.models",
+    "response_mutation.submit(self.models",
+    "history_save_mutation.retry_last(self.models",
+    "response_mutation.retry_last(self.models",
+    ".read(response_mutation.model()",
+    ".read(history_query.model()",
+)
+
+API_WORKBENCH_FORBIDDEN_SOURCE_MARKERS = (
+    "advanced::prelude",
+    "use fret::{FretApp",
+    "use fret::{",
+    "component::prelude",
+    "KernelApp",
+    "AppWindowId",
+    "ViewElements",
+    "LocalStateModelStoreExt",
+    "LocalStateRawModelExt",
+    "LocalStateElementContextExt",
+)
+
+API_WORKBENCH_FORBIDDEN_COMPACT_MARKERS = (
+    "fnsubmit_request(models:&mutfret_runtime::ModelStore",
+    "fnretry_last_request(models:&mutfret_runtime::ModelStore",
+    "fnload_history(models:&mutfret_runtime::ModelStore",
+)
+
+API_WORKBENCH_FORBIDDEN_RAW_MODEL_ACCESS_PATTERNS: tuple[
+    tuple[str, re.Pattern[str]], ...
+] = (
+    (
+        "models_mut().update",
+        re.compile(
+            r"\bmodels_mut\s*\(\s*\)\s*\.\s*update(?:_any)?\s*(?:::\s*<[^>]*>)?\s*\("
+        ),
+    ),
+    (
+        "models_mut().read",
+        re.compile(r"\bmodels_mut\s*\(\s*\)\s*\.\s*read\s*(?:::\s*<[^>]*>)?\s*\("),
+    ),
+    (
+        "models_mut().insert",
+        re.compile(r"\bmodels_mut\s*\(\s*\)\s*\.\s*insert\s*\("),
+    ),
+    (
+        "ModelStore::update",
+        re.compile(
+            r"(?:\bModelStore\s*::\s*|<\s*ModelStore\s*>\s*::\s*)update(?:_any)?\s*(?:::\s*<[^>]*>)?\s*\("
+        ),
+    ),
+    (
+        "ModelStore::read",
+        re.compile(
+            r"(?:\bModelStore\s*::\s*|<\s*ModelStore\s*>\s*::\s*)read\s*(?:::\s*<[^>]*>)?\s*\("
+        ),
+    ),
+    (
+        "ApiWorkbenchModelStore::update",
+        re.compile(
+            r"(?:\bApiWorkbenchModelStore\s*::\s*|<\s*ApiWorkbenchModelStore\s*>\s*::\s*)update(?:_any)?\s*(?:::\s*<[^>]*>)?\s*\("
+        ),
+    ),
+    (
+        "ApiWorkbenchModelStore::read",
+        re.compile(
+            r"(?:\bApiWorkbenchModelStore\s*::\s*|<\s*ApiWorkbenchModelStore\s*>\s*::\s*)read\s*(?:::\s*<[^>]*>)?\s*\("
+        ),
+    ),
+)
+
+API_WORKBENCH_OUTSIDE_OWNER_RAW_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
+    (
+        "LocalStateTxn::with_model_store",
+        re.compile(r"\bLocalStateTxn\s*::\s*with_model_store\s*\("),
+    ),
+    (
+        "mutation.submit",
+        re.compile(r"\b(?:history_save_mutation|response_mutation)\s*\.\s*submit\s*\("),
+    ),
+    (
+        "mutation.retry_last",
+        re.compile(r"\b(?:history_save_mutation|response_mutation)\s*\.\s*retry_last\s*\("),
+    ),
+    (
+        "mutation/query model read",
+        re.compile(r"\.\s*read\s*\(\s*(?:response_mutation|history_query)\s*\.\s*model\s*\("),
+    ),
+)
+
 GENUI_OWNER = "examples-genui-demo"
 
 GENUI_REQUIRED_COMPACT_MARKERS = (
@@ -1203,7 +1324,7 @@ COMPARISON_SURFACES: tuple[SurfacePath, ...] = (
             "AnyElement",
             "ModelStore",
         ),
-        owner="examples-api-workbench",
+        owner=API_WORKBENCH_OWNER,
     ),
     _fret_examples_comparison_surface(
         "hello_world_compare_demo.rs",
@@ -2987,6 +3108,210 @@ def _scan_workspace_shell_driver_owner_boundary(
     return violations
 
 
+def _scan_api_workbench_model_owner_boundary(
+    root: Path, spec: SurfacePath
+) -> list[SurfaceViolation]:
+    if spec.owner != API_WORKBENCH_OWNER:
+        return []
+
+    violations: list[SurfaceViolation] = []
+    for path in _iter_source_files(root / spec.path):
+        text = _read_text(path)
+        production_text = text.split("#[cfg(test)]", 1)[0]
+        compact_production = _compact_source(production_text)
+        missing_markers = [
+            marker
+            for marker in API_WORKBENCH_REQUIRED_COMPACT_MARKERS
+            if marker not in compact_production
+        ]
+        if missing_markers:
+            violations.append(
+                SurfaceViolation(
+                    rule="comparison-surface-api-workbench-model-owner-boundary",
+                    path=path,
+                    line_no=1,
+                    message=(
+                        "API Workbench raw model/data mutation seams must stay behind "
+                        f"ApiWorkbenchModelOwner; missing compact markers: {', '.join(missing_markers)}"
+                    ),
+                )
+            )
+
+        owner_start = production_text.find(
+            "type ApiWorkbenchModelStore = fret_runtime::ModelStore;"
+        )
+        owner_end = production_text.find("impl WorkbenchLocals")
+        if owner_start < 0 or owner_end < 0 or owner_end <= owner_start:
+            violations.append(
+                SurfaceViolation(
+                    rule="comparison-surface-api-workbench-model-owner-boundary",
+                    path=path,
+                    line_no=1,
+                    message=(
+                        "API Workbench must keep one local ApiWorkbenchModelOwner block "
+                        "between the raw ModelStore alias and WorkbenchLocals"
+                    ),
+                )
+            )
+            owner_source = ""
+            outside_owner = production_text
+        else:
+            owner_source = production_text[owner_start:owner_end]
+            outside_owner = production_text[:owner_start] + production_text[owner_end:]
+
+        for marker in API_WORKBENCH_OWNER_RAW_BOUNDARY_MARKERS:
+            if marker not in owner_source:
+                violations.append(
+                    SurfaceViolation(
+                        rule="comparison-surface-api-workbench-model-owner-boundary",
+                        path=path,
+                        line_no=1,
+                        message=(
+                            "API Workbench owner must explicitly contain raw bridge "
+                            f"`{marker}`"
+                        ),
+                    )
+                )
+            if marker in outside_owner:
+                violations.append(
+                    SurfaceViolation(
+                        rule="comparison-surface-api-workbench-model-owner-boundary",
+                        path=path,
+                        line_no=1,
+                        message=(
+                            "API Workbench raw bridge "
+                            f"`{marker}` must not appear outside ApiWorkbenchModelOwner"
+                        ),
+                    )
+                )
+
+        for marker in API_WORKBENCH_FORBIDDEN_SOURCE_MARKERS:
+            if marker not in production_text:
+                continue
+            violations.append(
+                SurfaceViolation(
+                    rule="comparison-surface-api-workbench-model-owner-boundary",
+                    path=path,
+                    line_no=1,
+                    message=(
+                        "API Workbench must stay on the app-facing local-state surface; "
+                        f"forbidden raw import or type marker `{marker}`"
+                    ),
+                )
+            )
+
+        for marker in API_WORKBENCH_FORBIDDEN_COMPACT_MARKERS:
+            if marker not in compact_production:
+                continue
+            violations.append(
+                SurfaceViolation(
+                    rule="comparison-surface-api-workbench-model-owner-boundary",
+                    path=path,
+                    line_no=1,
+                    message=(
+                        "API Workbench must keep raw ModelStore signatures behind "
+                        f"ApiWorkbenchModelStore; compact `{marker}` bypasses the owner alias"
+                    ),
+                )
+            )
+
+        outside_lines = _code_lines_for_scan(path, outside_owner)
+        for line_no, line in outside_lines:
+            if path.suffix == ".rs" and _is_rust_source_line_ignorable(line):
+                continue
+            for seam, pattern in API_WORKBENCH_OUTSIDE_OWNER_RAW_PATTERNS:
+                if not pattern.search(line):
+                    continue
+                violations.append(
+                    SurfaceViolation(
+                        rule="comparison-surface-api-workbench-model-owner-boundary",
+                        path=path,
+                        line_no=line_no,
+                        message=(
+                            "API Workbench raw query/mutation bridge must route through "
+                            f"ApiWorkbenchModelOwner; direct `{seam}` bypasses the owner boundary"
+                        ),
+                        source=line.strip(),
+                    )
+                )
+                break
+
+        for line_no, line in _code_lines_for_scan(path, production_text):
+            if path.suffix == ".rs" and _is_rust_source_line_ignorable(line):
+                continue
+            for seam, pattern in API_WORKBENCH_FORBIDDEN_RAW_MODEL_ACCESS_PATTERNS:
+                if not pattern.search(line):
+                    continue
+                violations.append(
+                    SurfaceViolation(
+                        rule="comparison-surface-api-workbench-model-owner-boundary",
+                        path=path,
+                        line_no=line_no,
+                        message=(
+                            "API Workbench runtime model reads/writes must route through "
+                            f"ApiWorkbenchModelOwner; direct `{seam}` bypasses the owner boundary"
+                        ),
+                        source=line.strip(),
+                    )
+                )
+                break
+
+        model_store_aliases: list[str] = []
+        for statement in production_text.split(";"):
+            compact_statement = _compact_source(statement)
+            rest = compact_statement.removeprefix("let")
+            if rest == compact_statement:
+                continue
+            if "=" not in rest:
+                continue
+            alias, rhs = rest.split("=", 1)
+            if not re.fullmatch(r"(?:[A-Za-z_][A-Za-z0-9_]*\.)?models_mut\(\)", rhs):
+                continue
+            model_store_aliases.append(alias.strip().removeprefix("mut"))
+
+        for alias in model_store_aliases:
+            for forbidden in (
+                f"{alias}.update(",
+                f"{alias}.update::<",
+                f"{alias}.update_any(",
+                f"{alias}.update_any::<",
+                f"{alias}.read(",
+                f"{alias}.read::<",
+                f"{alias}.insert(",
+                f"{alias}.insert::<",
+            ):
+                if forbidden not in compact_production:
+                    continue
+                violations.append(
+                    SurfaceViolation(
+                        rule="comparison-surface-api-workbench-model-owner-boundary",
+                        path=path,
+                        line_no=1,
+                        message=(
+                            "API Workbench runtime model reads/writes must route through "
+                            f"ApiWorkbenchModelOwner; ModelStore alias `{forbidden}` bypasses the owner boundary"
+                        ),
+                    )
+                )
+
+        host_models_mut_count = production_text.count("host.models_mut()")
+        if host_models_mut_count != 1:
+            violations.append(
+                SurfaceViolation(
+                    rule="comparison-surface-api-workbench-model-owner-boundary",
+                    path=path,
+                    line_no=1,
+                    message=(
+                        "API Workbench should keep the only host.models_mut() bridge inside "
+                        "ApiWorkbenchModelOwner command availability; "
+                        f"found {host_models_mut_count}"
+                    ),
+                )
+            )
+
+    return violations
+
+
 def _scan_genui_model_owner_boundary(
     root: Path, spec: SurfacePath
 ) -> list[SurfaceViolation]:
@@ -3520,6 +3845,7 @@ def _scan_classified_raw_surface(root: Path, spec: SurfacePath) -> list[SurfaceV
     violations.extend(_scan_hotpatch_smoke_owner_boundary(root, spec))
     violations.extend(_scan_docking_arbitration_controls_boundary(root, spec))
     violations.extend(_scan_workspace_shell_driver_owner_boundary(root, spec))
+    violations.extend(_scan_api_workbench_model_owner_boundary(root, spec))
     violations.extend(_scan_genui_model_owner_boundary(root, spec))
     violations.extend(_scan_window_hit_test_probe_boundary(root, spec))
     violations.extend(_scan_components_gallery_owner_boundary(root, spec))
