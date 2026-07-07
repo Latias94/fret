@@ -1556,9 +1556,8 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
     ),
     _fret_examples_advanced_surface(
         "async_playground_demo.rs",
-        "the async query lifecycle playground owns raw pressable row mechanics, dynamic "
-        "AnyElement child vectors until the app facade grows equivalent pressable and "
-        "typed-child wrappers",
+        "the async query lifecycle playground owns dynamic AnyElement child vectors until the app "
+        "facade grows equivalent typed-child wrappers",
         (
             "fret_ui",
             "AnyElement",

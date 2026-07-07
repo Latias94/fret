@@ -7,20 +7,18 @@ use std::time::Duration;
 
 use fret::actions::CommandId;
 use fret::app::prelude::*;
-use fret::app::{AppRenderContext, LocalState, RenderContextAccess as _, text};
+use fret::app::{AppRenderContext, LocalState, RenderContextAccess as _, pressable, text};
 use fret::children::UiElementSinkExt as _;
 use fret::query::{
     CancellationToken, FutureSpawner, FutureSpawnerHandle, QueryCancelMode, QueryError, QueryKey,
     QueryPolicy, QuerySnapshotEntry, QueryState, QueryStatus,
 };
 use fret::scroll::ScrollHandle;
-use fret::semantics::SemanticsRole;
 use fret::style::ThemeSnapshot;
-use fret_ui::element::{AnyElement, PressableA11y, PressableProps};
+use fret_ui::element::AnyElement;
 use fret_ui_kit::IntoUiElementInExt as _;
 use fret_ui_kit::declarative::QueryHandleWatchExt as _;
 use fret_ui_kit::declarative::UiElementTestIdExt as _;
-use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::primitives::scroll_area::ScrollAreaType;
 use fret_ui_kit::primitives::separator::SeparatorOrientation;
 use fret_ui_kit::ui;
@@ -554,47 +552,34 @@ where
     let bg_selected = theme.color_token("background");
     let bg_hover = theme.color_token("card");
 
-    cx.elements().pressable(
-        PressableProps {
-            enabled: true,
-            a11y: PressableA11y {
-                role: Some(SemanticsRole::Button),
-                label: Some(Arc::from(id.label())),
-                ..Default::default()
-            },
-            ..Default::default()
-        },
-        move |cx, st_press| {
-            cx.pressable_dispatch_command_if_enabled(select_cmd);
+    pressable::command_button(cx, select_cmd, id.label(), move |cx, st_press| {
+        let bg = if selected {
+            bg_selected
+        } else if st_press.pressed || st_press.hovered {
+            bg_hover
+        } else {
+            bg_idle
+        };
 
-            let bg = if selected {
-                bg_selected
-            } else if st_press.pressed || st_press.hovered {
-                bg_hover
-            } else {
-                bg_idle
-            };
+        let title = async_list_row_text(cx, id.label());
+        let badge = status_badge(cx, diag.as_ref());
 
-            let title = async_list_row_text(cx, id.label());
-            let badge = status_badge(cx, diag.as_ref());
+        let row = ui::h_flex(|_cx| [title, badge])
+            .gap(Space::N2)
+            .items_center()
+            .into_element(cx);
 
-            let row = ui::h_flex(|_cx| [title, badge])
-                .gap(Space::N2)
-                .items_center()
-                .into_element(cx);
-
-            vec![
-                ui::container(|_cx| vec![row])
-                    .bg(ColorRef::Color(bg))
-                    .border_1()
-                    .border_color(ColorRef::Color(theme.color_token("border")))
-                    .rounded_md()
-                    .p(Space::N2)
-                    .w_full()
-                    .into_element(cx),
-            ]
-        },
-    )
+        vec![
+            ui::container(|_cx| vec![row])
+                .bg(ColorRef::Color(bg))
+                .border_1()
+                .border_color(ColorRef::Color(theme.color_token("border")))
+                .rounded_md()
+                .p(Space::N2)
+                .w_full()
+                .into_element(cx),
+        ]
+    })
 }
 
 fn select_command_for_id(id: QueryId) -> CommandId {

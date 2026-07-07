@@ -912,6 +912,50 @@ pub mod app {
         }
     }
 
+    /// App-facing pressable helpers for simple command-backed interactive regions.
+    ///
+    /// Component crates can still use raw `PressableProps`; default app code should prefer these
+    /// helpers when it only needs a button-like role, command dispatch, and hover/press styling.
+    pub mod pressable {
+        use std::sync::Arc;
+
+        pub use fret_ui::element::PressableState;
+
+        pub fn command_button<'a, Cx, L, I, T>(
+            cx: &mut Cx,
+            command: fret_runtime::CommandId,
+            label: L,
+            render: impl FnOnce(&mut crate::AppRenderCx<'_>, PressableState) -> I,
+        ) -> fret_ui::element::AnyElement
+        where
+            Cx: crate::app::AppRenderContext<'a>,
+            L: Into<Arc<str>>,
+            I: IntoIterator<Item = T>,
+            T: fret_ui_kit::IntoUiElement<crate::app::App>,
+        {
+            use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
+
+            cx.elements().pressable(
+                fret_ui::element::PressableProps {
+                    enabled: true,
+                    a11y: fret_ui::element::PressableA11y {
+                        role: Some(fret_core::SemanticsRole::Button),
+                        label: Some(label.into()),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                move |cx, state| {
+                    cx.pressable_dispatch_command_if_enabled(command);
+                    render(cx, state)
+                        .into_iter()
+                        .map(|child| fret_ui_kit::IntoUiElement::into_element(child, cx))
+                        .collect::<Vec<_>>()
+                },
+            )
+        }
+    }
+
     /// App-facing UI asset helpers for the default render lane.
     ///
     /// These wrappers keep app and cookbook code on `AppUi` / `AppRenderContext` while still using
@@ -5109,6 +5153,9 @@ mod authoring_surface_policy_tests {
         assert!(!app_prelude_exports_symbol("view_child_with"));
         assert!(!public_surface.contains("pub use crate::view::{UiCxActionsExt, UiCxDataExt};"));
         assert!(LIB_RS.contains("pub use fret_ui::{Theme, ThemeSnapshot};"));
+        assert!(LIB_RS.contains("pub mod pressable {"));
+        assert!(LIB_RS.contains("pub use fret_ui::element::PressableState;"));
+        assert!(LIB_RS.contains("pub fn command_button<'a, Cx, L, I, T>("));
     }
 
     #[test]
@@ -5706,6 +5753,9 @@ mod authoring_surface_policy_tests {
         assert!(!app_prelude_exports_symbol("PointerMove"));
         assert!(!app_prelude_exports_symbol("PointerUp"));
         assert!(!app_prelude_exports_symbol("PointerId"));
+        assert!(!app_prelude_exports_symbol("PressableA11y"));
+        assert!(!app_prelude_exports_symbol("PressableProps"));
+        assert!(!app_prelude_exports_symbol("PressableState"));
         assert!(!app_prelude_exports_symbol("MouseButton"));
         assert!(!app_prelude_exports_symbol("CursorIcon"));
         assert!(!app_prelude_exports_symbol("AppAsyncWorkExt"));

@@ -1022,7 +1022,7 @@ class SurfacePolicyTests(unittest.TestCase):
             async_playground_spec,
             "async_playground_demo should be classified as an advanced query playground",
         )
-        self.assertIn("pressable", async_playground_spec.reason)
+        self.assertIn("AnyElement", async_playground_spec.reason)
         self.assertIn("AnyElement", async_playground_spec.allowed_raw_seams)
         self.assertNotIn("fret_core", async_playground_spec.allowed_raw_seams)
         self.assertNotIn("ElementContext", async_playground_spec.allowed_raw_seams)

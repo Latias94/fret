@@ -8,7 +8,7 @@ fn async_playground_demo_keeps_visible_text_on_roles() {
     let compact_source = compact(source);
 
     for needle in [
-        "usefret::app::{AppRenderContext,LocalState,RenderContextAccessas_,text};",
+        "usefret::app::{AppRenderContext,LocalState,RenderContextAccessas_,pressable,text};",
         "fnasync_chrome_title_text<'a,Cx,T>(cx:&mutCx,text:T)->AnyElement",
         "text::chrome_title(cx,text)",
         "text::section_chrome_label(cx,text)",
@@ -19,6 +19,7 @@ fn async_playground_demo_keeps_visible_text_on_roles() {
         "lettitle=async_chrome_title_text(cx,\"AsyncPlayground\");",
         "letslow_label=async_readout_text(cx,\"Slownetwork(x2)\");",
         "letheader=async_section_text(cx,\"Catalog\");",
+        "pressable::command_button(cx,select_cmd,id.label(),move|cx,st_press|{",
         "lettitle=async_list_row_text(cx,id.label());",
         "lettitle=async_section_text(cx,selected.label());",
         "out.push(async_code_label_text(cx,key.namespace()));",
@@ -54,6 +55,9 @@ fn async_playground_demo_keeps_visible_text_on_roles() {
         "decl_text::",
         "ElementContext",
         "UiHost",
+        "PressableProps",
+        "PressableA11y",
+        "pressable_dispatch_command_if_enabled",
     ] {
         assert!(
             !compact_source.contains(needle),
@@ -69,10 +73,9 @@ fn async_playground_demo_uses_app_view_imports() {
 
     for needle in [
         "usefret::app::prelude::*;",
-        "usefret::app::{AppRenderContext,LocalState,RenderContextAccessas_,text};",
+        "usefret::app::{AppRenderContext,LocalState,RenderContextAccessas_,pressable,text};",
         "usefret::actions::CommandId;",
         "usefret::scroll::ScrollHandle;",
-        "usefret::semantics::SemanticsRole;",
         "usefret::style::ThemeSnapshot;",
         ".view::<AsyncPlaygroundView>()?",
         "fninstall_tokio_spawner(app:&mutApp)",
@@ -96,6 +99,9 @@ fn async_playground_demo_uses_app_view_imports() {
         "fret_core::",
         "ElementContext",
         "UiHost",
+        "PressableProps",
+        "PressableA11y",
+        "pressable_dispatch_command_if_enabled",
         "KernelApp",
         "AppWindowId",
     ] {
