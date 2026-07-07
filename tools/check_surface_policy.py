@@ -1590,15 +1590,13 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
     _fret_examples_advanced_surface(
         "table_demo.rs",
         "the shadcn table behavior/perf proof owns a manual FnDriver runner, retained UiTree, "
-        "virtual-list scroll handle, grouping/header-menu state, and low-level table text cells",
+        "virtual-list scroll handle, grouping/header-menu state, and app text table cells",
         (
             "fret_app",
             "fret_core",
             "fret_launch",
             "fret_runtime",
             "fret_ui",
-            "AnyElement",
-            "ElementContext",
             "FnDriver",
             "UiTree",
         ),

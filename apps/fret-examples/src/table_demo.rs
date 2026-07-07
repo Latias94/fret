@@ -1,5 +1,6 @@
 use anyhow::Context as _;
 use fret::app::LocalState;
+use fret::app::text;
 use fret::app::{AppLocalStateExt as _, AppLocalStateTxnExt as _};
 use fret_app::{App, CommandId, Effect, WindowRequest};
 use fret_core::{AppWindowId, Corners, Edges, Event, Px};
@@ -8,14 +9,14 @@ use fret_launch::{
     WinitRenderContext, WinitRunnerConfig, WinitWindowContext,
 };
 use fret_runtime::PlatformCapabilities;
+use fret_ui::UiTree;
+use fret_ui::VirtualListScrollHandle;
 use fret_ui::declarative;
 use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
+    ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
 };
-use fret_ui::{ElementContext, UiTree, VirtualListScrollHandle};
 use fret_ui_kit::OverlayController;
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
-use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::headless::table::{
     ColumnPinningState, GroupedColumnMode, RowKey, TableState, create_column_helper,
 };
@@ -31,20 +32,6 @@ const CMD_GROUP_TOGGLE_ID: &str = "table_demo.group.toggle.id";
 const CMD_GROUP_TOGGLE_NAME: &str = "table_demo.group.toggle.name";
 const CMD_GROUP_TOGGLE_ROLE: &str = "table_demo.group.toggle.role";
 const CMD_GROUP_TOGGLE_SCORE: &str = "table_demo.group.toggle.score";
-
-fn table_demo_readout_text<H: fret_ui::UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    text: impl Into<Arc<str>>,
-) -> AnyElement {
-    decl_text::text_control_readout(cx, text)
-}
-
-fn table_demo_cell_text<H: fret_ui::UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    text: impl Into<Arc<str>>,
-) -> AnyElement {
-    decl_text::text_table_cell(cx, text)
-}
 
 #[derive(Debug, Clone)]
 struct DemoRow {
@@ -415,7 +402,7 @@ fn render(_driver: &mut TableDemoDriver, context: WinitRenderContext<'_, TableDe
                                     ));
 
                                     vec![
-                                        table_demo_readout_text(cx, header),
+                                        text::control_readout(cx, header),
                                         cx.flex(
                                             FlexProps {
                                                 layout: {
@@ -593,7 +580,7 @@ fn render(_driver: &mut TableDemoDriver, context: WinitRenderContext<'_, TableDe
 
                                                         vec![shadcn::ContextMenu::from_open(open).into_element(
                                                             cx,
-                                                            |cx| table_demo_cell_text(cx, label.clone()),
+                                                            |cx| text::table_cell(cx, label.clone()),
                                                             |_cx| {
                                                                 let mut entries = Vec::new();
                                                                 if groupable {
@@ -662,7 +649,7 @@ fn render(_driver: &mut TableDemoDriver, context: WinitRenderContext<'_, TableDe
                                                             "score" => row.original.score.to_string(),
                                                             _ => "".to_string(),
                                                         };
-                                                        vec![table_demo_cell_text(cx, text)]
+                                                        vec![text::table_cell(cx, text)]
                                                     },
                                                     None,
                                                     table_debug_ids,
