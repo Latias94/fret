@@ -802,6 +802,17 @@ class SurfacePolicyTests(unittest.TestCase):
         }
         for path in shadcn_rich_demo_paths:
             self.assertIn(path, POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS)
+        tail_advanced_paths = {
+            "apps/fret-examples/src/drag_demo.rs",
+            "apps/fret-examples/src/plot_image_demo.rs",
+            "apps/fret-examples/src/tags_demo.rs",
+            "apps/fret-examples/src/markdown_demo.rs",
+            "apps/fret-examples/src/genui_demo.rs",
+            "apps/fret-examples/src/imui_editor_proof_demo.rs",
+            "apps/fret-examples/src/imui_node_graph_demo.rs",
+        }
+        for path in tail_advanced_paths:
+            self.assertIn(path, POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS)
         self.assertIn(
             "apps/fret-examples/src/plot_stress_demo.rs",
             POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS,
@@ -1023,6 +1034,20 @@ class SurfacePolicyTests(unittest.TestCase):
                 spec, f"{path} should be classified as an advanced shadcn behavior proof"
             )
             self.assertIn("shadcn", spec.reason)
+            self.assertTrue(spec.allowed_raw_seams)
+            self.assertTrue(spec.retirement)
+        for path in tail_advanced_paths:
+            spec = next(
+                (
+                    spec
+                    for spec in POLICY.ADVANCED_MANUAL_SURFACES
+                    if spec.path == path
+                ),
+                None,
+            )
+            self.assertIsNotNone(
+                spec, f"{path} should be classified as an advanced/manual tail surface"
+            )
             self.assertTrue(spec.allowed_raw_seams)
             self.assertTrue(spec.retirement)
         for path in editor_notes_paths:

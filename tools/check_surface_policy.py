@@ -1608,6 +1608,98 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
         owner="examples-shadcn-sonner-demo",
     ),
     _fret_examples_advanced_surface(
+        "drag_demo.rs",
+        "the plot drag-overlay proof owns manual FnDriver/UiTree runner hooks, plot binding "
+        "state mutation, and direct pointer-event driven overlay updates",
+        (
+            "fret_app",
+            "fret_core",
+            "fret_launch",
+            "fret_runtime",
+            "fret_ui",
+            "FnDriver",
+            "UiTree",
+        ),
+        owner="examples-plot-drag-demo",
+    ),
+    _fret_examples_advanced_surface(
+        "plot_image_demo.rs",
+        "the plot image overlay proof still exposes advanced web/demo-shell launch helpers for "
+        "wasm integration while the native run path uses the default FretApp view facade",
+        (
+            "fret::advanced",
+            "fret_launch",
+            "fret_runtime",
+        ),
+        owner="examples-plot-image-demo",
+    ),
+    _fret_examples_advanced_surface(
+        "tags_demo.rs",
+        "the plot tags/text overlay proof still exposes advanced web/demo-shell launch helpers "
+        "for wasm integration while the native run path uses the default FretApp view facade",
+        (
+            "fret::advanced",
+            "fret_launch",
+            "fret_runtime",
+        ),
+        owner="examples-plot-tags-demo",
+    ),
+    _fret_examples_advanced_surface(
+        "markdown_demo.rs",
+        "the native markdown proof owns remote image fetch/decode, markdown-specific low-level "
+        "image/SVG props, pressable code-block affordances, and raw text helper boundaries",
+        (
+            "fret::advanced",
+            "fret_core",
+            "fret_ui",
+            "AnyElement",
+            "ElementContext",
+        ),
+        owner="examples-markdown-demo",
+    ),
+    _fret_examples_advanced_surface(
+        "genui_demo.rs",
+        "the GenUI reference deliberately owns generator/runtime/editor integration, raw model "
+        "ownership, action queue plumbing, and host-generic render helper boundaries",
+        (
+            "fret::advanced",
+            "fret_core",
+            "fret_runtime",
+            "fret_ui",
+            "AnyElement",
+            "ElementContext",
+            "ModelStore",
+            "UiActionHostAdapter",
+        ),
+        owner="examples-genui-demo",
+    ),
+    _fret_examples_advanced_surface(
+        "imui_editor_proof_demo.rs",
+        "the IMUI editor proof owns editor-grade multi-window/docking/embedded-viewport runtime "
+        "integration, GPU viewport bridges, and low-level editor proof helper surfaces",
+        (
+            "fret::advanced",
+            "fret_app",
+            "fret_core",
+            "fret_runtime",
+            "fret_ui",
+            "AnyElement",
+        ),
+        owner="examples-imui-editor-proof",
+    ),
+    _fret_examples_advanced_surface(
+        "imui_node_graph_demo.rs",
+        "the IMUI node-graph compatibility proof intentionally retains raw Model handles and "
+        "host-generic ElementContext helpers until declarative node-graph surfaces replace it",
+        (
+            "fret_runtime",
+            "fret_ui",
+            "AnyElement",
+            "ElementContext",
+        ),
+        owner="examples-imui-node-graph-compat",
+    ),
+    _fret_examples_advanced_surface(
         "editor_notes_demo.rs",
         "the editor notes demo owns editor app model bindings, shell-mounted rails, and theme "
         "preset wiring while keeping app-facing writes behind EditorAssetModels, "
@@ -2029,6 +2121,13 @@ PUBLIC_EXAMPLE_SCAN_ROOTS: tuple[str, ...] = (
     "apps/fret-examples/src/form_demo.rs",
     "apps/fret-examples/src/table_demo.rs",
     "apps/fret-examples/src/sonner_demo.rs",
+    "apps/fret-examples/src/drag_demo.rs",
+    "apps/fret-examples/src/plot_image_demo.rs",
+    "apps/fret-examples/src/tags_demo.rs",
+    "apps/fret-examples/src/markdown_demo.rs",
+    "apps/fret-examples/src/genui_demo.rs",
+    "apps/fret-examples/src/imui_editor_proof_demo.rs",
+    "apps/fret-examples/src/imui_node_graph_demo.rs",
     "apps/fret-examples/src/echarts_demo.rs",
     "apps/fret-examples/src/echarts_multi_grid_demo.rs",
     "apps/fret-examples/src/chart_multi_axis_demo.rs",
