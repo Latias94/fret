@@ -1560,7 +1560,7 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
     _fret_examples_advanced_surface(
         "date_picker_demo.rs",
         "the shadcn date-picker behavior proof owns a manual FnDriver/AppUi render-root bridge, "
-        "retained UiTree lifecycle, overlay state, and low-level text/container composition",
+        "retained UiTree lifecycle, overlay state, app text roles, and low-level container composition",
         (
             "fret::advanced",
             "fret_app",
@@ -1568,8 +1568,6 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
             "fret_launch",
             "fret_runtime",
             "fret_ui",
-            "AnyElement",
-            "ElementContext",
             "FnDriver",
             "UiTree",
         ),

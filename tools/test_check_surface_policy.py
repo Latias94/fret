@@ -1076,6 +1076,14 @@ class SurfacePolicyTests(unittest.TestCase):
         self.assertIn("device-shell", editor_device_shell_spec.reason)
         self.assertNotIn("AnyElement", editor_device_shell_spec.allowed_raw_seams)
         self.assertNotIn("ElementContext", editor_device_shell_spec.allowed_raw_seams)
+        date_picker_spec = next(
+            spec
+            for spec in POLICY.ADVANCED_MANUAL_SURFACES
+            if spec.path == "apps/fret-examples/src/date_picker_demo.rs"
+        )
+        self.assertIn("date-picker", date_picker_spec.reason)
+        self.assertNotIn("AnyElement", date_picker_spec.allowed_raw_seams)
+        self.assertNotIn("ElementContext", date_picker_spec.allowed_raw_seams)
         imui_node_graph_spec = next(
             spec
             for spec in POLICY.ADVANCED_MANUAL_SURFACES
