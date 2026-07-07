@@ -2622,6 +2622,247 @@ class SurfacePolicyTests(unittest.TestCase):
                 ]
             )
 
+    def test_plot_stress_legacy_retained_authoring_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-examples/src/plot_stress_demo.rs",
+                """
+                use fret_plot::LinePlotPanelBinding;
+                use fret_plot::declarative::line_plot_panel_in;
+                use fret_plot::declarative::{LinePlotPanelProps, line_plot_panel_in};
+                use fret_plot::models::{LinePlotModel, LineSeries};
+                use fret_plot::retained;
+                use fret_ui::{UiTree, declarative};
+                use std::sync::Arc;
+
+                struct PlotStressWindowState {
+                    ui: UiTree<App>,
+                    models: PlotStressModelOwner,
+                }
+
+                struct PlotStressModelOwner {
+                    plot: LinePlotPanelBinding,
+                    animate: Model<bool>,
+                }
+
+                impl PlotStressModelOwner {
+                    fn new(app: &mut App, points: usize, series: usize) -> Self {
+                        Self {
+                            plot: LinePlotPanelBinding::new(
+                                app,
+                                PlotStressDriver::build_plot_model(points, series),
+                            ),
+                            animate: app.models_mut().insert(true),
+                        }
+                    }
+
+                    fn plot_binding(&self) -> LinePlotPanelBinding {
+                        self.plot.clone()
+                    }
+
+                    fn animate_enabled(&self, app: &App) -> bool {
+                        self.animate.read_ref(app, |value| *value).unwrap_or(false)
+                    }
+
+                    fn toggle_animate(&self, app: &mut App) {
+                        let _ = self.animate.update(app, |value, _cx| *value = !*value);
+                    }
+
+                    fn shift_plot_bounds_for_animation(&self, app: &mut App, frame: u64) {
+                        let _ = self.plot.update_model(app, |model, _cx| {
+                            let _ = model;
+                            let _ = frame;
+                        });
+                    }
+                }
+
+                impl PlotStressDriver {
+                    fn build_plot_model(points: usize, series: usize) -> LinePlotModel {
+                        let label: Arc<str> = Arc::from("signal");
+                        let data = Self::build_series(points, series);
+                        LinePlotModel::from_series_with_bounds(
+                            vec![LineSeries::new(label, data)],
+                            bounds,
+                        )
+                    }
+                }
+
+                fn render(
+                    app: &mut App,
+                    services: &mut Services,
+                    window: AppWindowId,
+                    bounds: Rect,
+                    state: &mut PlotStressWindowState,
+                ) {
+                    let plot = state.models.plot_binding();
+                    let root = declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
+                    .render_root("plot-stress-demo", move |cx| {
+                        let style = LinePlotStyle::default();
+                        let props = plot.panel_props().style(style);
+                        vec![line_plot_panel_in(cx, props)]
+                    });
+                    let _ = root;
+                }
+
+                struct LegacyPlotModels {
+                    plot: Model<LinePlotModel>,
+                }
+
+                fn bad(app: &mut App, state: &PlotStressWindowState, points: usize, series: usize) {
+                    let plot = app.models_mut().insert(PlotStressDriver::build_plot_model(points, series));
+                    let _ = LinePlotPanelProps::new(plot.clone());
+                    let _ = fret_plot::retained::something();
+                    let _ = create_node_retained();
+                    let _ = app.models().read(&state.animate, |_| true);
+                    let _ = app.models_mut().update(&state.animate, |_| true);
+                    let _ = app.models_mut().update(&state.plot, |_| true);
+                }
+
+                struct LinePlotCanvas;
+                struct PlotCanvas;
+                """,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[],
+                internal_harness_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/plot_stress_demo.rs",
+                        "internal_harness",
+                        "fixture plot stress harness",
+                        owner="examples-plot-stress",
+                        allowed_raw_seams=("UiTree",),
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            owner_violations = [
+                violation
+                for violation in violations
+                if violation.rule
+                == "internal-harness-plot-stress-declarative-binding-boundary"
+            ]
+            self.assertGreaterEqual(len(owner_violations), 6)
+            messages = "\n".join(violation.message for violation in owner_violations)
+            self.assertIn("LinePlotPanelProps", messages)
+            self.assertIn("fret_plot::retained", messages)
+            self.assertIn("app.models_mut().update(&state.plot", messages)
+            self.assertIn("LinePlotCanvas", messages)
+
+    def test_plot_stress_declarative_binding_surface_is_allowed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-examples/src/plot_stress_demo.rs",
+                """
+                use fret_plot::LinePlotPanelBinding;
+                use fret_plot::declarative::line_plot_panel_in;
+                use fret_plot::models::{LinePlotModel, LineSeries};
+                use fret_ui::{UiTree, declarative};
+                use std::sync::Arc;
+
+                struct PlotStressWindowState {
+                    ui: UiTree<App>,
+                    models: PlotStressModelOwner,
+                }
+
+                struct PlotStressModelOwner {
+                    plot: LinePlotPanelBinding,
+                    animate: Model<bool>,
+                }
+
+                impl PlotStressModelOwner {
+                    fn new(app: &mut App, points: usize, series: usize) -> Self {
+                        Self {
+                            plot: LinePlotPanelBinding::new(
+                                app,
+                                PlotStressDriver::build_plot_model(points, series),
+                            ),
+                            animate: app.models_mut().insert(true),
+                        }
+                    }
+
+                    fn plot_binding(&self) -> LinePlotPanelBinding {
+                        self.plot.clone()
+                    }
+
+                    fn animate_enabled(&self, app: &App) -> bool {
+                        self.animate.read_ref(app, |value| *value).unwrap_or(false)
+                    }
+
+                    fn toggle_animate(&self, app: &mut App) {
+                        let _ = self.animate.update(app, |value, _cx| *value = !*value);
+                    }
+
+                    fn shift_plot_bounds_for_animation(&self, app: &mut App, frame: u64) {
+                        let _ = self.plot.update_model(app, |model, _cx| {
+                            let _ = model;
+                            let _ = frame;
+                        });
+                    }
+                }
+
+                impl PlotStressDriver {
+                    fn build_plot_model(points: usize, series: usize) -> LinePlotModel {
+                        let label: Arc<str> = Arc::from("signal");
+                        let data = Self::build_series(points, series);
+                        LinePlotModel::from_series_with_bounds(
+                            vec![LineSeries::new(label, data)],
+                            bounds,
+                        )
+                    }
+                }
+
+                fn render(
+                    app: &mut App,
+                    services: &mut Services,
+                    window: AppWindowId,
+                    bounds: Rect,
+                    state: &mut PlotStressWindowState,
+                ) {
+                    let plot = state.models.plot_binding();
+                    let root = declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
+                    .render_root("plot-stress-demo", move |cx| {
+                        let style = LinePlotStyle::default();
+                        let props = plot.panel_props().style(style);
+                        vec![line_plot_panel_in(cx, props)]
+                    });
+                    let _ = root;
+                }
+                """,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[],
+                internal_harness_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/plot_stress_demo.rs",
+                        "internal_harness",
+                        "fixture plot stress harness",
+                        owner="examples-plot-stress",
+                        allowed_raw_seams=("UiTree",),
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            self.assertFalse(
+                [
+                    violation
+                    for violation in violations
+                    if violation.rule
+                    == "internal-harness-plot-stress-declarative-binding-boundary"
+                ]
+            )
+
     def test_workspace_shell_driver_direct_model_writes_are_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

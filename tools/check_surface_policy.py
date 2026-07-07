@@ -690,6 +690,44 @@ DOCKING_ARBITRATION_FORBIDDEN_RAW_WRITE_PATTERNS: tuple[
     ),
 )
 
+PLOT_STRESS_OWNER = "examples-plot-stress"
+
+PLOT_STRESS_REQUIRED_COMPACT_MARKERS = (
+    "usefret_plot::LinePlotPanelBinding;",
+    "usefret_plot::declarative::line_plot_panel_in;",
+    "usefret_plot::models::{LinePlotModel,LineSeries};",
+    "structPlotStressModelOwner{",
+    "plot:LinePlotPanelBinding",
+    "fnplot_binding(&self)->LinePlotPanelBinding",
+    "fnanimate_enabled(&self,app:&App)->bool",
+    "fntoggle_animate(&self,app:&mutApp)",
+    "fnshift_plot_bounds_for_animation(&self,app:&mutApp,frame:u64)",
+    "self.plot.update_model(app,|model,_cx|",
+    "state.models.plot_binding()",
+    "LinePlotModel::from_series_with_bounds(",
+    "LineSeries::new(label,data)",
+    "declarative::RenderRootContext::new(&mutstate.ui,app,services,window,bounds)",
+    "plot.panel_props().style(style)",
+    ".style(style)",
+    "vec![line_plot_panel_in(cx,props)]",
+)
+
+PLOT_STRESS_FORBIDDEN_COMPACT_MARKERS = (
+    "usefret_plot::declarative::{LinePlotPanelProps,line_plot_panel_in};",
+    "plot:Model<LinePlotModel>",
+    "fnplot_model(&self)->Model<LinePlotModel>",
+    "app.models_mut().insert(PlotStressDriver::build_plot_model(points,series))",
+    "LinePlotPanelProps::new(plot.clone())",
+    "usefret_plot::retained",
+    "fret_plot::retained::",
+    "LinePlotCanvas",
+    "PlotCanvas",
+    "create_node_retained(",
+    "app.models().read(&state.animate",
+    "app.models_mut().update(&state.animate",
+    "app.models_mut().update(&state.plot",
+)
+
 WORKSPACE_SHELL_OWNER = "examples-workspace-shell"
 
 WORKSPACE_SHELL_DRIVER_REQUIRED_COMPACT_MARKERS = (
@@ -1527,7 +1565,7 @@ INTERNAL_HARNESS_SURFACES: tuple[SurfacePath, ...] = (
             "FnDriver",
             "UiTree",
         ),
-        owner="examples-plot-stress",
+        owner=PLOT_STRESS_OWNER,
     ),
     _fret_examples_internal_harness(
         "chart_stress_demo.rs",
@@ -3001,6 +3039,53 @@ def _scan_docking_arbitration_controls_boundary(
     return violations
 
 
+def _scan_plot_stress_declarative_binding_boundary(
+    root: Path, spec: SurfacePath
+) -> list[SurfaceViolation]:
+    if spec.owner != PLOT_STRESS_OWNER:
+        return []
+
+    violations: list[SurfaceViolation] = []
+    for path in _iter_source_files(root / spec.path):
+        text = _read_text(path)
+        production_text = text.split("#[cfg(test)]", 1)[0]
+        compact_production = _compact_source(production_text)
+        missing_markers = [
+            marker
+            for marker in PLOT_STRESS_REQUIRED_COMPACT_MARKERS
+            if marker not in compact_production
+        ]
+        if missing_markers:
+            violations.append(
+                SurfaceViolation(
+                    rule="internal-harness-plot-stress-declarative-binding-boundary",
+                    path=path,
+                    line_no=1,
+                    message=(
+                        "Plot stress must teach declarative LinePlotPanelBinding authoring; "
+                        f"missing compact markers: {', '.join(missing_markers)}"
+                    ),
+                )
+            )
+
+        for marker in PLOT_STRESS_FORBIDDEN_COMPACT_MARKERS:
+            if marker not in compact_production:
+                continue
+            violations.append(
+                SurfaceViolation(
+                    rule="internal-harness-plot-stress-declarative-binding-boundary",
+                    path=path,
+                    line_no=1,
+                    message=(
+                        "Plot stress must not regress to retained/manual plot model authoring; "
+                        f"compact `{marker}` bypasses the LinePlotPanelBinding boundary"
+                    ),
+                )
+            )
+
+    return violations
+
+
 def _scan_workspace_shell_driver_owner_boundary(
     root: Path, spec: SurfacePath
 ) -> list[SurfaceViolation]:
@@ -3844,6 +3929,7 @@ def _scan_classified_raw_surface(root: Path, spec: SurfacePath) -> list[SurfaceV
     violations.extend(_scan_external_imports_owner_boundary(root, spec))
     violations.extend(_scan_hotpatch_smoke_owner_boundary(root, spec))
     violations.extend(_scan_docking_arbitration_controls_boundary(root, spec))
+    violations.extend(_scan_plot_stress_declarative_binding_boundary(root, spec))
     violations.extend(_scan_workspace_shell_driver_owner_boundary(root, spec))
     violations.extend(_scan_api_workbench_model_owner_boundary(root, spec))
     violations.extend(_scan_genui_model_owner_boundary(root, spec))
