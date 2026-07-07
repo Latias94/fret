@@ -777,6 +777,10 @@ class SurfacePolicyTests(unittest.TestCase):
         for path in query_paths:
             self.assertIn(path, POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS)
         self.assertIn(
+            "apps/fret-examples/src/assets_demo.rs",
+            POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS,
+        )
+        self.assertIn(
             "apps/fret-examples/src/plot_stress_demo.rs",
             POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS,
         )
@@ -1050,6 +1054,12 @@ class SurfacePolicyTests(unittest.TestCase):
         self.assertTrue(
             any(
                 spec.path == "apps/fret-examples/src/effects_demo.rs"
+                for spec in POLICY.RENDERER_LAB_SURFACES
+            )
+        )
+        self.assertTrue(
+            any(
+                spec.path == "apps/fret-examples/src/assets_demo.rs"
                 for spec in POLICY.RENDERER_LAB_SURFACES
             )
         )
@@ -3266,6 +3276,7 @@ class SurfacePolicyTests(unittest.TestCase):
             "apps/fret-cookbook/examples/customv1_basics.rs",
             "apps/fret-cookbook/examples/image_asset_cache_basics.rs",
             "apps/fret-examples/src/alpha_mode_demo.rs",
+            "apps/fret-examples/src/assets_demo.rs",
             "apps/fret-examples/src/drop_shadow_demo.rs",
             "apps/fret-examples/src/effects_demo.rs",
             "apps/fret-examples/src/image_upload_demo.rs",

@@ -1318,6 +1318,14 @@ RENDERER_LAB_SURFACES: tuple[SurfacePath, ...] = (
         ("fret::advanced", "fret_app", "fret_core", "fret_launch", "FnDriver"),
         owner="examples-image-upload-renderer-lab",
     ),
+    _fret_examples_renderer_lab_surface(
+        "assets_demo.rs",
+        "it is a retained ADR probe for UiAppDriver ImageAssetCache/SvgAssetCache GPU-ready "
+        "integration, including advanced SVG registration hooks, rather than a first-contact "
+        "asset authoring lesson",
+        ("fret::advanced",),
+        owner="examples-assets-cache-renderer-lab",
+    ),
     _cookbook_renderer_lab_surface(
         "compositing_alpha_basics.rs",
         "it is a deterministic screenshot baseline for straight-vs-premultiplied alpha renderer "
@@ -1881,6 +1889,7 @@ PUBLIC_EXAMPLE_SCAN_ROOTS: tuple[str, ...] = (
     "apps/fret-examples/src/hello_world_compare_demo.rs",
     "apps/fret-examples/src/query_demo.rs",
     "apps/fret-examples/src/query_async_tokio_demo.rs",
+    "apps/fret-examples/src/assets_demo.rs",
     "apps/fret-examples/src/echarts_demo.rs",
     "apps/fret-examples/src/echarts_multi_grid_demo.rs",
     "apps/fret-examples/src/chart_multi_axis_demo.rs",
