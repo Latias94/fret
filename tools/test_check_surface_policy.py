@@ -3089,6 +3089,204 @@ class SurfacePolicyTests(unittest.TestCase):
                 ]
             )
 
+    def test_echarts_adapter_raw_chart_and_text_wiring_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-examples/src/echarts_demo.rs",
+                """
+                use fret::advanced::text;
+                use fret_chart::{ChartCanvasPanelBinding, chart_canvas_panel};
+                use fret_runtime::Model;
+                use fret_ui::{ElementContext, Invalidation};
+                use fret_ui_kit::declarative::text as decl_text;
+
+                struct EchartsDemoChart {
+                    title: std::sync::Arc<str>,
+                    chart: ChartCanvasPanelBinding,
+                }
+
+                struct EchartsDemoState {
+                    charts: Vec<EchartsDemoChart>,
+                }
+
+                fn init_window(app: &mut KernelApp) -> EchartsDemoState {
+                    let (engine_basic, spec_basic) = build_chart();
+                    let (engine_percent, spec_percent) = build_chart();
+                    EchartsDemoState {
+                        charts: vec![
+                            EchartsDemoChart {
+                                title: "basic".into(),
+                                chart: ChartCanvasPanelBinding::new(app, spec_basic, engine_basic),
+                            },
+                            EchartsDemoChart {
+                                title: "percent".into(),
+                                chart: ChartCanvasPanelBinding::new(app, spec_percent, engine_percent),
+                            },
+                        ],
+                    }
+                }
+
+                fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut EchartsDemoState) -> ViewElements {
+                    for chart in &st.charts {
+                        chart.chart.observe_engine_paint(cx);
+                    }
+
+                    let mut out = Vec::new();
+                    for chart in &st.charts {
+                        out.push(text::section_chrome_label(
+                            cx,
+                            std::sync::Arc::clone(&chart.title),
+                        ));
+                        let props = chart.chart.panel_props();
+                        out.push(chart_canvas_panel(cx, props));
+                    }
+                    out.into()
+                }
+
+                struct LegacyChart {
+                    engine: Model<ChartEngine>,
+                    spec: ChartSpec,
+                }
+
+                fn bad(
+                    app: &mut KernelApp,
+                    cx: &mut ElementContext<'_, KernelApp>,
+                    chart: &LegacyChart,
+                    engine_basic: ChartEngine,
+                    engine_percent: ChartEngine,
+                ) {
+                    let _ = cx.text(std::sync::Arc::clone(&chart.title));
+                    let _ = decl_text::body(cx, "bad");
+                    let _ = app.models_mut().insert(engine_basic);
+                    let _ = app.models_mut().insert(engine_percent);
+                    cx.observe_model(&chart.engine);
+                    let mut props = ChartCanvasPanelProps::new(chart.spec.clone());
+                    props.engine = Some(chart.engine.clone());
+                    let _ = Invalidation;
+                }
+                """,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[],
+                comparison_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/echarts_demo.rs",
+                        "comparison",
+                        "fixture ECharts adapter surface",
+                        owner="examples-echarts-adapter",
+                        allowed_raw_seams=(
+                            "fret::advanced",
+                            "fret_ui",
+                            "AnyElement",
+                            "ElementContext",
+                        ),
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            owner_violations = [
+                violation
+                for violation in violations
+                if violation.rule == "comparison-surface-echarts-adapter-binding-boundary"
+            ]
+            self.assertGreaterEqual(len(owner_violations), 6)
+            messages = "\n".join(violation.message for violation in owner_violations)
+            self.assertIn("cx.text", messages)
+            self.assertIn("decl_text", messages)
+            self.assertIn("Model<ChartEngine>", messages)
+            self.assertIn("ChartCanvasPanelProps", messages)
+
+    def test_echarts_adapter_binding_surface_is_allowed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-examples/src/echarts_demo.rs",
+                """
+                use fret::advanced::text;
+                use fret_chart::{ChartCanvasPanelBinding, chart_canvas_panel};
+                use fret_ui::ElementContext;
+
+                struct EchartsDemoChart {
+                    title: std::sync::Arc<str>,
+                    chart: ChartCanvasPanelBinding,
+                }
+
+                struct EchartsDemoState {
+                    charts: Vec<EchartsDemoChart>,
+                }
+
+                fn init_window(app: &mut KernelApp) -> EchartsDemoState {
+                    let (engine_basic, spec_basic) = build_chart();
+                    let (engine_percent, spec_percent) = build_chart();
+                    EchartsDemoState {
+                        charts: vec![
+                            EchartsDemoChart {
+                                title: "basic".into(),
+                                chart: ChartCanvasPanelBinding::new(app, spec_basic, engine_basic),
+                            },
+                            EchartsDemoChart {
+                                title: "percent".into(),
+                                chart: ChartCanvasPanelBinding::new(app, spec_percent, engine_percent),
+                            },
+                        ],
+                    }
+                }
+
+                fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut EchartsDemoState) -> ViewElements {
+                    for chart in &st.charts {
+                        chart.chart.observe_engine_paint(cx);
+                    }
+
+                    let mut out = Vec::new();
+                    for chart in &st.charts {
+                        out.push(text::section_chrome_label(
+                            cx,
+                            std::sync::Arc::clone(&chart.title),
+                        ));
+                        let props = chart.chart.panel_props();
+                        out.push(chart_canvas_panel(cx, props));
+                    }
+                    out.into()
+                }
+                """,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[],
+                comparison_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/echarts_demo.rs",
+                        "comparison",
+                        "fixture ECharts adapter surface",
+                        owner="examples-echarts-adapter",
+                        allowed_raw_seams=(
+                            "fret::advanced",
+                            "fret_ui",
+                            "AnyElement",
+                            "ElementContext",
+                        ),
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            self.assertFalse(
+                [
+                    violation
+                    for violation in violations
+                    if violation.rule == "comparison-surface-echarts-adapter-binding-boundary"
+                ]
+            )
+
     def test_workspace_shell_driver_direct_model_writes_are_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

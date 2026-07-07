@@ -765,6 +765,36 @@ CHART_STRESS_FORBIDDEN_COMPACT_MARKERS = (
     "avg_canvas_paint",
 )
 
+ECHARTS_ADAPTER_OWNER = "examples-echarts-adapter"
+
+ECHARTS_ADAPTER_REQUIRED_COMPACT_MARKERS = (
+    "usefret::advanced::text;",
+    "text::section_chrome_label(",
+    "std::sync::Arc::clone(&chart.title)",
+    "usefret_chart::{ChartCanvasPanelBinding,chart_canvas_panel};",
+    "structEchartsDemoChart{title:std::sync::Arc<str>,chart:ChartCanvasPanelBinding,}",
+    "ChartCanvasPanelBinding::new(app,spec_basic,engine_basic)",
+    "ChartCanvasPanelBinding::new(app,spec_percent,engine_percent)",
+    "chart.chart.observe_engine_paint(cx);",
+    "chart.chart.panel_props()",
+    "out.push(chart_canvas_panel(cx,props));",
+)
+
+ECHARTS_ADAPTER_FORBIDDEN_COMPACT_MARKERS = (
+    "cx.text(std::sync::Arc::clone(&chart.title))",
+    "usefret_ui_kit::declarative::textasdecl_text;",
+    "decl_text::",
+    "usefret_runtime::Model;",
+    "usefret_ui::{ElementContext,Invalidation};",
+    "engine:Model<ChartEngine>",
+    "spec:ChartSpec",
+    "app.models_mut().insert(engine_basic)",
+    "app.models_mut().insert(engine_percent)",
+    "cx.observe_model(&chart.engine",
+    "ChartCanvasPanelProps::new(chart.spec.clone())",
+    "props.engine=Some(chart.engine.clone());",
+)
+
 WORKSPACE_SHELL_OWNER = "examples-workspace-shell"
 
 WORKSPACE_SHELL_DRIVER_REQUIRED_COMPACT_MARKERS = (
@@ -1425,7 +1455,7 @@ COMPARISON_SURFACES: tuple[SurfacePath, ...] = (
             "AnyElement",
             "ElementContext",
         ),
-        owner="examples-echarts-adapter",
+        owner=ECHARTS_ADAPTER_OWNER,
     ),
     _fret_examples_comparison_surface(
         "imui_editor_proof_demo/authoring_parity",
@@ -3170,6 +3200,54 @@ def _scan_chart_stress_declarative_binding_boundary(
     return violations
 
 
+def _scan_echarts_adapter_binding_boundary(
+    root: Path, spec: SurfacePath
+) -> list[SurfaceViolation]:
+    if spec.owner != ECHARTS_ADAPTER_OWNER:
+        return []
+
+    violations: list[SurfaceViolation] = []
+    for path in _iter_source_files(root / spec.path):
+        text = _read_text(path)
+        production_text = text.split("#[cfg(test)]", 1)[0]
+        compact_production = _compact_source(production_text)
+        missing_markers = [
+            marker
+            for marker in ECHARTS_ADAPTER_REQUIRED_COMPACT_MARKERS
+            if marker not in compact_production
+        ]
+        if missing_markers:
+            violations.append(
+                SurfaceViolation(
+                    rule="comparison-surface-echarts-adapter-binding-boundary",
+                    path=path,
+                    line_no=1,
+                    message=(
+                        "ECharts adapter smoke must keep chart titles on the shared text role "
+                        "and mount charts through ChartCanvasPanelBinding; "
+                        f"missing compact markers: {', '.join(missing_markers)}"
+                    ),
+                )
+            )
+
+        for marker in ECHARTS_ADAPTER_FORBIDDEN_COMPACT_MARKERS:
+            if marker not in compact_production:
+                continue
+            violations.append(
+                SurfaceViolation(
+                    rule="comparison-surface-echarts-adapter-binding-boundary",
+                    path=path,
+                    line_no=1,
+                    message=(
+                        "ECharts adapter smoke must not expose raw chart model/text wiring; "
+                        f"compact `{marker}` bypasses the ChartCanvasPanelBinding/text role boundary"
+                    ),
+                )
+            )
+
+    return violations
+
+
 def _scan_workspace_shell_driver_owner_boundary(
     root: Path, spec: SurfacePath
 ) -> list[SurfaceViolation]:
@@ -4015,6 +4093,7 @@ def _scan_classified_raw_surface(root: Path, spec: SurfacePath) -> list[SurfaceV
     violations.extend(_scan_docking_arbitration_controls_boundary(root, spec))
     violations.extend(_scan_plot_stress_declarative_binding_boundary(root, spec))
     violations.extend(_scan_chart_stress_declarative_binding_boundary(root, spec))
+    violations.extend(_scan_echarts_adapter_binding_boundary(root, spec))
     violations.extend(_scan_workspace_shell_driver_owner_boundary(root, spec))
     violations.extend(_scan_api_workbench_model_owner_boundary(root, spec))
     violations.extend(_scan_genui_model_owner_boundary(root, spec))
