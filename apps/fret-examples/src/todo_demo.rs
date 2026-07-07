@@ -7,11 +7,9 @@ use fret::env::{
     ViewportQueryHysteresis, primary_pointer_can_hover, viewport_tailwind, viewport_width_at_least,
 };
 use fret::icons::{IconId, icon};
-use fret::style::{ChromeRefinement, ColorRef, Radius, Space, ThemeSnapshot};
-use fret_core::scene::DashPatternV1;
-use fret_core::{
-    AttributedText, Color, Corners, DecorationLineStyle, Px, StrikethroughStyle, TextPaintStyle,
-    TextSpan,
+use fret::style::{
+    AttributedText, ChromeRefinement, Color, ColorRef, Corners, DashPatternV1, DecorationLineStyle,
+    Radius, Space, StrikethroughStyle, TextPaintStyle, TextSpan, ThemeSnapshot,
 };
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::{WidgetStateProperty, WidgetStates};

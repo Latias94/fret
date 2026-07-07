@@ -46,6 +46,7 @@ fn todo_demo_keeps_visible_text_on_roles() {
         "textasdecl_text",
         "todo_readout_text(cx.elements()",
         "todo_filter_label_text(cx.elements()",
+        "usefret_core::",
         "usefret_ui::element::AnyElement;",
         "usefret_ui::Invalidation;",
         ")->AnyElement",

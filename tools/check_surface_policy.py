@@ -197,6 +197,11 @@ DEFAULT_AUTHORING_SURFACES: tuple[SurfacePath, ...] = (
         "copyable simple-todo example view should stay on the app facade",
     ),
     SurfacePath(
+        "apps/fret-examples/src/todo_demo.rs",
+        "default_app_clean",
+        "todo demo should stay on app-facing style, text, env, and typed-action facades",
+    ),
+    SurfacePath(
         "apps/fret-examples/src/query_demo.rs",
         "default_app_clean",
         "default query/read-cache example should stay on app-facing data, time, and text facades",
@@ -1400,15 +1405,6 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
             "Replace with a public workspace-shell starter once AppUi wrappers own command, "
             "overlay, virtual-list, diagnostics, and window lifecycle flows"
         ),
-    ),
-    _fret_examples_advanced_surface(
-        "todo_demo.rs",
-        "the app-facing view still owns low-level text/helper return boundaries while the raw "
-        "runtime cache tests live in the internal harness module",
-        (
-            "fret_core",
-        ),
-        owner="examples-todo",
     ),
     _fret_examples_advanced_surface(
         "components_gallery.rs",

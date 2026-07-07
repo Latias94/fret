@@ -1257,21 +1257,19 @@ class SurfacePolicyTests(unittest.TestCase):
         self.assertIn("fret::advanced", todo_runtime_tests_spec.allowed_raw_seams)
         self.assertIn("fret_runtime", todo_runtime_tests_spec.allowed_raw_seams)
         self.assertIn("UiTree", todo_runtime_tests_spec.allowed_raw_seams)
-        todo_demo_spec = next(
-            (
-                spec
-                for spec in POLICY.ADVANCED_MANUAL_SURFACES
-                if spec.path == "apps/fret-examples/src/todo_demo.rs"
+        self.assertTrue(
+            any(
+                spec.path == "apps/fret-examples/src/todo_demo.rs"
+                for spec in POLICY.DEFAULT_AUTHORING_SURFACES
             ),
-            None,
+            "todo demo should be back on the default app authoring surface",
         )
-        self.assertIsNotNone(
-            todo_demo_spec,
-            "todo demo should stay classified until its AnyElement helper returns are cleaned up",
-        )
-        self.assertEqual(
-            todo_demo_spec.allowed_raw_seams,
-            ("fret_core",),
+        self.assertFalse(
+            any(
+                spec.path == "apps/fret-examples/src/todo_demo.rs"
+                for spec in POLICY.ADVANCED_MANUAL_SURFACES
+            ),
+            "todo demo app source should no longer need advanced/manual quarantine",
         )
         harness_root_spec = next(
             (

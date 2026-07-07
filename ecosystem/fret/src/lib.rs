@@ -176,7 +176,11 @@ pub mod time {
 
 /// Explicit style/token nouns for app code that customizes layout or chrome beyond the default lane.
 pub mod style {
-    pub use fret_core::{Color, Corners, Edges, FontWeight, TextAlign, TextOverflow, TextWrap};
+    pub use fret_core::scene::DashPatternV1;
+    pub use fret_core::{
+        AttributedText, Color, Corners, DecorationLineStyle, Edges, FontWeight, StrikethroughStyle,
+        TextAlign, TextOverflow, TextPaintStyle, TextSpan, TextWrap,
+    };
     pub use fret_ui::element::{ContainerProps, LayoutStyle, Length, Overflow, SizeStyle};
     pub use fret_ui::{Theme, ThemeSnapshot};
     pub use fret_ui_kit::{
@@ -5079,7 +5083,10 @@ mod authoring_surface_policy_tests {
         assert!(LIB_RS.contains("pub use crate::view::LocalState;"));
         assert!(LIB_RS.contains("pub use crate::AppComponentCx;"));
         assert!(LIB_RS.contains("pub use crate::AppRenderCx;"));
-        assert!(LIB_RS.contains("pub use fret_core::{Color, Corners, Edges, FontWeight"));
+        assert!(LIB_RS.contains("pub use fret_core::scene::DashPatternV1;"));
+        assert!(LIB_RS.contains("AttributedText, Color, Corners, DecorationLineStyle, Edges"));
+        assert!(LIB_RS.contains("StrikethroughStyle,"));
+        assert!(LIB_RS.contains("TextPaintStyle, TextSpan, TextWrap"));
         assert!(
             LIB_RS
                 .contains("pub use fret_core::time::{Duration, Instant, SystemTime, UNIX_EPOCH};")
@@ -5392,9 +5399,10 @@ mod authoring_surface_policy_tests {
             root_header
                 .contains("pub use fret_core::time::{Duration, Instant, SystemTime, UNIX_EPOCH};")
         );
-        assert!(root_header.contains(
-            "pub use fret_core::{Color, Corners, Edges, FontWeight, TextAlign, TextOverflow,"
-        ));
+        assert!(root_header.contains("pub use fret_core::scene::DashPatternV1;"));
+        assert!(root_header.contains("AttributedText, Color, Corners, DecorationLineStyle, Edges"));
+        assert!(root_header.contains("StrikethroughStyle,"));
+        assert!(root_header.contains("TextPaintStyle, TextSpan, TextWrap"));
         assert!(root_header.contains("TextWrap};"));
         assert!(root_header.contains(
             "pub use fret_ui::element::{ContainerProps, LayoutStyle, Length, Overflow, SizeStyle};"
