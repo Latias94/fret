@@ -320,6 +320,56 @@ def _fret_examples_manual_chart_surface(filename: str) -> SurfacePath:
     )
 
 
+CUSTOM_EFFECT_REFERENCE_DEMO_FILENAMES = (
+    "custom_effect_v1_demo.rs",
+    "custom_effect_v2_demo.rs",
+    "custom_effect_v3_demo.rs",
+    "custom_effect_v3_web_demo.rs",
+)
+
+CUSTOM_EFFECT_NATIVE_REFERENCE_ALLOWED_RAW_SEAMS = (
+    "fret::advanced",
+    "fret_core",
+    "fret_ui",
+    "AnyElement",
+    "ElementContext",
+)
+
+CUSTOM_EFFECT_WEB_REFERENCE_ALLOWED_RAW_SEAMS = (
+    "fret_app",
+    "fret_core",
+    "fret_launch",
+    "fret_runtime",
+    "FnDriver",
+)
+
+
+def _fret_examples_custom_effect_reference_surface(filename: str) -> SurfacePath:
+    stem = filename.removesuffix(".rs").replace("_", "-")
+    if filename == "custom_effect_v3_web_demo.rs":
+        return _fret_examples_advanced_surface(
+            filename,
+            (
+                "the custom-effect V3 web reference owns manual web runner/bootstrap, direct "
+                "scene/effect composition, and validation for the bounded custom-effect contract"
+            ),
+            CUSTOM_EFFECT_WEB_REFERENCE_ALLOWED_RAW_SEAMS,
+            owner=f"examples-{stem}",
+        )
+
+    variant = filename.removesuffix("_demo.rs").replace("_", " ")
+    return _fret_examples_advanced_surface(
+        filename,
+        (
+            f"the {variant} reference keeps explicit effect/runtime ownership to validate "
+            "renderer/effect ABI wiring for the bounded custom-effect contract instead of "
+            "teaching default app authoring"
+        ),
+        CUSTOM_EFFECT_NATIVE_REFERENCE_ALLOWED_RAW_SEAMS,
+        owner=f"examples-{stem}",
+    )
+
+
 CUSTOM_EFFECT_V2_WEB_ALLOWED_RAW_SEAMS = (
     "fret::advanced",
     "fret_app",
@@ -1189,6 +1239,10 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
         _fret_examples_manual_chart_surface(filename)
         for filename in MANUAL_CHART_DEMO_FILENAMES
     ),
+    *(
+        _fret_examples_custom_effect_reference_surface(filename)
+        for filename in CUSTOM_EFFECT_REFERENCE_DEMO_FILENAMES
+    ),
     _fret_examples_advanced_surface(
         "embedded_viewport_demo.rs",
         "the embedded viewport interop proof owns explicit advanced driver hooks, render target "
@@ -1626,6 +1680,10 @@ PUBLIC_EXAMPLE_SCAN_ROOTS: tuple[str, ...] = (
     *(
         f"apps/fret-examples/src/{filename}"
         for filename in MANUAL_CHART_DEMO_FILENAMES
+    ),
+    *(
+        f"apps/fret-examples/src/{filename}"
+        for filename in CUSTOM_EFFECT_REFERENCE_DEMO_FILENAMES
     ),
     "apps/fret-examples/src/custom_effect_v2_web_demo.rs",
     "apps/fret-examples/src/custom_effect_v2_identity_web_demo.rs",

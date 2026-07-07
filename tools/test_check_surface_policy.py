@@ -856,7 +856,15 @@ class SurfacePolicyTests(unittest.TestCase):
             "apps/fret-examples/src/custom_effect_v2_lut_web_demo.rs",
             "apps/fret-examples/src/custom_effect_v2_glass_chrome_web_demo.rs",
         }
+        custom_effect_reference_paths = {
+            "apps/fret-examples/src/custom_effect_v1_demo.rs",
+            "apps/fret-examples/src/custom_effect_v2_demo.rs",
+            "apps/fret-examples/src/custom_effect_v3_demo.rs",
+            "apps/fret-examples/src/custom_effect_v3_web_demo.rs",
+        }
         for path in custom_effect_v2_web_paths:
+            self.assertIn(path, POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS)
+        for path in custom_effect_reference_paths:
             self.assertIn(path, POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS)
         self.assertTrue(
             any(
@@ -964,6 +972,20 @@ class SurfacePolicyTests(unittest.TestCase):
             )
             self.assertIsNotNone(spec, f"{path} should be classified as advanced/manual")
             self.assertIn("custom-effect parameter/control binding", spec.retirement)
+            self.assertTrue(spec.allowed_raw_seams)
+        for path in custom_effect_reference_paths:
+            spec = next(
+                (
+                    spec
+                    for spec in POLICY.ADVANCED_MANUAL_SURFACES
+                    if spec.path == path
+                ),
+                None,
+            )
+            self.assertIsNotNone(
+                spec, f"{path} should be classified as an advanced custom-effect reference"
+            )
+            self.assertIn("bounded custom-effect contract", spec.reason)
             self.assertTrue(spec.allowed_raw_seams)
         helper_spec = next(
             (
