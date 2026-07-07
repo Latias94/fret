@@ -2863,6 +2863,232 @@ class SurfacePolicyTests(unittest.TestCase):
                 ]
             )
 
+    def test_chart_stress_legacy_retained_authoring_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-examples/src/chart_stress_demo.rs",
+                """
+                use fret_chart::{ChartCanvasPanelBinding, chart_canvas_panel};
+                use fret_chart::{ChartCanvasPanelProps, chart_canvas_panel};
+                use fret_chart::retained::ChartCanvas;
+                use fret_runtime::{Model, PlatformCapabilities};
+                use fret_ui::UiTree;
+                use fret_ui::retained_bridge::Bridge;
+
+                pub struct ChartStressWindowState {
+                    ui: UiTree<App>,
+                    chart: ChartCanvasPanelBinding,
+                }
+
+                impl ChartStressDriver {
+                    fn build_chart(
+                        points: usize,
+                        scatter_lod: Option<SeriesLodSpecV1>,
+                    ) -> (ChartEngine, ChartSpec) {
+                        let _ = points;
+                        let _ = scatter_lod;
+                        (ChartEngine::default(), ChartSpec::default())
+                    }
+                }
+
+                fn create_window_state(driver: &mut ChartStressDriver, app: &mut App) -> ChartStressWindowState {
+                    let (engine, spec) = ChartStressDriver::build_chart(driver.points, driver.scatter_lod);
+                    let chart = ChartCanvasPanelBinding::new(app, spec, engine);
+                    ChartStressWindowState { ui: UiTree::new(), chart }
+                }
+
+                fn render(
+                    driver: &mut ChartStressDriver,
+                    app: &mut App,
+                    services: &mut Services,
+                    window: AppWindowId,
+                    bounds: Rect,
+                    state: &mut ChartStressWindowState,
+                ) {
+                    let chart = state.chart.clone();
+                    let root = fret_ui::declarative::render_root(
+                        &mut state.ui,
+                        app,
+                        services,
+                        window,
+                        bounds,
+                        "chart-stress-demo-root",
+                        move |cx| {
+                            chart.observe_engine_paint(cx);
+                            let props = chart.panel_props();
+                            vec![chart_canvas_panel(cx, props)]
+                        },
+                    );
+                    let _ = root;
+                    let stats = state
+                        .chart
+                        .read_engine(app, |_app, engine| engine.stats().clone())
+                        .unwrap_or_default();
+                    println!(
+                        "chart_stress_demo: points={} avg_declarative_render={:.1}us stage_runs(data/layout/visual/marks)={}/{}/{}/{} emitted(points/marks)={}/{}",
+                        driver.points,
+                        1.0,
+                        stats.stage_data_runs,
+                        stats.stage_layout_runs,
+                        stats.stage_visual_runs,
+                        stats.stage_marks_runs,
+                        stats.points_emitted,
+                        stats.marks_emitted
+                    );
+                }
+
+                struct LegacyChartModels {
+                    engine: Model<ChartEngine>,
+                    spec: ChartSpec,
+                }
+
+                fn bad(app: &mut App, cx: &mut Cx, engine: ChartEngine, spec: ChartSpec) {
+                    let engine = app.models_mut().insert(engine);
+                    let mut props = ChartCanvasPanelProps::new(spec);
+                    props.engine = Some(engine);
+                    cx.observe_model(&engine);
+                    let _ = ChartCanvas::new();
+                    let _ = ChartCanvas::create_node();
+                    let _ = create_node_retained();
+                    let _ = "avg_canvas_paint";
+                }
+
+                struct ChartStressCanvas;
+                impl<H: fret_ui::UiHost> Widget<H> for ChartStressCanvas {}
+                """,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[],
+                internal_harness_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/chart_stress_demo.rs",
+                        "internal_harness",
+                        "fixture chart stress harness",
+                        owner="examples-chart-stress",
+                        allowed_raw_seams=("fret_runtime", "fret_ui", "UiTree"),
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            owner_violations = [
+                violation
+                for violation in violations
+                if violation.rule
+                == "internal-harness-chart-stress-declarative-binding-boundary"
+            ]
+            self.assertGreaterEqual(len(owner_violations), 8)
+            messages = "\n".join(violation.message for violation in owner_violations)
+            self.assertIn("ChartCanvasPanelProps", messages)
+            self.assertIn("ChartCanvas::new", messages)
+            self.assertIn("ChartStressCanvas", messages)
+            self.assertIn("avg_canvas_paint", messages)
+
+    def test_chart_stress_declarative_binding_surface_is_allowed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-examples/src/chart_stress_demo.rs",
+                """
+                use fret_chart::{ChartCanvasPanelBinding, chart_canvas_panel};
+                use fret_runtime::PlatformCapabilities;
+                use fret_ui::UiTree;
+
+                pub struct ChartStressWindowState {
+                    ui: UiTree<App>,
+                    chart: ChartCanvasPanelBinding,
+                }
+
+                impl ChartStressDriver {
+                    fn build_chart(
+                        points: usize,
+                        scatter_lod: Option<SeriesLodSpecV1>,
+                    ) -> (ChartEngine, ChartSpec) {
+                        let _ = points;
+                        let _ = scatter_lod;
+                        (ChartEngine::default(), ChartSpec::default())
+                    }
+                }
+
+                fn create_window_state(driver: &mut ChartStressDriver, app: &mut App) -> ChartStressWindowState {
+                    let (engine, spec) = ChartStressDriver::build_chart(driver.points, driver.scatter_lod);
+                    let chart = ChartCanvasPanelBinding::new(app, spec, engine);
+                    ChartStressWindowState { ui: UiTree::new(), chart }
+                }
+
+                fn render(
+                    driver: &mut ChartStressDriver,
+                    app: &mut App,
+                    services: &mut Services,
+                    window: AppWindowId,
+                    bounds: Rect,
+                    state: &mut ChartStressWindowState,
+                ) {
+                    let chart = state.chart.clone();
+                    let root = fret_ui::declarative::render_root(
+                        &mut state.ui,
+                        app,
+                        services,
+                        window,
+                        bounds,
+                        "chart-stress-demo-root",
+                        move |cx| {
+                            chart.observe_engine_paint(cx);
+                            let props = chart.panel_props();
+                            vec![chart_canvas_panel(cx, props)]
+                        },
+                    );
+                    let _ = root;
+                    let stats = state
+                        .chart
+                        .read_engine(app, |_app, engine| engine.stats().clone())
+                        .unwrap_or_default();
+                    println!(
+                        "chart_stress_demo: points={} avg_declarative_render={:.1}us stage_runs(data/layout/visual/marks)={}/{}/{}/{} emitted(points/marks)={}/{}",
+                        driver.points,
+                        1.0,
+                        stats.stage_data_runs,
+                        stats.stage_layout_runs,
+                        stats.stage_visual_runs,
+                        stats.stage_marks_runs,
+                        stats.points_emitted,
+                        stats.marks_emitted
+                    );
+                }
+                """,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[],
+                internal_harness_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/chart_stress_demo.rs",
+                        "internal_harness",
+                        "fixture chart stress harness",
+                        owner="examples-chart-stress",
+                        allowed_raw_seams=("fret_runtime", "fret_ui", "UiTree"),
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            self.assertFalse(
+                [
+                    violation
+                    for violation in violations
+                    if violation.rule
+                    == "internal-harness-chart-stress-declarative-binding-boundary"
+                ]
+            )
+
     def test_workspace_shell_driver_direct_model_writes_are_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

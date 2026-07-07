@@ -728,6 +728,43 @@ PLOT_STRESS_FORBIDDEN_COMPACT_MARKERS = (
     "app.models_mut().update(&state.plot",
 )
 
+CHART_STRESS_OWNER = "examples-chart-stress"
+
+CHART_STRESS_REQUIRED_COMPACT_MARKERS = (
+    "usefret_chart::{ChartCanvasPanelBinding,chart_canvas_panel};",
+    "chart:ChartCanvasPanelBinding",
+    "fnbuild_chart(",
+    "points:usize,",
+    "scatter_lod:Option<SeriesLodSpecV1>,",
+    ")->(ChartEngine,ChartSpec)",
+    "letchart=ChartCanvasPanelBinding::new(app,spec,engine);",
+    "fret_ui::declarative::render_root(",
+    "chart.observe_engine_paint(cx);",
+    "letprops=chart.panel_props();",
+    "vec![chart_canvas_panel(cx,props)]",
+    ".read_engine(app,|_app,engine|engine.stats().clone())",
+    "chart_stress_demo:points={}avg_declarative_render={:.1}usstage_runs(data/layout/visual/marks)={}/{}/{}/{}emitted(points/marks)={}/{}",
+)
+
+CHART_STRESS_FORBIDDEN_COMPACT_MARKERS = (
+    "usefret_chart::{ChartCanvasPanelProps,chart_canvas_panel};",
+    "usefret_runtime::{Model,PlatformCapabilities};",
+    "engine:Model<ChartEngine>",
+    "spec:ChartSpec",
+    "app.models_mut().insert(engine)",
+    "ChartCanvasPanelProps::new(spec)",
+    "props.engine=Some(engine);",
+    "cx.observe_model(&engine",
+    "usefret_chart::retained::ChartCanvas;",
+    "structChartStressCanvas",
+    "impl<H:fret_ui::UiHost>Widget<H>forChartStressCanvas",
+    "usefret_ui::retained_bridge::",
+    "ChartCanvas::new(",
+    "ChartCanvas::create_node(",
+    "create_node_retained(",
+    "avg_canvas_paint",
+)
+
 WORKSPACE_SHELL_OWNER = "examples-workspace-shell"
 
 WORKSPACE_SHELL_DRIVER_REQUIRED_COMPACT_MARKERS = (
@@ -1580,7 +1617,7 @@ INTERNAL_HARNESS_SURFACES: tuple[SurfacePath, ...] = (
             "FnDriver",
             "UiTree",
         ),
-        owner="examples-chart-stress",
+        owner=CHART_STRESS_OWNER,
     ),
     _fret_examples_internal_harness(
         "virtual_list_stress_demo.rs",
@@ -3086,6 +3123,53 @@ def _scan_plot_stress_declarative_binding_boundary(
     return violations
 
 
+def _scan_chart_stress_declarative_binding_boundary(
+    root: Path, spec: SurfacePath
+) -> list[SurfaceViolation]:
+    if spec.owner != CHART_STRESS_OWNER:
+        return []
+
+    violations: list[SurfaceViolation] = []
+    for path in _iter_source_files(root / spec.path):
+        text = _read_text(path)
+        production_text = text.split("#[cfg(test)]", 1)[0]
+        compact_production = _compact_source(production_text)
+        missing_markers = [
+            marker
+            for marker in CHART_STRESS_REQUIRED_COMPACT_MARKERS
+            if marker not in compact_production
+        ]
+        if missing_markers:
+            violations.append(
+                SurfaceViolation(
+                    rule="internal-harness-chart-stress-declarative-binding-boundary",
+                    path=path,
+                    line_no=1,
+                    message=(
+                        "Chart stress must teach declarative ChartCanvasPanelBinding authoring; "
+                        f"missing compact markers: {', '.join(missing_markers)}"
+                    ),
+                )
+            )
+
+        for marker in CHART_STRESS_FORBIDDEN_COMPACT_MARKERS:
+            if marker not in compact_production:
+                continue
+            violations.append(
+                SurfaceViolation(
+                    rule="internal-harness-chart-stress-declarative-binding-boundary",
+                    path=path,
+                    line_no=1,
+                    message=(
+                        "Chart stress must not regress to retained/manual chart canvas authoring; "
+                        f"compact `{marker}` bypasses the ChartCanvasPanelBinding boundary"
+                    ),
+                )
+            )
+
+    return violations
+
+
 def _scan_workspace_shell_driver_owner_boundary(
     root: Path, spec: SurfacePath
 ) -> list[SurfaceViolation]:
@@ -3930,6 +4014,7 @@ def _scan_classified_raw_surface(root: Path, spec: SurfacePath) -> list[SurfaceV
     violations.extend(_scan_hotpatch_smoke_owner_boundary(root, spec))
     violations.extend(_scan_docking_arbitration_controls_boundary(root, spec))
     violations.extend(_scan_plot_stress_declarative_binding_boundary(root, spec))
+    violations.extend(_scan_chart_stress_declarative_binding_boundary(root, spec))
     violations.extend(_scan_workspace_shell_driver_owner_boundary(root, spec))
     violations.extend(_scan_api_workbench_model_owner_boundary(root, spec))
     violations.extend(_scan_genui_model_owner_boundary(root, spec))
