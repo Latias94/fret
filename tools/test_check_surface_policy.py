@@ -1010,23 +1010,20 @@ class SurfacePolicyTests(unittest.TestCase):
             self.assertIn("utility-window", spec.reason)
             self.assertTrue(spec.allowed_raw_seams)
             self.assertTrue(spec.retirement)
-        async_playground_spec = next(
-            (
-                spec
-                for spec in POLICY.ADVANCED_MANUAL_SURFACES
-                if spec.path == "apps/fret-examples/src/async_playground_demo.rs"
+        self.assertTrue(
+            any(
+                spec.path == "apps/fret-examples/src/async_playground_demo.rs"
+                for spec in POLICY.DEFAULT_AUTHORING_SURFACES
             ),
-            None,
+            "async_playground_demo should be classified as default-clean app authoring",
         )
-        self.assertIsNotNone(
-            async_playground_spec,
-            "async_playground_demo should be classified as an advanced query playground",
+        self.assertFalse(
+            any(
+                spec.path == "apps/fret-examples/src/async_playground_demo.rs"
+                for spec in POLICY.ADVANCED_MANUAL_SURFACES
+            ),
+            "async_playground_demo should not require advanced/manual quarantine",
         )
-        self.assertIn("AnyElement", async_playground_spec.reason)
-        self.assertIn("AnyElement", async_playground_spec.allowed_raw_seams)
-        self.assertNotIn("fret_core", async_playground_spec.allowed_raw_seams)
-        self.assertNotIn("ElementContext", async_playground_spec.allowed_raw_seams)
-        self.assertTrue(async_playground_spec.retirement)
         for path in shadcn_rich_demo_paths:
             spec = next(
                 (

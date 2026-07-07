@@ -212,6 +212,11 @@ DEFAULT_AUTHORING_SURFACES: tuple[SurfacePath, ...] = (
         "default async query example should stay on app-facing data, time, and text facades",
     ),
     SurfacePath(
+        "apps/fret-examples/src/async_playground_demo.rs",
+        "default_app_clean",
+        "async query playground should stay on app-facing data, text, scroll, pressable, and element aliases",
+    ),
+    SurfacePath(
         "apps/fret-examples/src/plot_image_demo.rs",
         "default_app_clean",
         "plot image overlay example should stay on the default declarative plot app surface",
@@ -1553,16 +1558,6 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
             "UiTree",
         ),
         owner="examples-launcher-utility-window-materials",
-    ),
-    _fret_examples_advanced_surface(
-        "async_playground_demo.rs",
-        "the async query lifecycle playground owns dynamic AnyElement child vectors until the app "
-        "facade grows equivalent typed-child wrappers",
-        (
-            "fret_ui",
-            "AnyElement",
-        ),
-        owner="examples-async-query-playground",
     ),
     _fret_examples_advanced_surface(
         "date_picker_demo.rs",

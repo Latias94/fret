@@ -8,8 +8,9 @@ fn async_playground_demo_keeps_visible_text_on_roles() {
     let compact_source = compact(source);
 
     for needle in [
-        "usefret::app::{AppRenderContext,LocalState,RenderContextAccessas_,pressable,text};",
-        "fnasync_chrome_title_text<'a,Cx,T>(cx:&mutCx,text:T)->AnyElement",
+        "usefret::app::{",
+        "AppElement,AppRenderContext,LocalState,RenderContextAccessas_,pressable,text,",
+        "fnasync_chrome_title_text<'a,Cx,T>(cx:&mutCx,text:T)->AppElement",
         "text::chrome_title(cx,text)",
         "text::section_chrome_label(cx,text)",
         "text::list_row_label(cx,text)",
@@ -58,6 +59,8 @@ fn async_playground_demo_keeps_visible_text_on_roles() {
         "PressableProps",
         "PressableA11y",
         "pressable_dispatch_command_if_enabled",
+        "AnyElement",
+        "fret_ui::element",
     ] {
         assert!(
             !compact_source.contains(needle),
@@ -73,7 +76,8 @@ fn async_playground_demo_uses_app_view_imports() {
 
     for needle in [
         "usefret::app::prelude::*;",
-        "usefret::app::{AppRenderContext,LocalState,RenderContextAccessas_,pressable,text};",
+        "usefret::app::{",
+        "AppElement,AppRenderContext,LocalState,RenderContextAccessas_,pressable,text,",
         "usefret::actions::CommandId;",
         "usefret::scroll::ScrollHandle;",
         "usefret::style::ThemeSnapshot;",
@@ -102,6 +106,8 @@ fn async_playground_demo_uses_app_view_imports() {
         "PressableProps",
         "PressableA11y",
         "pressable_dispatch_command_if_enabled",
+        "AnyElement",
+        "fret_ui::element",
         "KernelApp",
         "AppWindowId",
     ] {

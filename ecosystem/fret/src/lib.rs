@@ -652,6 +652,13 @@ pub type AppUi<'cx, 'a, H = crate::app::App> = view::AppUi<'cx, 'a, H>;
 /// Canonical app-facing render return alias for the default authoring surface.
 pub type Ui = fret_ui::element::Elements;
 
+/// Canonical app-facing single-element alias for extracted helper functions.
+///
+/// Prefer returning concrete `impl UiChild` when possible. Use this explicit alias when a helper
+/// must erase heterogeneous element branches without importing raw `fret_ui::element::AnyElement`
+/// into default app code.
+pub type AppElement = fret_ui::element::AnyElement;
+
 /// Canonical app-facing concrete render-context alias for extracted helper ergonomics.
 ///
 /// Prefer `fret::app::AppRenderContext<'a>` for named helper signatures on the default lane.
@@ -784,6 +791,8 @@ mod interop;
 pub mod app {
     /// Canonical app-hosted component/snippet context alias.
     pub use crate::AppComponentCx;
+    /// Canonical app-facing single-element alias for extracted helper functions.
+    pub use crate::AppElement;
     /// Canonical app-facing concrete helper context alias for closure-local or inline helpers.
     pub use crate::AppRenderCx;
     /// Canonical app-facing view trait on the explicit app lane.
@@ -5129,6 +5138,8 @@ mod authoring_surface_policy_tests {
     #[test]
     fn app_and_style_modules_expose_explicit_secondary_app_nouns() {
         let public_surface = crate_public_surface_source();
+        assert!(LIB_RS.contains("pub type AppElement = fret_ui::element::AnyElement;"));
+        assert!(LIB_RS.contains("pub use crate::AppElement;"));
         assert!(LIB_RS.contains("pub use crate::view::LocalState;"));
         assert!(LIB_RS.contains("pub use crate::AppComponentCx;"));
         assert!(LIB_RS.contains("pub use crate::AppRenderCx;"));
@@ -5162,6 +5173,7 @@ mod authoring_surface_policy_tests {
     fn ui_child_alias_uses_unified_component_conversion_trait() {
         let tests_start = LIB_RS.find("#[cfg(test)]").unwrap_or(LIB_RS.len());
         let public_surface = &LIB_RS[..tests_start];
+        assert!(public_surface.contains("pub type AppElement = fret_ui::element::AnyElement;"));
         assert!(
             public_surface
                 .contains("pub trait UiChild: fret_ui_kit::IntoUiElement<crate::app::App>")
@@ -5744,6 +5756,7 @@ mod authoring_surface_policy_tests {
         assert!(!app_prelude_exports_symbol("TypedAction"));
         assert!(!app_prelude_exports_symbol("RouterUiStore"));
         assert!(!app_prelude_exports_symbol("RouterOutlet"));
+        assert!(!app_prelude_exports_symbol("AppElement"));
         assert!(!app_prelude_exports_symbol("UiBuilder"));
         assert!(!app_prelude_exports_symbol("UiPatchTarget"));
         assert!(!app_prelude_exports_symbol("HoverRegionProps"));

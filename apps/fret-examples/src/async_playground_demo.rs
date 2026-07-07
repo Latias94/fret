@@ -7,7 +7,9 @@ use std::time::Duration;
 
 use fret::actions::CommandId;
 use fret::app::prelude::*;
-use fret::app::{AppRenderContext, LocalState, RenderContextAccess as _, pressable, text};
+use fret::app::{
+    AppElement, AppRenderContext, LocalState, RenderContextAccess as _, pressable, text,
+};
 use fret::children::UiElementSinkExt as _;
 use fret::query::{
     CancellationToken, FutureSpawner, FutureSpawnerHandle, QueryCancelMode, QueryError, QueryKey,
@@ -15,7 +17,6 @@ use fret::query::{
 };
 use fret::scroll::ScrollHandle;
 use fret::style::ThemeSnapshot;
-use fret_ui::element::AnyElement;
 use fret_ui_kit::IntoUiElementInExt as _;
 use fret_ui_kit::declarative::QueryHandleWatchExt as _;
 use fret_ui_kit::declarative::UiElementTestIdExt as _;
@@ -43,7 +44,7 @@ const TRANSIENT_INVALIDATE_SELECTED: u64 = 0xAFA0_1002;
 const TRANSIENT_CANCEL_SELECTED: u64 = 0xAFA0_1003;
 const TRANSIENT_INVALIDATE_NAMESPACE: u64 = 0xAFA0_1004;
 
-fn async_chrome_title_text<'a, Cx, T>(cx: &mut Cx, text: T) -> AnyElement
+fn async_chrome_title_text<'a, Cx, T>(cx: &mut Cx, text: T) -> AppElement
 where
     Cx: AppRenderContext<'a>,
     T: Into<Arc<str>>,
@@ -51,7 +52,7 @@ where
     text::chrome_title(cx, text)
 }
 
-fn async_section_text<'a, Cx, T>(cx: &mut Cx, text: T) -> AnyElement
+fn async_section_text<'a, Cx, T>(cx: &mut Cx, text: T) -> AppElement
 where
     Cx: AppRenderContext<'a>,
     T: Into<Arc<str>>,
@@ -59,7 +60,7 @@ where
     text::section_chrome_label(cx, text)
 }
 
-fn async_list_row_text<'a, Cx, T>(cx: &mut Cx, text: T) -> AnyElement
+fn async_list_row_text<'a, Cx, T>(cx: &mut Cx, text: T) -> AppElement
 where
     Cx: AppRenderContext<'a>,
     T: Into<Arc<str>>,
@@ -67,7 +68,7 @@ where
     text::list_row_label(cx, text)
 }
 
-fn async_readout_text<'a, Cx, T>(cx: &mut Cx, text: T) -> AnyElement
+fn async_readout_text<'a, Cx, T>(cx: &mut Cx, text: T) -> AppElement
 where
     Cx: AppRenderContext<'a>,
     T: Into<Arc<str>>,
@@ -75,7 +76,7 @@ where
     text::control_readout(cx, text)
 }
 
-fn async_code_label_text<'a, Cx, T>(cx: &mut Cx, text: T) -> AnyElement
+fn async_code_label_text<'a, Cx, T>(cx: &mut Cx, text: T) -> AppElement
 where
     Cx: AppRenderContext<'a>,
     T: Into<Arc<str>>,
@@ -83,7 +84,7 @@ where
     text::code_label(cx, text)
 }
 
-fn async_compact_paragraph_text<'a, Cx, T>(cx: &mut Cx, text: T) -> AnyElement
+fn async_compact_paragraph_text<'a, Cx, T>(cx: &mut Cx, text: T) -> AppElement
 where
     Cx: AppRenderContext<'a>,
     T: Into<Arc<str>>,
@@ -422,7 +423,7 @@ fn header_bar<'a, Cx>(
     theme: ThemeSnapshot,
     global_slow: bool,
     dark: bool,
-) -> AnyElement
+) -> AppElement
 where
     Cx: AppRenderContext<'a>,
 {
@@ -467,7 +468,7 @@ fn body<'a, Cx>(
     theme: ThemeSnapshot,
     global_slow: bool,
     selected: QueryId,
-) -> AnyElement
+) -> AppElement
 where
     Cx: AppRenderContext<'a>,
 {
@@ -496,7 +497,7 @@ fn catalog_panel<'a, Cx>(
     st: &mut AsyncPlaygroundState,
     theme: ThemeSnapshot,
     selected: QueryId,
-) -> AnyElement
+) -> AppElement
 where
     Cx: AppRenderContext<'a>,
 {
@@ -540,7 +541,7 @@ fn catalog_item<'a, Cx>(
     theme: ThemeSnapshot,
     selected: QueryId,
     id: QueryId,
-) -> AnyElement
+) -> AppElement
 where
     Cx: AppRenderContext<'a>,
 {
@@ -598,7 +599,7 @@ fn main_panel<'a, Cx>(
     theme: ThemeSnapshot,
     global_slow: bool,
     selected: QueryId,
-) -> AnyElement
+) -> AppElement
 where
     Cx: AppRenderContext<'a>,
 {
@@ -622,7 +623,7 @@ where
         .into_element_in(cx);
 
     let header_row = ui::h_flex(|cx| {
-        let spacer = ui::container(|_cx| Vec::<AnyElement>::new())
+        let spacer = ui::container(|_cx| Vec::<AppElement>::new())
             .flex_grow(1.0)
             .into_element(cx);
         [title, spacer, actions]
@@ -648,14 +649,14 @@ where
     let sync_panel = if mode == FetchMode::Sync {
         query_panel_for_mode(cx, st, locals, global_slow, selected, FetchMode::Sync)
     } else {
-        ui::container(|_cx| Vec::<AnyElement>::new())
+        ui::container(|_cx| Vec::<AppElement>::new())
             .h_full()
             .into_element_in(cx)
     };
     let async_panel = if mode == FetchMode::Async {
         query_panel_for_mode(cx, st, locals, global_slow, selected, FetchMode::Async)
     } else {
-        ui::container(|_cx| Vec::<AnyElement>::new())
+        ui::container(|_cx| Vec::<AppElement>::new())
             .h_full()
             .into_element_in(cx)
     };
@@ -696,7 +697,7 @@ fn inspector_panel<'a, Cx>(
     locals: &AsyncPlaygroundLocals,
     theme: ThemeSnapshot,
     selected: QueryId,
-) -> AnyElement
+) -> AppElement
 where
     Cx: AppRenderContext<'a>,
 {
@@ -777,7 +778,7 @@ where
         .into_element_in(cx)
 }
 
-fn policy_editor<'a, Cx>(cx: &mut Cx, st: &mut AsyncPlaygroundState, id: QueryId) -> AnyElement
+fn policy_editor<'a, Cx>(cx: &mut Cx, st: &mut AsyncPlaygroundState, id: QueryId) -> AppElement
 where
     Cx: AppRenderContext<'a>,
 {
@@ -834,7 +835,7 @@ fn query_panel_for_mode<'a, Cx>(
     global_slow: bool,
     selected: QueryId,
     mode: FetchMode,
-) -> AnyElement
+) -> AppElement
 where
     Cx: AppRenderContext<'a>,
 {
@@ -888,11 +889,11 @@ where
         .into_element_in(cx)
 }
 
-fn query_inputs_row<'a, Cx>(cx: &mut Cx, locals: &AsyncPlaygroundLocals, id: QueryId) -> AnyElement
+fn query_inputs_row<'a, Cx>(cx: &mut Cx, locals: &AsyncPlaygroundLocals, id: QueryId) -> AppElement
 where
     Cx: AppRenderContext<'a>,
 {
-    let mut children: Vec<AnyElement> = Vec::new();
+    let mut children: Vec<AppElement> = Vec::new();
     children.push(async_compact_paragraph_text(
         cx,
         match id {
@@ -936,7 +937,7 @@ fn query_result_view<'a, Cx>(
     state: &QueryState<Arc<str>>,
     snap: Option<&QuerySnapshotEntry>,
     policy: &QueryPolicy,
-) -> AnyElement
+) -> AppElement
 where
     Cx: AppRenderContext<'a>,
 {
@@ -995,7 +996,7 @@ where
 
     let header = ui::h_flex(|cx| {
         let title = async_section_text(cx, "Result");
-        let spacer = ui::container(|_cx| Vec::<AnyElement>::new())
+        let spacer = ui::container(|_cx| Vec::<AppElement>::new())
             .flex_grow(1.0)
             .into_element(cx);
         [title, spacer, badge]
@@ -1128,7 +1129,7 @@ fn observe_query_diag(
     st.last_diag.insert(id, diag);
 }
 
-fn status_badge<'a, Cx>(cx: &mut Cx, diag: Option<&QueryDiag>) -> AnyElement
+fn status_badge<'a, Cx>(cx: &mut Cx, diag: Option<&QueryDiag>) -> AppElement
 where
     Cx: AppRenderContext<'a>,
 {
