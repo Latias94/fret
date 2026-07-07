@@ -14,7 +14,6 @@ use fret_core::{
     TextSpan,
 };
 use fret_ui::Invalidation;
-use fret_ui::element::AnyElement;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::{WidgetStateProperty, WidgetStates};
 
@@ -50,41 +49,46 @@ const TODO_COMPACT_WIDTH: Px = Px(560.0);
 const TODO_COMPACT_HEIGHT: Px = Px(640.0);
 const TODO_ROOMY_HEIGHT: Px = Px(760.0);
 
-fn todo_readout_text<'a, Cx>(cx: &mut Cx, text: impl Into<Arc<str>>) -> AnyElement
+fn todo_readout_text<'a, Cx, T>(cx: &mut Cx, text: T) -> impl UiChild + use<Cx, T>
 where
     Cx: fret::app::AppRenderContext<'a>,
+    T: Into<Arc<str>>,
 {
     text::control_readout(cx, text)
 }
 
-fn todo_chrome_title_text<'a, Cx>(cx: &mut Cx, text: impl Into<Arc<str>>) -> AnyElement
+fn todo_chrome_title_text<'a, Cx, T>(cx: &mut Cx, text: T) -> impl UiChild + use<Cx, T>
 where
     Cx: fret::app::AppRenderContext<'a>,
+    T: Into<Arc<str>>,
 {
     text::chrome_title(cx, text)
 }
 
-fn todo_compact_paragraph_text<'a, Cx>(cx: &mut Cx, text: impl Into<Arc<str>>) -> AnyElement
+fn todo_compact_paragraph_text<'a, Cx, T>(cx: &mut Cx, text: T) -> impl UiChild + use<Cx, T>
 where
     Cx: fret::app::AppRenderContext<'a>,
+    T: Into<Arc<str>>,
 {
     text::compact_paragraph(cx, text)
 }
 
-fn todo_filter_label_text<'a, Cx>(cx: &mut Cx, text: impl Into<Arc<str>>) -> AnyElement
+fn todo_filter_label_text<'a, Cx, T>(cx: &mut Cx, text: T) -> impl UiChild + use<Cx, T>
 where
     Cx: fret::app::AppRenderContext<'a>,
+    T: Into<Arc<str>>,
 {
     text::button_label(cx, text)
 }
 
-fn todo_row_label_text<'a, Cx>(
+fn todo_row_label_text<'a, Cx, T>(
     cx: &mut Cx,
-    text: impl Into<Arc<str>>,
+    text: T,
     foreground: Color,
-) -> AnyElement
+) -> impl UiChild + use<Cx, T>
 where
     Cx: fret::app::AppRenderContext<'a>,
+    T: Into<Arc<str>>,
 {
     text::list_row_label_with_foreground(cx, text, foreground)
 }
@@ -93,7 +97,7 @@ fn todo_attributed_row_label_text<'a, Cx>(
     cx: &mut Cx,
     rich: AttributedText,
     foreground: Color,
-) -> AnyElement
+) -> impl UiChild + use<Cx>
 where
     Cx: fret::app::AppRenderContext<'a>,
 {
@@ -372,7 +376,7 @@ impl View for TodoDemoView {
         .shadow_sm();
 
         let status_line = if total_count == 0 {
-            todo_readout_text(cx, "Add a task to get started")
+            todo_readout_text(cx, "Add a task to get started").into_element_in(cx)
         } else if active_count == 0 {
             ui::h_flex(|cx| {
                 let completed_text = todo_readout_text(cx, "All tasks completed");
@@ -392,7 +396,7 @@ impl View for TodoDemoView {
             .into_element_in(cx)
         } else {
             let task_label = if active_count == 1 { "task" } else { "tasks" };
-            todo_readout_text(cx, format!("{active_count} {task_label} left"))
+            todo_readout_text(cx, format!("{active_count} {task_label} left")).into_element_in(cx)
         };
 
         let title_block = ui::v_flex(|cx| {
@@ -540,7 +544,7 @@ impl View for TodoDemoView {
                 |row| row.id,
                 |cx, row| {
                     let theme = theme.clone();
-                    todo_row(cx, theme, row, responsive.always_show_row_actions)
+                    todo_row(cx, theme, row, responsive.always_show_row_actions).into_element_in(cx)
                 },
             )
         })
@@ -566,7 +570,7 @@ impl View for TodoDemoView {
             .flex_1()
             .min_h_0();
 
-        let filters = filter_group(cx, &locals.filter, theme.clone());
+        let filters = filter_group(cx, &locals.filter, theme.clone()).into_element_in(cx);
 
         let clear_done_btn = shadcn::Button::new("Clear completed")
             .variant(shadcn::ButtonVariant::Ghost)
@@ -696,7 +700,7 @@ fn filter_group<'a, Cx>(
     cx: &mut Cx,
     filter: &LocalState<Option<Arc<str>>>,
     theme: ThemeSnapshot,
-) -> AnyElement
+) -> impl UiChild + use<Cx>
 where
     Cx: fret::app::ElementContextAccess<'a, App>,
 {
@@ -752,7 +756,7 @@ fn filter_group_item<'a, Cx>(
 where
     Cx: fret::app::ElementContextAccess<'a, App>,
 {
-    let label = todo_filter_label_text(cx, filter.label());
+    let label = todo_filter_label_text(cx, filter.label()).into_element_in(cx);
     shadcn::ToggleGroupItem::new(filter.value(), [label])
         .a11y_label(format!("Show {} tasks", filter.label().to_lowercase()))
         .test_id(test_id)
@@ -769,7 +773,7 @@ fn todo_row<'a, Cx>(
     theme: ThemeSnapshot,
     row: &TodoRow,
     always_show_remove_action: bool,
-) -> AnyElement
+) -> impl UiChild + use<Cx>
 where
     Cx: fret::app::ElementContextAccess<'a, App>,
 {
@@ -829,9 +833,9 @@ where
 
         let text = if row_done {
             let rich = rich_strikethrough(&row_text, muted_foreground);
-            todo_attributed_row_label_text(cx, rich, muted_foreground)
+            todo_attributed_row_label_text(cx, rich, muted_foreground).into_element(cx)
         } else {
-            todo_row_label_text(cx, row_text.clone(), foreground)
+            todo_row_label_text(cx, row_text.clone(), foreground).into_element(cx)
         };
 
         let leading = ui::h_flex(|cx| ui::children![cx; toggle, text])

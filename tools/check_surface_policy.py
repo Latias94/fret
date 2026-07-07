@@ -1408,7 +1408,6 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
         (
             "fret_core",
             "fret_ui",
-            "AnyElement",
         ),
         owner="examples-todo",
     ),
