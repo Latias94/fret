@@ -275,6 +275,51 @@ def _fret_examples_advanced_surface(
     )
 
 
+MANUAL_CHART_DEMO_FILENAMES = (
+    "area_demo.rs",
+    "bars_demo.rs",
+    "candlestick_demo.rs",
+    "category_line_demo.rs",
+    "chart_demo.rs",
+    "error_bars_demo.rs",
+    "grouped_bars_demo.rs",
+    "heatmap_demo.rs",
+    "histogram2d_demo.rs",
+    "histogram_demo.rs",
+    "horizontal_bars_demo.rs",
+    "inf_lines_demo.rs",
+    "linked_cursor_demo.rs",
+    "plot3d_demo.rs",
+    "shaded_demo.rs",
+    "stacked_bars_demo.rs",
+    "stairs_demo.rs",
+    "stems_demo.rs",
+)
+
+MANUAL_CHART_ALLOWED_RAW_SEAMS = (
+    "fret_app",
+    "fret_core",
+    "fret_launch",
+    "fret_runtime",
+    "fret_ui",
+    "FnDriver",
+    "UiTree",
+)
+
+
+def _fret_examples_manual_chart_surface(filename: str) -> SurfacePath:
+    stem = filename.removesuffix(".rs").replace("_", "-")
+    return _fret_examples_advanced_surface(
+        filename,
+        (
+            "it owns a manual retained-chart demo runner with FnDriver/UiTree lifecycle and "
+            "direct chart viewport wiring"
+        ),
+        MANUAL_CHART_ALLOWED_RAW_SEAMS,
+        owner=f"examples-chart-{stem}",
+    )
+
+
 CUSTOM_EFFECT_V2_WEB_ALLOWED_RAW_SEAMS = (
     "fret::advanced",
     "fret_app",
@@ -1140,6 +1185,10 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
         ),
         owner=DATATABLE_OWNER,
     ),
+    *(
+        _fret_examples_manual_chart_surface(filename)
+        for filename in MANUAL_CHART_DEMO_FILENAMES
+    ),
     _fret_examples_advanced_surface(
         "embedded_viewport_demo.rs",
         "the embedded viewport interop proof owns explicit advanced driver hooks, render target "
@@ -1574,6 +1623,10 @@ PUBLIC_EXAMPLE_SCAN_ROOTS: tuple[str, ...] = (
     "apps/fret-examples/src/table_stress_demo.rs",
     "apps/fret-examples/src/canvas_datagrid_stress_demo.rs",
     "apps/fret-examples/src/datatable_demo.rs",
+    *(
+        f"apps/fret-examples/src/{filename}"
+        for filename in MANUAL_CHART_DEMO_FILENAMES
+    ),
     "apps/fret-examples/src/custom_effect_v2_web_demo.rs",
     "apps/fret-examples/src/custom_effect_v2_identity_web_demo.rs",
     "apps/fret-examples/src/custom_effect_v2_lut_web_demo.rs",

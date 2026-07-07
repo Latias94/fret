@@ -790,6 +790,28 @@ class SurfacePolicyTests(unittest.TestCase):
             "apps/fret-examples/src/chart_stress_demo.rs",
             POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS,
         )
+        manual_chart_paths = {
+            "apps/fret-examples/src/area_demo.rs",
+            "apps/fret-examples/src/bars_demo.rs",
+            "apps/fret-examples/src/candlestick_demo.rs",
+            "apps/fret-examples/src/category_line_demo.rs",
+            "apps/fret-examples/src/chart_demo.rs",
+            "apps/fret-examples/src/error_bars_demo.rs",
+            "apps/fret-examples/src/grouped_bars_demo.rs",
+            "apps/fret-examples/src/heatmap_demo.rs",
+            "apps/fret-examples/src/histogram2d_demo.rs",
+            "apps/fret-examples/src/histogram_demo.rs",
+            "apps/fret-examples/src/horizontal_bars_demo.rs",
+            "apps/fret-examples/src/inf_lines_demo.rs",
+            "apps/fret-examples/src/linked_cursor_demo.rs",
+            "apps/fret-examples/src/plot3d_demo.rs",
+            "apps/fret-examples/src/shaded_demo.rs",
+            "apps/fret-examples/src/stacked_bars_demo.rs",
+            "apps/fret-examples/src/stairs_demo.rs",
+            "apps/fret-examples/src/stems_demo.rs",
+        }
+        for path in manual_chart_paths:
+            self.assertIn(path, POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS)
         self.assertIn(
             "apps/fret-examples/src/virtual_list_stress_demo.rs",
             POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS,
@@ -912,6 +934,11 @@ class SurfacePolicyTests(unittest.TestCase):
             if spec.path == "apps/fret-examples/src/echarts_demo.rs"
         )
         self.assertNotIn("fret_runtime", echarts_spec.allowed_raw_seams)
+        for chart_path in manual_chart_paths:
+            self.assertTrue(
+                any(spec.path == chart_path for spec in POLICY.ADVANCED_MANUAL_SURFACES),
+                f"{chart_path} should be classified as an advanced manual chart surface",
+            )
         for chart_path in {
             "apps/fret-examples/src/echarts_multi_grid_demo.rs",
             "apps/fret-examples/src/chart_multi_axis_demo.rs",
