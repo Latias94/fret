@@ -972,6 +972,65 @@ fn histogram2d_demo_uses_manual_harness_declarative_histogram2d_plot_panel() {
 }
 
 #[test]
+fn chart_demo_uses_manual_harness_declarative_chart_canvas_panel_binding() {
+    let source = compact(include_str!("../src/chart_demo.rs"));
+
+    for needle in [
+        "usefret_chart::{ChartCanvasPanelBinding,chart_canvas_panel};",
+        "chart:ChartCanvasPanelBinding",
+        "fnbuild_chart()->(ChartEngine,ChartSpec)",
+        "AxisScale::Time(TimeAxisScale)",
+        "name:Some(\"Left\".to_string())",
+        "name:Some(\"Right\".to_string())",
+        "position:Some(AxisPosition::Right)",
+        "axis_pointer:Some(delinea::AxisPointerSpec{",
+        "name:Some(\"StackA(area)\".to_string())",
+        "name:Some(\"StackB(area)\".to_string())",
+        "kind:SeriesKind::Area",
+        "area_baseline:Some(AreaBaseline::Zero)",
+        "stack:Some(stack_id)",
+        "name:Some(\"Rightaxis(line)\".to_string())",
+        "kind:SeriesKind::Line",
+        "y_axis:y_right_axis",
+        "engine.datasets_mut().insert(dataset_id,table);",
+        "letchart=ChartCanvasPanelBinding::new(app,spec,engine);",
+        "fret_ui::declarative::render_root(",
+        "\"chart-demo-root\"",
+        "chart.observe_engine_paint(cx);",
+        "letprops=chart.panel_props();",
+        "vec![chart_canvas_panel(cx,props)]",
+    ] {
+        assert!(
+            source.contains(needle),
+            "chart_demo manual harness should use declarative chart canvas binding authoring; missing `{needle}`"
+        );
+    }
+
+    for legacy in [
+        "usefret_chart::{ChartCanvasPanelProps,chart_canvas_panel};",
+        "usefret_chart::retained",
+        "fret_chart::retained::",
+        "fret_runtime::Model<",
+        "engine:Model<ChartEngine>",
+        "output:Model<ChartCanvasOutput>",
+        "app.models_mut().insert(engine)",
+        "app.models_mut().insert(ChartEngine::",
+        "ChartCanvasPanelProps::new(",
+        "props.engine=Some(engine);",
+        ".output_model(",
+        "cx.observe_model(&engine",
+        "ChartCanvas::new(",
+        "ChartCanvas::create_node(",
+        "create_node_retained(",
+    ] {
+        assert!(
+            !source.contains(legacy),
+            "chart_demo should not teach retained/manual chart canvas authoring; unexpected `{legacy}`"
+        );
+    }
+}
+
+#[test]
 fn bars_demo_uses_manual_harness_declarative_chart_canvas_panel_binding() {
     let source = compact(include_str!("../src/bars_demo.rs"));
 

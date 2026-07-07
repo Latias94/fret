@@ -512,6 +512,17 @@ def _fret_examples_manual_chart_surface(filename: str) -> SurfacePath:
             MANUAL_CHART_ALLOWED_RAW_SEAMS,
             owner=CHART_BARS_OWNER,
         )
+    if filename == "chart_demo.rs":
+        return _fret_examples_advanced_surface(
+            filename,
+            (
+                "it owns a manual multi-axis chart runner with FnDriver/UiTree lifecycle "
+                "while time axis, stacked area series, right-axis line series, dataset "
+                "insertion, and panel wiring route through ChartCanvasPanelBinding"
+            ),
+            MANUAL_CHART_ALLOWED_RAW_SEAMS,
+            owner=CHART_DEMO_OWNER,
+        )
     if filename == "category_line_demo.rs":
         return _fret_examples_advanced_surface(
             filename,
@@ -1627,6 +1638,34 @@ CHART_STRESS_FORBIDDEN_COMPACT_MARKERS = (
     "avg_canvas_paint",
 )
 
+CHART_DEMO_OWNER = "examples-chart-demo"
+
+CHART_DEMO_REQUIRED_COMPACT_MARKERS = (
+    "usefret_chart::{ChartCanvasPanelBinding,chart_canvas_panel};",
+    "chart:ChartCanvasPanelBinding",
+    "fnbuild_chart()->(ChartEngine,ChartSpec)",
+    "AxisScale::Time(TimeAxisScale)",
+    'name:Some("Left".to_string())',
+    'name:Some("Right".to_string())',
+    "position:Some(AxisPosition::Right)",
+    "axis_pointer:Some(delinea::AxisPointerSpec{",
+    'name:Some("StackA(area)".to_string())',
+    'name:Some("StackB(area)".to_string())',
+    "kind:SeriesKind::Area",
+    "area_baseline:Some(AreaBaseline::Zero)",
+    "stack:Some(stack_id)",
+    'name:Some("Rightaxis(line)".to_string())',
+    "kind:SeriesKind::Line",
+    "y_axis:y_right_axis",
+    "engine.datasets_mut().insert(dataset_id,table);",
+    "letchart=ChartCanvasPanelBinding::new(app,spec,engine);",
+    "fret_ui::declarative::render_root(",
+    '"chart-demo-root"',
+    "chart.observe_engine_paint(cx);",
+    "letprops=chart.panel_props();",
+    "vec![chart_canvas_panel(cx,props)]",
+)
+
 CHART_BARS_OWNER = "examples-chart-bars"
 
 CHART_BARS_REQUIRED_COMPACT_MARKERS = (
@@ -1659,6 +1698,8 @@ CHART_BARS_FORBIDDEN_COMPACT_MARKERS = (
     "ChartCanvas::create_node(",
     "create_node_retained(",
 )
+
+CHART_DEMO_FORBIDDEN_COMPACT_MARKERS = CHART_BARS_FORBIDDEN_COMPACT_MARKERS
 
 CHART_CATEGORY_LINE_OWNER = "examples-chart-category-line"
 
@@ -1702,6 +1743,21 @@ CHART_HORIZONTAL_BARS_REQUIRED_COMPACT_MARKERS = (
 CHART_HORIZONTAL_BARS_FORBIDDEN_COMPACT_MARKERS = CHART_BARS_FORBIDDEN_COMPACT_MARKERS
 
 CHART_CANVAS_BINDING_BOUNDARIES: tuple[CompactSourceBoundary, ...] = (
+    CompactSourceBoundary(
+        owner=CHART_DEMO_OWNER,
+        rule="advanced-surface-chart-demo-declarative-binding-boundary",
+        required_markers=CHART_DEMO_REQUIRED_COMPACT_MARKERS,
+        forbidden_markers=CHART_DEMO_FORBIDDEN_COMPACT_MARKERS,
+        missing_message_template=(
+            "Chart demo must keep time axis, stacked area series, right-axis line series, "
+            "dataset insertion, and panel wiring on ChartCanvasPanelBinding; "
+            "missing compact markers: {missing_markers}"
+        ),
+        forbidden_message_template=(
+            "Chart demo must not expose retained/manual chart canvas state or output "
+            "wiring; compact `{marker}` bypasses the ChartCanvasPanelBinding boundary"
+        ),
+    ),
     CompactSourceBoundary(
         owner=CHART_BARS_OWNER,
         rule="advanced-surface-chart-bars-declarative-binding-boundary",

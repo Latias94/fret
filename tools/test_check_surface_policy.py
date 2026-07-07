@@ -6299,6 +6299,303 @@ class SurfacePolicyTests(unittest.TestCase):
                 ]
             )
 
+    def test_chart_demo_legacy_retained_authoring_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-examples/src/chart_demo.rs",
+                """
+                use fret_chart::{ChartCanvasPanelBinding, chart_canvas_panel};
+                use fret_chart::{ChartCanvasPanelProps, chart_canvas_panel};
+                use fret_chart::retained::ChartCanvas;
+                use fret_runtime::Model;
+                use fret_ui::UiTree;
+
+                struct ChartDemoWindowState {
+                    ui: UiTree<App>,
+                    chart: ChartCanvasPanelBinding,
+                }
+
+                impl ChartDemoDriver {
+                    fn build_chart() -> (ChartEngine, ChartSpec) {
+                        let dataset_id = delinea::ids::DatasetId::new(1);
+                        let x_axis = AxisId::new(1);
+                        let y_left_axis = AxisId::new(2);
+                        let y_right_axis = AxisId::new(3);
+                        let stack_id = StackId::new(1);
+                        let spec = ChartSpec {
+                            axes: vec![
+                                delinea::AxisSpec {
+                                    name: Some("Left".to_string()),
+                                    kind: AxisKind::Y,
+                                    scale: Default::default(),
+                                    ..Default::default()
+                                },
+                                delinea::AxisSpec {
+                                    name: Some("Right".to_string()),
+                                    kind: AxisKind::Y,
+                                    position: Some(AxisPosition::Right),
+                                    scale: Default::default(),
+                                    ..Default::default()
+                                },
+                                delinea::AxisSpec {
+                                    id: x_axis,
+                                    kind: AxisKind::X,
+                                    scale: AxisScale::Time(TimeAxisScale),
+                                    ..Default::default()
+                                },
+                            ],
+                            axis_pointer: Some(delinea::AxisPointerSpec {
+                                enabled: true,
+                                ..Default::default()
+                            }),
+                            series: vec![
+                                SeriesSpec {
+                                    name: Some("Stack A (area)".to_string()),
+                                    kind: SeriesKind::Area,
+                                    y_axis: y_left_axis,
+                                    stack: Some(stack_id),
+                                    area_baseline: Some(AreaBaseline::Zero),
+                                    ..Default::default()
+                                },
+                                SeriesSpec {
+                                    name: Some("Stack B (area)".to_string()),
+                                    kind: SeriesKind::Area,
+                                    y_axis: y_left_axis,
+                                    stack: Some(stack_id),
+                                    area_baseline: Some(AreaBaseline::Zero),
+                                    ..Default::default()
+                                },
+                                SeriesSpec {
+                                    name: Some("Right axis (line)".to_string()),
+                                    kind: SeriesKind::Line,
+                                    y_axis: y_right_axis,
+                                    ..Default::default()
+                                },
+                            ],
+                            ..Default::default()
+                        };
+                        let mut engine = ChartEngine::new(spec.clone()).expect("chart spec should be valid");
+                        let mut table = DataTable::default();
+                        engine.datasets_mut().insert(dataset_id, table);
+                        (engine, spec)
+                    }
+
+                    fn build_ui(app: &mut App) -> ChartDemoWindowState {
+                        let (engine, spec) = Self::build_chart();
+                        let chart = ChartCanvasPanelBinding::new(app, spec, engine);
+                        ChartDemoWindowState { ui: UiTree::new(), chart }
+                    }
+                }
+
+                fn render(
+                    app: &mut App,
+                    services: &mut Services,
+                    window: AppWindowId,
+                    bounds: Rect,
+                    state: &mut ChartDemoWindowState,
+                ) {
+                    let chart = state.chart.clone();
+                    let root = fret_ui::declarative::render_root(
+                        &mut state.ui,
+                        app,
+                        services,
+                        window,
+                        bounds,
+                        "chart-demo-root",
+                        move |cx| {
+                            chart.observe_engine_paint(cx);
+                            let props = chart.panel_props();
+                            vec![chart_canvas_panel(cx, props)]
+                        },
+                    );
+                    let _ = root;
+                }
+
+                struct LegacyChartDemoCanvas {
+                    engine: Model<ChartEngine>,
+                    output: Model<ChartCanvasOutput>,
+                }
+
+                fn bad(app: &mut App, cx: &mut Cx, engine: ChartEngine, spec: ChartSpec) {
+                    let engine = app.models_mut().insert(engine);
+                    let output = app.models_mut().insert(ChartCanvasOutput::default());
+                    let _other = app.models_mut().insert(ChartEngine::default());
+                    let mut props = ChartCanvasPanelProps::new(spec).output_model(output);
+                    props.engine = Some(engine);
+                    cx.observe_model(&engine);
+                    let _ = ChartCanvas::new();
+                    let _ = ChartCanvas::create_node();
+                    create_node_retained();
+                }
+                """,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/chart_demo.rs",
+                        "advanced_manual",
+                        "fixture chart demo",
+                        owner="examples-chart-demo",
+                        allowed_raw_seams=("fret_runtime", "fret_ui", "UiTree"),
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            owner_violations = [
+                violation
+                for violation in violations
+                if violation.rule == "advanced-surface-chart-demo-declarative-binding-boundary"
+            ]
+            self.assertGreaterEqual(len(owner_violations), 8)
+            messages = "\n".join(violation.message for violation in owner_violations)
+            self.assertIn("ChartCanvasPanelProps", messages)
+            self.assertIn("ChartCanvas::new", messages)
+            self.assertIn("ChartCanvas::create_node", messages)
+            self.assertIn("ChartCanvasOutput", messages)
+
+    def test_chart_demo_declarative_binding_surface_is_allowed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-examples/src/chart_demo.rs",
+                """
+                use fret_chart::{ChartCanvasPanelBinding, chart_canvas_panel};
+                use fret_ui::UiTree;
+
+                struct ChartDemoWindowState {
+                    ui: UiTree<App>,
+                    chart: ChartCanvasPanelBinding,
+                }
+
+                impl ChartDemoDriver {
+                    fn build_chart() -> (ChartEngine, ChartSpec) {
+                        let dataset_id = delinea::ids::DatasetId::new(1);
+                        let x_axis = AxisId::new(1);
+                        let y_left_axis = AxisId::new(2);
+                        let y_right_axis = AxisId::new(3);
+                        let stack_id = StackId::new(1);
+                        let spec = ChartSpec {
+                            axes: vec![
+                                delinea::AxisSpec {
+                                    name: Some("Left".to_string()),
+                                    kind: AxisKind::Y,
+                                    scale: Default::default(),
+                                    ..Default::default()
+                                },
+                                delinea::AxisSpec {
+                                    name: Some("Right".to_string()),
+                                    kind: AxisKind::Y,
+                                    position: Some(AxisPosition::Right),
+                                    scale: Default::default(),
+                                    ..Default::default()
+                                },
+                                delinea::AxisSpec {
+                                    id: x_axis,
+                                    kind: AxisKind::X,
+                                    scale: AxisScale::Time(TimeAxisScale),
+                                    ..Default::default()
+                                },
+                            ],
+                            axis_pointer: Some(delinea::AxisPointerSpec {
+                                enabled: true,
+                                ..Default::default()
+                            }),
+                            series: vec![
+                                SeriesSpec {
+                                    name: Some("Stack A (area)".to_string()),
+                                    kind: SeriesKind::Area,
+                                    y_axis: y_left_axis,
+                                    stack: Some(stack_id),
+                                    area_baseline: Some(AreaBaseline::Zero),
+                                    ..Default::default()
+                                },
+                                SeriesSpec {
+                                    name: Some("Stack B (area)".to_string()),
+                                    kind: SeriesKind::Area,
+                                    y_axis: y_left_axis,
+                                    stack: Some(stack_id),
+                                    area_baseline: Some(AreaBaseline::Zero),
+                                    ..Default::default()
+                                },
+                                SeriesSpec {
+                                    name: Some("Right axis (line)".to_string()),
+                                    kind: SeriesKind::Line,
+                                    y_axis: y_right_axis,
+                                    ..Default::default()
+                                },
+                            ],
+                            ..Default::default()
+                        };
+                        let mut engine = ChartEngine::new(spec.clone()).expect("chart spec should be valid");
+                        let mut table = DataTable::default();
+                        engine.datasets_mut().insert(dataset_id, table);
+                        (engine, spec)
+                    }
+
+                    fn build_ui(app: &mut App) -> ChartDemoWindowState {
+                        let (engine, spec) = Self::build_chart();
+                        let chart = ChartCanvasPanelBinding::new(app, spec, engine);
+                        ChartDemoWindowState { ui: UiTree::new(), chart }
+                    }
+                }
+
+                fn render(
+                    app: &mut App,
+                    services: &mut Services,
+                    window: AppWindowId,
+                    bounds: Rect,
+                    state: &mut ChartDemoWindowState,
+                ) {
+                    let chart = state.chart.clone();
+                    let root = fret_ui::declarative::render_root(
+                        &mut state.ui,
+                        app,
+                        services,
+                        window,
+                        bounds,
+                        "chart-demo-root",
+                        move |cx| {
+                            chart.observe_engine_paint(cx);
+                            let props = chart.panel_props();
+                            vec![chart_canvas_panel(cx, props)]
+                        },
+                    );
+                    let _ = root;
+                }
+                """,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/chart_demo.rs",
+                        "advanced_manual",
+                        "fixture chart demo",
+                        owner="examples-chart-demo",
+                        allowed_raw_seams=("fret_ui", "UiTree"),
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            self.assertFalse(
+                [
+                    violation
+                    for violation in violations
+                    if violation.rule
+                    == "advanced-surface-chart-demo-declarative-binding-boundary"
+                ]
+            )
+
     def test_chart_bars_legacy_retained_authoring_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
