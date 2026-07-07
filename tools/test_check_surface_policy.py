@@ -862,9 +862,16 @@ class SurfacePolicyTests(unittest.TestCase):
             "apps/fret-examples/src/custom_effect_v3_demo.rs",
             "apps/fret-examples/src/custom_effect_v3_web_demo.rs",
         }
+        streaming_import_paths = {
+            "apps/fret-examples/src/streaming_i420_demo.rs",
+            "apps/fret-examples/src/streaming_image_demo.rs",
+            "apps/fret-examples/src/streaming_nv12_demo.rs",
+        }
         for path in custom_effect_v2_web_paths:
             self.assertIn(path, POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS)
         for path in custom_effect_reference_paths:
+            self.assertIn(path, POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS)
+        for path in streaming_import_paths:
             self.assertIn(path, POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS)
         self.assertTrue(
             any(
@@ -986,6 +993,20 @@ class SurfacePolicyTests(unittest.TestCase):
                 spec, f"{path} should be classified as an advanced custom-effect reference"
             )
             self.assertIn("bounded custom-effect contract", spec.reason)
+            self.assertTrue(spec.allowed_raw_seams)
+        for path in streaming_import_paths:
+            spec = next(
+                (
+                    spec
+                    for spec in POLICY.ADVANCED_MANUAL_SURFACES
+                    if spec.path == path
+                ),
+                None,
+            )
+            self.assertIsNotNone(
+                spec, f"{path} should be classified as an advanced streaming import surface"
+            )
+            self.assertIn("streaming image upload", spec.reason)
             self.assertTrue(spec.allowed_raw_seams)
         helper_spec = next(
             (

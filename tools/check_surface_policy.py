@@ -370,6 +370,34 @@ def _fret_examples_custom_effect_reference_surface(filename: str) -> SurfacePath
     )
 
 
+STREAMING_IMPORT_DEMO_FILENAMES = (
+    "streaming_i420_demo.rs",
+    "streaming_image_demo.rs",
+    "streaming_nv12_demo.rs",
+)
+
+STREAMING_IMPORT_ALLOWED_RAW_SEAMS = (
+    "fret_app",
+    "fret_core",
+    "fret_launch",
+    "fret_runtime",
+    "FnDriver",
+)
+
+
+def _fret_examples_streaming_import_surface(filename: str) -> SurfacePath:
+    stem = filename.removesuffix(".rs").replace("_", "-")
+    return _fret_examples_advanced_surface(
+        filename,
+        (
+            "the streaming image upload proof owns manual FnDriver event/render hooks, direct "
+            "scene image ops, and runtime image update effects"
+        ),
+        STREAMING_IMPORT_ALLOWED_RAW_SEAMS,
+        owner=f"examples-{stem}",
+    )
+
+
 CUSTOM_EFFECT_V2_WEB_ALLOWED_RAW_SEAMS = (
     "fret::advanced",
     "fret_app",
@@ -1243,6 +1271,10 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
         _fret_examples_custom_effect_reference_surface(filename)
         for filename in CUSTOM_EFFECT_REFERENCE_DEMO_FILENAMES
     ),
+    *(
+        _fret_examples_streaming_import_surface(filename)
+        for filename in STREAMING_IMPORT_DEMO_FILENAMES
+    ),
     _fret_examples_advanced_surface(
         "embedded_viewport_demo.rs",
         "the embedded viewport interop proof owns explicit advanced driver hooks, render target "
@@ -1684,6 +1716,10 @@ PUBLIC_EXAMPLE_SCAN_ROOTS: tuple[str, ...] = (
     *(
         f"apps/fret-examples/src/{filename}"
         for filename in CUSTOM_EFFECT_REFERENCE_DEMO_FILENAMES
+    ),
+    *(
+        f"apps/fret-examples/src/{filename}"
+        for filename in STREAMING_IMPORT_DEMO_FILENAMES
     ),
     "apps/fret-examples/src/custom_effect_v2_web_demo.rs",
     "apps/fret-examples/src/custom_effect_v2_identity_web_demo.rs",
