@@ -8,10 +8,13 @@ fn container_queries_docking_demo_keeps_fixed_panel_text_on_roles() {
     let source = compact(source);
 
     for needle in [
-        "fncontainer_query_docking_readout_text<H:fret_ui::UiHost>(",
-        "fncontainer_query_docking_placeholder_text<H:fret_ui::UiHost>(",
-        "fret_ui_kit::declarative::text::text_control_readout(cx,text)",
-        "fret_ui_kit::declarative::text::text_button_label(cx,text)",
+        "usefret::app::{AppRenderContext,text};",
+        "fncontainer_query_docking_readout_text<'a,Cx>(",
+        "fncontainer_query_docking_placeholder_text<'a,Cx>(",
+        "Cx:AppRenderContext<'a>,",
+        "text::control_readout(cx,text)",
+        "text::button_label(cx,text)",
+        "fnrender_left_panel(cx:&mutElementContext<'_,App>,theme:&Theme)->Vec<AnyElement>{",
         "container_query_docking_readout_text(cx,Arc::clone(&mode_text),)",
         "container_query_docking_placeholder_text(cx,\"Inputstub\")",
         "container_query_docking_readout_text(cx,\"Unregisteredpanelkind\",)",
@@ -26,6 +29,8 @@ fn container_queries_docking_demo_keeps_fixed_panel_text_on_roles() {
         "cx.text(Arc::clone(&mode_text))",
         "cx.text(\"Inputstub\")",
         "cx.text(\"Unregisteredpanelkind\")",
+        "fret_ui_kit::declarative::text::text_control_readout(",
+        "fret_ui_kit::declarative::text::text_button_label(",
     ] {
         assert!(
             !source.contains(needle),

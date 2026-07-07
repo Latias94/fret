@@ -1,4 +1,5 @@
 use anyhow::Context as _;
+use fret::app::{AppRenderContext, text};
 use fret_app::{App, CommandId, Effect, WindowRequest};
 use fret_bootstrap::ui_diagnostics::UiDiagnosticsService;
 use fret_core::{AppWindowId, Event, Rect, UiServices, geometry::Px};
@@ -22,18 +23,24 @@ use std::sync::Arc;
 const INITIAL_SPLIT_FRACTION_LEFT: f32 = 0.75;
 const SPLIT_ANCHOR_W: Px = Px(18.0);
 
-fn container_query_docking_readout_text<H: fret_ui::UiHost>(
-    cx: &mut ElementContext<'_, H>,
+fn container_query_docking_readout_text<'a, Cx>(
+    cx: &mut Cx,
     text: impl Into<Arc<str>>,
-) -> AnyElement {
-    fret_ui_kit::declarative::text::text_control_readout(cx, text)
+) -> AnyElement
+where
+    Cx: AppRenderContext<'a>,
+{
+    text::control_readout(cx, text)
 }
 
-fn container_query_docking_placeholder_text<H: fret_ui::UiHost>(
-    cx: &mut ElementContext<'_, H>,
+fn container_query_docking_placeholder_text<'a, Cx>(
+    cx: &mut Cx,
     text: impl Into<Arc<str>>,
-) -> AnyElement {
-    fret_ui_kit::declarative::text::text_button_label(cx, text)
+) -> AnyElement
+where
+    Cx: AppRenderContext<'a>,
+{
+    text::button_label(cx, text)
 }
 
 fn container_query_docking_absolute_layout(bounds: Rect, rect: Rect) -> LayoutStyle {
@@ -80,10 +87,7 @@ fn container_query_docking_diagnostic_anchor<H: fret_ui::UiHost>(
 struct DemoDockPanelRegistry;
 
 impl DemoDockPanelRegistry {
-    fn render_left_panel<H: fret_ui::UiHost>(
-        cx: &mut ElementContext<'_, H>,
-        theme: &Theme,
-    ) -> Vec<AnyElement> {
+    fn render_left_panel(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<AnyElement> {
         let padding = theme.metric_token("metric.padding.md");
         let background = theme.color_token("background");
         let muted = theme.color_token("muted");
