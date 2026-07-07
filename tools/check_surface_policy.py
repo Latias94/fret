@@ -424,6 +424,17 @@ def _fret_examples_manual_chart_surface(filename: str) -> SurfacePath:
             MANUAL_CHART_ALLOWED_RAW_SEAMS,
             owner=PLOT_SHADED_OWNER,
         )
+    if filename == "error_bars_demo.rs":
+        return _fret_examples_advanced_surface(
+            filename,
+            (
+                "it owns a manual error-bars runner with FnDriver/UiTree lifecycle while "
+                "error-bar model, query output reads, and panel wiring route through "
+                "ErrorBarsPlotPanelBinding"
+            ),
+            MANUAL_CHART_ALLOWED_RAW_SEAMS,
+            owner=PLOT_ERROR_BARS_OWNER,
+        )
     stem = filename.removesuffix(".rs").replace("_", "-")
     return _fret_examples_advanced_surface(
         filename,
@@ -1045,6 +1056,39 @@ PLOT_SHADED_FORBIDDEN_COMPACT_MARKERS = (
     "app.models_mut().insert(PlotOutput::default())",
 )
 
+PLOT_ERROR_BARS_OWNER = "examples-plot-error-bars"
+
+PLOT_ERROR_BARS_REQUIRED_COMPACT_MARKERS = (
+    "usefret_plot::ErrorBarsPlotPanelBinding;",
+    "usefret_plot::declarative::error_bars_plot_panel_in;",
+    "usefret_plot::models::{ErrorBar,ErrorBarsPlotModel,ErrorBarsSeries,YAxis};",
+    "usefret_ui::{UiTree,declarative};",
+    "plot:ErrorBarsPlotPanelBinding",
+    "ErrorBarsPlotPanelBinding::new(app,ErrorBarsPlotModel::from_series(vec![",
+    "ErrorBarsPlotModel::from_series(vec![",
+    "ErrorBarsSeries::new(",
+    ".y_errors(Arc::from(left_y_errors))",
+    ".x_errors(Arc::from(left_x_errors))",
+    "declarative::RenderRootContext::new(&mutstate.ui,app,services,window,bounds).render_root(\"error-bars-demo\"",
+    "plot.panel_props()",
+    "state.plot.output_untracked(app)",
+    "vec![error_bars_plot_panel_in(cx,props)]",
+)
+
+PLOT_ERROR_BARS_FORBIDDEN_COMPACT_MARKERS = (
+    "usefret_plot::retained",
+    "fret_plot::retained::",
+    "ErrorBarsPlotCanvas",
+    "PlotCanvas",
+    "create_node_retained(",
+    "fret_runtime::Model<",
+    "ErrorBarsPlotPanelProps::new(",
+    ".state(plot_state.clone())",
+    ".output(plot_output.clone())",
+    "app.models_mut().insert(PlotState::default())",
+    "app.models_mut().insert(PlotOutput::default())",
+)
+
 PLOT_DECLARATIVE_BINDING_BOUNDARIES: tuple[CompactSourceBoundary, ...] = (
     CompactSourceBoundary(
         owner=PLOT_STRESS_OWNER,
@@ -1159,6 +1203,20 @@ PLOT_DECLARATIVE_BINDING_BOUNDARIES: tuple[CompactSourceBoundary, ...] = (
         forbidden_message_template=(
             "Shaded plot demo must not expose retained/manual plot state or output "
             "wiring; compact `{marker}` bypasses the ShadedPlotPanelBinding boundary"
+        ),
+    ),
+    CompactSourceBoundary(
+        owner=PLOT_ERROR_BARS_OWNER,
+        rule="advanced-surface-plot-error-bars-declarative-binding-boundary",
+        required_markers=PLOT_ERROR_BARS_REQUIRED_COMPACT_MARKERS,
+        forbidden_markers=PLOT_ERROR_BARS_FORBIDDEN_COMPACT_MARKERS,
+        missing_message_template=(
+            "Error-bars plot demo must keep error-bar model authoring and query output "
+            "reads on ErrorBarsPlotPanelBinding; missing compact markers: {missing_markers}"
+        ),
+        forbidden_message_template=(
+            "Error-bars plot demo must not expose retained/manual plot state or output "
+            "wiring; compact `{marker}` bypasses the ErrorBarsPlotPanelBinding boundary"
         ),
     ),
 )
