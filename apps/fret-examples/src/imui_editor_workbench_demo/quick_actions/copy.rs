@@ -1,11 +1,10 @@
 use std::sync::Arc;
 
-use fret::app::LocalState;
 use fret::app::prelude::*;
+use fret::app::{AppRenderContext, LocalState, text};
 use fret_app::Effect;
 use fret_ui::element::AnyElement;
 use fret_ui_kit::IntoUiElementInExt as _;
-use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_shadcn::facade as shadcn;
 
 use super::catalog::{WorkbenchQuickActionSpec, workbench_quick_action_command_bundle_text};
@@ -50,11 +49,14 @@ pub(super) fn render_workbench_quick_action_copy_buttons(
     [copy_selected, copy_bundle]
 }
 
-pub(super) fn render_workbench_quick_action_copy_status<H: fret_ui::UiHost>(
-    cx: &mut fret_ui::ElementContext<'_, H>,
+pub(super) fn render_workbench_quick_action_copy_status<'a, Cx>(
+    cx: &mut Cx,
     copy_status: String,
-) -> AnyElement {
-    decl_text::text_control_readout(cx, copy_status).test_id(TEST_ID_ACTION_COPY_STATUS)
+) -> AnyElement
+where
+    Cx: AppRenderContext<'a>,
+{
+    text::control_readout(cx, copy_status).test_id(TEST_ID_ACTION_COPY_STATUS)
 }
 
 fn workbench_copy_text_on_activate(

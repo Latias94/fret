@@ -1,9 +1,8 @@
 use std::sync::Arc;
 
-use fret::app::LocalState;
 use fret::app::prelude::*;
+use fret::app::{AppRenderContext, LocalState, text};
 use fret_ui::element::AnyElement;
-use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::{IntoUiElementInExt as _, Space};
 use fret_ui_shadcn::facade as shadcn;
 
@@ -36,25 +35,25 @@ pub(super) fn render_workbench_quick_action_strip(cx: &mut AppUi<'_, '_>) -> Any
     )
 }
 
-fn workbench_text_section<H: fret_ui::UiHost>(
-    cx: &mut fret_ui::ElementContext<'_, H>,
-    text: impl Into<Arc<str>>,
-) -> AnyElement {
-    decl_text::text_section_chrome_label(cx, text)
+fn workbench_text_section<'a, Cx>(cx: &mut Cx, text: impl Into<Arc<str>>) -> AnyElement
+where
+    Cx: AppRenderContext<'a>,
+{
+    text::section_chrome_label(cx, text)
 }
 
-fn workbench_text_paragraph<H: fret_ui::UiHost>(
-    cx: &mut fret_ui::ElementContext<'_, H>,
-    text: impl Into<Arc<str>>,
-) -> AnyElement {
-    decl_text::text_paragraph(cx, text)
+fn workbench_text_paragraph<'a, Cx>(cx: &mut Cx, text: impl Into<Arc<str>>) -> AnyElement
+where
+    Cx: AppRenderContext<'a>,
+{
+    text::paragraph(cx, text)
 }
 
-fn workbench_text_readout<H: fret_ui::UiHost>(
-    cx: &mut fret_ui::ElementContext<'_, H>,
-    text: impl Into<Arc<str>>,
-) -> AnyElement {
-    decl_text::text_control_readout(cx, text)
+fn workbench_text_readout<'a, Cx>(cx: &mut Cx, text: impl Into<Arc<str>>) -> AnyElement
+where
+    Cx: AppRenderContext<'a>,
+{
+    text::control_readout(cx, text)
 }
 
 fn render_workbench_quick_action_strip_with_state(

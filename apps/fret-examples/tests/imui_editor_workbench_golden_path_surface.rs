@@ -113,6 +113,14 @@ fn imui_editor_workbench_demo_is_the_canonical_editor_workbench_route() {
     for needle in [
         "mod catalog;",
         "mod copy;",
+        "use fret::app::{AppRenderContext, LocalState, text};",
+        "fn workbench_text_section<'a, Cx>(",
+        "fn workbench_text_paragraph<'a, Cx>(",
+        "fn workbench_text_readout<'a, Cx>(",
+        "Cx: AppRenderContext<'a>,",
+        "text::section_chrome_label(cx, text)",
+        "text::paragraph(cx, text)",
+        "text::control_readout(cx, text)",
         "install_workbench_quick_action_commands(cx, &active_action);",
         "copy::initial_workbench_copy_status",
         "copy::render_workbench_quick_action_copy_buttons(",
@@ -121,6 +129,28 @@ fn imui_editor_workbench_demo_is_the_canonical_editor_workbench_route() {
         assert!(
             quick_actions_source.contains(needle),
             "canonical workbench quick-action render owner should carry resident chrome and delegate copy behavior; missing `{needle}`"
+        );
+    }
+    for unexpected in [
+        "use fret_ui_kit::declarative::text as decl_text;",
+        "fret_ui::UiHost",
+        "fret_ui::ElementContext",
+        "decl_text::",
+    ] {
+        assert!(
+            !quick_actions_source.contains(unexpected),
+            "canonical workbench quick-action render owner should use app text facade instead of raw text helpers; unexpected `{unexpected}`"
+        );
+    }
+    for needle in [
+        "use fret::app::{AppRenderContext, LocalState, text};",
+        "pub(super) fn render_workbench_quick_action_copy_status<'a, Cx>(",
+        "Cx: AppRenderContext<'a>,",
+        "text::control_readout(cx, copy_status).test_id(TEST_ID_ACTION_COPY_STATUS)",
+    ] {
+        assert!(
+            quick_action_copy_source.contains(needle),
+            "canonical workbench quick-action copy owner should keep status text on the app text facade; missing `{needle}`"
         );
     }
     for needle in [
@@ -145,6 +175,17 @@ fn imui_editor_workbench_demo_is_the_canonical_editor_workbench_route() {
         assert!(
             !quick_action_catalog_source.contains(needle),
             "canonical workbench quick-action catalog should not own clipboard affordance behavior; unexpected `{needle}`"
+        );
+    }
+    for unexpected in [
+        "use fret_ui_kit::declarative::text as decl_text;",
+        "fret_ui::UiHost",
+        "fret_ui::ElementContext",
+        "decl_text::",
+    ] {
+        assert!(
+            !quick_action_copy_source.contains(unexpected),
+            "canonical workbench quick-action copy owner should use app text facade instead of raw text helpers; unexpected `{unexpected}`"
         );
     }
     assert!(
