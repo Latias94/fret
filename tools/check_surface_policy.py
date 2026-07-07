@@ -348,6 +348,17 @@ MANUAL_CHART_ALLOWED_RAW_SEAMS = (
 
 
 def _fret_examples_manual_chart_surface(filename: str) -> SurfacePath:
+    if filename == "inf_lines_demo.rs":
+        return _fret_examples_advanced_surface(
+            filename,
+            (
+                "it owns a manual plot overlay runner with FnDriver/UiTree lifecycle while "
+                "infinite-line overlay state, query output reads, and panel wiring route through "
+                "LinePlotPanelBinding"
+            ),
+            MANUAL_CHART_ALLOWED_RAW_SEAMS,
+            owner=PLOT_INF_LINES_OWNER,
+        )
     stem = filename.removesuffix(".rs").replace("_", "-")
     return _fret_examples_advanced_surface(
         filename,
@@ -763,6 +774,42 @@ PLOT_DRAG_FORBIDDEN_COMPACT_MARKERS = (
     ".state(plot_state.clone())",
     ".output(plot_output.clone())",
     "state.plot_state.update(app",
+    "app.models_mut().insert(PlotOutput::default())",
+)
+
+PLOT_INF_LINES_OWNER = "examples-plot-inf-lines"
+
+PLOT_INF_LINES_REQUIRED_COMPACT_MARKERS = (
+    "usefret_plot::LinePlotPanelBinding;",
+    "usefret_plot::declarative::line_plot_panel_in;",
+    "usefret_plot::models::{LinePlotModel,LineSeries,YAxis};",
+    "usefret_plot::state::{InfLineX,InfLineY,PlotOverlays,PlotState};",
+    "usefret_plot::style::{LinePlotStyle,SeriesTooltipMode};",
+    "plot:LinePlotPanelBinding",
+    "declarative::RenderRootContext::new(&mutstate.ui,app,services,window,bounds)",
+    "LinePlotModel::from_series(vec![",
+    "LinePlotPanelBinding::new_with_state(app,model,state)",
+    "state.plot.output_untracked(app)",
+    "plot.panel_props()",
+    ".style(style)",
+    ".y_axis_labels(",
+    ".y2_axis_labels(",
+    ".y3_axis_labels(",
+    ".y4_axis_labels(",
+    "vec![line_plot_panel_in(cx,props)]",
+)
+
+PLOT_INF_LINES_FORBIDDEN_COMPACT_MARKERS = (
+    "usefret_plot::retained",
+    "fret_plot::retained::",
+    "LinePlotCanvas",
+    "PlotCanvas",
+    "create_node_retained(",
+    "fret_runtime::Model<",
+    "PlotOutput",
+    "LinePlotPanelProps::new(plot.clone())",
+    ".state(plot_state.clone())",
+    ".output(plot_output.clone())",
     "app.models_mut().insert(PlotOutput::default())",
 )
 
@@ -3514,6 +3561,54 @@ def _scan_plot_drag_declarative_binding_boundary(
     return violations
 
 
+def _scan_plot_inf_lines_declarative_binding_boundary(
+    root: Path, spec: SurfacePath
+) -> list[SurfaceViolation]:
+    if spec.owner != PLOT_INF_LINES_OWNER:
+        return []
+
+    violations: list[SurfaceViolation] = []
+    for path in _iter_source_files(root / spec.path):
+        text = _read_text(path)
+        production_text = text.split("#[cfg(test)]", 1)[0]
+        compact_production = _compact_source(production_text)
+        missing_markers = [
+            marker
+            for marker in PLOT_INF_LINES_REQUIRED_COMPACT_MARKERS
+            if marker not in compact_production
+        ]
+        if missing_markers:
+            violations.append(
+                SurfaceViolation(
+                    rule="advanced-surface-plot-inf-lines-declarative-binding-boundary",
+                    path=path,
+                    line_no=1,
+                    message=(
+                        "Inf-lines plot demo must keep infinite-line overlays, query output reads, "
+                        "and panel authoring on LinePlotPanelBinding; "
+                        f"missing compact markers: {', '.join(missing_markers)}"
+                    ),
+                )
+            )
+
+        for marker in PLOT_INF_LINES_FORBIDDEN_COMPACT_MARKERS:
+            if marker not in compact_production:
+                continue
+            violations.append(
+                SurfaceViolation(
+                    rule="advanced-surface-plot-inf-lines-declarative-binding-boundary",
+                    path=path,
+                    line_no=1,
+                    message=(
+                        "Inf-lines plot demo must not expose retained/manual plot state or output "
+                        f"wiring; compact `{marker}` bypasses the LinePlotPanelBinding boundary"
+                    ),
+                )
+            )
+
+    return violations
+
+
 def _scan_chart_stress_declarative_binding_boundary(
     root: Path, spec: SurfacePath
 ) -> list[SurfaceViolation]:
@@ -4643,6 +4738,7 @@ def _scan_classified_raw_surface(root: Path, spec: SurfacePath) -> list[SurfaceV
     violations.extend(_scan_docking_arbitration_controls_boundary(root, spec))
     violations.extend(_scan_plot_stress_declarative_binding_boundary(root, spec))
     violations.extend(_scan_plot_drag_declarative_binding_boundary(root, spec))
+    violations.extend(_scan_plot_inf_lines_declarative_binding_boundary(root, spec))
     violations.extend(_scan_chart_stress_declarative_binding_boundary(root, spec))
     violations.extend(_scan_chart_multi_axis_linked_binding_boundary(root, spec))
     violations.extend(_scan_echarts_adapter_binding_boundary(root, spec))
