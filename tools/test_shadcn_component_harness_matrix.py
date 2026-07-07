@@ -39,6 +39,37 @@ class ShadcnComponentHarnessMatrixTests(unittest.TestCase):
         external_path = Path(tempfile.gettempdir()) / "fret-matrix-output.json"
         self.assertEqual(external_path.as_posix(), MATRIX._display_path(external_path))
 
+    def test_source_doc_metadata_uses_posix_paths(self) -> None:
+        extra_report = (
+            MATRIX.ROOT
+            / "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/button_group_agent_packet_p0_v1.json"
+        )
+        matrix = MATRIX.build_matrix(
+            MATRIX.ROOT / "docs/shadcn-declarative-progress.md",
+            MATRIX.ROOT
+            / "tools/parity-discovery/manifests/shadcn_parity_coverage_v2.json",
+            MATRIX.ROOT
+            / "docs/workstreams/shadcn-parity-discovery-harness-v2/artifacts/shadcn_parity_suite_report_v2.json",
+            [extra_report],
+        )
+
+        source_docs = matrix["source_docs"]
+        self.assertEqual(
+            "docs/shadcn-declarative-progress.md",
+            source_docs["progress_doc"],
+        )
+        self.assertEqual(
+            "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/button_group_agent_packet_p0_v1.json",
+            source_docs["extra_reports"][0],
+        )
+        for value in (
+            source_docs["progress_doc"],
+            source_docs["manifest"],
+            source_docs["suite_report"],
+            *source_docs["extra_reports"],
+        ):
+            self.assertNotIn("\\", value)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -459,7 +459,7 @@ def load_extra_reports(paths: list[Path]) -> dict[str, list[dict[str, Any]]]:
         grouped[component].append(
             {
                 "id": path.stem,
-                "output": str(path.relative_to(ROOT)),
+                "output": _display_path(path),
                 "agent_status": data.get("agent_packet", {}).get("status", ""),
                 "status_counts": data.get("summary", {}).get("status_counts", {}),
                 "repair_queue_count": agent_summary.get(
@@ -760,10 +760,10 @@ def build_matrix(
         "schema_version": 1,
         "generated_date": date.today().isoformat(),
         "source_docs": {
-            "progress_doc": str(progress_doc.relative_to(ROOT)),
-            "manifest": str(manifest_path.relative_to(ROOT)),
-            "suite_report": str(suite_report.relative_to(ROOT)),
-            "extra_reports": [str(path.relative_to(ROOT)) for path in extra_reports],
+            "progress_doc": _display_path(progress_doc),
+            "manifest": _display_path(manifest_path),
+            "suite_report": _display_path(suite_report),
+            "extra_reports": [_display_path(path) for path in extra_reports],
         },
         "self_rendered_harness_model": {
             "principle": "Do not compare Fret output to HTML tree structure. Compare observable outcomes from upstream DOM/CSS references against Fret layout, semantics, interaction, paint, and text diagnostics.",
