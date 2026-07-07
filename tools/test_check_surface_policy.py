@@ -791,6 +791,10 @@ class SurfacePolicyTests(unittest.TestCase):
             POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS,
         )
         self.assertIn(
+            "apps/fret-examples/src/virtual_list_stress_demo.rs",
+            POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS,
+        )
+        self.assertIn(
             "apps/fret-examples/src/embedded_viewport_demo.rs",
             POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS,
         )
@@ -823,6 +827,12 @@ class SurfacePolicyTests(unittest.TestCase):
         self.assertTrue(
             any(
                 spec.path == "apps/fret-examples/src/chart_stress_demo.rs"
+                for spec in POLICY.INTERNAL_HARNESS_SURFACES
+            )
+        )
+        self.assertTrue(
+            any(
+                spec.path == "apps/fret-examples/src/virtual_list_stress_demo.rs"
                 for spec in POLICY.INTERNAL_HARNESS_SURFACES
             )
         )
@@ -1982,6 +1992,191 @@ class SurfacePolicyTests(unittest.TestCase):
                     for violation in violations
                     if violation.rule
                     == "advanced-surface-components-gallery-owner-boundary"
+                ]
+            )
+
+    def test_virtual_list_stress_direct_model_writes_are_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-examples/src/virtual_list_stress_demo.rs",
+                """
+                use fret_runtime::{ModelStore, PlatformCapabilities};
+
+                struct VirtualListStressControls {
+                    tall_rows_enabled: Model<bool>,
+                    reversed: Model<bool>,
+                    items_revision: Model<u64>,
+                }
+
+                struct VirtualListStressSnapshot;
+
+                impl VirtualListStressControls {
+                    fn new(models: &mut ModelStore) -> Self {
+                        Self {
+                            tall_rows_enabled: models.insert(false),
+                            reversed: models.insert(false),
+                            items_revision: models.insert(0u64),
+                        }
+                    }
+
+                    fn toggle_rows_enabled(&self, models: &mut ModelStore) -> bool {
+                        false
+                    }
+
+                    fn toggle_reversed_and_bump_revision(&self, models: &mut ModelStore) -> bool {
+                        false
+                    }
+
+                    fn layout_snapshot(&self, cx: &mut ElementContext<'_, App>) -> VirtualListStressSnapshot {
+                        VirtualListStressSnapshot
+                    }
+                }
+
+                struct VirtualListStressWindowState {
+                    controls: VirtualListStressControls,
+                    progress: Model<u64>,
+                }
+
+                fn build_ui(app: &mut App) {
+                    let controls = VirtualListStressControls::new(app.models_mut());
+                    let _ = app.models_mut().insert(false);
+                }
+
+                fn handle_event(app: &mut App, state: &mut VirtualListStressWindowState) {
+                    let _ = state.controls.toggle_rows_enabled(app.models_mut());
+                    let _ = state.controls.toggle_reversed_and_bump_revision(app.models_mut());
+                    let _ = app.models_mut().update(&state.progress, |_| true);
+                    let _ = ModelStore::update(app.models_mut(), &state.progress, |_| true);
+                }
+
+                fn render(cx: &mut ElementContext<'_, App>, state: &VirtualListStressWindowState) {
+                    let controls = state.controls.layout_snapshot(cx);
+                }
+                """,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[],
+                internal_harness_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/virtual_list_stress_demo.rs",
+                        "internal_harness",
+                        "fixture virtual-list stress harness",
+                        owner="examples-virtual-list-stress",
+                        allowed_raw_seams=(
+                            "fret_app",
+                            "fret_runtime",
+                            "ElementContext",
+                            "ModelStore",
+                        ),
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            owner_violations = [
+                violation
+                for violation in violations
+                if violation.rule
+                == "internal_harness-virtual-list-stress-controls-boundary"
+            ]
+            self.assertEqual(3, len(owner_violations))
+            messages = "\n".join(violation.message for violation in owner_violations)
+            self.assertIn("models_mut().insert", messages)
+            self.assertIn("models_mut().update", messages)
+            self.assertIn("ModelStore::update", messages)
+
+    def test_virtual_list_stress_controls_surface_is_allowed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-examples/src/virtual_list_stress_demo.rs",
+                """
+                use fret_runtime::{ModelStore, PlatformCapabilities};
+
+                struct VirtualListStressControls {
+                    tall_rows_enabled: Model<bool>,
+                    reversed: Model<bool>,
+                    items_revision: Model<u64>,
+                }
+
+                struct VirtualListStressSnapshot;
+
+                impl VirtualListStressControls {
+                    fn new(models: &mut ModelStore) -> Self {
+                        Self {
+                            tall_rows_enabled: models.insert(false),
+                            reversed: models.insert(false),
+                            items_revision: models.insert(0u64),
+                        }
+                    }
+
+                    fn toggle_rows_enabled(&self, models: &mut ModelStore) -> bool {
+                        false
+                    }
+
+                    fn toggle_reversed_and_bump_revision(&self, models: &mut ModelStore) -> bool {
+                        false
+                    }
+
+                    fn layout_snapshot(&self, cx: &mut ElementContext<'_, App>) -> VirtualListStressSnapshot {
+                        VirtualListStressSnapshot
+                    }
+                }
+
+                struct VirtualListStressWindowState {
+                    controls: VirtualListStressControls,
+                }
+
+                fn build_ui(app: &mut App) {
+                    let controls = VirtualListStressControls::new(app.models_mut());
+                    let _ = controls;
+                }
+
+                fn handle_event(app: &mut App, state: &mut VirtualListStressWindowState) {
+                    let _ = state.controls.toggle_rows_enabled(app.models_mut());
+                    let _ = state.controls.toggle_reversed_and_bump_revision(app.models_mut());
+                }
+
+                fn render(cx: &mut ElementContext<'_, App>, state: &VirtualListStressWindowState) {
+                    let controls = state.controls.layout_snapshot(cx);
+                    let _ = controls;
+                }
+                """,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[],
+                internal_harness_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/virtual_list_stress_demo.rs",
+                        "internal_harness",
+                        "fixture virtual-list stress harness",
+                        owner="examples-virtual-list-stress",
+                        allowed_raw_seams=(
+                            "fret_app",
+                            "fret_runtime",
+                            "ElementContext",
+                            "ModelStore",
+                        ),
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            self.assertFalse(
+                [
+                    violation
+                    for violation in violations
+                    if violation.rule
+                    == "internal_harness-virtual-list-stress-controls-boundary"
                 ]
             )
 

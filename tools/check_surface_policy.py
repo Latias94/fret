@@ -521,6 +521,61 @@ COMPONENTS_GALLERY_FORBIDDEN_RAW_WRITE_PATTERNS: tuple[
     ),
 )
 
+VIRTUAL_LIST_STRESS_OWNER = "examples-virtual-list-stress"
+
+VIRTUAL_LIST_STRESS_REQUIRED_MARKERS = (
+    "struct VirtualListStressControls",
+    "tall_rows_enabled: Model<bool>",
+    "reversed: Model<bool>",
+    "items_revision: Model<u64>",
+    "fn new(models: &mut ModelStore) -> Self",
+    "fn toggle_rows_enabled(&self, models: &mut ModelStore) -> bool",
+    "fn toggle_reversed_and_bump_revision(&self, models: &mut ModelStore) -> bool",
+    "fn layout_snapshot(&self, cx: &mut ElementContext<'_, App>) -> VirtualListStressSnapshot",
+    "let controls = VirtualListStressControls::new(app.models_mut());",
+    "controls: VirtualListStressControls,",
+    "state.controls.toggle_rows_enabled(app.models_mut())",
+    "toggle_reversed_and_bump_revision(app.models_mut())",
+    "let controls = state.controls.layout_snapshot(cx);",
+)
+
+VIRTUAL_LIST_STRESS_FORBIDDEN_RAW_WRITE_PATTERNS: tuple[
+    tuple[str, re.Pattern[str]], ...
+] = (
+    (
+        "models_mut().insert",
+        re.compile(r"\bmodels_mut\s*\(\s*\)\s*\.\s*insert\s*\("),
+    ),
+    (
+        "models_mut().update",
+        re.compile(r"\bmodels_mut\s*\(\s*\)\s*\.\s*update(?:_any)?\s*\("),
+    ),
+    (
+        "ModelStore::update",
+        re.compile(
+            r"(?:\bModelStore\s*::\s*update(?:_any)?\s*\(|<\s*ModelStore\s*>\s*::\s*update(?:_any)?\s*\()"
+        ),
+    ),
+    (
+        "legacy-state-model-field",
+        re.compile(
+            r"\b(tall_rows_enabled|reversed|items_revision)\s*:\s*fret_app\s*::\s*Model\s*<"
+        ),
+    ),
+    (
+        "legacy-state-model-reference",
+        re.compile(r"&\s*state\s*\.\s*(?:tall_rows_enabled|reversed|items_revision)\b"),
+    ),
+    (
+        "legacy-model-owner",
+        re.compile(r"\bVirtualListStressModelOwner\b"),
+    ),
+    (
+        "legacy-free-helper",
+        re.compile(r"\bfn\s+virtual_list_stress_(?:update_model|toggle_model|bump_revision)\b"),
+    ),
+)
+
 
 def _fret_examples_custom_effect_v2_web_surface(filename: str, variant: str) -> SurfacePath:
     return SurfacePath(
@@ -696,6 +751,26 @@ INTERNAL_HARNESS_SURFACES: tuple[SurfacePath, ...] = (
             "UiTree",
         ),
         owner="examples-chart-stress",
+    ),
+    _fret_examples_internal_harness(
+        "virtual_list_stress_demo.rs",
+        "the virtual-list stress harness owns manual driver state, renderer perf hooks, and "
+        "env-driven scroll controls, while shared model allocation, command writes, and render "
+        "snapshots route through VirtualListStressControls",
+        (
+            "fret::advanced",
+            "fret_app",
+            "fret_core",
+            "fret_launch",
+            "fret_runtime",
+            "fret_ui",
+            "AnyElement",
+            "ElementContext",
+            "FnDriver",
+            "ModelStore",
+            "UiTree",
+        ),
+        owner=VIRTUAL_LIST_STRESS_OWNER,
     ),
     _fret_examples_internal_harness(
         "simple_todo_demo/driver.rs",
@@ -1193,6 +1268,7 @@ PUBLIC_EXAMPLE_SCAN_ROOTS: tuple[str, ...] = (
     "apps/fret-examples/src/echarts_multi_grid_demo.rs",
     "apps/fret-examples/src/chart_multi_axis_demo.rs",
     "apps/fret-examples/src/chart_stress_demo.rs",
+    "apps/fret-examples/src/virtual_list_stress_demo.rs",
     "apps/fret-examples/src/custom_effect_v2_web_demo.rs",
     "apps/fret-examples/src/custom_effect_v2_identity_web_demo.rs",
     "apps/fret-examples/src/custom_effect_v2_lut_web_demo.rs",
@@ -1695,6 +1771,58 @@ def _scan_components_gallery_owner_boundary(
     return violations
 
 
+def _scan_virtual_list_stress_controls_boundary(
+    root: Path, spec: SurfacePath
+) -> list[SurfaceViolation]:
+    if spec.owner != VIRTUAL_LIST_STRESS_OWNER:
+        return []
+
+    violations: list[SurfaceViolation] = []
+    for path in _iter_source_files(root / spec.path):
+        text = _read_text(path)
+        production_text = text.split("#[cfg(test)]", 1)[0]
+        missing_markers = [
+            marker
+            for marker in VIRTUAL_LIST_STRESS_REQUIRED_MARKERS
+            if marker not in production_text
+        ]
+        if missing_markers:
+            violations.append(
+                SurfaceViolation(
+                    rule="internal_harness-virtual-list-stress-controls-boundary",
+                    path=path,
+                    line_no=1,
+                    message=(
+                        "virtual-list stress shared models must stay behind "
+                        f"VirtualListStressControls; missing markers: {', '.join(missing_markers)}"
+                    ),
+                )
+            )
+
+        for line_no, line in _code_lines_for_scan(path, production_text):
+            if path.suffix == ".rs" and _is_rust_source_line_ignorable(line):
+                continue
+            for seam, pattern in VIRTUAL_LIST_STRESS_FORBIDDEN_RAW_WRITE_PATTERNS:
+                if not pattern.search(line):
+                    continue
+                violations.append(
+                    SurfaceViolation(
+                        rule="internal_harness-virtual-list-stress-controls-boundary",
+                        path=path,
+                        line_no=line_no,
+                        message=(
+                            "virtual-list stress startup allocation, command writes, and render "
+                            f"snapshots must route through VirtualListStressControls; direct `{seam}` "
+                            "bypasses the controls boundary"
+                        ),
+                        source=line.strip(),
+                    )
+                )
+                break
+
+    return violations
+
+
 def _scan_default_authoring_surface(root: Path, spec: SurfacePath) -> list[SurfaceViolation]:
     violations: list[SurfaceViolation] = []
     for path in _iter_source_files(root / spec.path):
@@ -1758,6 +1886,7 @@ def _scan_classified_raw_surface(root: Path, spec: SurfacePath) -> list[SurfaceV
     violations.extend(_scan_external_imports_owner_boundary(root, spec))
     violations.extend(_scan_window_hit_test_probe_boundary(root, spec))
     violations.extend(_scan_components_gallery_owner_boundary(root, spec))
+    violations.extend(_scan_virtual_list_stress_controls_boundary(root, spec))
     for seam in sorted(allowed_raw_seams - used_raw_seams):
         violations.append(
             SurfaceViolation(

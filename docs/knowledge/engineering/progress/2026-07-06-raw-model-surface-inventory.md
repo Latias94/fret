@@ -209,14 +209,17 @@ Keep raw/shared-model mechanisms for now:
   gates that gallery boundary globally, requiring the bundle/owner markers and rejecting direct
   production-source `models_mut().update(...)`, `models_mut().insert(...)`, and
   `ModelStore::update(...)` bypasses.
-  `virtual_list_stress_demo.rs` from free helper functions to a named
+  `virtual_list_stress_demo.rs` was upgraded from free helper functions to a named
   `VirtualListStressModelOwner`; a later tightening replaced that owner with
-  `VirtualListStressControls`, so startup allocation, command writes, and render snapshot reads
-  now sit behind one demo-local binding. Its source gate forbids direct/generic/update-any and UFCS
-  `ModelStore` bypasses in production source. The same tightening upgraded `editor_notes_demo.rs`
-  from free host helper functions to `EditorNotesModelOwner`; a later tightening added
-  `EditorAssetModels`, `editor_asset_paint_snapshot(...)`, and `EditorThemePresetBinding`, so the
-  editor notes app and device-shell views no longer expose separate raw text/theme model fields.
+  `VirtualListStressControls`, so startup allocation, command writes, and render snapshot reads now
+  sit behind one demo-local binding. `tools/check_surface_policy.py` now classifies it as an
+  internal harness, includes it in public example scanning, and globally rejects direct
+  production-source `models_mut().insert(...)`, `models_mut().update(...)`, `update_any(...)`, UFCS
+  `ModelStore::update(...)`, and legacy owner/free-helper bypasses. The same tightening upgraded
+  `editor_notes_demo.rs` from free host helper functions to `EditorNotesModelOwner`; a later
+  tightening added `EditorAssetModels`, `editor_asset_paint_snapshot(...)`, and
+  `EditorThemePresetBinding`, so the editor notes app and device-shell views no longer expose
+  separate raw text/theme model fields.
 - `external_texture_imports_demo.rs`, `external_texture_imports_web_demo.rs`, and the platform
   `external_video_imports_*` demos. Audited and cleaned after the wasm `ui-assets` feature fix:
   they remain low-level external import harnesses, while the shared visibility toggle write now
