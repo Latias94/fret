@@ -50,6 +50,7 @@ base example implementations in `repo-ref/ui`.
 
 ## Validation
 
+- Docs-order/action-state gate: `apps/fret-ui-gallery/tests/button_group_docs_surface.rs`
 - `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_control_chrome web_vs_fret_button_group_demo_button_chrome_matches --status-level fail`
 - `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_control_chrome web_vs_fret_button_group_nested_geometry_and_chrome_match --status-level fail`
 - `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_control_chrome web_vs_fret_button_group_separator_geometry_and_chrome_match --status-level fail`
