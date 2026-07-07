@@ -7,7 +7,7 @@ use std::time::Duration;
 
 use fret::actions::CommandId;
 use fret::app::prelude::*;
-use fret::app::{AppRenderContext, LocalState, RenderContextAccess as _};
+use fret::app::{AppRenderContext, LocalState, RenderContextAccess as _, text};
 use fret::children::UiElementSinkExt as _;
 use fret::query::{
     CancellationToken, FutureSpawner, FutureSpawnerHandle, QueryCancelMode, QueryError, QueryKey,
@@ -17,12 +17,10 @@ use fret::scroll::ScrollHandle;
 use fret::semantics::SemanticsRole;
 use fret::style::ThemeSnapshot;
 use fret_ui::element::{AnyElement, PressableA11y, PressableProps};
-use fret_ui::{ElementContext, UiHost};
 use fret_ui_kit::IntoUiElementInExt as _;
 use fret_ui_kit::declarative::QueryHandleWatchExt as _;
 use fret_ui_kit::declarative::UiElementTestIdExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
-use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::primitives::scroll_area::ScrollAreaType;
 use fret_ui_kit::primitives::separator::SeparatorOrientation;
 use fret_ui_kit::ui;
@@ -47,46 +45,52 @@ const TRANSIENT_INVALIDATE_SELECTED: u64 = 0xAFA0_1002;
 const TRANSIENT_CANCEL_SELECTED: u64 = 0xAFA0_1003;
 const TRANSIENT_INVALIDATE_NAMESPACE: u64 = 0xAFA0_1004;
 
-fn async_chrome_title_text<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    text: impl Into<Arc<str>>,
-) -> AnyElement {
-    decl_text::text_chrome_title(cx, text)
+fn async_chrome_title_text<'a, Cx, T>(cx: &mut Cx, text: T) -> AnyElement
+where
+    Cx: AppRenderContext<'a>,
+    T: Into<Arc<str>>,
+{
+    text::chrome_title(cx, text)
 }
 
-fn async_section_text<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    text: impl Into<Arc<str>>,
-) -> AnyElement {
-    decl_text::text_section_chrome_label(cx, text)
+fn async_section_text<'a, Cx, T>(cx: &mut Cx, text: T) -> AnyElement
+where
+    Cx: AppRenderContext<'a>,
+    T: Into<Arc<str>>,
+{
+    text::section_chrome_label(cx, text)
 }
 
-fn async_list_row_text<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    text: impl Into<Arc<str>>,
-) -> AnyElement {
-    decl_text::text_list_row_label(cx, text)
+fn async_list_row_text<'a, Cx, T>(cx: &mut Cx, text: T) -> AnyElement
+where
+    Cx: AppRenderContext<'a>,
+    T: Into<Arc<str>>,
+{
+    text::list_row_label(cx, text)
 }
 
-fn async_readout_text<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    text: impl Into<Arc<str>>,
-) -> AnyElement {
-    decl_text::text_control_readout(cx, text)
+fn async_readout_text<'a, Cx, T>(cx: &mut Cx, text: T) -> AnyElement
+where
+    Cx: AppRenderContext<'a>,
+    T: Into<Arc<str>>,
+{
+    text::control_readout(cx, text)
 }
 
-fn async_code_label_text<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    text: impl Into<Arc<str>>,
-) -> AnyElement {
-    decl_text::text_code_label(cx, text)
+fn async_code_label_text<'a, Cx, T>(cx: &mut Cx, text: T) -> AnyElement
+where
+    Cx: AppRenderContext<'a>,
+    T: Into<Arc<str>>,
+{
+    text::code_label(cx, text)
 }
 
-fn async_compact_paragraph_text<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    text: impl Into<Arc<str>>,
-) -> AnyElement {
-    decl_text::text_compact_paragraph(cx, text)
+fn async_compact_paragraph_text<'a, Cx, T>(cx: &mut Cx, text: T) -> AnyElement
+where
+    Cx: AppRenderContext<'a>,
+    T: Into<Arc<str>>,
+{
+    text::compact_paragraph(cx, text)
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -424,9 +428,9 @@ fn header_bar<'a, Cx>(
 where
     Cx: AppRenderContext<'a>,
 {
-    let title = async_chrome_title_text(cx.elements(), "Async Playground");
+    let title = async_chrome_title_text(cx, "Async Playground");
 
-    let slow_label = async_readout_text(cx.elements(), "Slow network (x2)");
+    let slow_label = async_readout_text(cx, "Slow network (x2)");
     let slow_switch = shadcn::Switch::new(&locals.global_slow)
         .a11y_label("Simulate slow network")
         .into_element_in(cx);
@@ -499,7 +503,7 @@ where
     Cx: AppRenderContext<'a>,
 {
     let catalog_scroll = st.catalog_scroll.clone();
-    let header = async_section_text(cx.elements(), "Catalog");
+    let header = async_section_text(cx, "Catalog");
     let header_row = ui::container(|_cx| vec![header])
         .px(Space::N4)
         .py(Space::N3)
@@ -615,7 +619,7 @@ where
 {
     let mode = active_mode(cx, locals);
 
-    let title = async_section_text(cx.elements(), selected.label());
+    let title = async_section_text(cx, selected.label());
 
     let cancel = shadcn::Button::new("Cancel")
         .variant(shadcn::ButtonVariant::Secondary)
@@ -801,12 +805,12 @@ where
         .placeholder("cache_time (s)")
         .into_element_in(cx);
 
-    let keep_prev_label = async_readout_text(cx.elements(), "keepPreviousDataWhileLoading");
+    let keep_prev_label = async_readout_text(cx, "keepPreviousDataWhileLoading");
     let keep_prev = shadcn::Switch::new(&config.keep_prev)
         .a11y_label("Keep previous data while loading")
         .into_element_in(cx);
 
-    let fail_label = async_readout_text(cx.elements(), "fail mode");
+    let fail_label = async_readout_text(cx, "fail mode");
     let fail = shadcn::Switch::new(&config.fail_mode)
         .a11y_label("Force failures")
         .into_element_in(cx);
@@ -905,7 +909,7 @@ where
 {
     let mut children: Vec<AnyElement> = Vec::new();
     children.push(async_compact_paragraph_text(
-        cx.elements(),
+        cx,
         match id {
             QueryId::Tip | QueryId::Status => "No params (key is stable).",
             QueryId::Search => "Type to change key and trigger a new query.",
@@ -969,11 +973,11 @@ where
     .into_element_in(cx);
 
     let body = match state.status {
-        QueryStatus::Idle => async_compact_paragraph_text(cx.elements(), "Idle (not fetched yet)."),
+        QueryStatus::Idle => async_compact_paragraph_text(cx, "Idle (not fetched yet)."),
         QueryStatus::Loading => {
             let kept = policy.keep_previous_data_while_loading && state.is_refreshing();
             async_compact_paragraph_text(
-                cx.elements(),
+                cx,
                 if kept {
                     "Loading… (keepPreviousDataWhileLoading=true)"
                 } else {
@@ -995,7 +999,7 @@ where
             .into_element_in(cx)
         }
         QueryStatus::Success => async_compact_paragraph_text(
-            cx.elements(),
+            cx,
             state
                 .data
                 .as_deref()
