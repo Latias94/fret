@@ -64,6 +64,10 @@ and new-york-v4 registry implementation in `repo-ref/ui`.
   collections.
 - Pass: `Label Association` and `With Title` remain as explicit Fret-only follow-ups after the upstream path because they document field/label composition rather than the base checkbox recipe itself.
 - Pass: the remaining parity work for this component is page/docs clarity; no extra generic children or `compose()` API is warranted.
+- Pass: the dedicated Gallery docs-surface gate now locks the page order through `API Reference`
+  before the Fret-only follow-ups, keeps the snippets on curated `Checkbox` / `Field*` surfaces
+  without raw/advanced exposure, and anchors the disabled, required-disabled, mixed-state table,
+  label-click, and RTL diagnostics.
 
 ### Visual parity (new-york)
 
@@ -81,6 +85,10 @@ and new-york-v4 registry implementation in `repo-ref/ui`.
   (`web_vs_fret_layout_checkbox_demo_control_size`).
 - Focus ring gate: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_control_chrome`
   (`web_vs_fret_checkbox_demo_focus_ring_matches`).
+- Gallery docs-surface gate:
+  `cargo nextest run -p fret-ui-gallery --test checkbox_docs_surface`.
+- Gallery default-app authoring gate:
+  `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app checkbox --no-fail-fast`.
 
 ## Follow-ups (recommended)
 
