@@ -2887,6 +2887,179 @@ class SurfacePolicyTests(unittest.TestCase):
                 ]
             )
 
+    def test_genui_direct_model_access_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-examples/src/genui_demo.rs",
+                """
+                use fret_runtime::{Model, ModelStore};
+
+                struct GenUiModelOwner<'a> {
+                    models: &'a mut ModelStore,
+                }
+
+                impl<'a> GenUiModelOwner<'a> {
+                    fn new(models: &'a mut ModelStore) -> Self {
+                        Self { models }
+                    }
+
+                    fn update<T: Any, R>(&mut self, model: &Model<T>, f: impl FnOnce(&mut T) -> R) -> Option<R> {
+                        None
+                    }
+
+                    fn read<T: Any, R>(&mut self, model: &Model<T>, f: impl FnOnce(&T) -> R) -> Option<R> {
+                        None
+                    }
+                }
+
+                struct GenUiState;
+                impl GenUiState {
+                    fn reset_runtime_models(&self, app: &mut KernelApp, seed: Value) {
+                        let mut owner = GenUiModelOwner::new(app.models_mut());
+                        let _ = owner;
+                    }
+                }
+
+                fn reset(state: &GenUiState, app: &mut KernelApp, seed: Value) {
+                    state.reset_runtime_models(app, seed);
+                }
+
+                fn handler(
+                    host: &mut Host,
+                    state_model_for_confirm: Model<Value>,
+                    validation_model: Model<Validation>,
+                    state_model_for_submit: Model<Value>,
+                    out: Validation,
+                ) {
+                    let mut owner = GenUiModelOwner::new(host.models_mut());
+                    owner.read(&state_model_for_confirm, |v| v);
+                    owner.update(&state_model_for_confirm, |v| {});
+                    owner.update(&validation_model, |v| *v = out);
+                    owner.update(&state_model_for_submit, |v| {});
+                }
+
+                fn bad(app: &mut KernelApp, host: &mut Host, state: &State) {
+                    let _ = app.models_mut().update(&state.model, |_| true);
+                    let _ = app.models_mut().read(&state.model, |_| true);
+                    let _ = ModelStore::update(app.models_mut(), &state.model, |_| true);
+                    let _ = ModelStore::read(app.models_mut(), &state.model, |_| true);
+                    let mut store = host.models_mut();
+                    let _ = store.update(&state.model, |_| true);
+                    let _ = store.read(&state.model, |_| true);
+                }
+                """,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/genui_demo.rs",
+                        "advanced_manual",
+                        "fixture GenUI surface",
+                        owner="examples-genui-demo",
+                        allowed_raw_seams=("fret_runtime", "ModelStore"),
+                        retirement=POLICY.FRET_EXAMPLES_ADVANCED_RETIREMENT,
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            owner_violations = [
+                violation
+                for violation in violations
+                if violation.rule == "advanced-surface-genui-model-owner-boundary"
+            ]
+            self.assertEqual(6, len(owner_violations))
+            messages = "\n".join(violation.message for violation in owner_violations)
+            self.assertIn("models_mut().update", messages)
+            self.assertIn("models_mut().read", messages)
+            self.assertIn("ModelStore::update", messages)
+            self.assertIn("ModelStore::read", messages)
+            self.assertIn("ModelStore alias", messages)
+
+    def test_genui_owner_surface_is_allowed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-examples/src/genui_demo.rs",
+                """
+                use fret_runtime::{Model, ModelStore};
+
+                struct GenUiModelOwner<'a> {
+                    models: &'a mut ModelStore,
+                }
+
+                impl<'a> GenUiModelOwner<'a> {
+                    fn new(models: &'a mut ModelStore) -> Self {
+                        Self { models }
+                    }
+
+                    fn update<T: Any, R>(&mut self, model: &Model<T>, f: impl FnOnce(&mut T) -> R) -> Option<R> {
+                        None
+                    }
+
+                    fn read<T: Any, R>(&mut self, model: &Model<T>, f: impl FnOnce(&T) -> R) -> Option<R> {
+                        None
+                    }
+                }
+
+                struct GenUiState;
+                impl GenUiState {
+                    fn reset_runtime_models(&self, app: &mut KernelApp, seed: Value) {
+                        let mut owner = GenUiModelOwner::new(app.models_mut());
+                        let _ = owner;
+                    }
+                }
+
+                fn reset(state: &GenUiState, app: &mut KernelApp, seed: Value) {
+                    state.reset_runtime_models(app, seed);
+                }
+
+                fn handler(
+                    host: &mut Host,
+                    state_model_for_confirm: Model<Value>,
+                    validation_model: Model<Validation>,
+                    state_model_for_submit: Model<Value>,
+                    out: Validation,
+                ) {
+                    let mut owner = GenUiModelOwner::new(host.models_mut());
+                    owner.read(&state_model_for_confirm, |v| v);
+                    owner.update(&state_model_for_confirm, |v| {});
+                    owner.update(&validation_model, |v| *v = out);
+                    owner.update(&state_model_for_submit, |v| {});
+                }
+                """,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/genui_demo.rs",
+                        "advanced_manual",
+                        "fixture GenUI surface",
+                        owner="examples-genui-demo",
+                        allowed_raw_seams=("fret_runtime", "ModelStore"),
+                        retirement=POLICY.FRET_EXAMPLES_ADVANCED_RETIREMENT,
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            self.assertFalse(
+                [
+                    violation
+                    for violation in violations
+                    if violation.rule == "advanced-surface-genui-model-owner-boundary"
+                ]
+            )
+
     def test_components_gallery_direct_model_writes_are_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

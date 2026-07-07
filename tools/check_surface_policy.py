@@ -742,6 +742,55 @@ WORKSPACE_SHELL_DRIVER_FORBIDDEN_RAW_WRITE_PATTERNS: tuple[
     ),
 )
 
+GENUI_OWNER = "examples-genui-demo"
+
+GENUI_REQUIRED_COMPACT_MARKERS = (
+    "usefret_runtime::{Model,ModelStore};",
+    "structGenUiModelOwner<'a>{",
+    "models:&'amutModelStore,",
+    "fnupdate<T:Any,R>(&mutself,model:&Model<T>,f:implFnOnce(&mutT)->R)->Option<R>{",
+    "fnread<T:Any,R>(&mutself,model:&Model<T>,f:implFnOnce(&T)->R)->Option<R>{",
+    "fnreset_runtime_models(&self,app:&mutKernelApp,seed:Value)",
+    "state.reset_runtime_models(app,seed);",
+    "letmutowner=GenUiModelOwner::new(app.models_mut());",
+    "letmutowner=GenUiModelOwner::new(host.models_mut());",
+    "owner.read(&state_model_for_confirm,",
+    "owner.update(&state_model_for_confirm,",
+    "owner.update(&validation_model,|v|*v=out);",
+    "owner.update(&state_model_for_submit,",
+)
+
+GENUI_FORBIDDEN_COMPACT_MARKERS = (
+    "fngenui_update_model",
+    "fngenui_host_update_model",
+    "fngenui_host_read_model",
+)
+
+GENUI_FORBIDDEN_RAW_MODEL_ACCESS_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
+    (
+        "models_mut().update",
+        re.compile(
+            r"\bmodels_mut\s*\(\s*\)\s*\.\s*update(?:_any)?\s*(?:::\s*<[^>]*>)?\s*\("
+        ),
+    ),
+    (
+        "models_mut().read",
+        re.compile(r"\bmodels_mut\s*\(\s*\)\s*\.\s*read\s*(?:::\s*<[^>]*>)?\s*\("),
+    ),
+    (
+        "ModelStore::update",
+        re.compile(
+            r"(?:\bModelStore\s*::\s*|<\s*ModelStore\s*>\s*::\s*)update(?:_any)?\s*(?:::\s*<[^>]*>)?\s*\("
+        ),
+    ),
+    (
+        "ModelStore::read",
+        re.compile(
+            r"(?:\bModelStore\s*::\s*|<\s*ModelStore\s*>\s*::\s*)read\s*(?:::\s*<[^>]*>)?\s*\("
+        ),
+    ),
+)
+
 WINDOW_HIT_TEST_PROBE_OWNER = "examples-window-hit-test-probe"
 
 WINDOW_HIT_TEST_PROBE_REQUIRED_MARKERS = (
@@ -1797,7 +1846,7 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
             "ModelStore",
             "UiActionHostAdapter",
         ),
-        owner="examples-genui-demo",
+        owner=GENUI_OWNER,
     ),
     _fret_examples_advanced_surface(
         "imui_editor_proof_demo.rs",
@@ -2938,6 +2987,107 @@ def _scan_workspace_shell_driver_owner_boundary(
     return violations
 
 
+def _scan_genui_model_owner_boundary(
+    root: Path, spec: SurfacePath
+) -> list[SurfaceViolation]:
+    if spec.owner != GENUI_OWNER:
+        return []
+
+    violations: list[SurfaceViolation] = []
+    for path in _iter_source_files(root / spec.path):
+        text = _read_text(path)
+        production_text = text.split("#[cfg(test)]", 1)[0]
+        compact_production = _compact_source(production_text)
+        missing_markers = [
+            marker for marker in GENUI_REQUIRED_COMPACT_MARKERS if marker not in compact_production
+        ]
+        if missing_markers:
+            violations.append(
+                SurfaceViolation(
+                    rule="advanced-surface-genui-model-owner-boundary",
+                    path=path,
+                    line_no=1,
+                    message=(
+                        "GenUI runtime model reads and writes must stay behind GenUiModelOwner; "
+                        f"missing compact markers: {', '.join(missing_markers)}"
+                    ),
+                )
+            )
+
+        for marker in GENUI_FORBIDDEN_COMPACT_MARKERS:
+            if marker not in compact_production:
+                continue
+            violations.append(
+                SurfaceViolation(
+                    rule="advanced-surface-genui-model-owner-boundary",
+                    path=path,
+                    line_no=1,
+                    message=(
+                        "GenUI runtime model reads and writes must not regress to raw helper "
+                        f"functions; compact `{marker}` bypasses the owner boundary"
+                    ),
+                )
+            )
+
+        for line_no, line in _code_lines_for_scan(path, production_text):
+            if path.suffix == ".rs" and _is_rust_source_line_ignorable(line):
+                continue
+            for seam, pattern in GENUI_FORBIDDEN_RAW_MODEL_ACCESS_PATTERNS:
+                if not pattern.search(line):
+                    continue
+                violations.append(
+                    SurfaceViolation(
+                        rule="advanced-surface-genui-model-owner-boundary",
+                        path=path,
+                        line_no=line_no,
+                        message=(
+                            "GenUI runtime model reads and writes must route through "
+                            f"GenUiModelOwner; direct `{seam}` bypasses the owner boundary"
+                        ),
+                        source=line.strip(),
+                    )
+                )
+                break
+
+        model_store_aliases: list[str] = []
+        for statement in production_text.split(";"):
+            compact_statement = _compact_source(statement)
+            rest = compact_statement.removeprefix("let")
+            if rest == compact_statement:
+                continue
+            if "=" not in rest:
+                continue
+            alias, rhs = rest.split("=", 1)
+            if not re.fullmatch(r"(?:[A-Za-z_][A-Za-z0-9_]*\.)?models_mut\(\)", rhs):
+                continue
+            model_store_aliases.append(alias.strip().removeprefix("mut"))
+
+        for alias in model_store_aliases:
+            for forbidden in (
+                f"{alias}.update(",
+                f"{alias}.update::<",
+                f"{alias}.update_any(",
+                f"{alias}.update_any::<",
+                f"{alias}.read(",
+                f"{alias}.read::<",
+            ):
+                if forbidden not in compact_production:
+                    continue
+                violations.append(
+                    SurfaceViolation(
+                        rule="advanced-surface-genui-model-owner-boundary",
+                        path=path,
+                        line_no=1,
+                        message=(
+                            "GenUI runtime model reads and writes must route through "
+                            f"GenUiModelOwner; ModelStore alias `{forbidden}` bypasses the owner boundary"
+                        ),
+                    )
+                )
+
+    return violations
+
+
 def _scan_window_hit_test_probe_boundary(
     root: Path, spec: SurfacePath
 ) -> list[SurfaceViolation]:
@@ -3370,6 +3520,7 @@ def _scan_classified_raw_surface(root: Path, spec: SurfacePath) -> list[SurfaceV
     violations.extend(_scan_hotpatch_smoke_owner_boundary(root, spec))
     violations.extend(_scan_docking_arbitration_controls_boundary(root, spec))
     violations.extend(_scan_workspace_shell_driver_owner_boundary(root, spec))
+    violations.extend(_scan_genui_model_owner_boundary(root, spec))
     violations.extend(_scan_window_hit_test_probe_boundary(root, spec))
     violations.extend(_scan_components_gallery_owner_boundary(root, spec))
     violations.extend(_scan_virtual_list_stress_controls_boundary(root, spec))
