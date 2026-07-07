@@ -303,11 +303,12 @@ fn assert_custom_effect_v2_glass_chrome_text_roles(source: &str) {
     let source = compact(source);
 
     for needle in [
-        "usefret_ui_kit::declarative::textasdecl_text;",
-        "fncontrol_label_text<H:UiHost>(",
-        "fncontrol_readout_text<H:UiHost>(",
-        "decl_text::text_control_label(cx,text).inherit_foreground(foreground)",
-        "decl_text::text_control_readout(cx,text).inherit_foreground(foreground)",
+        "usefret::app::{AppRenderContext,text};",
+        "fncontrol_label_text<'a,Cx>(",
+        "fncontrol_readout_text<'a,Cx>(",
+        "Cx:AppRenderContext<'a>,",
+        "text::control_label(cx,text).inherit_foreground(foreground)",
+        "text::control_readout(cx,text).inherit_foreground(foreground)",
         "Self::control_label_text(cx,label,theme.color_token(\"muted_foreground\"))",
         "Self::control_readout_text(cx,value,theme.color_token(\"foreground\"))",
         "Self::control_readout_text(cx,\"CustomV2unsupportedonthisadapter/backend\",theme.color_token(\"muted_foreground\"),)",
@@ -323,6 +324,8 @@ fn assert_custom_effect_v2_glass_chrome_text_roles(source: &str) {
         "TextProps{",
         "wrap:fret_core::TextWrap::None",
         "overflow:fret_core::TextOverflow::Clip",
+        "usefret_ui_kit::declarative::textasdecl_text;",
+        "decl_text::",
     ] {
         assert!(
             !source.contains(needle),
