@@ -923,6 +923,45 @@ class SurfacePolicyTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             write(
+                root / "apps/fret-examples/src/plot_declarative_demo.rs",
+                """
+                use fret::app::prelude::*;
+                use fret_plot::LinePlotPanelBinding;
+                use fret_plot::cartesian::AxisScale;
+                use fret_plot::declarative::line_plot_panel_in;
+                use fret_plot::models::{LinePlotModel, LineSeries};
+                use fret_plot::series::Series;
+
+                struct PlotDeclarativeView {
+                    plot: LinePlotPanelBinding,
+                }
+
+                pub fn run() -> anyhow::Result<()> {
+                    FretApp::new("plot-declarative-demo")
+                        .window("plot_declarative_demo", (960.0, 640.0))
+                        .view::<PlotDeclarativeView>()?
+                        .run()
+                }
+
+                impl View for PlotDeclarativeView {
+                    fn init(app: &mut App, _window: WindowId) -> Self {
+                        let model = LinePlotModel::from_series(vec![LineSeries::new(
+                            "signal",
+                            Series::from_points_sorted(points, true),
+                        )]);
+                        Self {
+                            plot: LinePlotPanelBinding::new(app, model),
+                        }
+                    }
+
+                    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
+                        let props = self.plot.panel_props().x_scale(AxisScale::Linear);
+                        line_plot_panel_in(cx, props).into()
+                    }
+                }
+                """,
+            )
+            write(
                 root / "apps/fret-examples/src/tags_demo.rs",
                 """
                 use fret::app::prelude::*;
@@ -1092,6 +1131,11 @@ class SurfacePolicyTests(unittest.TestCase):
                 root,
                 default_surfaces=[
                     POLICY.SurfacePath(
+                        "apps/fret-examples/src/plot_declarative_demo.rs",
+                        "default_app_clean",
+                        "fixture default plot demo",
+                    ),
+                    POLICY.SurfacePath(
                         "apps/fret-examples/src/tags_demo.rs",
                         "default_app_clean",
                         "fixture default tags demo",
@@ -1172,6 +1216,10 @@ class SurfacePolicyTests(unittest.TestCase):
             "apps/fret-examples/src/async_playground_demo.rs",
             POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS,
         )
+        self.assertIn(
+            "apps/fret-examples/src/plot_declarative_demo.rs",
+            POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS,
+        )
         shadcn_rich_demo_paths = {
             "apps/fret-examples/src/date_picker_demo.rs",
             "apps/fret-examples/src/form_demo.rs",
@@ -1181,6 +1229,7 @@ class SurfacePolicyTests(unittest.TestCase):
         for path in shadcn_rich_demo_paths:
             self.assertIn(path, POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS)
         default_plot_overlay_paths = {
+            "apps/fret-examples/src/plot_declarative_demo.rs",
             "apps/fret-examples/src/plot_image_demo.rs",
             "apps/fret-examples/src/tags_demo.rs",
         }

@@ -217,6 +217,11 @@ DEFAULT_AUTHORING_SURFACES: tuple[SurfacePath, ...] = (
         "async query playground should stay on app-facing data, text, scroll, pressable, and element aliases",
     ),
     SurfacePath(
+        "apps/fret-examples/src/plot_declarative_demo.rs",
+        "default_app_clean",
+        "default app plot demo should stay on the FretApp/View plot binding path",
+    ),
+    SurfacePath(
         "apps/fret-examples/src/plot_image_demo.rs",
         "default_app_clean",
         "plot image overlay example should stay on the default declarative plot app surface",
@@ -2594,6 +2599,23 @@ DEFAULT_FORBIDDEN_PATTERNS: tuple[tuple[str, str], ...] = (
 )
 
 DEFAULT_PLOT_OVERLAY_REQUIRED_COMPACT_MARKERS: dict[str, tuple[str, ...]] = {
+    "apps/fret-examples/src/plot_declarative_demo.rs": (
+        "usefret::app::prelude::*;",
+        "usefret_plot::LinePlotPanelBinding;",
+        "usefret_plot::declarative::line_plot_panel_in;",
+        "PlotDeclarativeView",
+        "plot:LinePlotPanelBinding",
+        "FretApp::new(\"plot-declarative-demo\")",
+        ".view::<PlotDeclarativeView>()?",
+        "fninit(app:&mutApp,_window:WindowId)->Self",
+        "LinePlotModel::from_series(",
+        "LineSeries::new(",
+        "Series::from_points_sorted(",
+        "LinePlotPanelBinding::new(app,model)",
+        "self.plot.panel_props()",
+        ".x_scale(AxisScale::Linear)",
+        "line_plot_panel_in(cx,props).into()",
+    ),
     "apps/fret-examples/src/tags_demo.rs": (
         "usefret::app::prelude::*;",
         "usefret_plot::LinePlotPanelBinding;",
@@ -2641,6 +2663,24 @@ DEFAULT_PLOT_OVERLAY_REQUIRED_COMPACT_MARKERS: dict[str, tuple[str, ...]] = {
 }
 
 DEFAULT_PLOT_OVERLAY_FORBIDDEN_COMPACT_MARKERS: dict[str, tuple[str, ...]] = {
+    "apps/fret-examples/src/plot_declarative_demo.rs": (
+        "usefret::advanced::raw::Model;",
+        "usefret_plot::retained",
+        "fret_plot::retained::",
+        "LinePlotCanvas",
+        "PlotCanvas",
+        "create_node_retained(",
+        "LineChart::into_canvas(",
+        "advanced::prelude::*",
+        "component::prelude::*",
+        "KernelApp",
+        "AppWindowId",
+        "usefret_runtime::Model;",
+        "model:Model<LinePlotModel>",
+        "LinePlotPanelProps::new(self.model.clone())",
+        "fret_launch::",
+        "FnDriver",
+    ),
     "apps/fret-examples/src/tags_demo.rs": (
         "usefret::advanced::raw::Model;",
         "usefret_plot::retained",
@@ -2773,6 +2813,7 @@ PUBLIC_EXAMPLE_SCAN_ROOTS: tuple[str, ...] = (
     "apps/fret-examples/src/launcher_utility_window_demo.rs",
     "apps/fret-examples/src/launcher_utility_window_materials_demo.rs",
     "apps/fret-examples/src/async_playground_demo.rs",
+    "apps/fret-examples/src/plot_declarative_demo.rs",
     "apps/fret-examples/src/date_picker_demo.rs",
     "apps/fret-examples/src/form_demo.rs",
     "apps/fret-examples/src/table_demo.rs",
