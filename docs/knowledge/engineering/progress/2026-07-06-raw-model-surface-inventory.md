@@ -205,7 +205,10 @@ Keep raw/shared-model mechanisms for now:
   `components_gallery.rs` from generic free helpers to `ComponentsGalleryModelOwner`,
   and later moved its window-initialization model allocation behind
   `ComponentsGalleryModelBundle` so production source no longer scatters direct
-  `app.models_mut().insert(...)` calls in `build_ui(...)`.
+  `app.models_mut().insert(...)` calls in `build_ui(...)`. `tools/check_surface_policy.py` now
+  gates that gallery boundary globally, requiring the bundle/owner markers and rejecting direct
+  production-source `models_mut().update(...)`, `models_mut().insert(...)`, and
+  `ModelStore::update(...)` bypasses.
   `virtual_list_stress_demo.rs` from free helper functions to a named
   `VirtualListStressModelOwner`; a later tightening replaced that owner with
   `VirtualListStressControls`, so startup allocation, command writes, and render snapshot reads

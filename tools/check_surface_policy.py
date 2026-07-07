@@ -481,6 +481,46 @@ WINDOW_HIT_TEST_PROBE_FORBIDDEN_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...
     ),
 )
 
+COMPONENTS_GALLERY_OWNER = "examples-components-gallery"
+
+COMPONENTS_GALLERY_REQUIRED_MARKERS = (
+    "struct ComponentsGalleryModelBundle",
+    "fn new(models: &mut ModelStore",
+    "ComponentsGalleryModelBundle::new(app.models_mut()",
+    "struct ComponentsGalleryModelOwner<'a>",
+    "models: &'a mut ModelStore",
+    "fn update<T: Any, R>(",
+    "fn set<T: Any>(",
+    "fn set_last_action(",
+    "fn open_command_palette(",
+    "fn close_transient_surfaces(",
+    "fn components_gallery_set_last_action(",
+    "fn components_gallery_open_command_palette(",
+    "fn components_gallery_close_transient_surfaces(",
+    "components_gallery_close_transient_surfaces(app, state);",
+    "components_gallery_open_command_palette(app, state);",
+    "components_gallery_set_last_action(app, state, \"context_menu.action\");",
+)
+
+COMPONENTS_GALLERY_FORBIDDEN_RAW_WRITE_PATTERNS: tuple[
+    tuple[str, re.Pattern[str]], ...
+] = (
+    (
+        "models_mut().update",
+        re.compile(r"\bmodels_mut\s*\(\s*\)\s*\.\s*update(?:_any)?\s*\("),
+    ),
+    (
+        "ModelStore::update",
+        re.compile(
+            r"(?:\bModelStore\s*::\s*update(?:_any)?\s*\(|<\s*ModelStore\s*>\s*::\s*update(?:_any)?\s*\()"
+        ),
+    ),
+    (
+        "models_mut().insert",
+        re.compile(r"\bmodels_mut\s*\(\s*\)\s*\.\s*insert\s*\("),
+    ),
+)
+
 
 def _fret_examples_custom_effect_v2_web_surface(filename: str, variant: str) -> SurfacePath:
     return SurfacePath(
@@ -749,7 +789,7 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
             "ModelStore",
             "UiTree",
         ),
-        owner="examples-components-gallery",
+        owner=COMPONENTS_GALLERY_OWNER,
     ),
     _fret_examples_advanced_surface(
         "embedded_viewport_demo.rs",
@@ -1604,6 +1644,57 @@ def _scan_window_hit_test_probe_boundary(
     return violations
 
 
+def _scan_components_gallery_owner_boundary(
+    root: Path, spec: SurfacePath
+) -> list[SurfaceViolation]:
+    if spec.owner != COMPONENTS_GALLERY_OWNER:
+        return []
+
+    violations: list[SurfaceViolation] = []
+    for path in _iter_source_files(root / spec.path):
+        text = _read_text(path)
+        production_text = text.split("#[cfg(test)]", 1)[0]
+        missing_markers = [
+            marker
+            for marker in COMPONENTS_GALLERY_REQUIRED_MARKERS
+            if marker not in production_text
+        ]
+        if missing_markers:
+            violations.append(
+                SurfaceViolation(
+                    rule="advanced-surface-components-gallery-owner-boundary",
+                    path=path,
+                    line_no=1,
+                    message=(
+                        "components gallery model writes and startup allocation must stay behind "
+                        f"ComponentsGalleryModelBundle/Owner; missing markers: {', '.join(missing_markers)}"
+                    ),
+                )
+            )
+
+        for line_no, line in _code_lines_for_scan(path, production_text):
+            if path.suffix == ".rs" and _is_rust_source_line_ignorable(line):
+                continue
+            for seam, pattern in COMPONENTS_GALLERY_FORBIDDEN_RAW_WRITE_PATTERNS:
+                if not pattern.search(line):
+                    continue
+                violations.append(
+                    SurfaceViolation(
+                        rule="advanced-surface-components-gallery-owner-boundary",
+                        path=path,
+                        line_no=line_no,
+                        message=(
+                            "components gallery app/driver model writes must use "
+                            f"ComponentsGalleryModelBundle/Owner; direct `{seam}` bypasses the owner boundary"
+                        ),
+                        source=line.strip(),
+                    )
+                )
+                break
+
+    return violations
+
+
 def _scan_default_authoring_surface(root: Path, spec: SurfacePath) -> list[SurfaceViolation]:
     violations: list[SurfaceViolation] = []
     for path in _iter_source_files(root / spec.path):
@@ -1666,6 +1757,7 @@ def _scan_classified_raw_surface(root: Path, spec: SurfacePath) -> list[SurfaceV
     violations.extend(_scan_embedded_viewport_owner_boundary(root, spec))
     violations.extend(_scan_external_imports_owner_boundary(root, spec))
     violations.extend(_scan_window_hit_test_probe_boundary(root, spec))
+    violations.extend(_scan_components_gallery_owner_boundary(root, spec))
     for seam in sorted(allowed_raw_seams - used_raw_seams):
         violations.append(
             SurfaceViolation(

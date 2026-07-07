@@ -1824,6 +1824,167 @@ class SurfacePolicyTests(unittest.TestCase):
                 ]
             )
 
+    def test_components_gallery_direct_model_writes_are_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-examples/src/components_gallery.rs",
+                """
+                use fret_runtime::{ModelStore, PlatformCapabilities};
+
+                struct ComponentsGalleryModelBundle;
+                impl ComponentsGalleryModelBundle {
+                    fn new(models: &mut ModelStore) -> Self {
+                        Self
+                    }
+                }
+
+                struct ComponentsGalleryModelOwner<'a> {
+                    models: &'a mut ModelStore,
+                }
+
+                impl<'a> ComponentsGalleryModelOwner<'a> {
+                    fn update<T: Any, R>(&mut self, model: &Model<T>, f: impl FnOnce(&mut T) -> R) -> Option<R> {
+                        None
+                    }
+                    fn set<T: Any>(&mut self, model: &Model<T>, value: T) -> bool {
+                        false
+                    }
+                    fn set_last_action(&mut self) {}
+                    fn open_command_palette(&mut self) {}
+                    fn close_transient_surfaces(&mut self) {}
+                }
+
+                fn components_gallery_set_last_action() {}
+                fn components_gallery_open_command_palette() {}
+                fn components_gallery_close_transient_surfaces() {}
+                fn route_helpers(app: &mut App, state: &State) {
+                    components_gallery_close_transient_surfaces(app, state);
+                    components_gallery_open_command_palette(app, state);
+                    components_gallery_set_last_action(app, state, "context_menu.action");
+                }
+
+                fn build_ui(app: &mut App) {
+                    let _ = ComponentsGalleryModelBundle::new(app.models_mut());
+                    let _ = app.models_mut().insert(35.0f32);
+                }
+
+                fn bad(app: &mut App, state: &State) {
+                    ComponentsGalleryModelOwner::new(app.models_mut()).update(&state.progress, |_| {});
+                    let _ = app.models_mut().update(&state.progress, |_| true);
+                    let _ = ModelStore::update(app.models_mut(), &state.progress, |_| true);
+                }
+                """,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/components_gallery.rs",
+                        "advanced_manual",
+                        "fixture components gallery surface",
+                        owner="examples-components-gallery",
+                        allowed_raw_seams=("fret_runtime", "ModelStore"),
+                        retirement=POLICY.FRET_EXAMPLES_ADVANCED_RETIREMENT,
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            owner_violations = [
+                violation
+                for violation in violations
+                if violation.rule == "advanced-surface-components-gallery-owner-boundary"
+            ]
+            self.assertEqual(3, len(owner_violations))
+            messages = "\n".join(violation.message for violation in owner_violations)
+            self.assertIn("models_mut().insert", messages)
+            self.assertIn("models_mut().update", messages)
+            self.assertIn("ModelStore::update", messages)
+
+    def test_components_gallery_owner_surface_is_allowed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-examples/src/components_gallery.rs",
+                """
+                use fret_runtime::{ModelStore, PlatformCapabilities};
+
+                struct ComponentsGalleryModelBundle;
+                impl ComponentsGalleryModelBundle {
+                    fn new(models: &mut ModelStore) -> Self {
+                        let _ = models.insert(35.0f32);
+                        Self
+                    }
+                }
+
+                struct ComponentsGalleryModelOwner<'a> {
+                    models: &'a mut ModelStore,
+                }
+
+                impl<'a> ComponentsGalleryModelOwner<'a> {
+                    fn update<T: Any, R>(&mut self, model: &Model<T>, f: impl FnOnce(&mut T) -> R) -> Option<R> {
+                        None
+                    }
+                    fn set<T: Any>(&mut self, model: &Model<T>, value: T) -> bool {
+                        false
+                    }
+                    fn set_last_action(&mut self) {}
+                    fn open_command_palette(&mut self) {}
+                    fn close_transient_surfaces(&mut self) {}
+                }
+
+                fn components_gallery_set_last_action() {}
+                fn components_gallery_open_command_palette() {}
+                fn components_gallery_close_transient_surfaces() {}
+                fn route_helpers(app: &mut App, state: &State) {
+                    components_gallery_close_transient_surfaces(app, state);
+                    components_gallery_open_command_palette(app, state);
+                    components_gallery_set_last_action(app, state, "context_menu.action");
+                }
+
+                fn build_ui(app: &mut App) {
+                    let _ = ComponentsGalleryModelBundle::new(app.models_mut());
+                }
+
+                fn ok(app: &mut App, state: &State) {
+                    ComponentsGalleryModelOwner::new(app.models_mut()).update(&state.progress, |_| {});
+                    components_gallery_set_last_action();
+                    components_gallery_open_command_palette();
+                    components_gallery_close_transient_surfaces();
+                }
+                """,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/components_gallery.rs",
+                        "advanced_manual",
+                        "fixture components gallery surface",
+                        owner="examples-components-gallery",
+                        allowed_raw_seams=("fret_runtime", "ModelStore"),
+                        retirement=POLICY.FRET_EXAMPLES_ADVANCED_RETIREMENT,
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            self.assertFalse(
+                [
+                    violation
+                    for violation in violations
+                    if violation.rule
+                    == "advanced-surface-components-gallery-owner-boundary"
+                ]
+            )
+
     def test_migrated_cookbook_examples_are_default_clean(self) -> None:
         migrated = {
             "apps/fret-cookbook/examples/async_inbox_basics.rs",
