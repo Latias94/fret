@@ -67,4 +67,11 @@ This audit compares Fret's shadcn-aligned `Resizable` recipe against the upstrea
 
 ## Validation
 
-- `cargo check -p fret-ui-gallery --message-format short`
+- `cargo nextest run -p fret-ui-shadcn --test resizable_panel_group_layout`
+- `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_resizable`
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout resizable::`
+- `cargo nextest run -p fret-ui-gallery --test resizable_docs_surface`
+- `cargo nextest run -p fret-ui-gallery --lib gallery_resizable_core_examples_keep_upstream_aligned_targets_present`
+- Matrix packet: `docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/resizable_agent_packet_p0_v1.json`
+  (all packet validation gates are `pass`, with no `needs_live_measurement`, `mismatch`, or
+  `blocked` status counts).
