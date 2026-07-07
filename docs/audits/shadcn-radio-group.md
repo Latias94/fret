@@ -44,10 +44,12 @@ docs page, the `new-york-v4` registry source/examples, and the existing radio-gr
 - Pass: the gallery mirrors the current upstream Radio Group docs path first: `Demo` and `Usage`.
 - Pass: `Description`, `Choice Card`, `Fieldset`, `Disabled`, `Required Disabled`, `Invalid`, `RTL`, `API Reference`, and `Label Association` remain explicit Fret follow-ups that document related Field/Form/RTL/association composition without pretending they are current upstream Radio Group headings.
 - Pass: the composed rows use `into_element_parts(...)` for source-shaped composition instead of forcing richer rows through the item-owned child lane.
+- Pass: the dedicated gallery docs-surface gate now locks the page order, snippet lane split, and diagnostic evidence anchors in `apps/fret-ui-gallery/tests/radio_group_docs_surface.rs`.
 - Pass: this work remains docs/public-surface parity, not a mechanism-layer fix.
 
 ## Validation
 
+- `cargo nextest run -p fret-ui-gallery --test radio_group_docs_surface`
 - `cargo nextest run -p fret-ui-shadcn --lib --status-level fail radio_group`
 - `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail radio_group`
 - `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_control_chrome --status-level fail radio_group_demo`
