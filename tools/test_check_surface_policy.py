@@ -1068,6 +1068,14 @@ class SurfacePolicyTests(unittest.TestCase):
         )
         self.assertIn("postprocess", postprocess_spec.reason)
         self.assertNotIn("AnyElement", postprocess_spec.allowed_raw_seams)
+        editor_device_shell_spec = next(
+            spec
+            for spec in POLICY.ADVANCED_MANUAL_SURFACES
+            if spec.path == "apps/fret-examples/src/editor_notes_device_shell_demo.rs"
+        )
+        self.assertIn("device-shell", editor_device_shell_spec.reason)
+        self.assertNotIn("AnyElement", editor_device_shell_spec.allowed_raw_seams)
+        self.assertNotIn("ElementContext", editor_device_shell_spec.allowed_raw_seams)
         for path in default_plot_overlay_paths:
             self.assertTrue(
                 any(spec.path == path for spec in POLICY.DEFAULT_AUTHORING_SURFACES),

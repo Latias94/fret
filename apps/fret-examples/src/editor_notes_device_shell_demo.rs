@@ -2,13 +2,12 @@ use std::sync::Arc;
 
 use fret::adaptive::{DeviceShellSwitchPolicy, device_shell_switch};
 use fret::app::prelude::*;
+use fret::app::{AppElement, AppRenderContext, RenderContextAccess as _, text};
 use fret::{Defaults, FretApp, shadcn};
 use fret_core::Px;
 use fret_ui::Invalidation;
 use fret_ui_kit::IntoUiElementInExt as _;
-use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
-use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::{LayoutRefinement, Space};
 use fret_workspace::WorkspaceFrame;
 
@@ -35,18 +34,20 @@ struct EditorNotesDeviceShellDemoView {
     theme: EditorThemePresetBinding,
 }
 
-fn device_shell_section_text<H: fret_ui::UiHost>(
-    cx: &mut fret_ui::ElementContext<'_, H>,
-    text: impl Into<Arc<str>>,
-) -> fret_ui::element::AnyElement {
-    decl_text::text_section_chrome_label(cx, text)
+fn device_shell_section_text<'a, Cx, T>(cx: &mut Cx, text: T) -> AppElement
+where
+    Cx: AppRenderContext<'a>,
+    T: Into<Arc<str>>,
+{
+    text::section_chrome_label(cx, text)
 }
 
-fn device_shell_paragraph_text<H: fret_ui::UiHost>(
-    cx: &mut fret_ui::ElementContext<'_, H>,
-    text: impl Into<Arc<str>>,
-) -> fret_ui::element::AnyElement {
-    decl_text::text_paragraph(cx, text)
+fn device_shell_paragraph_text<'a, Cx, T>(cx: &mut Cx, text: T) -> AppElement
+where
+    Cx: AppRenderContext<'a>,
+    T: Into<Arc<str>>,
+{
+    text::paragraph(cx, text)
 }
 
 pub fn run() -> anyhow::Result<()> {
