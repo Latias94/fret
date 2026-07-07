@@ -576,6 +576,64 @@ VIRTUAL_LIST_STRESS_FORBIDDEN_RAW_WRITE_PATTERNS: tuple[
     ),
 )
 
+TABLE_STRESS_OWNER = "examples-table-stress"
+
+TABLE_STRESS_REQUIRED_MARKERS = (
+    "struct TableStressControls",
+    "table_state: Model<TableState>",
+    "items_revision: Model<u64>",
+    "controls: TableStressControls,",
+    "fn new(models: &mut ModelStore, row_count: usize) -> Self",
+    "fn render_snapshot(&self, cx: &mut ElementContext<'_, App>) -> TableStressSnapshot",
+    "let table_state = state.controls.table_model();",
+    "let controls = state.controls.render_snapshot(cx);",
+    "struct TableStressModelOwner<'a>",
+    "models: &'a mut ModelStore",
+    "fn update_table_state(",
+    "fn toggle_sorting(&mut self, state: &Model<TableState>) -> bool",
+    "fn toggle_role_filter(&mut self, state: &Model<TableState>) -> bool",
+    "fn toggle_global_filter(&mut self, state: &Model<TableState>) -> bool",
+    "fn clear_filters(&mut self, state: &Model<TableState>) -> bool",
+    "fn bump_items_revision(&mut self, revision: &Model<u64>) -> bool",
+    "TableStressModelOwner::new(app.models_mut()).toggle_sorting(&self.table_state)",
+    "TableStressModelOwner::new(app.models_mut()).toggle_role_filter(&self.table_state)",
+    "TableStressModelOwner::new(app.models_mut()).toggle_global_filter(&self.table_state)",
+    "TableStressModelOwner::new(app.models_mut()).clear_filters(&self.table_state)",
+    "TableStressModelOwner::new(app.models_mut()).bump_items_revision(&self.items_revision)",
+    "state.controls.toggle_sorting(app)",
+    "state.controls.toggle_role_filter(app)",
+    "state.controls.toggle_global_filter(app)",
+    "state.controls.clear_filters(app)",
+    "state.controls.bump_items_revision(app)",
+)
+
+TABLE_STRESS_FORBIDDEN_RAW_WRITE_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
+    (
+        "models_mut().insert",
+        re.compile(r"\bmodels_mut\s*\(\s*\)\s*\.\s*insert\s*\("),
+    ),
+    (
+        "models_mut().update",
+        re.compile(r"\bmodels_mut\s*\(\s*\)\s*\.\s*update(?:_any)?\s*\("),
+    ),
+    (
+        "ModelStore::update",
+        re.compile(
+            r"(?:\bModelStore\s*::\s*update(?:_any)?\s*\(|<\s*ModelStore\s*>\s*::\s*update(?:_any)?\s*\()"
+        ),
+    ),
+    (
+        "legacy-state-model-reference",
+        re.compile(r"&\s*state\s*\.\s*(?:table_state|items_revision)\b"),
+    ),
+    (
+        "legacy-driver-command",
+        re.compile(
+            r"\bTableStressDriver\s*::\s*(?:toggle_sorting|toggle_role_filter|toggle_global_filter|clear_filters|bump_items_revision)\b"
+        ),
+    ),
+)
+
 
 def _fret_examples_custom_effect_v2_web_surface(filename: str, variant: str) -> SurfacePath:
     return SurfacePath(
@@ -771,6 +829,26 @@ INTERNAL_HARNESS_SURFACES: tuple[SurfacePath, ...] = (
             "UiTree",
         ),
         owner=VIRTUAL_LIST_STRESS_OWNER,
+    ),
+    _fret_examples_internal_harness(
+        "table_stress_demo.rs",
+        "the table stress harness owns manual driver state, renderer/allocation perf hooks, and "
+        "retained table plumbing, while shared model allocation, command writes, render "
+        "subscriptions, and readout snapshots route through TableStressControls and "
+        "TableStressModelOwner",
+        (
+            "fret_app",
+            "fret_core",
+            "fret_launch",
+            "fret_runtime",
+            "fret_ui",
+            "AnyElement",
+            "ElementContext",
+            "FnDriver",
+            "ModelStore",
+            "UiTree",
+        ),
+        owner=TABLE_STRESS_OWNER,
     ),
     _fret_examples_internal_harness(
         "simple_todo_demo/driver.rs",
@@ -1269,6 +1347,7 @@ PUBLIC_EXAMPLE_SCAN_ROOTS: tuple[str, ...] = (
     "apps/fret-examples/src/chart_multi_axis_demo.rs",
     "apps/fret-examples/src/chart_stress_demo.rs",
     "apps/fret-examples/src/virtual_list_stress_demo.rs",
+    "apps/fret-examples/src/table_stress_demo.rs",
     "apps/fret-examples/src/custom_effect_v2_web_demo.rs",
     "apps/fret-examples/src/custom_effect_v2_identity_web_demo.rs",
     "apps/fret-examples/src/custom_effect_v2_lut_web_demo.rs",
@@ -1823,6 +1902,56 @@ def _scan_virtual_list_stress_controls_boundary(
     return violations
 
 
+def _scan_table_stress_controls_boundary(
+    root: Path, spec: SurfacePath
+) -> list[SurfaceViolation]:
+    if spec.owner != TABLE_STRESS_OWNER:
+        return []
+
+    violations: list[SurfaceViolation] = []
+    for path in _iter_source_files(root / spec.path):
+        text = _read_text(path)
+        production_text = text.split("#[cfg(test)]", 1)[0]
+        missing_markers = [
+            marker for marker in TABLE_STRESS_REQUIRED_MARKERS if marker not in production_text
+        ]
+        if missing_markers:
+            violations.append(
+                SurfaceViolation(
+                    rule="internal_harness-table-stress-controls-boundary",
+                    path=path,
+                    line_no=1,
+                    message=(
+                        "table stress shared models must stay behind TableStressControls and "
+                        f"TableStressModelOwner; missing markers: {', '.join(missing_markers)}"
+                    ),
+                )
+            )
+
+        for line_no, line in _code_lines_for_scan(path, production_text):
+            if path.suffix == ".rs" and _is_rust_source_line_ignorable(line):
+                continue
+            for seam, pattern in TABLE_STRESS_FORBIDDEN_RAW_WRITE_PATTERNS:
+                if not pattern.search(line):
+                    continue
+                violations.append(
+                    SurfaceViolation(
+                        rule="internal_harness-table-stress-controls-boundary",
+                        path=path,
+                        line_no=line_no,
+                        message=(
+                            "table stress startup allocation, command writes, render "
+                            "subscriptions, and readout snapshots must route through "
+                            f"TableStressControls/Owner; direct `{seam}` bypasses the controls boundary"
+                        ),
+                        source=line.strip(),
+                    )
+                )
+                break
+
+    return violations
+
+
 def _scan_default_authoring_surface(root: Path, spec: SurfacePath) -> list[SurfaceViolation]:
     violations: list[SurfaceViolation] = []
     for path in _iter_source_files(root / spec.path):
@@ -1887,6 +2016,7 @@ def _scan_classified_raw_surface(root: Path, spec: SurfacePath) -> list[SurfaceV
     violations.extend(_scan_window_hit_test_probe_boundary(root, spec))
     violations.extend(_scan_components_gallery_owner_boundary(root, spec))
     violations.extend(_scan_virtual_list_stress_controls_boundary(root, spec))
+    violations.extend(_scan_table_stress_controls_boundary(root, spec))
     for seam in sorted(allowed_raw_seams - used_raw_seams):
         violations.append(
             SurfaceViolation(

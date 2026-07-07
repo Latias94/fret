@@ -795,6 +795,10 @@ class SurfacePolicyTests(unittest.TestCase):
             POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS,
         )
         self.assertIn(
+            "apps/fret-examples/src/table_stress_demo.rs",
+            POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS,
+        )
+        self.assertIn(
             "apps/fret-examples/src/embedded_viewport_demo.rs",
             POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS,
         )
@@ -833,6 +837,12 @@ class SurfacePolicyTests(unittest.TestCase):
         self.assertTrue(
             any(
                 spec.path == "apps/fret-examples/src/virtual_list_stress_demo.rs"
+                for spec in POLICY.INTERNAL_HARNESS_SURFACES
+            )
+        )
+        self.assertTrue(
+            any(
+                spec.path == "apps/fret-examples/src/table_stress_demo.rs"
                 for spec in POLICY.INTERNAL_HARNESS_SURFACES
             )
         )
@@ -2177,6 +2187,265 @@ class SurfacePolicyTests(unittest.TestCase):
                     for violation in violations
                     if violation.rule
                     == "internal_harness-virtual-list-stress-controls-boundary"
+                ]
+            )
+
+    def test_table_stress_direct_model_writes_are_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-examples/src/table_stress_demo.rs",
+                """
+                use fret_runtime::{ModelStore, PlatformCapabilities};
+
+                struct TableStressControls {
+                    table_state: Model<TableState>,
+                    items_revision: Model<u64>,
+                }
+
+                struct TableStressSnapshot;
+
+                struct TableStressModelOwner<'a> {
+                    models: &'a mut ModelStore,
+                }
+
+                impl<'a> TableStressModelOwner<'a> {
+                    fn new(models: &'a mut ModelStore) -> Self {
+                        Self { models }
+                    }
+
+                    fn update_table_state(&mut self, state: &Model<TableState>, f: impl FnOnce(&mut TableState)) -> bool {
+                        false
+                    }
+
+                    fn toggle_sorting(&mut self, state: &Model<TableState>) -> bool { false }
+                    fn toggle_role_filter(&mut self, state: &Model<TableState>) -> bool { false }
+                    fn toggle_global_filter(&mut self, state: &Model<TableState>) -> bool { false }
+                    fn clear_filters(&mut self, state: &Model<TableState>) -> bool { false }
+                    fn bump_items_revision(&mut self, revision: &Model<u64>) -> bool { false }
+                }
+
+                impl TableStressControls {
+                    fn new(models: &mut ModelStore, row_count: usize) -> Self {
+                        Self {
+                            table_state: models.insert(TableState::default()),
+                            items_revision: models.insert(1u64),
+                        }
+                    }
+
+                    fn table_model(&self) -> Model<TableState> {
+                        self.table_state.clone()
+                    }
+
+                    fn toggle_sorting(&self, app: &mut App) -> bool {
+                        TableStressModelOwner::new(app.models_mut()).toggle_sorting(&self.table_state)
+                    }
+
+                    fn toggle_role_filter(&self, app: &mut App) -> bool {
+                        TableStressModelOwner::new(app.models_mut()).toggle_role_filter(&self.table_state)
+                    }
+
+                    fn toggle_global_filter(&self, app: &mut App) -> bool {
+                        TableStressModelOwner::new(app.models_mut()).toggle_global_filter(&self.table_state)
+                    }
+
+                    fn clear_filters(&self, app: &mut App) -> bool {
+                        TableStressModelOwner::new(app.models_mut()).clear_filters(&self.table_state)
+                    }
+
+                    fn bump_items_revision(&self, app: &mut App) -> bool {
+                        TableStressModelOwner::new(app.models_mut()).bump_items_revision(&self.items_revision)
+                    }
+
+                    fn render_snapshot(&self, cx: &mut ElementContext<'_, App>) -> TableStressSnapshot {
+                        TableStressSnapshot
+                    }
+                }
+
+                struct TableStressWindowState {
+                    controls: TableStressControls,
+                    progress: Model<u64>,
+                }
+
+                fn build_ui(app: &mut App) {
+                    let controls = TableStressControls::new(app.models_mut(), 10);
+                    let _ = app.models_mut().insert(0u64);
+                }
+
+                fn handle_event(app: &mut App, state: &mut TableStressWindowState) {
+                    let _ = state.controls.toggle_sorting(app);
+                    let _ = state.controls.toggle_role_filter(app);
+                    let _ = state.controls.toggle_global_filter(app);
+                    let _ = state.controls.clear_filters(app);
+                    let _ = state.controls.bump_items_revision(app);
+                    let _ = app.models_mut().update(&state.progress, |_| true);
+                    let _ = ModelStore::update(app.models_mut(), &state.progress, |_| true);
+                }
+
+                fn render(cx: &mut ElementContext<'_, App>, state: &TableStressWindowState) {
+                    let table_state = state.controls.table_model();
+                    let controls = state.controls.render_snapshot(cx);
+                }
+                """,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[],
+                internal_harness_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/table_stress_demo.rs",
+                        "internal_harness",
+                        "fixture table stress harness",
+                        owner="examples-table-stress",
+                        allowed_raw_seams=(
+                            "fret_app",
+                            "fret_runtime",
+                            "ElementContext",
+                            "ModelStore",
+                        ),
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            owner_violations = [
+                violation
+                for violation in violations
+                if violation.rule == "internal_harness-table-stress-controls-boundary"
+            ]
+            self.assertEqual(3, len(owner_violations))
+            messages = "\n".join(violation.message for violation in owner_violations)
+            self.assertIn("models_mut().insert", messages)
+            self.assertIn("models_mut().update", messages)
+            self.assertIn("ModelStore::update", messages)
+
+    def test_table_stress_controls_surface_is_allowed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-examples/src/table_stress_demo.rs",
+                """
+                use fret_runtime::{ModelStore, PlatformCapabilities};
+
+                struct TableStressControls {
+                    table_state: Model<TableState>,
+                    items_revision: Model<u64>,
+                }
+
+                struct TableStressSnapshot;
+
+                struct TableStressModelOwner<'a> {
+                    models: &'a mut ModelStore,
+                }
+
+                impl<'a> TableStressModelOwner<'a> {
+                    fn new(models: &'a mut ModelStore) -> Self {
+                        Self { models }
+                    }
+
+                    fn update_table_state(&mut self, state: &Model<TableState>, f: impl FnOnce(&mut TableState)) -> bool {
+                        false
+                    }
+
+                    fn toggle_sorting(&mut self, state: &Model<TableState>) -> bool { false }
+                    fn toggle_role_filter(&mut self, state: &Model<TableState>) -> bool { false }
+                    fn toggle_global_filter(&mut self, state: &Model<TableState>) -> bool { false }
+                    fn clear_filters(&mut self, state: &Model<TableState>) -> bool { false }
+                    fn bump_items_revision(&mut self, revision: &Model<u64>) -> bool { false }
+                }
+
+                impl TableStressControls {
+                    fn new(models: &mut ModelStore, row_count: usize) -> Self {
+                        Self {
+                            table_state: models.insert(TableState::default()),
+                            items_revision: models.insert(1u64),
+                        }
+                    }
+
+                    fn table_model(&self) -> Model<TableState> {
+                        self.table_state.clone()
+                    }
+
+                    fn toggle_sorting(&self, app: &mut App) -> bool {
+                        TableStressModelOwner::new(app.models_mut()).toggle_sorting(&self.table_state)
+                    }
+
+                    fn toggle_role_filter(&self, app: &mut App) -> bool {
+                        TableStressModelOwner::new(app.models_mut()).toggle_role_filter(&self.table_state)
+                    }
+
+                    fn toggle_global_filter(&self, app: &mut App) -> bool {
+                        TableStressModelOwner::new(app.models_mut()).toggle_global_filter(&self.table_state)
+                    }
+
+                    fn clear_filters(&self, app: &mut App) -> bool {
+                        TableStressModelOwner::new(app.models_mut()).clear_filters(&self.table_state)
+                    }
+
+                    fn bump_items_revision(&self, app: &mut App) -> bool {
+                        TableStressModelOwner::new(app.models_mut()).bump_items_revision(&self.items_revision)
+                    }
+
+                    fn render_snapshot(&self, cx: &mut ElementContext<'_, App>) -> TableStressSnapshot {
+                        TableStressSnapshot
+                    }
+                }
+
+                struct TableStressWindowState {
+                    controls: TableStressControls,
+                }
+
+                fn build_ui(app: &mut App) {
+                    let controls = TableStressControls::new(app.models_mut(), 10);
+                    let _ = controls;
+                }
+
+                fn handle_event(app: &mut App, state: &mut TableStressWindowState) {
+                    let _ = state.controls.toggle_sorting(app);
+                    let _ = state.controls.toggle_role_filter(app);
+                    let _ = state.controls.toggle_global_filter(app);
+                    let _ = state.controls.clear_filters(app);
+                    let _ = state.controls.bump_items_revision(app);
+                }
+
+                fn render(cx: &mut ElementContext<'_, App>, state: &TableStressWindowState) {
+                    let table_state = state.controls.table_model();
+                    let controls = state.controls.render_snapshot(cx);
+                    let _ = (table_state, controls);
+                }
+                """,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[],
+                internal_harness_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/table_stress_demo.rs",
+                        "internal_harness",
+                        "fixture table stress harness",
+                        owner="examples-table-stress",
+                        allowed_raw_seams=(
+                            "fret_app",
+                            "fret_runtime",
+                            "ElementContext",
+                            "ModelStore",
+                        ),
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            self.assertFalse(
+                [
+                    violation
+                    for violation in violations
+                    if violation.rule == "internal_harness-table-stress-controls-boundary"
                 ]
             )
 

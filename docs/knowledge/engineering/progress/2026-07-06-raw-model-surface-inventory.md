@@ -135,7 +135,11 @@ Keep raw/shared-model mechanisms for now:
     `models_mut().update(...)`, generic/update-any variants, and UFCS `ModelStore` bypasses in the
     production demo source. A later tightening added `TableStressControls`, so startup allocation,
     command writes, render subscriptions, and readout snapshots now sit behind one demo-local
-    controls binding while preserving the retained table component seam.
+    controls binding while preserving the retained table component seam. `tools/check_surface_policy.py`
+    now classifies it as an internal harness, includes it in public example scanning, and globally
+    rejects direct production-source `models_mut().insert(...)`, `models_mut().update(...)`,
+    `update_any(...)`, UFCS `ModelStore::update(...)`, direct legacy state model references, and
+    legacy `TableStressDriver::*` command helpers.
   - Keep raw model seams in lower-level retained table, data-grid, stress, or canvas-grid surfaces
     only when their component contract still names the shared retained state explicitly.
 - Custom effect demos such as `custom_effect_v2_*`. They expose effect parameter models and reset
