@@ -435,6 +435,17 @@ def _fret_examples_manual_chart_surface(filename: str) -> SurfacePath:
             MANUAL_CHART_ALLOWED_RAW_SEAMS,
             owner=PLOT_ERROR_BARS_OWNER,
         )
+    if filename == "histogram_demo.rs":
+        return _fret_examples_advanced_surface(
+            filename,
+            (
+                "it owns a manual histogram runner with FnDriver/UiTree lifecycle while "
+                "histogram series, query output reads, and panel wiring route through "
+                "HistogramPlotPanelBinding"
+            ),
+            MANUAL_CHART_ALLOWED_RAW_SEAMS,
+            owner=PLOT_HISTOGRAM_OWNER,
+        )
     stem = filename.removesuffix(".rs").replace("_", "-")
     return _fret_examples_advanced_surface(
         filename,
@@ -1089,6 +1100,37 @@ PLOT_ERROR_BARS_FORBIDDEN_COMPACT_MARKERS = (
     "app.models_mut().insert(PlotOutput::default())",
 )
 
+PLOT_HISTOGRAM_OWNER = "examples-plot-histogram"
+
+PLOT_HISTOGRAM_REQUIRED_COMPACT_MARKERS = (
+    "usefret_plot::HistogramPlotPanelBinding;",
+    "usefret_plot::declarative::histogram_plot_panel_in;",
+    "usefret_plot::models::{HistogramPlotModel,HistogramSeries};",
+    "usefret_ui::{UiTree,declarative};",
+    "plot:HistogramPlotPanelBinding",
+    "HistogramPlotModel::from_series(series)",
+    "HistogramSeries::new(",
+    ".bins(80)",
+    ".bar_gap_fraction(0.12)",
+    "HistogramPlotPanelBinding::new(app,HistogramPlotModel::from_series(series))",
+    "declarative::RenderRootContext::new(&mutstate.ui,app,services,window,bounds).render_root(\"histogram-demo\"",
+    "plot.panel_props()",
+    "state.plot.output_untracked(app)",
+    "vec![histogram_plot_panel_in(cx,props)]",
+)
+
+PLOT_HISTOGRAM_FORBIDDEN_COMPACT_MARKERS = (
+    "usefret_plot::retained",
+    "fret_plot::retained::",
+    "HistogramPlotCanvas",
+    "PlotCanvas",
+    "create_node_retained(",
+    "fret_runtime::Model<",
+    "HistogramPlotPanelProps::new(",
+    "app.models_mut().insert(PlotState::default())",
+    "app.models_mut().insert(PlotOutput::default())",
+)
+
 PLOT_DECLARATIVE_BINDING_BOUNDARIES: tuple[CompactSourceBoundary, ...] = (
     CompactSourceBoundary(
         owner=PLOT_STRESS_OWNER,
@@ -1217,6 +1259,20 @@ PLOT_DECLARATIVE_BINDING_BOUNDARIES: tuple[CompactSourceBoundary, ...] = (
         forbidden_message_template=(
             "Error-bars plot demo must not expose retained/manual plot state or output "
             "wiring; compact `{marker}` bypasses the ErrorBarsPlotPanelBinding boundary"
+        ),
+    ),
+    CompactSourceBoundary(
+        owner=PLOT_HISTOGRAM_OWNER,
+        rule="advanced-surface-plot-histogram-declarative-binding-boundary",
+        required_markers=PLOT_HISTOGRAM_REQUIRED_COMPACT_MARKERS,
+        forbidden_markers=PLOT_HISTOGRAM_FORBIDDEN_COMPACT_MARKERS,
+        missing_message_template=(
+            "Histogram plot demo must keep histogram series authoring and query output "
+            "reads on HistogramPlotPanelBinding; missing compact markers: {missing_markers}"
+        ),
+        forbidden_message_template=(
+            "Histogram plot demo must not expose retained/manual plot state or output "
+            "wiring; compact `{marker}` bypasses the HistogramPlotPanelBinding boundary"
         ),
     ),
 )

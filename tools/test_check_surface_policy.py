@@ -4672,6 +4672,188 @@ class SurfacePolicyTests(unittest.TestCase):
                 ]
             )
 
+    def test_plot_histogram_legacy_retained_authoring_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-examples/src/histogram_demo.rs",
+                """
+                use fret_plot::HistogramPlotPanelBinding;
+                use fret_plot::declarative::{HistogramPlotPanelProps, histogram_plot_panel_in};
+                use fret_plot::models::{HistogramPlotModel, HistogramSeries};
+                use fret_plot::retained;
+                use fret_runtime::Model;
+                use fret_ui::{UiTree, declarative};
+
+                struct HistogramDemoWindowState {
+                    ui: UiTree<App>,
+                    plot: HistogramPlotPanelBinding,
+                }
+
+                impl HistogramDemoDriver {
+                    fn build_ui(app: &mut App) -> HistogramDemoWindowState {
+                        let series = vec![
+                            HistogramSeries::new("histogram", samples)
+                                .bins(80)
+                                .bar_gap_fraction(0.12),
+                        ];
+                        let plot = HistogramPlotPanelBinding::new(app, HistogramPlotModel::from_series(series));
+                        HistogramDemoWindowState {
+                            ui: UiTree::new(),
+                            plot,
+                        }
+                    }
+                }
+
+                fn handle_event(app: &mut App, state: &mut HistogramDemoWindowState) {
+                    let _ = state.plot.output_untracked(app);
+                }
+
+                fn render(
+                    app: &mut App,
+                    services: &mut Services,
+                    window: AppWindowId,
+                    bounds: Rect,
+                    state: &mut HistogramDemoWindowState,
+                ) {
+                    let plot = state.plot.clone();
+                    let root = declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
+                        .render_root("histogram-demo", move |cx| {
+                            let style = LinePlotStyle::default();
+                            let props = plot.panel_props().style(style);
+                            vec![histogram_plot_panel_in(cx, props)]
+                        });
+                    let _ = root;
+                }
+
+                struct LegacyHistogramPlot {
+                    plot: fret_runtime::Model<HistogramPlotModel>,
+                    output: Model<PlotOutput>,
+                }
+
+                fn bad(
+                    app: &mut App,
+                    plot: Model<HistogramPlotModel>,
+                ) {
+                    let _ = retained::legacy();
+                    let _ = fret_plot::retained::legacy();
+                    let _ = HistogramPlotCanvas;
+                    let _ = PlotCanvas;
+                    create_node_retained();
+                    let _props = HistogramPlotPanelProps::new(plot.clone());
+                    let _ = app.models_mut().insert(PlotState::default());
+                    let _ = app.models_mut().insert(PlotOutput::default());
+                }
+                """,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/histogram_demo.rs",
+                        "advanced_manual",
+                        "fixture histogram plot demo",
+                        owner="examples-plot-histogram",
+                        allowed_raw_seams=("fret_runtime", "fret_ui", "UiTree"),
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            owner_violations = [
+                violation
+                for violation in violations
+                if violation.rule == "advanced-surface-plot-histogram-declarative-binding-boundary"
+            ]
+            self.assertGreaterEqual(len(owner_violations), 7)
+            messages = "\n".join(violation.message for violation in owner_violations)
+            self.assertIn("fret_plot::retained", messages)
+            self.assertIn("HistogramPlotCanvas", messages)
+            self.assertIn("PlotCanvas", messages)
+            self.assertIn("PlotOutput", messages)
+            self.assertIn("HistogramPlotPanelProps", messages)
+
+    def test_plot_histogram_declarative_binding_surface_is_allowed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-examples/src/histogram_demo.rs",
+                """
+                use fret_plot::HistogramPlotPanelBinding;
+                use fret_plot::declarative::histogram_plot_panel_in;
+                use fret_plot::models::{HistogramPlotModel, HistogramSeries};
+                use fret_ui::{UiTree, declarative};
+
+                struct HistogramDemoWindowState {
+                    ui: UiTree<App>,
+                    plot: HistogramPlotPanelBinding,
+                }
+
+                impl HistogramDemoDriver {
+                    fn build_ui(app: &mut App) -> HistogramDemoWindowState {
+                        let series = vec![
+                            HistogramSeries::new("histogram", samples)
+                                .bins(80)
+                                .bar_gap_fraction(0.12),
+                        ];
+                        let plot = HistogramPlotPanelBinding::new(app, HistogramPlotModel::from_series(series));
+                        HistogramDemoWindowState {
+                            ui: UiTree::new(),
+                            plot,
+                        }
+                    }
+                }
+
+                fn handle_event(app: &mut App, state: &mut HistogramDemoWindowState) {
+                    let _ = state.plot.output_untracked(app);
+                }
+
+                fn render(
+                    app: &mut App,
+                    services: &mut Services,
+                    window: AppWindowId,
+                    bounds: Rect,
+                    state: &mut HistogramDemoWindowState,
+                ) {
+                    let plot = state.plot.clone();
+                    let root = declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
+                        .render_root("histogram-demo", move |cx| {
+                            let style = LinePlotStyle::default();
+                            let props = plot.panel_props().style(style);
+                            vec![histogram_plot_panel_in(cx, props)]
+                        });
+                    let _ = root;
+                }
+                """,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/histogram_demo.rs",
+                        "advanced_manual",
+                        "fixture histogram plot demo",
+                        owner="examples-plot-histogram",
+                        allowed_raw_seams=("fret_ui", "UiTree"),
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            self.assertFalse(
+                [
+                    violation
+                    for violation in violations
+                    if violation.rule == "advanced-surface-plot-histogram-declarative-binding-boundary"
+                ]
+            )
+
     def test_plot_stress_legacy_retained_authoring_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
