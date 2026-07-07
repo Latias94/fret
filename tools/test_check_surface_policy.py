@@ -780,6 +780,16 @@ class SurfacePolicyTests(unittest.TestCase):
             "apps/fret-examples/src/assets_demo.rs",
             POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS,
         )
+        utility_window_paths = {
+            "apps/fret-examples/src/launcher_utility_window_demo.rs",
+            "apps/fret-examples/src/launcher_utility_window_materials_demo.rs",
+        }
+        for path in utility_window_paths:
+            self.assertIn(path, POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS)
+        self.assertIn(
+            "apps/fret-examples/src/container_queries_docking_demo.rs",
+            POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS,
+        )
         self.assertIn(
             "apps/fret-examples/src/plot_stress_demo.rs",
             POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS,
@@ -958,6 +968,21 @@ class SurfacePolicyTests(unittest.TestCase):
                 for spec in POLICY.ADVANCED_MANUAL_SURFACES
             )
         )
+        for path in utility_window_paths:
+            spec = next(
+                (
+                    spec
+                    for spec in POLICY.ADVANCED_MANUAL_SURFACES
+                    if spec.path == path
+                ),
+                None,
+            )
+            self.assertIsNotNone(
+                spec, f"{path} should be classified as an advanced utility-window surface"
+            )
+            self.assertIn("utility-window", spec.reason)
+            self.assertTrue(spec.allowed_raw_seams)
+            self.assertTrue(spec.retirement)
         for path in editor_notes_paths:
             self.assertTrue(
                 any(spec.path == path for spec in POLICY.ADVANCED_MANUAL_SURFACES),
@@ -1141,6 +1166,20 @@ class SurfacePolicyTests(unittest.TestCase):
                 for spec in POLICY.INTERNAL_HARNESS_SURFACES
             )
         )
+        container_query_docking_spec = next(
+            (
+                spec
+                for spec in POLICY.INTERNAL_HARNESS_SURFACES
+                if spec.path == "apps/fret-examples/src/container_queries_docking_demo.rs"
+            ),
+            None,
+        )
+        self.assertIsNotNone(
+            container_query_docking_spec,
+            "container_queries_docking_demo should be classified as an internal harness",
+        )
+        self.assertIn("docking", container_query_docking_spec.reason)
+        self.assertIn("FnDriver", container_query_docking_spec.allowed_raw_seams)
         self.assertFalse(
             any(
                 spec.path == "apps/fret-examples/src/plot_stress_demo.rs"

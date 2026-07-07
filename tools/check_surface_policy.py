@@ -1270,6 +1270,24 @@ INTERNAL_HARNESS_SURFACES: tuple[SurfacePath, ...] = (
         owner=CANVAS_DATAGRID_STRESS_OWNER,
     ),
     _fret_examples_internal_harness(
+        "container_queries_docking_demo.rs",
+        "the container-query docking proof owns manual FnDriver, UiTree, diagnostics/script "
+        "driving, docking runtime, and accessibility bridge hooks",
+        (
+            "fret::advanced",
+            "fret_app",
+            "fret_core",
+            "fret_launch",
+            "fret_runtime",
+            "fret_ui",
+            "AnyElement",
+            "ElementContext",
+            "FnDriver",
+            "UiTree",
+        ),
+        owner="examples-container-query-docking-harness",
+    ),
+    _fret_examples_internal_harness(
         "simple_todo_demo/driver.rs",
         "the simple-todo driver module owns native/web compatibility launch glue for demo shells",
         (
@@ -1475,6 +1493,38 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
             "ModelStore",
         ),
         owner=EMBEDDED_VIEWPORT_OWNER,
+    ),
+    _fret_examples_advanced_surface(
+        "launcher_utility_window_demo.rs",
+        "the utility-window proof owns manual UiAppDriver hooks, frameless window style effects, "
+        "drag/resize pointer regions, timers, and raw window diagnostics",
+        (
+            "fret::advanced",
+            "fret_app",
+            "fret_core",
+            "fret_runtime",
+            "fret_ui",
+            "AnyElement",
+            "ElementContext",
+            "UiTree",
+        ),
+        owner="examples-launcher-utility-window",
+    ),
+    _fret_examples_advanced_surface(
+        "launcher_utility_window_materials_demo.rs",
+        "the utility-window materials proof owns manual UiAppDriver hooks, background material "
+        "window style requests, and raw window diagnostics",
+        (
+            "fret::advanced",
+            "fret_app",
+            "fret_core",
+            "fret_runtime",
+            "fret_ui",
+            "AnyElement",
+            "ElementContext",
+            "UiTree",
+        ),
+        owner="examples-launcher-utility-window-materials",
     ),
     _fret_examples_advanced_surface(
         "editor_notes_demo.rs",
@@ -1890,6 +1940,9 @@ PUBLIC_EXAMPLE_SCAN_ROOTS: tuple[str, ...] = (
     "apps/fret-examples/src/query_demo.rs",
     "apps/fret-examples/src/query_async_tokio_demo.rs",
     "apps/fret-examples/src/assets_demo.rs",
+    "apps/fret-examples/src/container_queries_docking_demo.rs",
+    "apps/fret-examples/src/launcher_utility_window_demo.rs",
+    "apps/fret-examples/src/launcher_utility_window_materials_demo.rs",
     "apps/fret-examples/src/echarts_demo.rs",
     "apps/fret-examples/src/echarts_multi_grid_demo.rs",
     "apps/fret-examples/src/chart_multi_axis_demo.rs",
