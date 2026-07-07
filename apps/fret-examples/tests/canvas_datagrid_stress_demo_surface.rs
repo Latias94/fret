@@ -8,21 +8,28 @@ fn canvas_datagrid_stress_demo_keeps_header_text_on_readout_role() {
     let source = compact(source);
 
     for needle in [
-        "usefret_ui_kit::declarative::textasdecl_text;",
-        "fncanvas_datagrid_stress_readout_text<H:fret_ui::UiHost>(",
-        "decl_text::text_control_readout(cx,text)",
+        "usefret::app::text;",
+        "usefret::app::AppRenderContext;",
+        "fncanvas_datagrid_stress_readout_text<'a,Cx>(",
+        "Cx:AppRenderContext<'a>,",
+        "text::control_readout(cx,text)",
         "canvas_datagrid_stress_readout_text(cx,header)",
     ] {
         assert!(
             source.contains(needle),
-            "canvas datagrid stress demo should keep compact header text on the shared readout role; missing `{needle}`"
+            "canvas datagrid stress demo should keep compact header text on the app readout facade; missing `{needle}`"
         );
     }
 
-    for needle in ["cx.text(header)"] {
+    for needle in [
+        "usefret_ui_kit::declarative::textasdecl_text;",
+        "decl_text::",
+        "text_control_readout(",
+        "cx.text(header)",
+    ] {
         assert!(
             !source.contains(needle),
-            "canvas datagrid stress demo should not render the fixed header readout with bare wrapping text; unexpected `{needle}`"
+            "canvas datagrid stress demo should not render the fixed header readout through raw text seams; unexpected `{needle}`"
         );
     }
 }

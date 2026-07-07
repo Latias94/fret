@@ -1,5 +1,7 @@
 use anyhow::Context as _;
 use fret::advanced::view::AppRenderDataExt as _;
+use fret::app::AppRenderContext;
+use fret::app::text;
 use fret::app::{AppLocalStateExt as _, AppLocalStateTxnExt as _, LocalState};
 use fret_app::{App, CommandId, Effect, Model, WindowRequest};
 use fret_core::{AppWindowId, Event, Px};
@@ -14,17 +16,16 @@ use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
 };
 use fret_ui::{ElementContext, Invalidation, UiTree};
-use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_shadcn::facade as shadcn;
 use std::collections::VecDeque;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-fn canvas_datagrid_stress_readout_text<H: fret_ui::UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    text: impl Into<Arc<str>>,
-) -> AnyElement {
-    decl_text::text_control_readout(cx, text)
+fn canvas_datagrid_stress_readout_text<'a, Cx>(cx: &mut Cx, text: impl Into<Arc<str>>) -> AnyElement
+where
+    Cx: AppRenderContext<'a>,
+{
+    text::control_readout(cx, text)
 }
 
 fn try_println(args: std::fmt::Arguments<'_>) {
