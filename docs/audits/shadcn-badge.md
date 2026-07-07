@@ -52,6 +52,7 @@ base examples, and the existing badge chrome/layout gates.
 
 ## Validation
 
+- Docs-order gate: `apps/fret-ui-gallery/tests/badge_docs_surface.rs`
 - `CARGO_TARGET_DIR=target-codex-avatar cargo check -p fret-ui-gallery --message-format short`
 - Existing chrome gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`web_vs_fret_badge_demo_chrome_matches`)
 - Existing layout gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/badge.rs` (`web_vs_fret_layout_badge_demo_heights`)
