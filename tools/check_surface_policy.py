@@ -765,6 +765,57 @@ CHART_STRESS_FORBIDDEN_COMPACT_MARKERS = (
     "avg_canvas_paint",
 )
 
+CHART_MULTI_AXIS_OWNER = "examples-chart-multi-axis"
+
+CHART_MULTI_AXIS_REQUIRED_COMPACT_MARKERS = (
+    "usefret_chart::{ChartCanvasLinkedGroupBinding,ChartCanvasLinkedPanelBinding,ChartCanvasLinkedStateBinding,ChartLinkPolicy,ChartLinkRouter,LinkAxisKey,chart_canvas_panel,};",
+    "shared_state:ChartCanvasLinkedStateBinding",
+    "top_chart:ChartCanvasLinkedPanelBinding",
+    "bottom_chart:ChartCanvasLinkedPanelBinding",
+    "linked:ChartCanvasLinkedGroupBinding",
+    "fnbuild_chart(chart_id:delinea::ids::ChartId)->(ChartEngine,ChartSpec,ChartLinkRouter)",
+    "let(top_engine,top_spec,top_router)=ChartMultiAxisDemoDriver::build_chart",
+    "let(bottom_engine,bottom_spec,bottom_router)=ChartMultiAxisDemoDriver::build_chart",
+    "letmutlinked=ChartCanvasLinkedGroupBinding::new(app,ChartLinkPolicy{brush:true,axis_pointer:true,domain_windows:true,},);",
+    "lettop_chart=linked.push_panel(app,top_spec,top_engine,top_router);",
+    "letbottom_chart=linked.push_panel(app,bottom_spec,bottom_engine,bottom_router);",
+    "handles.shared_state.domain_windows_untracked(app)",
+    "handles.top_chart.output_untracked(app)",
+    "state.top_chart.output_untracked(app)",
+    "state.linked.domain_windows_untracked(app)",
+    "state.top_chart.read_engine(app",
+    "state.top_chart.update_engine(app",
+    "chart.panel_props_with_test_id(test_id)",
+    "declarative::RenderRootContext::new(&mutstate.ui,app,services,window,bounds).render_root(\"chart-multi-axis-demo\"",
+)
+
+CHART_MULTI_AXIS_FORBIDDEN_COMPACT_MARKERS = (
+    "usefret_chart::{AxisPointerLinkAnchor,BrushSelectionLink2D,ChartCanvasOutput,ChartCanvasPanelProps,ChartLinkPolicy,ChartLinkRouter,LinkAxisKey,LinkedChartGroup,LinkedChartMember,chart_canvas_panel,};",
+    "usefret_runtime::Model;",
+    "top_engine:Model<ChartEngine>",
+    "bottom_engine:Model<ChartEngine>",
+    "top_spec:ChartSpec",
+    "bottom_spec:ChartSpec",
+    "linked:LinkedChartGroup",
+    "top_output:Model<ChartCanvasOutput>",
+    "bottom_output:Model<ChartCanvasOutput>",
+    "ChartCanvasOutput::default()",
+    "ChartCanvasPanelProps::new(spec)",
+    ".output_model(output)",
+    ".linked_brush(shared_brush)",
+    ".linked_axis_pointer(shared_axis_pointer)",
+    ".linked_domain_windows(shared_domain_windows)",
+    "props.engine=Some(engine);",
+    "usefret_chart::retained::ChartCanvas",
+    "ChartCanvas::new(",
+    "ChartCanvas::new_shared(",
+    "ChartCanvas::create_node(",
+    "FixedSplit::create_node_with_children(",
+    "Rc<RefCell<ChartEngine>>",
+    "std::rc::Rc<std::cell::RefCell<ChartEngine>>",
+    "create_node_retained(",
+)
+
 ECHARTS_ADAPTER_OWNER = "examples-echarts-adapter"
 
 ECHARTS_ADAPTER_REQUIRED_COMPACT_MARKERS = (
@@ -2334,7 +2385,7 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
             "FnDriver",
             "UiTree",
         ),
-        owner="examples-chart-multi-axis",
+        owner=CHART_MULTI_AXIS_OWNER,
     ),
     _cookbook_advanced_surface(
         "docking_basics.rs",
@@ -3228,6 +3279,54 @@ def _scan_chart_stress_declarative_binding_boundary(
                     message=(
                         "Chart stress must not regress to retained/manual chart canvas authoring; "
                         f"compact `{marker}` bypasses the ChartCanvasPanelBinding boundary"
+                    ),
+                )
+            )
+
+    return violations
+
+
+def _scan_chart_multi_axis_linked_binding_boundary(
+    root: Path, spec: SurfacePath
+) -> list[SurfaceViolation]:
+    if spec.owner != CHART_MULTI_AXIS_OWNER:
+        return []
+
+    violations: list[SurfaceViolation] = []
+    for path in _iter_source_files(root / spec.path):
+        text = _read_text(path)
+        production_text = text.split("#[cfg(test)]", 1)[0]
+        compact_production = _compact_source(production_text)
+        missing_markers = [
+            marker
+            for marker in CHART_MULTI_AXIS_REQUIRED_COMPACT_MARKERS
+            if marker not in compact_production
+        ]
+        if missing_markers:
+            violations.append(
+                SurfaceViolation(
+                    rule="advanced-surface-chart-multi-axis-linked-binding-boundary",
+                    path=path,
+                    line_no=1,
+                    message=(
+                        "Chart multi-axis proof must route linked chart state, panels, and "
+                        "diagnostic engine access through ChartCanvasLinkedGroupBinding and "
+                        f"ChartCanvasLinkedPanelBinding; missing compact markers: {', '.join(missing_markers)}"
+                    ),
+                )
+            )
+
+        for marker in CHART_MULTI_AXIS_FORBIDDEN_COMPACT_MARKERS:
+            if marker not in compact_production:
+                continue
+            violations.append(
+                SurfaceViolation(
+                    rule="advanced-surface-chart-multi-axis-linked-binding-boundary",
+                    path=path,
+                    line_no=1,
+                    message=(
+                        "Chart multi-axis proof must not expose retained/manual linked chart "
+                        f"model wiring; compact `{marker}` bypasses the linked chart binding boundary"
                     ),
                 )
             )
@@ -4175,6 +4274,7 @@ def _scan_classified_raw_surface(root: Path, spec: SurfacePath) -> list[SurfaceV
     violations.extend(_scan_docking_arbitration_controls_boundary(root, spec))
     violations.extend(_scan_plot_stress_declarative_binding_boundary(root, spec))
     violations.extend(_scan_chart_stress_declarative_binding_boundary(root, spec))
+    violations.extend(_scan_chart_multi_axis_linked_binding_boundary(root, spec))
     violations.extend(_scan_echarts_adapter_binding_boundary(root, spec))
     violations.extend(_scan_echarts_multi_grid_binding_boundary(root, spec))
     violations.extend(_scan_workspace_shell_driver_owner_boundary(root, spec))

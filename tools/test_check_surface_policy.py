@@ -3287,6 +3287,332 @@ class SurfacePolicyTests(unittest.TestCase):
                 ]
             )
 
+    def test_chart_multi_axis_retained_linked_wiring_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-examples/src/chart_multi_axis_demo.rs",
+                """
+                use fret_chart::{
+                    ChartCanvasLinkedGroupBinding,
+                    ChartCanvasLinkedPanelBinding,
+                    ChartCanvasLinkedStateBinding,
+                    ChartLinkPolicy,
+                    ChartLinkRouter,
+                    LinkAxisKey,
+                    chart_canvas_panel,
+                };
+                use fret_chart::{
+                    AxisPointerLinkAnchor,
+                    BrushSelectionLink2D,
+                    ChartCanvasOutput,
+                    ChartCanvasPanelProps,
+                    ChartLinkPolicy,
+                    ChartLinkRouter,
+                    LinkAxisKey,
+                    LinkedChartGroup,
+                    LinkedChartMember,
+                    chart_canvas_panel,
+                };
+                use fret_chart::retained::ChartCanvas;
+                use fret_runtime::Model;
+                use fret_ui::{AnyElement, ElementContext, UiTree};
+
+                struct ChartMultiAxisDemoDiagnosticsHandles {
+                    shared_state: ChartCanvasLinkedStateBinding,
+                    top_chart: ChartCanvasLinkedPanelBinding,
+                    bottom_chart: ChartCanvasLinkedPanelBinding,
+                }
+
+                pub struct ChartMultiAxisDemoWindowState {
+                    ui: UiTree<App>,
+                    linked: ChartCanvasLinkedGroupBinding,
+                    top_chart: ChartCanvasLinkedPanelBinding,
+                    bottom_chart: ChartCanvasLinkedPanelBinding,
+                }
+
+                impl ChartMultiAxisDemoDriver {
+                    fn build_ui(app: &mut App) -> ChartMultiAxisDemoWindowState {
+                        let (top_engine, top_spec, top_router) =
+                            ChartMultiAxisDemoDriver::build_chart(delinea::ids::ChartId::new(1));
+                        let (bottom_engine, bottom_spec, bottom_router) =
+                            ChartMultiAxisDemoDriver::build_chart(delinea::ids::ChartId::new(2));
+                        let mut linked = ChartCanvasLinkedGroupBinding::new(
+                            app,
+                            ChartLinkPolicy {
+                                brush: true,
+                                axis_pointer: true,
+                                domain_windows: true,
+                            },
+                        );
+                        let top_chart = linked.push_panel(app, top_spec, top_engine, top_router);
+                        let bottom_chart =
+                            linked.push_panel(app, bottom_spec, bottom_engine, bottom_router);
+
+                        ChartMultiAxisDemoWindowState {
+                            ui: UiTree::new(),
+                            linked,
+                            top_chart,
+                            bottom_chart,
+                        }
+                    }
+
+                    fn build_chart(
+                        chart_id: delinea::ids::ChartId
+                    ) -> (ChartEngine, ChartSpec, ChartLinkRouter) {
+                        todo!()
+                    }
+
+                    fn chart_panel(
+                        cx: &mut ElementContext<'_, App>,
+                        chart: ChartCanvasLinkedPanelBinding,
+                        test_id: &'static str,
+                    ) -> AnyElement {
+                        chart_canvas_panel(cx, chart.panel_props_with_test_id(test_id))
+                    }
+
+                    fn snapshot(app: &App, handles: &ChartMultiAxisDemoDiagnosticsHandles) {
+                        let _ = handles.shared_state.domain_windows_untracked(app);
+                        let _ = handles.top_chart.output_untracked(app);
+                    }
+
+                    fn diagnostics(app: &mut App, state: &mut ChartMultiAxisDemoWindowState) {
+                        let _ = state.top_chart.output_untracked(app);
+                        let _ = state.linked.domain_windows_untracked(app);
+                        let _ = state.top_chart.read_engine(app, |_app, engine| engine.stats());
+                        let _ = state.top_chart.update_engine(app, |engine, _cx| {
+                            engine.apply_action(Action::Noop);
+                        });
+                    }
+                }
+
+                fn render(
+                    app: &mut App,
+                    services: &mut Services,
+                    window: AppWindowId,
+                    bounds: Rect,
+                    state: &mut ChartMultiAxisDemoWindowState,
+                ) {
+                    let top_chart = state.top_chart.clone();
+                    let root = declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
+                        .render_root("chart-multi-axis-demo", move |cx| {
+                            vec![ChartMultiAxisDemoDriver::chart_panel(
+                                cx,
+                                top_chart.clone(),
+                                "chart-multi-axis-top",
+                            )]
+                        });
+                    let _ = root;
+                }
+
+                struct LegacyLinkedCharts {
+                    top_engine: Model<ChartEngine>,
+                    bottom_engine: Model<ChartEngine>,
+                    top_spec: ChartSpec,
+                    bottom_spec: ChartSpec,
+                    linked: LinkedChartGroup,
+                    top_output: Model<ChartCanvasOutput>,
+                    bottom_output: Model<ChartCanvasOutput>,
+                }
+
+                fn bad(
+                    spec: ChartSpec,
+                    engine: Model<ChartEngine>,
+                    output: Model<ChartCanvasOutput>,
+                    shared_brush: BrushSelectionLink2D,
+                    shared_axis_pointer: AxisPointerLinkAnchor,
+                    shared_domain_windows: LinkAxisKey,
+                ) {
+                    let _ = ChartCanvasOutput::default();
+                    let mut props = ChartCanvasPanelProps::new(spec)
+                        .output_model(output)
+                        .linked_brush(shared_brush)
+                        .linked_axis_pointer(shared_axis_pointer)
+                        .linked_domain_windows(shared_domain_windows);
+                    props.engine = Some(engine);
+                    let _ = ChartCanvas::new();
+                    let _ = ChartCanvas::new_shared();
+                    let _ = ChartCanvas::create_node();
+                    let _ = FixedSplit::create_node_with_children();
+                    let _engine_cell: Rc<RefCell<ChartEngine>> = todo!();
+                    let _other: std::rc::Rc<std::cell::RefCell<ChartEngine>> = todo!();
+                    create_node_retained();
+                }
+                """,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/chart_multi_axis_demo.rs",
+                        "advanced_manual",
+                        "fixture chart multi-axis surface",
+                        owner="examples-chart-multi-axis",
+                        allowed_raw_seams=(
+                            "fret_runtime",
+                            "fret_ui",
+                            "AnyElement",
+                            "ElementContext",
+                            "UiTree",
+                        ),
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            owner_violations = [
+                violation
+                for violation in violations
+                if violation.rule
+                == "advanced-surface-chart-multi-axis-linked-binding-boundary"
+            ]
+            self.assertGreaterEqual(len(owner_violations), 10)
+            messages = "\n".join(violation.message for violation in owner_violations)
+            self.assertIn("LinkedChartGroup", messages)
+            self.assertIn("Model<ChartEngine>", messages)
+            self.assertIn("ChartCanvasPanelProps", messages)
+            self.assertIn("ChartCanvas::new_shared", messages)
+            self.assertIn("FixedSplit::create_node_with_children", messages)
+
+    def test_chart_multi_axis_linked_binding_surface_is_allowed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-examples/src/chart_multi_axis_demo.rs",
+                """
+                use fret_chart::{
+                    ChartCanvasLinkedGroupBinding,
+                    ChartCanvasLinkedPanelBinding,
+                    ChartCanvasLinkedStateBinding,
+                    ChartLinkPolicy,
+                    ChartLinkRouter,
+                    LinkAxisKey,
+                    chart_canvas_panel,
+                };
+                use fret_ui::{AnyElement, ElementContext, UiTree};
+
+                struct ChartMultiAxisDemoDiagnosticsHandles {
+                    shared_state: ChartCanvasLinkedStateBinding,
+                    top_chart: ChartCanvasLinkedPanelBinding,
+                    bottom_chart: ChartCanvasLinkedPanelBinding,
+                }
+
+                pub struct ChartMultiAxisDemoWindowState {
+                    ui: UiTree<App>,
+                    linked: ChartCanvasLinkedGroupBinding,
+                    top_chart: ChartCanvasLinkedPanelBinding,
+                    bottom_chart: ChartCanvasLinkedPanelBinding,
+                }
+
+                impl ChartMultiAxisDemoDriver {
+                    fn build_ui(app: &mut App) -> ChartMultiAxisDemoWindowState {
+                        let (top_engine, top_spec, top_router) =
+                            ChartMultiAxisDemoDriver::build_chart(delinea::ids::ChartId::new(1));
+                        let (bottom_engine, bottom_spec, bottom_router) =
+                            ChartMultiAxisDemoDriver::build_chart(delinea::ids::ChartId::new(2));
+                        let mut linked = ChartCanvasLinkedGroupBinding::new(
+                            app,
+                            ChartLinkPolicy {
+                                brush: true,
+                                axis_pointer: true,
+                                domain_windows: true,
+                            },
+                        );
+                        let top_chart = linked.push_panel(app, top_spec, top_engine, top_router);
+                        let bottom_chart =
+                            linked.push_panel(app, bottom_spec, bottom_engine, bottom_router);
+
+                        ChartMultiAxisDemoWindowState {
+                            ui: UiTree::new(),
+                            linked,
+                            top_chart,
+                            bottom_chart,
+                        }
+                    }
+
+                    fn build_chart(
+                        chart_id: delinea::ids::ChartId
+                    ) -> (ChartEngine, ChartSpec, ChartLinkRouter) {
+                        todo!()
+                    }
+
+                    fn chart_panel(
+                        cx: &mut ElementContext<'_, App>,
+                        chart: ChartCanvasLinkedPanelBinding,
+                        test_id: &'static str,
+                    ) -> AnyElement {
+                        chart_canvas_panel(cx, chart.panel_props_with_test_id(test_id))
+                    }
+
+                    fn snapshot(app: &App, handles: &ChartMultiAxisDemoDiagnosticsHandles) {
+                        let _ = handles.shared_state.domain_windows_untracked(app);
+                        let _ = handles.top_chart.output_untracked(app);
+                    }
+
+                    fn diagnostics(app: &mut App, state: &mut ChartMultiAxisDemoWindowState) {
+                        let _ = state.top_chart.output_untracked(app);
+                        let _ = state.linked.domain_windows_untracked(app);
+                        let _ = state.top_chart.read_engine(app, |_app, engine| engine.stats());
+                        let _ = state.top_chart.update_engine(app, |engine, _cx| {
+                            engine.apply_action(Action::Noop);
+                        });
+                    }
+                }
+
+                fn render(
+                    app: &mut App,
+                    services: &mut Services,
+                    window: AppWindowId,
+                    bounds: Rect,
+                    state: &mut ChartMultiAxisDemoWindowState,
+                ) {
+                    let top_chart = state.top_chart.clone();
+                    let root = declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
+                        .render_root("chart-multi-axis-demo", move |cx| {
+                            vec![ChartMultiAxisDemoDriver::chart_panel(
+                                cx,
+                                top_chart.clone(),
+                                "chart-multi-axis-top",
+                            )]
+                        });
+                    let _ = root;
+                }
+                """,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/chart_multi_axis_demo.rs",
+                        "advanced_manual",
+                        "fixture chart multi-axis surface",
+                        owner="examples-chart-multi-axis",
+                        allowed_raw_seams=(
+                            "fret_ui",
+                            "AnyElement",
+                            "ElementContext",
+                            "UiTree",
+                        ),
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            self.assertFalse(
+                [
+                    violation
+                    for violation in violations
+                    if violation.rule
+                    == "advanced-surface-chart-multi-axis-linked-binding-boundary"
+                ]
+            )
+
     def test_echarts_multi_grid_retained_helpers_are_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
