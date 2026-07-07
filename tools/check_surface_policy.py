@@ -1118,6 +1118,40 @@ INTERNAL_HARNESS_SURFACES: tuple[SurfacePath, ...] = (
         owner="examples-ime-conformance-smoke",
     ),
     _fret_examples_internal_harness(
+        "image_heavy_memory_demo.rs",
+        "the image-heavy memory harness owns GPU image allocation, upload/drop controls, "
+        "engine-frame hooks, and retained image rendering for memory diagnostics",
+        (
+            "fret::advanced",
+            "fret_core",
+            "fret_launch",
+            "fret_runtime",
+            "fret_ui",
+            "UiTree",
+        ),
+        owner="examples-image-heavy-memory",
+    ),
+    _fret_examples_internal_harness(
+        "text_heavy_memory_demo.rs",
+        "the text-heavy memory harness deliberately grows shaping caches and color emoji atlas "
+        "pressure while using low-level text/container mechanisms",
+        ("fret_core", "fret_ui", "ElementContext"),
+        owner="examples-text-heavy-memory",
+    ),
+    _fret_examples_internal_harness(
+        "extras_marquee_perf_demo.rs",
+        "the extras marquee perf harness owns advanced KernelApp startup and low-level text "
+        "composition for diagnostics-focused perf probing",
+        (
+            "fret::advanced",
+            "fret_core",
+            "fret_ui",
+            "AnyElement",
+            "ElementContext",
+        ),
+        owner="examples-extras-marquee-perf",
+    ),
+    _fret_examples_internal_harness(
         "docking_arbitration_demo.rs",
         "the arbitration harness is ADR/conformance infrastructure for docking, viewports, "
         "overlays, and launch hooks",
@@ -1837,6 +1871,9 @@ PUBLIC_EXAMPLE_SCAN_ROOTS: tuple[str, ...] = (
     "apps/fret-examples/src/cjk_conformance_demo.rs",
     "apps/fret-examples/src/emoji_conformance_demo.rs",
     "apps/fret-examples/src/ime_smoke_demo.rs",
+    "apps/fret-examples/src/image_heavy_memory_demo.rs",
+    "apps/fret-examples/src/text_heavy_memory_demo.rs",
+    "apps/fret-examples/src/extras_marquee_perf_demo.rs",
     "apps/fret-examples/src/custom_effect_v2_web_demo.rs",
     "apps/fret-examples/src/custom_effect_v2_identity_web_demo.rs",
     "apps/fret-examples/src/custom_effect_v2_lut_web_demo.rs",

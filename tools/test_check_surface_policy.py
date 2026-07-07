@@ -881,6 +881,11 @@ class SurfacePolicyTests(unittest.TestCase):
             "apps/fret-examples/src/emoji_conformance_demo.rs",
             "apps/fret-examples/src/ime_smoke_demo.rs",
         }
+        memory_perf_harness_paths = {
+            "apps/fret-examples/src/extras_marquee_perf_demo.rs",
+            "apps/fret-examples/src/image_heavy_memory_demo.rs",
+            "apps/fret-examples/src/text_heavy_memory_demo.rs",
+        }
         for path in custom_effect_v2_web_paths:
             self.assertIn(path, POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS)
         for path in custom_effect_reference_paths:
@@ -892,6 +897,8 @@ class SurfacePolicyTests(unittest.TestCase):
         for path in renderer_media_lab_paths:
             self.assertIn(path, POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS)
         for path in text_input_conformance_paths:
+            self.assertIn(path, POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS)
+        for path in memory_perf_harness_paths:
             self.assertIn(path, POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS)
         self.assertTrue(
             any(
@@ -1053,6 +1060,23 @@ class SurfacePolicyTests(unittest.TestCase):
                 spec, f"{path} should be classified as a text/input conformance harness"
             )
             self.assertIn("conformance", spec.reason)
+            self.assertTrue(spec.allowed_raw_seams)
+        for path in memory_perf_harness_paths:
+            spec = next(
+                (
+                    spec
+                    for spec in POLICY.INTERNAL_HARNESS_SURFACES
+                    if spec.path == path
+                ),
+                None,
+            )
+            self.assertIsNotNone(
+                spec, f"{path} should be classified as a memory/perf harness"
+            )
+            self.assertTrue(
+                "memory" in spec.reason or "perf" in spec.reason,
+                f"{path} should explain its memory/perf harness role",
+            )
             self.assertTrue(spec.allowed_raw_seams)
         helper_spec = next(
             (
