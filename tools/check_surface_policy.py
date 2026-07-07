@@ -40,6 +40,16 @@ class SurfaceViolation:
     source: str = ""
 
 
+@dataclass(frozen=True)
+class CompactSourceBoundary:
+    owner: str
+    rule: str
+    required_markers: tuple[str, ...]
+    forbidden_markers: tuple[str, ...]
+    missing_message_template: str
+    forbidden_message_template: str
+
+
 DEFAULT_AUTHORING_SURFACES: tuple[SurfacePath, ...] = (
     SurfacePath(
         "README.md",
@@ -947,6 +957,96 @@ PLOT_STEMS_FORBIDDEN_COMPACT_MARKERS = (
     "StemsPlotPanelProps::new(",
     "app.models_mut().insert(PlotState::default())",
     "app.models_mut().insert(PlotOutput::default())",
+)
+
+PLOT_DECLARATIVE_BINDING_BOUNDARIES: tuple[CompactSourceBoundary, ...] = (
+    CompactSourceBoundary(
+        owner=PLOT_STRESS_OWNER,
+        rule="internal-harness-plot-stress-declarative-binding-boundary",
+        required_markers=PLOT_STRESS_REQUIRED_COMPACT_MARKERS,
+        forbidden_markers=PLOT_STRESS_FORBIDDEN_COMPACT_MARKERS,
+        missing_message_template=(
+            "Plot stress must teach declarative LinePlotPanelBinding authoring; "
+            "missing compact markers: {missing_markers}"
+        ),
+        forbidden_message_template=(
+            "Plot stress must not regress to retained/manual plot model authoring; "
+            "compact `{marker}` bypasses the LinePlotPanelBinding boundary"
+        ),
+    ),
+    CompactSourceBoundary(
+        owner=PLOT_DRAG_OWNER,
+        rule="advanced-surface-plot-drag-declarative-binding-boundary",
+        required_markers=PLOT_DRAG_REQUIRED_COMPACT_MARKERS,
+        forbidden_markers=PLOT_DRAG_FORBIDDEN_COMPACT_MARKERS,
+        missing_message_template=(
+            "Plot drag demo must keep drag output reads, state feedback writes, "
+            "and panel authoring on LinePlotPanelBinding; "
+            "missing compact markers: {missing_markers}"
+        ),
+        forbidden_message_template=(
+            "Plot drag demo must not expose retained/manual plot state or output "
+            "wiring; compact `{marker}` bypasses the LinePlotPanelBinding boundary"
+        ),
+    ),
+    CompactSourceBoundary(
+        owner=PLOT_INF_LINES_OWNER,
+        rule="advanced-surface-plot-inf-lines-declarative-binding-boundary",
+        required_markers=PLOT_INF_LINES_REQUIRED_COMPACT_MARKERS,
+        forbidden_markers=PLOT_INF_LINES_FORBIDDEN_COMPACT_MARKERS,
+        missing_message_template=(
+            "Inf-lines plot demo must keep infinite-line overlays, query output reads, "
+            "and panel authoring on LinePlotPanelBinding; "
+            "missing compact markers: {missing_markers}"
+        ),
+        forbidden_message_template=(
+            "Inf-lines plot demo must not expose retained/manual plot state or output "
+            "wiring; compact `{marker}` bypasses the LinePlotPanelBinding boundary"
+        ),
+    ),
+    CompactSourceBoundary(
+        owner=PLOT_AREA_OWNER,
+        rule="advanced-surface-plot-area-declarative-binding-boundary",
+        required_markers=PLOT_AREA_REQUIRED_COMPACT_MARKERS,
+        forbidden_markers=PLOT_AREA_FORBIDDEN_COMPACT_MARKERS,
+        missing_message_template=(
+            "Area plot demo must keep query output reads and panel authoring "
+            "on AreaPlotPanelBinding; missing compact markers: {missing_markers}"
+        ),
+        forbidden_message_template=(
+            "Area plot demo must not expose retained/manual plot state or output "
+            "wiring; compact `{marker}` bypasses the AreaPlotPanelBinding boundary"
+        ),
+    ),
+    CompactSourceBoundary(
+        owner=PLOT_LINKED_CURSOR_OWNER,
+        rule="advanced-surface-plot-linked-cursor-declarative-binding-boundary",
+        required_markers=PLOT_LINKED_CURSOR_REQUIRED_COMPACT_MARKERS,
+        forbidden_markers=PLOT_LINKED_CURSOR_FORBIDDEN_COMPACT_MARKERS,
+        missing_message_template=(
+            "Linked cursor plot demo must keep linked plot synchronization and "
+            "line/area panel authoring on LinePlotPanelBinding/AreaPlotPanelBinding; "
+            "missing compact markers: {missing_markers}"
+        ),
+        forbidden_message_template=(
+            "Linked cursor plot demo must not expose retained/manual linked plot "
+            "state or output wiring; compact `{marker}` bypasses the plot binding boundary"
+        ),
+    ),
+    CompactSourceBoundary(
+        owner=PLOT_STEMS_OWNER,
+        rule="advanced-surface-plot-stems-declarative-binding-boundary",
+        required_markers=PLOT_STEMS_REQUIRED_COMPACT_MARKERS,
+        forbidden_markers=PLOT_STEMS_FORBIDDEN_COMPACT_MARKERS,
+        missing_message_template=(
+            "Stems plot demo must keep query output reads and panel authoring "
+            "on StemsPlotPanelBinding; missing compact markers: {missing_markers}"
+        ),
+        forbidden_message_template=(
+            "Stems plot demo must not expose retained/manual plot state or output "
+            "wiring; compact `{marker}` bypasses the StemsPlotPanelBinding boundary"
+        ),
+    ),
 )
 
 CHART_STRESS_OWNER = "examples-chart-stress"
@@ -3602,10 +3702,10 @@ def _scan_docking_arbitration_controls_boundary(
     return violations
 
 
-def _scan_plot_stress_declarative_binding_boundary(
-    root: Path, spec: SurfacePath
+def _scan_compact_source_boundary(
+    root: Path, spec: SurfacePath, boundary: CompactSourceBoundary
 ) -> list[SurfaceViolation]:
-    if spec.owner != PLOT_STRESS_OWNER:
+    if spec.owner != boundary.owner:
         return []
 
     violations: list[SurfaceViolation] = []
@@ -3615,33 +3715,31 @@ def _scan_plot_stress_declarative_binding_boundary(
         compact_production = _compact_source(production_text)
         missing_markers = [
             marker
-            for marker in PLOT_STRESS_REQUIRED_COMPACT_MARKERS
+            for marker in boundary.required_markers
             if marker not in compact_production
         ]
         if missing_markers:
             violations.append(
                 SurfaceViolation(
-                    rule="internal-harness-plot-stress-declarative-binding-boundary",
+                    rule=boundary.rule,
                     path=path,
                     line_no=1,
-                    message=(
-                        "Plot stress must teach declarative LinePlotPanelBinding authoring; "
-                        f"missing compact markers: {', '.join(missing_markers)}"
+                    message=boundary.missing_message_template.format(
+                        missing_markers=", ".join(missing_markers)
                     ),
                 )
             )
 
-        for marker in PLOT_STRESS_FORBIDDEN_COMPACT_MARKERS:
+        for marker in boundary.forbidden_markers:
             if marker not in compact_production:
                 continue
             violations.append(
                 SurfaceViolation(
-                    rule="internal-harness-plot-stress-declarative-binding-boundary",
+                    rule=boundary.rule,
                     path=path,
                     line_no=1,
-                    message=(
-                        "Plot stress must not regress to retained/manual plot model authoring; "
-                        f"compact `{marker}` bypasses the LinePlotPanelBinding boundary"
+                    message=boundary.forbidden_message_template.format(
+                        marker=marker
                     ),
                 )
             )
@@ -3649,243 +3747,12 @@ def _scan_plot_stress_declarative_binding_boundary(
     return violations
 
 
-def _scan_plot_drag_declarative_binding_boundary(
+def _scan_plot_declarative_binding_boundaries(
     root: Path, spec: SurfacePath
 ) -> list[SurfaceViolation]:
-    if spec.owner != PLOT_DRAG_OWNER:
-        return []
-
     violations: list[SurfaceViolation] = []
-    for path in _iter_source_files(root / spec.path):
-        text = _read_text(path)
-        production_text = text.split("#[cfg(test)]", 1)[0]
-        compact_production = _compact_source(production_text)
-        missing_markers = [
-            marker
-            for marker in PLOT_DRAG_REQUIRED_COMPACT_MARKERS
-            if marker not in compact_production
-        ]
-        if missing_markers:
-            violations.append(
-                SurfaceViolation(
-                    rule="advanced-surface-plot-drag-declarative-binding-boundary",
-                    path=path,
-                    line_no=1,
-                    message=(
-                        "Plot drag demo must keep drag output reads, state feedback writes, "
-                        "and panel authoring on LinePlotPanelBinding; "
-                        f"missing compact markers: {', '.join(missing_markers)}"
-                    ),
-                )
-            )
-
-        for marker in PLOT_DRAG_FORBIDDEN_COMPACT_MARKERS:
-            if marker not in compact_production:
-                continue
-            violations.append(
-                SurfaceViolation(
-                    rule="advanced-surface-plot-drag-declarative-binding-boundary",
-                    path=path,
-                    line_no=1,
-                    message=(
-                        "Plot drag demo must not expose retained/manual plot state or output "
-                        f"wiring; compact `{marker}` bypasses the LinePlotPanelBinding boundary"
-                    ),
-                )
-            )
-
-    return violations
-
-
-def _scan_plot_inf_lines_declarative_binding_boundary(
-    root: Path, spec: SurfacePath
-) -> list[SurfaceViolation]:
-    if spec.owner != PLOT_INF_LINES_OWNER:
-        return []
-
-    violations: list[SurfaceViolation] = []
-    for path in _iter_source_files(root / spec.path):
-        text = _read_text(path)
-        production_text = text.split("#[cfg(test)]", 1)[0]
-        compact_production = _compact_source(production_text)
-        missing_markers = [
-            marker
-            for marker in PLOT_INF_LINES_REQUIRED_COMPACT_MARKERS
-            if marker not in compact_production
-        ]
-        if missing_markers:
-            violations.append(
-                SurfaceViolation(
-                    rule="advanced-surface-plot-inf-lines-declarative-binding-boundary",
-                    path=path,
-                    line_no=1,
-                    message=(
-                        "Inf-lines plot demo must keep infinite-line overlays, query output reads, "
-                        "and panel authoring on LinePlotPanelBinding; "
-                        f"missing compact markers: {', '.join(missing_markers)}"
-                    ),
-                )
-            )
-
-        for marker in PLOT_INF_LINES_FORBIDDEN_COMPACT_MARKERS:
-            if marker not in compact_production:
-                continue
-            violations.append(
-                SurfaceViolation(
-                    rule="advanced-surface-plot-inf-lines-declarative-binding-boundary",
-                    path=path,
-                    line_no=1,
-                    message=(
-                        "Inf-lines plot demo must not expose retained/manual plot state or output "
-                        f"wiring; compact `{marker}` bypasses the LinePlotPanelBinding boundary"
-                    ),
-                )
-            )
-
-    return violations
-
-
-def _scan_plot_area_declarative_binding_boundary(
-    root: Path, spec: SurfacePath
-) -> list[SurfaceViolation]:
-    if spec.owner != PLOT_AREA_OWNER:
-        return []
-
-    violations: list[SurfaceViolation] = []
-    for path in _iter_source_files(root / spec.path):
-        text = _read_text(path)
-        production_text = text.split("#[cfg(test)]", 1)[0]
-        compact_production = _compact_source(production_text)
-        missing_markers = [
-            marker
-            for marker in PLOT_AREA_REQUIRED_COMPACT_MARKERS
-            if marker not in compact_production
-        ]
-        if missing_markers:
-            violations.append(
-                SurfaceViolation(
-                    rule="advanced-surface-plot-area-declarative-binding-boundary",
-                    path=path,
-                    line_no=1,
-                    message=(
-                        "Area plot demo must keep query output reads and panel authoring "
-                        "on AreaPlotPanelBinding; "
-                        f"missing compact markers: {', '.join(missing_markers)}"
-                    ),
-                )
-            )
-
-        for marker in PLOT_AREA_FORBIDDEN_COMPACT_MARKERS:
-            if marker not in compact_production:
-                continue
-            violations.append(
-                SurfaceViolation(
-                    rule="advanced-surface-plot-area-declarative-binding-boundary",
-                    path=path,
-                    line_no=1,
-                    message=(
-                        "Area plot demo must not expose retained/manual plot state or output "
-                        f"wiring; compact `{marker}` bypasses the AreaPlotPanelBinding boundary"
-                    ),
-                )
-            )
-
-    return violations
-
-
-def _scan_plot_linked_cursor_declarative_binding_boundary(
-    root: Path, spec: SurfacePath
-) -> list[SurfaceViolation]:
-    if spec.owner != PLOT_LINKED_CURSOR_OWNER:
-        return []
-
-    violations: list[SurfaceViolation] = []
-    for path in _iter_source_files(root / spec.path):
-        text = _read_text(path)
-        production_text = text.split("#[cfg(test)]", 1)[0]
-        compact_production = _compact_source(production_text)
-        missing_markers = [
-            marker
-            for marker in PLOT_LINKED_CURSOR_REQUIRED_COMPACT_MARKERS
-            if marker not in compact_production
-        ]
-        if missing_markers:
-            violations.append(
-                SurfaceViolation(
-                    rule="advanced-surface-plot-linked-cursor-declarative-binding-boundary",
-                    path=path,
-                    line_no=1,
-                    message=(
-                        "Linked cursor plot demo must keep linked plot synchronization and "
-                        "line/area panel authoring on LinePlotPanelBinding/AreaPlotPanelBinding; "
-                        f"missing compact markers: {', '.join(missing_markers)}"
-                    ),
-                )
-            )
-
-        for marker in PLOT_LINKED_CURSOR_FORBIDDEN_COMPACT_MARKERS:
-            if marker not in compact_production:
-                continue
-            violations.append(
-                SurfaceViolation(
-                    rule="advanced-surface-plot-linked-cursor-declarative-binding-boundary",
-                    path=path,
-                    line_no=1,
-                    message=(
-                        "Linked cursor plot demo must not expose retained/manual linked plot "
-                        f"state or output wiring; compact `{marker}` bypasses the plot binding boundary"
-                    ),
-                )
-            )
-
-    return violations
-
-
-def _scan_plot_stems_declarative_binding_boundary(
-    root: Path, spec: SurfacePath
-) -> list[SurfaceViolation]:
-    if spec.owner != PLOT_STEMS_OWNER:
-        return []
-
-    violations: list[SurfaceViolation] = []
-    for path in _iter_source_files(root / spec.path):
-        text = _read_text(path)
-        production_text = text.split("#[cfg(test)]", 1)[0]
-        compact_production = _compact_source(production_text)
-        missing_markers = [
-            marker
-            for marker in PLOT_STEMS_REQUIRED_COMPACT_MARKERS
-            if marker not in compact_production
-        ]
-        if missing_markers:
-            violations.append(
-                SurfaceViolation(
-                    rule="advanced-surface-plot-stems-declarative-binding-boundary",
-                    path=path,
-                    line_no=1,
-                    message=(
-                        "Stems plot demo must keep query output reads and panel authoring "
-                        "on StemsPlotPanelBinding; "
-                        f"missing compact markers: {', '.join(missing_markers)}"
-                    ),
-                )
-            )
-
-        for marker in PLOT_STEMS_FORBIDDEN_COMPACT_MARKERS:
-            if marker not in compact_production:
-                continue
-            violations.append(
-                SurfaceViolation(
-                    rule="advanced-surface-plot-stems-declarative-binding-boundary",
-                    path=path,
-                    line_no=1,
-                    message=(
-                        "Stems plot demo must not expose retained/manual plot state or output "
-                        f"wiring; compact `{marker}` bypasses the StemsPlotPanelBinding boundary"
-                    ),
-                )
-            )
-
+    for boundary in PLOT_DECLARATIVE_BINDING_BOUNDARIES:
+        violations.extend(_scan_compact_source_boundary(root, spec, boundary))
     return violations
 
 
@@ -5016,12 +4883,7 @@ def _scan_classified_raw_surface(root: Path, spec: SurfacePath) -> list[SurfaceV
     violations.extend(_scan_external_imports_owner_boundary(root, spec))
     violations.extend(_scan_hotpatch_smoke_owner_boundary(root, spec))
     violations.extend(_scan_docking_arbitration_controls_boundary(root, spec))
-    violations.extend(_scan_plot_stress_declarative_binding_boundary(root, spec))
-    violations.extend(_scan_plot_drag_declarative_binding_boundary(root, spec))
-    violations.extend(_scan_plot_inf_lines_declarative_binding_boundary(root, spec))
-    violations.extend(_scan_plot_area_declarative_binding_boundary(root, spec))
-    violations.extend(_scan_plot_linked_cursor_declarative_binding_boundary(root, spec))
-    violations.extend(_scan_plot_stems_declarative_binding_boundary(root, spec))
+    violations.extend(_scan_plot_declarative_binding_boundaries(root, spec))
     violations.extend(_scan_chart_stress_declarative_binding_boundary(root, spec))
     violations.extend(_scan_chart_multi_axis_linked_binding_boundary(root, spec))
     violations.extend(_scan_echarts_adapter_binding_boundary(root, spec))
