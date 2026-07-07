@@ -2456,6 +2456,172 @@ class SurfacePolicyTests(unittest.TestCase):
                 ]
             )
 
+    def test_docking_arbitration_direct_model_writes_are_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-examples/src/docking_arbitration_demo.rs",
+                """
+                use fret_runtime::{ModelStore, PlatformCapabilities};
+
+                struct DockingArbitrationControls {}
+                struct DockingArbitrationControlsService {}
+
+                impl DockingArbitrationControlsService {
+                    fn default() -> Self { Self }
+                    fn set(&mut self, window: AppWindowId, controls: DockingArbitrationControls) {}
+                }
+
+                impl DockingArbitrationControls {
+                    fn new(models: &mut ModelStore) -> Self { Self }
+                    fn toggle_drop_mask_disallow_left_edge(&self, host: &mut Host) -> bool { false }
+                    fn set_synth_pointer_debug(&self, app: &mut App, msg: Arc<str>) -> bool { true }
+                    fn set_last_viewport_input(&self, app: &mut App, msg: Arc<str>) -> bool { true }
+                }
+
+                fn build_ui(app: &mut App, window: AppWindowId) {
+                    let controls = DockingArbitrationControls::new(app.models_mut());
+                    app.with_global_mut(
+                        DockingArbitrationControlsService::default,
+                        move |svc, _app| {
+                            svc.set(window, controls);
+                        },
+                    );
+                }
+
+                fn controls_panel(host: &mut Host, controls: &DockingArbitrationControls) {
+                    let next = controls.toggle_drop_mask_disallow_left_edge(host);
+                    let _ = next;
+                }
+
+                fn update_synth_debug(app: &mut App, controls: DockingArbitrationControls, msg: Arc<str>) {
+                    controls.set_synth_pointer_debug(app, msg);
+                }
+
+                fn viewport_input(app: &mut App, controls: DockingArbitrationControls, msg: Arc<str>) {
+                    controls.set_last_viewport_input(app, msg);
+                }
+
+                fn dispatch_synth(synth: Synth, pressed: bool) {
+                    if !synth.enabled && pressed { return; }
+                }
+
+                fn bad(app: &mut App, state: &State) {
+                    let _ = app.models_mut().update(&state.debug, |_| true);
+                    let _ = ModelStore::update(app.models_mut(), &state.debug, |_| true);
+                    let mut models = app.models_mut();
+                    let _ = models.update(&state.debug, |_| true);
+                }
+                """,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[],
+                internal_harness_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/docking_arbitration_demo.rs",
+                        "internal_harness",
+                        "fixture docking arbitration harness",
+                        owner="examples-docking-arbitration",
+                        allowed_raw_seams=("fret_runtime", "ModelStore"),
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            owner_violations = [
+                violation
+                for violation in violations
+                if violation.rule
+                == "internal_harness-docking-arbitration-controls-boundary"
+            ]
+            self.assertEqual(3, len(owner_violations))
+            messages = "\n".join(violation.message for violation in owner_violations)
+            self.assertIn("models_mut().update", messages)
+            self.assertIn("ModelStore::update", messages)
+            self.assertIn("ModelStore alias", messages)
+
+    def test_docking_arbitration_controls_surface_is_allowed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-examples/src/docking_arbitration_demo.rs",
+                """
+                use fret_runtime::{ModelStore, PlatformCapabilities};
+
+                struct DockingArbitrationControls {}
+                struct DockingArbitrationControlsService {}
+
+                impl DockingArbitrationControlsService {
+                    fn default() -> Self { Self }
+                    fn set(&mut self, window: AppWindowId, controls: DockingArbitrationControls) {}
+                }
+
+                impl DockingArbitrationControls {
+                    fn new(models: &mut ModelStore) -> Self { Self }
+                    fn toggle_drop_mask_disallow_left_edge(&self, host: &mut Host) -> bool { false }
+                    fn set_synth_pointer_debug(&self, app: &mut App, msg: Arc<str>) -> bool { true }
+                    fn set_last_viewport_input(&self, app: &mut App, msg: Arc<str>) -> bool { true }
+                }
+
+                fn build_ui(app: &mut App, window: AppWindowId) {
+                    let controls = DockingArbitrationControls::new(app.models_mut());
+                    app.with_global_mut(
+                        DockingArbitrationControlsService::default,
+                        move |svc, _app| {
+                            svc.set(window, controls);
+                        },
+                    );
+                }
+
+                fn controls_panel(host: &mut Host, controls: &DockingArbitrationControls) {
+                    let next = controls.toggle_drop_mask_disallow_left_edge(host);
+                    let _ = next;
+                }
+
+                fn update_synth_debug(app: &mut App, controls: DockingArbitrationControls, msg: Arc<str>) {
+                    controls.set_synth_pointer_debug(app, msg);
+                }
+
+                fn viewport_input(app: &mut App, controls: DockingArbitrationControls, msg: Arc<str>) {
+                    controls.set_last_viewport_input(app, msg);
+                }
+
+                fn dispatch_synth(synth: Synth, pressed: bool) {
+                    if !synth.enabled && pressed { return; }
+                }
+                """,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[],
+                internal_harness_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/docking_arbitration_demo.rs",
+                        "internal_harness",
+                        "fixture docking arbitration harness",
+                        owner="examples-docking-arbitration",
+                        allowed_raw_seams=("fret_runtime", "ModelStore"),
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            self.assertFalse(
+                [
+                    violation
+                    for violation in violations
+                    if violation.rule
+                    == "internal_harness-docking-arbitration-controls-boundary"
+                ]
+            )
+
     def test_components_gallery_direct_model_writes_are_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

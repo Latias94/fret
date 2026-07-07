@@ -647,6 +647,49 @@ HOTPATCH_SMOKE_FORBIDDEN_RAW_WRITE_PATTERNS: tuple[
     ),
 )
 
+DOCKING_ARBITRATION_OWNER = "examples-docking-arbitration"
+
+DOCKING_ARBITRATION_REQUIRED_COMPACT_MARKERS = (
+    "usefret_runtime::{ModelStore,PlatformCapabilities};",
+    "structDockingArbitrationControls{",
+    "structDockingArbitrationControlsService{",
+    "letcontrols=DockingArbitrationControls::new(app.models_mut());",
+    "DockingArbitrationControlsService::default",
+    "svc.set(window,controls);",
+    "letnext=controls.toggle_drop_mask_disallow_left_edge(host);",
+    "controls.set_synth_pointer_debug(app,msg);",
+    "controls.set_last_viewport_input(app,msg);",
+    "if!synth.enabled&&pressed{return;}",
+)
+
+DOCKING_ARBITRATION_FORBIDDEN_COMPACT_MARKERS = (
+    "structDockingArbitrationPanelModels",
+    "DockingArbitrationPanelModelsService",
+    "structViewportDebugService",
+    "last_event:HashMap<AppWindowId,Model<Arc<str>>>",
+    "structDockingArbitrationModelOwner",
+    "DockingArbitrationModelOwner::new(host.models_mut()).toggle_drop_mask_disallow_left_edge(&drop_mask_disallow_left_edge);",
+    "set_synth_pointer_debug(&models.synth_pointer_debug,msg)",
+    "set_last_viewport_input(&model,msg.clone())",
+)
+
+DOCKING_ARBITRATION_FORBIDDEN_RAW_WRITE_PATTERNS: tuple[
+    tuple[str, re.Pattern[str]], ...
+] = (
+    (
+        "models_mut().update",
+        re.compile(
+            r"\bmodels_mut\s*\(\s*\)\s*\.\s*update(?:_any)?\s*(?:::\s*<[^>]*>)?\s*\("
+        ),
+    ),
+    (
+        "ModelStore::update",
+        re.compile(
+            r"(?:\bModelStore\s*::\s*|<\s*ModelStore\s*>\s*::\s*)update(?:_any)?\s*(?:::\s*<[^>]*>)?\s*\("
+        ),
+    ),
+)
+
 WINDOW_HIT_TEST_PROBE_OWNER = "examples-window-hit-test-probe"
 
 WINDOW_HIT_TEST_PROBE_REQUIRED_MARKERS = (
@@ -1247,7 +1290,7 @@ INTERNAL_HARNESS_SURFACES: tuple[SurfacePath, ...] = (
             "ModelStore",
             "UiTree",
         ),
-        owner="examples-docking-arbitration",
+        owner=DOCKING_ARBITRATION_OWNER,
     ),
     _fret_examples_internal_harness(
         "plot_stress_demo.rs",
@@ -2633,6 +2676,109 @@ def _scan_hotpatch_smoke_owner_boundary(
     return violations
 
 
+def _scan_docking_arbitration_controls_boundary(
+    root: Path, spec: SurfacePath
+) -> list[SurfaceViolation]:
+    if spec.owner != DOCKING_ARBITRATION_OWNER:
+        return []
+
+    violations: list[SurfaceViolation] = []
+    for path in _iter_source_files(root / spec.path):
+        text = _read_text(path)
+        production_text = text.split("#[cfg(test)]", 1)[0]
+        compact_production = _compact_source(production_text)
+        missing_markers = [
+            marker
+            for marker in DOCKING_ARBITRATION_REQUIRED_COMPACT_MARKERS
+            if marker not in compact_production
+        ]
+        if missing_markers:
+            violations.append(
+                SurfaceViolation(
+                    rule="internal_harness-docking-arbitration-controls-boundary",
+                    path=path,
+                    line_no=1,
+                    message=(
+                        "docking arbitration diagnostic model writes must stay behind "
+                        f"DockingArbitrationControls/Service; missing compact markers: "
+                        f"{', '.join(missing_markers)}"
+                    ),
+                )
+            )
+
+        for marker in DOCKING_ARBITRATION_FORBIDDEN_COMPACT_MARKERS:
+            if marker not in compact_production:
+                continue
+            violations.append(
+                SurfaceViolation(
+                    rule="internal_harness-docking-arbitration-controls-boundary",
+                    path=path,
+                    line_no=1,
+                    message=(
+                        "docking arbitration diagnostic state must not regress to legacy "
+                        f"panel/debug model owners; compact `{marker}` bypasses the controls boundary"
+                    ),
+                )
+            )
+
+        for line_no, line in _code_lines_for_scan(path, production_text):
+            if path.suffix == ".rs" and _is_rust_source_line_ignorable(line):
+                continue
+            for seam, pattern in DOCKING_ARBITRATION_FORBIDDEN_RAW_WRITE_PATTERNS:
+                if not pattern.search(line):
+                    continue
+                violations.append(
+                    SurfaceViolation(
+                        rule="internal_harness-docking-arbitration-controls-boundary",
+                        path=path,
+                        line_no=line_no,
+                        message=(
+                            "docking arbitration diagnostic model writes must route through "
+                            f"DockingArbitrationControls; direct `{seam}` bypasses the controls boundary"
+                        ),
+                        source=line.strip(),
+                    )
+                )
+                break
+
+        model_store_aliases: list[str] = []
+        for statement in production_text.split(";"):
+            compact_statement = _compact_source(statement)
+            rest = compact_statement.removeprefix("let")
+            if rest == compact_statement:
+                continue
+            if "=" not in rest:
+                continue
+            alias, rhs = rest.split("=", 1)
+            if "models_mut()" not in rhs:
+                continue
+            model_store_aliases.append(alias.strip().removeprefix("mut"))
+
+        for alias in model_store_aliases:
+            for forbidden in (
+                f"{alias}.update(",
+                f"{alias}.update::<",
+                f"{alias}.update_any(",
+                f"{alias}.update_any::<",
+            ):
+                if forbidden not in compact_production:
+                    continue
+                violations.append(
+                    SurfaceViolation(
+                        rule="internal_harness-docking-arbitration-controls-boundary",
+                        path=path,
+                        line_no=1,
+                        message=(
+                            "docking arbitration diagnostic model writes must route through "
+                            f"DockingArbitrationControls; ModelStore alias `{forbidden}` "
+                            "bypasses the controls boundary"
+                        ),
+                    )
+                )
+
+    return violations
+
+
 def _scan_window_hit_test_probe_boundary(
     root: Path, spec: SurfacePath
 ) -> list[SurfaceViolation]:
@@ -3063,6 +3209,7 @@ def _scan_classified_raw_surface(root: Path, spec: SurfacePath) -> list[SurfaceV
     violations.extend(_scan_embedded_viewport_owner_boundary(root, spec))
     violations.extend(_scan_external_imports_owner_boundary(root, spec))
     violations.extend(_scan_hotpatch_smoke_owner_boundary(root, spec))
+    violations.extend(_scan_docking_arbitration_controls_boundary(root, spec))
     violations.extend(_scan_window_hit_test_probe_boundary(root, spec))
     violations.extend(_scan_components_gallery_owner_boundary(root, spec))
     violations.extend(_scan_virtual_list_stress_controls_boundary(root, spec))
