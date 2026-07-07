@@ -1,4 +1,3 @@
-use anyhow::Context as _;
 use fret::app::prelude::*;
 use fret_plot::LinePlotPanelBinding;
 use fret_plot::cartesian::DataPoint;
@@ -8,34 +7,12 @@ use fret_plot::series::Series;
 use fret_plot::state::{PlotOverlays, PlotState};
 use fret_plot::style::{LinePlotStyle, SeriesTooltipMode};
 
+mod driver;
+
+pub use driver::{build_app, build_fn_driver, build_runner_config, run};
+
 struct TagsDemoView {
     plot: LinePlotPanelBinding,
-}
-
-pub fn build_app() -> fret::app::App {
-    crate::build_default_view_demo_app()
-}
-
-pub fn build_runner_config() -> fret_launch::WinitRunnerConfig {
-    crate::build_default_view_demo_runner_config("fret-demo tags_demo", (960.0, 640.0))
-}
-
-pub fn build_fn_driver() -> impl fret_launch::WinitAppDriver {
-    crate::build_default_view_demo_fn_driver::<TagsDemoView>("tags-demo")
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-pub fn run() -> anyhow::Result<()> {
-    FretApp::new("tags-demo")
-        .window("tags_demo", (960.0, 640.0))
-        .view::<TagsDemoView>()?
-        .run()
-        .context("run tags_demo app")
-}
-
-#[cfg(target_arch = "wasm32")]
-pub fn run() -> anyhow::Result<()> {
-    Ok(())
 }
 
 impl View for TagsDemoView {

@@ -802,10 +802,14 @@ class SurfacePolicyTests(unittest.TestCase):
         }
         for path in shadcn_rich_demo_paths:
             self.assertIn(path, POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS)
-        tail_advanced_paths = {
-            "apps/fret-examples/src/drag_demo.rs",
+        default_plot_overlay_paths = {
             "apps/fret-examples/src/plot_image_demo.rs",
             "apps/fret-examples/src/tags_demo.rs",
+        }
+        for path in default_plot_overlay_paths:
+            self.assertIn(path, POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS)
+        tail_advanced_paths = {
+            "apps/fret-examples/src/drag_demo.rs",
             "apps/fret-examples/src/markdown_demo.rs",
             "apps/fret-examples/src/genui_demo.rs",
             "apps/fret-examples/src/imui_editor_proof_demo.rs",
@@ -1050,12 +1054,29 @@ class SurfacePolicyTests(unittest.TestCase):
             )
             self.assertTrue(spec.allowed_raw_seams)
             self.assertTrue(spec.retirement)
+        for path in default_plot_overlay_paths:
+            self.assertTrue(
+                any(spec.path == path for spec in POLICY.DEFAULT_AUTHORING_SURFACES),
+                f"{path} should be back on the default app authoring surface",
+            )
+            self.assertFalse(
+                any(spec.path == path for spec in POLICY.ADVANCED_MANUAL_SURFACES),
+                f"{path} should not require advanced/manual quarantine",
+            )
         for path in {
-            "apps/fret-examples/src/plot_image_demo.rs",
-            "apps/fret-examples/src/tags_demo.rs",
+            "apps/fret-examples/src/plot_image_demo/driver.rs",
+            "apps/fret-examples/src/tags_demo/driver.rs",
         }:
             spec = next(
-                spec for spec in POLICY.ADVANCED_MANUAL_SURFACES if spec.path == path
+                (
+                    spec
+                    for spec in POLICY.INTERNAL_HARNESS_SURFACES
+                    if spec.path == path
+                ),
+                None,
+            )
+            self.assertIsNotNone(
+                spec, f"{path} should own the launch seam as an internal harness"
             )
             self.assertEqual(spec.allowed_raw_seams, ("fret_launch",))
         for path in editor_notes_paths:

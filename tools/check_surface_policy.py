@@ -211,6 +211,16 @@ DEFAULT_AUTHORING_SURFACES: tuple[SurfacePath, ...] = (
         "default_app_clean",
         "default async query example should stay on app-facing data, time, and text facades",
     ),
+    SurfacePath(
+        "apps/fret-examples/src/plot_image_demo.rs",
+        "default_app_clean",
+        "plot image overlay example should stay on the default declarative plot app surface",
+    ),
+    SurfacePath(
+        "apps/fret-examples/src/tags_demo.rs",
+        "default_app_clean",
+        "plot tags/text overlay example should stay on the default declarative plot app surface",
+    ),
 )
 
 POLICY_RECIPE_SURFACES: tuple[SurfacePath, ...] = (
@@ -1299,6 +1309,18 @@ INTERNAL_HARNESS_SURFACES: tuple[SurfacePath, ...] = (
         owner="examples-simple-todo-driver",
     ),
     _fret_examples_internal_harness(
+        "plot_image_demo/driver.rs",
+        "the plot-image driver module owns native/web compatibility launch signatures for demo shells",
+        ("fret_launch",),
+        owner="examples-plot-image-driver",
+    ),
+    _fret_examples_internal_harness(
+        "tags_demo/driver.rs",
+        "the plot-tags driver module owns native/web compatibility launch signatures for demo shells",
+        ("fret_launch",),
+        owner="examples-plot-tags-driver",
+    ),
+    _fret_examples_internal_harness(
         "todo_demo_runtime_tests.rs",
         "the todo demo runtime test harness owns direct view-runtime rendering, cache transition "
         "checks, and fake UI services for semantics snapshots",
@@ -1622,20 +1644,6 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
             "UiTree",
         ),
         owner="examples-plot-drag-demo",
-    ),
-    _fret_examples_advanced_surface(
-        "plot_image_demo.rs",
-        "the plot image overlay proof still exposes demo-shell launch signatures for wasm "
-        "integration while the native run path and view driver use default app helpers",
-        ("fret_launch",),
-        owner="examples-plot-image-demo",
-    ),
-    _fret_examples_advanced_surface(
-        "tags_demo.rs",
-        "the plot tags/text overlay proof still exposes demo-shell launch signatures for wasm "
-        "integration while the native run path and view driver use default app helpers",
-        ("fret_launch",),
-        owner="examples-plot-tags-demo",
     ),
     _fret_examples_advanced_surface(
         "markdown_demo.rs",

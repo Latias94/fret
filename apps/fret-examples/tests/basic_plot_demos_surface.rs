@@ -2,6 +2,32 @@ fn compact(source: &str) -> String {
     source.split_whitespace().collect()
 }
 
+fn assert_default_view_demo_driver(
+    source: &str,
+    demo_title: &str,
+    default_size: &str,
+    view_type: &str,
+    root_name: &str,
+) {
+    let source = compact(source);
+    let demo_title = compact(demo_title);
+    let default_size = compact(default_size);
+    let needles = [
+        "useanyhow::Contextas_;".to_string(),
+        "usefret::app::prelude::*;".to_string(),
+        "crate::build_default_view_demo_app()".to_string(),
+        format!("crate::build_default_view_demo_runner_config(\"{demo_title}\",{default_size})"),
+        format!("crate::build_default_view_demo_fn_driver::<{view_type}>(\"{root_name}\")"),
+        "->implfret_launch::WinitAppDriver".to_string(),
+    ];
+    for needle in needles {
+        assert!(
+            source.contains(&needle),
+            "default view demo driver should keep launch wiring in the internal harness; missing `{needle}`"
+        );
+    }
+}
+
 #[test]
 fn plot_declarative_demo_uses_default_declarative_line_plot_panel() {
     let source = compact(include_str!("../src/plot_declarative_demo.rs"));
@@ -72,9 +98,8 @@ fn tags_demo_uses_default_declarative_line_plot_panel() {
         "text:vec![",
         "fret_plot::state::PlotText::new(50.0,-0.75,fret_plot::models::YAxis::Left,\"PlotTextat(50,-0.75)\",)",
         "LinePlotPanelBinding::new_with_state(app,model,state)",
-        "crate::build_default_view_demo_app()",
-        "crate::build_default_view_demo_runner_config(\"fret-demotags_demo\",(960.0,640.0))",
-        "crate::build_default_view_demo_fn_driver::<TagsDemoView>(\"tags-demo\")",
+        "moddriver;",
+        "pubusedriver::{build_app,build_fn_driver,build_runner_config,run};",
         "self.plot.panel_props()",
         "line_plot_panel_in(cx,props).into()",
     ] {
@@ -109,6 +134,11 @@ fn tags_demo_uses_default_declarative_line_plot_panel() {
         "fret::advanced::view::view_init_window",
         "fret::advanced::view::view_view",
         "fret::advanced::view::ViewWindowState",
+        "fret_launch::",
+        "FnDriver",
+        "build_default_view_demo_app()",
+        "build_default_view_demo_runner_config(",
+        "build_default_view_demo_fn_driver::<",
     ] {
         assert!(
             !source.contains(legacy),
@@ -139,9 +169,8 @@ fn plot_image_demo_uses_default_declarative_line_plot_panel() {
         "PlotImage::new(",
         "PlotImageLayer::BelowGrid",
         "AxisLabelFormatter::number(AxisNumberFormat::Fixed(2))",
-        "crate::build_default_view_demo_app()",
-        "crate::build_default_view_demo_runner_config(\"fret-demoplot_image_demo\",(960.0,640.0))",
-        "crate::build_default_view_demo_fn_driver::<PlotImageDemoView>(\"plot-image-demo\")",
+        "moddriver;",
+        "pubusedriver::{build_app,build_fn_driver,build_runner_config,run};",
         "self.plot.panel_props()",
         ".y_axis_labels(AxisLabelFormatter::number(AxisNumberFormat::Fixed(2)))",
         "line_plot_panel_in(cx,props).into()",
@@ -184,12 +213,39 @@ fn plot_image_demo_uses_default_declarative_line_plot_panel() {
         "fret::advanced::view::view_init_window",
         "fret::advanced::view::view_view",
         "fret::advanced::view::ViewWindowState",
+        "fret_launch::",
+        "FnDriver",
+        "build_default_view_demo_app()",
+        "build_default_view_demo_runner_config(",
+        "build_default_view_demo_fn_driver::<",
     ] {
         assert!(
             !source.contains(legacy),
             "plot_image_demo should not teach retained plot authoring; unexpected `{legacy}`"
         );
     }
+}
+
+#[test]
+fn tags_demo_driver_owns_default_view_launch_wiring() {
+    assert_default_view_demo_driver(
+        include_str!("../src/tags_demo/driver.rs"),
+        "fret-demo tags_demo",
+        "(960.0,640.0)",
+        "TagsDemoView",
+        "tags-demo",
+    );
+}
+
+#[test]
+fn plot_image_demo_driver_owns_default_view_launch_wiring() {
+    assert_default_view_demo_driver(
+        include_str!("../src/plot_image_demo/driver.rs"),
+        "fret-demo plot_image_demo",
+        "(960.0,640.0)",
+        "PlotImageDemoView",
+        "plot-image-demo",
+    );
 }
 
 #[test]
