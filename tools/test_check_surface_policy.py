@@ -1229,12 +1229,19 @@ class SurfacePolicyTests(unittest.TestCase):
         )
         self.assertIn("ModelStore", helper_spec.allowed_raw_seams)
         self.assertIn("fret_core", helper_spec.allowed_raw_seams)
-        self.assertTrue(
-            any(
-                spec.path == "apps/fret-examples/src/simple_todo_demo/driver.rs"
+        simple_todo_driver_spec = next(
+            (
+                spec
                 for spec in POLICY.INTERNAL_HARNESS_SURFACES
-            )
+                if spec.path == "apps/fret-examples/src/simple_todo_demo/driver.rs"
+            ),
+            None,
         )
+        self.assertIsNotNone(
+            simple_todo_driver_spec,
+            "simple todo driver should stay classified as an internal harness",
+        )
+        self.assertEqual(simple_todo_driver_spec.allowed_raw_seams, ("fret_launch",))
         harness_root_spec = next(
             (
                 spec

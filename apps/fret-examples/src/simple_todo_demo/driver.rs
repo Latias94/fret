@@ -1,37 +1,20 @@
 use fret::app::App;
-use fret_bootstrap::ui_app_driver;
-use fret_runtime::PlatformCapabilities;
 
 use super::{SimpleTodoView, install_demo_icons, install_demo_theme};
 
 pub fn build_app() -> App {
-    let mut app = App::new();
-    app.set_global(PlatformCapabilities::default());
+    let mut app = crate::build_default_view_demo_app();
     install_demo_icons(&mut app);
     install_demo_theme(&mut app);
     app
 }
 
 pub fn build_runner_config() -> fret_launch::WinitRunnerConfig {
-    fret_launch::WinitRunnerConfig {
-        main_window_title: "fret-demo simple-todo".to_string(),
-        main_window_size: fret_launch::WindowLogicalSize::new(560.0, 520.0),
-        ..Default::default()
-    }
+    crate::build_default_view_demo_runner_config("fret-demo simple-todo", (560.0, 520.0))
 }
 
 pub fn build_fn_driver() -> impl fret_launch::WinitAppDriver {
-    ui_app_driver::UiAppDriver::new(
-        "simple-todo-demo",
-        fret::advanced::view::view_init_window::<SimpleTodoView>,
-        fret::advanced::view::view_view::<SimpleTodoView>,
-    )
-    .on_preferences(
-        ui_app_driver::default_on_preferences::<
-            fret::advanced::view::ViewWindowState<SimpleTodoView>,
-        >,
-    )
-    .into_fn_driver()
+    crate::build_default_view_demo_fn_driver::<SimpleTodoView>("simple-todo-demo")
 }
 
 #[cfg(not(target_arch = "wasm32"))]

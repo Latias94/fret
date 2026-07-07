@@ -1289,12 +1289,8 @@ INTERNAL_HARNESS_SURFACES: tuple[SurfacePath, ...] = (
     ),
     _fret_examples_internal_harness(
         "simple_todo_demo/driver.rs",
-        "the simple-todo driver module owns native/web compatibility launch glue for demo shells",
-        (
-            "fret::advanced",
-            "fret_launch",
-            "fret_runtime",
-        ),
+        "the simple-todo driver module owns native/web compatibility launch signatures for demo shells",
+        ("fret_launch",),
         owner="examples-simple-todo-driver",
     ),
 )
