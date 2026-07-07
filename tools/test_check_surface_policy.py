@@ -794,6 +794,14 @@ class SurfacePolicyTests(unittest.TestCase):
             "apps/fret-examples/src/async_playground_demo.rs",
             POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS,
         )
+        shadcn_rich_demo_paths = {
+            "apps/fret-examples/src/date_picker_demo.rs",
+            "apps/fret-examples/src/form_demo.rs",
+            "apps/fret-examples/src/table_demo.rs",
+            "apps/fret-examples/src/sonner_demo.rs",
+        }
+        for path in shadcn_rich_demo_paths:
+            self.assertIn(path, POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS)
         self.assertIn(
             "apps/fret-examples/src/plot_stress_demo.rs",
             POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS,
@@ -1002,6 +1010,21 @@ class SurfacePolicyTests(unittest.TestCase):
         self.assertIn("pressable", async_playground_spec.reason)
         self.assertIn("AnyElement", async_playground_spec.allowed_raw_seams)
         self.assertTrue(async_playground_spec.retirement)
+        for path in shadcn_rich_demo_paths:
+            spec = next(
+                (
+                    spec
+                    for spec in POLICY.ADVANCED_MANUAL_SURFACES
+                    if spec.path == path
+                ),
+                None,
+            )
+            self.assertIsNotNone(
+                spec, f"{path} should be classified as an advanced shadcn behavior proof"
+            )
+            self.assertIn("shadcn", spec.reason)
+            self.assertTrue(spec.allowed_raw_seams)
+            self.assertTrue(spec.retirement)
         for path in editor_notes_paths:
             self.assertTrue(
                 any(spec.path == path for spec in POLICY.ADVANCED_MANUAL_SURFACES),

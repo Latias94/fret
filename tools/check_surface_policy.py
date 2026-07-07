@@ -1540,6 +1540,74 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
         owner="examples-async-query-playground",
     ),
     _fret_examples_advanced_surface(
+        "date_picker_demo.rs",
+        "the shadcn date-picker behavior proof owns a manual FnDriver/AppUi render-root bridge, "
+        "retained UiTree lifecycle, overlay state, and low-level text/container composition",
+        (
+            "fret::advanced",
+            "fret_app",
+            "fret_core",
+            "fret_launch",
+            "fret_runtime",
+            "fret_ui",
+            "AnyElement",
+            "ElementContext",
+            "FnDriver",
+            "UiTree",
+        ),
+        owner="examples-shadcn-date-picker-demo",
+    ),
+    _fret_examples_advanced_surface(
+        "form_demo.rs",
+        "the shadcn form behavior proof owns a manual FnDriver/AppUi render-root bridge, "
+        "retained UiTree lifecycle, form registry validation, and overlay state",
+        (
+            "fret::advanced",
+            "fret_app",
+            "fret_core",
+            "fret_launch",
+            "fret_runtime",
+            "fret_ui",
+            "FnDriver",
+            "UiTree",
+        ),
+        owner="examples-shadcn-form-demo",
+    ),
+    _fret_examples_advanced_surface(
+        "table_demo.rs",
+        "the shadcn table behavior/perf proof owns a manual FnDriver runner, retained UiTree, "
+        "virtual-list scroll handle, grouping/header-menu state, and low-level table text cells",
+        (
+            "fret_app",
+            "fret_core",
+            "fret_launch",
+            "fret_runtime",
+            "fret_ui",
+            "AnyElement",
+            "ElementContext",
+            "FnDriver",
+            "UiTree",
+        ),
+        owner="examples-shadcn-table-demo",
+    ),
+    _fret_examples_advanced_surface(
+        "sonner_demo.rs",
+        "the shadcn sonner/toast behavior proof owns a manual FnDriver/AppUi render-root bridge, "
+        "retained UiTree lifecycle, raw action host adapter plumbing, and toast promise lifecycle",
+        (
+            "fret::advanced",
+            "fret_app",
+            "fret_core",
+            "fret_launch",
+            "fret_runtime",
+            "fret_ui",
+            "FnDriver",
+            "UiActionHostAdapter",
+            "UiTree",
+        ),
+        owner="examples-shadcn-sonner-demo",
+    ),
+    _fret_examples_advanced_surface(
         "editor_notes_demo.rs",
         "the editor notes demo owns editor app model bindings, shell-mounted rails, and theme "
         "preset wiring while keeping app-facing writes behind EditorAssetModels, "
@@ -1957,6 +2025,10 @@ PUBLIC_EXAMPLE_SCAN_ROOTS: tuple[str, ...] = (
     "apps/fret-examples/src/launcher_utility_window_demo.rs",
     "apps/fret-examples/src/launcher_utility_window_materials_demo.rs",
     "apps/fret-examples/src/async_playground_demo.rs",
+    "apps/fret-examples/src/date_picker_demo.rs",
+    "apps/fret-examples/src/form_demo.rs",
+    "apps/fret-examples/src/table_demo.rs",
+    "apps/fret-examples/src/sonner_demo.rs",
     "apps/fret-examples/src/echarts_demo.rs",
     "apps/fret-examples/src/echarts_multi_grid_demo.rs",
     "apps/fret-examples/src/chart_multi_axis_demo.rs",
