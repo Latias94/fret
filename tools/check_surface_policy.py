@@ -468,6 +468,17 @@ def _fret_examples_manual_chart_surface(filename: str) -> SurfacePath:
             MANUAL_CHART_ALLOWED_RAW_SEAMS,
             owner=PLOT_STACKED_BARS_OWNER,
         )
+    if filename == "candlestick_demo.rs":
+        return _fret_examples_advanced_surface(
+            filename,
+            (
+                "it owns a manual candlestick runner with FnDriver/UiTree lifecycle while "
+                "OHLC series, query output reads, and panel wiring route through "
+                "CandlestickPlotPanelBinding"
+            ),
+            MANUAL_CHART_ALLOWED_RAW_SEAMS,
+            owner=PLOT_CANDLESTICK_OWNER,
+        )
     stem = filename.removesuffix(".rs").replace("_", "-")
     return _fret_examples_advanced_surface(
         filename,
@@ -1213,6 +1224,38 @@ PLOT_STACKED_BARS_FORBIDDEN_COMPACT_MARKERS = (
     "app.models_mut().insert(PlotOutput::default())",
 )
 
+PLOT_CANDLESTICK_OWNER = "examples-plot-candlestick"
+
+PLOT_CANDLESTICK_REQUIRED_COMPACT_MARKERS = (
+    "usefret_plot::CandlestickPlotPanelBinding;",
+    "usefret_plot::declarative::candlestick_plot_panel_in;",
+    "usefret_plot::models::{CandlestickPlotModel,CandlestickSeries,OhlcPoint};",
+    "usefret_ui::{UiTree,declarative};",
+    "plot:CandlestickPlotPanelBinding",
+    "CandlestickPlotPanelBinding::new(app,CandlestickPlotModel::from_series(vec![",
+    "CandlestickPlotModel::from_series(vec![",
+    "CandlestickSeries::new_sorted(",
+    ".width(0.9)",
+    "declarative::RenderRootContext::new(&mutstate.ui,app,services,window,bounds).render_root(\"candlestick-demo\"",
+    "plot.panel_props()",
+    "state.plot.output_untracked(app)",
+    "vec![candlestick_plot_panel_in(cx,props)]",
+)
+
+PLOT_CANDLESTICK_FORBIDDEN_COMPACT_MARKERS = (
+    "usefret_plot::retained",
+    "fret_plot::retained::",
+    "CandlestickPlotCanvas",
+    "PlotCanvas",
+    "create_node_retained(",
+    "fret_runtime::Model<",
+    "CandlestickPlotPanelProps::new(",
+    ".state(plot_state.clone())",
+    ".output(plot_output.clone())",
+    "app.models_mut().insert(PlotState::default())",
+    "app.models_mut().insert(PlotOutput::default())",
+)
+
 PLOT_DECLARATIVE_BINDING_BOUNDARIES: tuple[CompactSourceBoundary, ...] = (
     CompactSourceBoundary(
         owner=PLOT_STRESS_OWNER,
@@ -1383,6 +1426,20 @@ PLOT_DECLARATIVE_BINDING_BOUNDARIES: tuple[CompactSourceBoundary, ...] = (
         forbidden_message_template=(
             "Stacked bars demo must not expose retained/manual plot state or output "
             "wiring; compact `{marker}` bypasses the BarsPlotPanelBinding boundary"
+        ),
+    ),
+    CompactSourceBoundary(
+        owner=PLOT_CANDLESTICK_OWNER,
+        rule="advanced-surface-plot-candlestick-declarative-binding-boundary",
+        required_markers=PLOT_CANDLESTICK_REQUIRED_COMPACT_MARKERS,
+        forbidden_markers=PLOT_CANDLESTICK_FORBIDDEN_COMPACT_MARKERS,
+        missing_message_template=(
+            "Candlestick demo must keep OHLC series authoring and query output reads "
+            "on CandlestickPlotPanelBinding; missing compact markers: {missing_markers}"
+        ),
+        forbidden_message_template=(
+            "Candlestick demo must not expose retained/manual plot state or output "
+            "wiring; compact `{marker}` bypasses the CandlestickPlotPanelBinding boundary"
         ),
     ),
 )
