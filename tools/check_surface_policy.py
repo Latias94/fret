@@ -618,6 +618,35 @@ EXTERNAL_IMPORTS_DEMO_FORBIDDEN_RAW_WRITE_PATTERNS: tuple[
     ),
 )
 
+HOTPATCH_SMOKE_OWNER = "demo-hotpatch-smoke"
+
+HOTPATCH_SMOKE_REQUIRED_MARKERS = (
+    "struct HotpatchSmokeModelOwner<'a>",
+    "models: &'a mut ModelStore",
+    "fn increment_counter(",
+    "fn set_debug(",
+    "HotpatchSmokeModelOwner::new(app.models_mut())",
+    ".increment_counter(&state.counter)",
+    ".set_debug(&state.debug, &msg)",
+)
+
+HOTPATCH_SMOKE_FORBIDDEN_RAW_WRITE_PATTERNS: tuple[
+    tuple[str, re.Pattern[str]], ...
+] = (
+    (
+        "models_mut().update",
+        re.compile(
+            r"\bmodels_mut\s*\(\s*\)\s*\.\s*update(?:_any)?\s*(?:::\s*<[^>]*>)?\s*\("
+        ),
+    ),
+    (
+        "ModelStore::update",
+        re.compile(
+            r"(?:\bModelStore\s*::\s*|<\s*ModelStore\s*>\s*::\s*)update(?:_any)?\s*(?:::\s*<[^>]*>)?\s*\("
+        ),
+    ),
+)
+
 WINDOW_HIT_TEST_PROBE_OWNER = "examples-window-hit-test-probe"
 
 WINDOW_HIT_TEST_PROBE_REQUIRED_MARKERS = (
@@ -1087,6 +1116,21 @@ INTERNAL_HARNESS_SURFACES: tuple[SurfacePath, ...] = (
         "shared private owner helper for external import visibility writes",
         owner=EXTERNAL_IMPORTS_OWNER,
         allowed_raw_seams=("fret_runtime", "ModelStore"),
+    ),
+    SurfacePath(
+        "apps/fret-demo/src/bin/hotpatch_smoke_demo.rs",
+        "internal_harness",
+        "dev-only hotpatch maintainer smoke harness with manual driver hooks and owner-routed model writes",
+        owner=HOTPATCH_SMOKE_OWNER,
+        allowed_raw_seams=(
+            "fret_app",
+            "fret_core",
+            "fret_runtime",
+            "fret_ui",
+            "ElementContext",
+            "ModelStore",
+            "UiTree",
+        ),
     ),
     _fret_examples_internal_harness(
         "lib.rs",
@@ -2540,6 +2584,55 @@ def _scan_external_imports_owner_boundary(
     return violations
 
 
+def _scan_hotpatch_smoke_owner_boundary(
+    root: Path, spec: SurfacePath
+) -> list[SurfaceViolation]:
+    if spec.owner != HOTPATCH_SMOKE_OWNER:
+        return []
+
+    violations: list[SurfaceViolation] = []
+    for path in _iter_source_files(root / spec.path):
+        text = _read_text(path)
+        production_text = text.split("#[cfg(test)]", 1)[0]
+        missing_markers = [
+            marker for marker in HOTPATCH_SMOKE_REQUIRED_MARKERS if marker not in production_text
+        ]
+        if missing_markers:
+            violations.append(
+                SurfaceViolation(
+                    rule="internal_harness-hotpatch-smoke-owner-boundary",
+                    path=path,
+                    line_no=1,
+                    message=(
+                        "hotpatch smoke event/command writes must stay behind "
+                        f"HotpatchSmokeModelOwner; missing markers: {', '.join(missing_markers)}"
+                    ),
+                )
+            )
+
+        for line_no, line in _code_lines_for_scan(path, production_text):
+            if path.suffix == ".rs" and _is_rust_source_line_ignorable(line):
+                continue
+            for seam, pattern in HOTPATCH_SMOKE_FORBIDDEN_RAW_WRITE_PATTERNS:
+                if not pattern.search(line):
+                    continue
+                violations.append(
+                    SurfaceViolation(
+                        rule="internal_harness-hotpatch-smoke-owner-boundary",
+                        path=path,
+                        line_no=line_no,
+                        message=(
+                            "hotpatch smoke event/command writes must use "
+                            f"HotpatchSmokeModelOwner; direct `{seam}` bypasses the owner boundary"
+                        ),
+                        source=line.strip(),
+                    )
+                )
+                break
+
+    return violations
+
+
 def _scan_window_hit_test_probe_boundary(
     root: Path, spec: SurfacePath
 ) -> list[SurfaceViolation]:
@@ -2969,6 +3062,7 @@ def _scan_classified_raw_surface(root: Path, spec: SurfacePath) -> list[SurfaceV
     violations.extend(_scan_gizmo3d_owner_boundary(root, spec))
     violations.extend(_scan_embedded_viewport_owner_boundary(root, spec))
     violations.extend(_scan_external_imports_owner_boundary(root, spec))
+    violations.extend(_scan_hotpatch_smoke_owner_boundary(root, spec))
     violations.extend(_scan_window_hit_test_probe_boundary(root, spec))
     violations.extend(_scan_components_gallery_owner_boundary(root, spec))
     violations.extend(_scan_virtual_list_stress_controls_boundary(root, spec))

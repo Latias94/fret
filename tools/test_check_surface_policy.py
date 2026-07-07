@@ -2304,6 +2304,158 @@ class SurfacePolicyTests(unittest.TestCase):
                 ]
             )
 
+    def test_hotpatch_smoke_direct_model_writes_are_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-demo/src/bin/hotpatch_smoke_demo.rs",
+                """
+                use fret_runtime::{Model, ModelStore};
+                use std::sync::Arc;
+
+                struct State {
+                    counter: Model<i64>,
+                    debug: Model<Arc<str>>,
+                }
+
+                struct HotpatchSmokeModelOwner<'a> {
+                    models: &'a mut ModelStore,
+                }
+
+                impl<'a> HotpatchSmokeModelOwner<'a> {
+                    fn new(models: &'a mut ModelStore) -> Self {
+                        Self { models }
+                    }
+
+                    fn increment_counter(&mut self, model: &Model<i64>) -> Option<i64> {
+                        self.models.update(model, |value| {
+                            *value += 1;
+                            *value
+                        }).ok()
+                    }
+
+                    fn set_debug(&mut self, model: &Model<Arc<str>>, message: &str) -> bool {
+                        self.models.update(model, |value| *value = Arc::from(message)).is_ok()
+                    }
+                }
+
+                fn on_event(app: &mut App, state: &mut State) {
+                    let msg = "pointer down";
+                    let _ = HotpatchSmokeModelOwner::new(app.models_mut()).set_debug(&state.debug, &msg);
+                    let _ = app.models_mut().update(&state.debug, |_| true);
+                }
+
+                fn on_command(app: &mut App, state: &mut State) {
+                    let msg = "command";
+                    let _ = HotpatchSmokeModelOwner::new(app.models_mut())
+                        .increment_counter(&state.counter);
+                    let _ = HotpatchSmokeModelOwner::new(app.models_mut()).set_debug(&state.debug, &msg);
+                    let _ = <ModelStore>::update_any::<u64>(app.models_mut(), &state.debug, |_| true);
+                }
+                """,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[],
+                internal_harness_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-demo/src/bin/hotpatch_smoke_demo.rs",
+                        "internal_harness",
+                        "fixture hotpatch smoke harness",
+                        owner="demo-hotpatch-smoke",
+                        allowed_raw_seams=("fret_runtime", "ModelStore"),
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            owner_violations = [
+                violation
+                for violation in violations
+                if violation.rule == "internal_harness-hotpatch-smoke-owner-boundary"
+            ]
+            self.assertEqual(2, len(owner_violations))
+            messages = "\n".join(violation.message for violation in owner_violations)
+            self.assertIn("models_mut().update", messages)
+            self.assertIn("ModelStore::update", messages)
+
+    def test_hotpatch_smoke_owner_surface_is_allowed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-demo/src/bin/hotpatch_smoke_demo.rs",
+                """
+                use fret_runtime::{Model, ModelStore};
+                use std::sync::Arc;
+
+                struct State {
+                    counter: Model<i64>,
+                    debug: Model<Arc<str>>,
+                }
+
+                struct HotpatchSmokeModelOwner<'a> {
+                    models: &'a mut ModelStore,
+                }
+
+                impl<'a> HotpatchSmokeModelOwner<'a> {
+                    fn new(models: &'a mut ModelStore) -> Self {
+                        Self { models }
+                    }
+
+                    fn increment_counter(&mut self, model: &Model<i64>) -> Option<i64> {
+                        self.models.update(model, |value| {
+                            *value += 1;
+                            *value
+                        }).ok()
+                    }
+
+                    fn set_debug(&mut self, model: &Model<Arc<str>>, message: &str) -> bool {
+                        self.models.update(model, |value| *value = Arc::from(message)).is_ok()
+                    }
+                }
+
+                fn on_event(app: &mut App, state: &mut State) {
+                    let msg = "pointer down";
+                    let _ = HotpatchSmokeModelOwner::new(app.models_mut()).set_debug(&state.debug, &msg);
+                }
+
+                fn on_command(app: &mut App, state: &mut State) {
+                    let msg = "command";
+                    let _ = HotpatchSmokeModelOwner::new(app.models_mut())
+                        .increment_counter(&state.counter);
+                    let _ = HotpatchSmokeModelOwner::new(app.models_mut()).set_debug(&state.debug, &msg);
+                }
+                """,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[],
+                internal_harness_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-demo/src/bin/hotpatch_smoke_demo.rs",
+                        "internal_harness",
+                        "fixture hotpatch smoke harness",
+                        owner="demo-hotpatch-smoke",
+                        allowed_raw_seams=("fret_runtime", "ModelStore"),
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            self.assertFalse(
+                [
+                    violation
+                    for violation in violations
+                    if violation.rule == "internal_harness-hotpatch-smoke-owner-boundary"
+                ]
+            )
+
     def test_components_gallery_direct_model_writes_are_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
