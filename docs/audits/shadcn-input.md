@@ -50,6 +50,7 @@ base examples, and the in-repo web goldens that currently gate input chrome.
 
 ## Validation
 
+- Docs-order/runtime follow-up gate: `apps/fret-ui-gallery/tests/input_docs_surface.rs`
 - `CARGO_TARGET_DIR=target-codex-fieldlabel-lib cargo test -p fret-ui-shadcn --lib field_label_click -- --nocapture`
 - `CARGO_TARGET_DIR=target-codex-fretboard cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/input/ui-gallery-input-label-click-focus.json --dir target/fret-diag-input-label-focus-20260320-2 --launch -- env CARGO_TARGET_DIR=target-codex-ui-gallery-input cargo run -p fret-ui-gallery`
 - `CARGO_TARGET_DIR=target-codex-ui-gallery-input cargo check -p fret-ui-gallery --message-format short`
@@ -58,3 +59,7 @@ base examples, and the in-repo web goldens that currently gate input chrome.
 - Existing chrome gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`input-demo`, `input-demo.invalid`, `input-demo.focus`, `input-demo.invalid-focus`)
 - Existing layout gate coverage remains referenced from `docs/audits/shadcn-input.md` history and input-related web-vs-fret tests.
 - Existing diag scripts: `tools/diag-scripts/ui-gallery/input/ui-gallery-input-label-click-focus.json`, `tools/diag-scripts/ui-gallery/input/ui-gallery-input-file-browse-mocked.json`, `tools/diag-scripts/ui-gallery/input/ui-gallery-input-docs-screenshots.json`
+- Matrix packet: `docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/input_agent_packet_p0_v1.json`
+- Current live gap: broad `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_layout input`
+  currently fails `input-with-label` geometry, so the progress tracker should remain `In review`
+  until that layout fixture is fixed or superseded by stronger current evidence.
