@@ -14,7 +14,7 @@ use std::sync::Arc;
 
 use fret::advanced::driver::UiAppBuilderAdvancedExt as _;
 use fret::app::prelude::*;
-use fret::app::{AppComponentCx, AppRenderContext, LocalState};
+use fret::app::{AppComponentCx, AppRenderContext, LocalState, text};
 use fret_core::scene::{
     BackdropWarpFieldV2, BackdropWarpKindV1, BackdropWarpV1, BackdropWarpV2,
     CustomEffectImageInputV1, CustomEffectPyramidRequestV1, CustomEffectSourcesV3, DitherMode,
@@ -27,12 +27,11 @@ use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, EffectLayerProps, InsetStyle, LayoutStyle, Length,
     MainAlign, Overflow, PositionStyle, RowProps, SizeStyle, SpacerProps, SpacingLength,
 };
-use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
+use fret_ui::{ElementContext, Invalidation, Theme};
 use fret_ui_assets::image_asset_cache::{ImageAssetCacheHostExt, ImageAssetKey};
 use fret_ui_kit::custom_effects::{CustomEffectProgramV2, CustomEffectProgramV3};
 use fret_ui_kit::declarative::UiElementTestIdExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
-use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::{IntoUiElement, Space, UiSupportsLayout as _, ui};
 use fret_ui_shadcn::facade as shadcn;
 
@@ -192,19 +191,18 @@ fn rainbow_stripe(t: f32, a: f32) -> Color {
     Color { r, g, b, a }
 }
 
-fn liquid_glass_overlay_text<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    text: impl Into<Arc<str>>,
-) -> AnyElement {
-    decl_text::text_section_chrome_label(cx, text).inherit_foreground(srgb(255, 255, 255, 0.92))
+fn liquid_glass_overlay_text<'a, Cx>(cx: &mut Cx, text: impl Into<Arc<str>>) -> AnyElement
+where
+    Cx: AppRenderContext<'a>,
+{
+    text::section_chrome_label(cx, text).inherit_foreground(srgb(255, 255, 255, 0.92))
 }
 
 fn liquid_glass_card_title_text<'a, Cx>(cx: &mut Cx, text: impl Into<Arc<str>>) -> AnyElement
 where
     Cx: AppRenderContext<'a>,
 {
-    decl_text::text_section_chrome_label(cx.elements(), text)
-        .inherit_foreground(srgb(255, 255, 255, 0.92))
+    text::section_chrome_label(cx, text).inherit_foreground(srgb(255, 255, 255, 0.92))
 }
 
 fn watch_first_f32(cx: &mut AppComponentCx<'_>, model: &LocalState<Vec<f32>>, default: f32) -> f32 {
@@ -285,13 +283,13 @@ fn generate_warp_map_rg_signed(width: u32, height: u32) -> Vec<u8> {
     out
 }
 
-fn lens_panel<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
+fn lens_panel(
+    cx: &mut ElementContext<'_, App>,
     label: Arc<str>,
     radius: Px,
     mode: EffectMode,
     chain: EffectChain,
-) -> impl IntoUiElement<H> + use<H> {
+) -> impl IntoUiElement<App> + use<> {
     let mut outer_layout = LayoutStyle::default();
     outer_layout.size.width = Length::Px(Px(320.0));
     outer_layout.size.height = Length::Px(Px(220.0));

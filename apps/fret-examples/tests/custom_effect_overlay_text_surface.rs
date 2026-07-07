@@ -404,12 +404,13 @@ fn assert_liquid_glass_overlay_text_roles(source: &str) {
     let source = compact(source);
 
     for needle in [
-        "usefret::app::{AppComponentCx,AppRenderContext,LocalState};",
-        "usefret_ui_kit::declarative::textasdecl_text;",
-        "fnliquid_glass_overlay_text<H:UiHost>(",
+        "usefret::app::{AppComponentCx,AppRenderContext,LocalState,text};",
+        "fnliquid_glass_overlay_text<'a,Cx>(",
         "fnliquid_glass_card_title_text<'a,Cx>(",
-        "decl_text::text_section_chrome_label(cx,text).inherit_foreground(srgb(255,255,255,0.92))",
-        "decl_text::text_section_chrome_label(cx.elements(),text).inherit_foreground(srgb(255,255,255,0.92))",
+        "Cx:AppRenderContext<'a>,",
+        "text::section_chrome_label(cx,text).inherit_foreground(srgb(255,255,255,0.92))",
+        "fnlens_panel(cx:&mutElementContext<'_,App>,",
+        "implIntoUiElement<App>+use<>",
         "lettitle=liquid_glass_overlay_text(cx,label.clone());",
         "lettitle=liquid_glass_card_title_text(cx,title);",
     ] {
@@ -424,6 +425,10 @@ fn assert_liquid_glass_overlay_text_roles(source: &str) {
         "TextProps{",
         "wrap:fret_core::TextWrap::None",
         "overflow:fret_core::TextOverflow::Clip",
+        "usefret_ui_kit::declarative::textasdecl_text;",
+        "decl_text::",
+        "fnliquid_glass_overlay_text<H:UiHost>(",
+        "implIntoUiElement<H>",
     ] {
         assert!(
             !source.contains(needle),
@@ -628,8 +633,8 @@ fn liquid_glass_demo_uses_app_view_imports_with_explicit_effect_hooks() {
     for needle in [
         "usefret::advanced::driver::UiAppBuilderAdvancedExtas_;",
         "usefret::app::prelude::*;",
-        "usefret::app::{AppComponentCx,AppRenderContext,LocalState};",
-        "usefret_ui::{ElementContext,Invalidation,Theme,UiHost};",
+        "usefret::app::{AppComponentCx,AppRenderContext,LocalState,text};",
+        "usefret_ui::{ElementContext,Invalidation,Theme};",
         "usefret_ui_kit::declarative::action_hooks::ActionHooksExtas_;",
         "usefret_ui_kit::{IntoUiElement,Space,UiSupportsLayoutas_,ui};",
         "usefret_ui_shadcn::facadeasshadcn;",
@@ -639,7 +644,7 @@ fn liquid_glass_demo_uses_app_view_imports_with_explicit_effect_hooks() {
         "fninstall_custom_effects(app:&mutApp,effects:&mutdynfret_core::CustomEffectService)",
         "fninit(app:&mutApp,_window:WindowId)->Self",
         "fnview(cx:&mutElementContext<'_,App>,st:&mutLiquidGlassState)->Ui",
-        "implIntoUiElement<H>",
+        "implIntoUiElement<App>",
     ] {
         assert!(
             compact.contains(needle),
@@ -657,6 +662,7 @@ fn liquid_glass_demo_uses_app_view_imports_with_explicit_effect_hooks() {
         "AppWindowId",
         "ViewElements",
         "IntoUiElement<KernelApp>",
+        "UiHost",
     ] {
         assert!(
             !source.contains(forbidden),
