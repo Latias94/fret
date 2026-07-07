@@ -8,13 +8,13 @@ fn components_gallery_table_torture_uses_text_roles() {
     let source = compact(source);
 
     for needle in [
-        "usefret_ui_kit::declarative::textasdecl_text;",
-        "\"id\"=>decl_text::text_table_cell(cx,row.to_string())",
-        "\"status\"=>decl_text::text_table_cell(cx,ifrow%3==0",
-        "\"cpu\"=>decl_text::text_table_cell(cx,format!(\"{}%\",(row*7)%100))",
-        "\"mem_mb\"=>decl_text::text_table_cell(cx,format!(\"{}MB\",128+(row%4096)))",
-        "_=>decl_text::text_table_cell(cx,\"?\")",
-        "letheader=decl_text::text_paragraph(cx,header);",
+        "usefret::app::{TrackedStateExtas_,text};",
+        "\"id\"=>text::table_cell(cx,row.to_string())",
+        "\"status\"=>text::table_cell(cx,ifrow%3==0",
+        "\"cpu\"=>text::table_cell(cx,format!(\"{}%\",(row*7)%100))",
+        "\"mem_mb\"=>text::table_cell(cx,format!(\"{}MB\",128+(row%4096)))",
+        "_=>text::table_cell(cx,\"?\")",
+        "letheader=text::paragraph(cx,header);",
     ] {
         assert!(
             source.contains(needle),
@@ -29,6 +29,8 @@ fn components_gallery_table_torture_uses_text_roles() {
         "\"mem_mb\"=>cx.text(format!(\"{}MB\",128+(row%4096)))",
         "_=>cx.text(\"?\")",
         "letheader=cx.text(header);",
+        "usefret_ui_kit::declarative::textasdecl_text;",
+        "decl_text::",
     ] {
         assert!(
             !source.contains(needle),
@@ -43,15 +45,15 @@ fn components_gallery_chrome_and_controls_use_text_roles() {
     let source = compact(source);
 
     for needle in [
-        "decl_text::text_chrome_title(cx,title)",
-        "decl_text::text_control_readout(cx,subtitle)",
-        "decl_text::text_control_label(cx,Arc::<str>::from(\"Theme:\"),)",
-        "decl_text::text_control_readout(cx,Arc::<str>::from(format!(\"Themeconfig:{}\",theme_name)),)",
-        "decl_text::text_control_label(cx,label,)",
-        "decl_text::text_control_readout(cx,format!(\"checkbox:{checkbox_value}\"),)",
-        "decl_text::text_control_readout(cx,format!(\"switch:{switch_value}\"),)",
-        "decl_text::text_control_readout(cx,format!(\"radio:{radio_label}\"),)",
-        "decl_text::text_control_readout(cx,format!(\"select:{select_label}\"),)",
+        "text::chrome_title(cx,title)",
+        "text::control_readout(cx,subtitle)",
+        "text::control_label(cx,Arc::<str>::from(\"Theme:\"),)",
+        "text::control_readout(cx,Arc::<str>::from(format!(\"Themeconfig:{}\",theme_name)),)",
+        "text::control_label(cx,label,)",
+        "text::control_readout(cx,format!(\"checkbox:{checkbox_value}\"),)",
+        "text::control_readout(cx,format!(\"switch:{switch_value}\"),)",
+        "text::control_readout(cx,format!(\"radio:{radio_label}\"),)",
+        "text::control_readout(cx,format!(\"select:{select_label}\"),)",
     ] {
         assert!(
             source.contains(needle),
@@ -83,12 +85,12 @@ fn components_gallery_overlay_text_uses_text_roles() {
     let source = compact(source);
 
     for needle in [
-        "decl_text::text_paragraph(cx,\"HoverCardcontent(overlay-root)\")",
-        "decl_text::text_paragraph(cx,\"Movepointerfromtriggertocontent.\")",
-        "decl_text::text_paragraph(cx,\"Popovercontent\")",
-        "decl_text::text_paragraph(cx,\"overlays:tooltip/dropdown/context-menu/popover/dialog/alert-dialog/sheet\",)",
-        "decl_text::text_control_readout(cx,format!(\"lastaction:{}\",last_action_value.as_ref()))",
-        "decl_text::text_paragraph(cx,\"cmdk:Ctrl/Cmd+Popens,arrows/hoverhighlight,Enterselects\",)",
+        "text::paragraph(cx,\"HoverCardcontent(overlay-root)\")",
+        "text::paragraph(cx,\"Movepointerfromtriggertocontent.\")",
+        "text::paragraph(cx,\"Popovercontent\")",
+        "text::paragraph(cx,\"overlays:tooltip/dropdown/context-menu/popover/dialog/alert-dialog/sheet\",)",
+        "text::control_readout(cx,format!(\"lastaction:{}\",last_action_value.as_ref()))",
+        "text::paragraph(cx,\"cmdk:Ctrl/Cmd+Popens,arrows/hoverhighlight,Enterselects\",)",
     ] {
         assert!(
             source.contains(needle),

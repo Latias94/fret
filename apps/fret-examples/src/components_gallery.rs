@@ -1,7 +1,7 @@
 #[cfg(not(target_arch = "wasm32"))]
 use anyhow::Context as _;
 use fret::advanced::view::{AppUiRenderRootState, render_root_with_app_ui};
-use fret::app::TrackedStateExt as _;
+use fret::app::{TrackedStateExt as _, text};
 use fret_app::{App, CommandId, CommandMeta, Effect, Model, WhenExpr, WindowRequest};
 use fret_bootstrap::ui_diagnostics::UiDiagnosticsService;
 use fret_core::{
@@ -24,7 +24,6 @@ use fret_ui::{ElementContext, UiTree};
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::declarative::cached_subtree::{CachedSubtreeExt, CachedSubtreeProps};
 use fret_ui_kit::declarative::file_tree::{FileTreeViewProps, file_tree_view_retained_v0};
-use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::headless::table::{ColumnDef, RowKey, TableState};
 use fret_ui_kit::tree::{TreeItem, TreeItemId, TreeState};
 use fret_ui_kit::{ColorRef, LayoutRefinement, OverlayController, Space, UiExt, ui};
@@ -265,8 +264,8 @@ fn components_gallery_table_cell(
 ) -> fret_ui::element::AnyElement {
     let cx = cx.elements();
     match col.id.as_ref() {
-        "id" => decl_text::text_table_cell(cx, row.to_string()),
-        "status" => decl_text::text_table_cell(
+        "id" => text::table_cell(cx, row.to_string()),
+        "status" => text::table_cell(
             cx,
             if row % 3 == 0 {
                 "idle"
@@ -276,9 +275,9 @@ fn components_gallery_table_cell(
                 "offline"
             },
         ),
-        "cpu" => decl_text::text_table_cell(cx, format!("{}%", (row * 7) % 100)),
-        "mem_mb" => decl_text::text_table_cell(cx, format!("{} MB", 128 + (row % 4096))),
-        _ => decl_text::text_table_cell(cx, "?"),
+        "cpu" => text::table_cell(cx, format!("{}%", (row * 7) % 100)),
+        "mem_mb" => text::table_cell(cx, format!("{} MB", 128 + (row % 4096))),
+        _ => text::table_cell(cx, "?"),
     }
 }
 
@@ -502,7 +501,7 @@ impl ComponentsGalleryDriver {
                         "Table torture (retained host): click headers to sort; wheel scroll crosses overscan boundaries.",
                     );
 
-                    let header = decl_text::text_paragraph(cx, header);
+                    let header = text::paragraph(cx, header);
 
                     let table = cx.cached_subtree_with(
                         CachedSubtreeProps::default().contain_layout_when_bounds_known(true),
@@ -639,8 +638,8 @@ impl ComponentsGalleryDriver {
 
                 vec![ui::v_flex(|cx: &mut ElementContext<'_, App>| {
                                  vec![
-                                     decl_text::text_chrome_title(cx, title),
-                                     decl_text::text_control_readout(cx, subtitle),
+                                     text::chrome_title(cx, title),
+                                     text::control_readout(cx, subtitle),
                                      markdown::Markdown::new(markdown_sample.clone())
                                         .into_element(cx),
                                     cx.flex(
@@ -655,7 +654,7 @@ impl ComponentsGalleryDriver {
                                         },
                                         |cx| {
                                             vec![
-                                                decl_text::text_control_label(
+                                                text::control_label(
                                                     cx,
                                                     Arc::<str>::from("Theme:"),
                                                 ),
@@ -717,7 +716,7 @@ impl ComponentsGalleryDriver {
                                             ]
                                         },
                                     ),
-                                    decl_text::text_control_readout(
+                                    text::control_readout(
                                         cx,
                                         Arc::<str>::from(format!("Theme config: {}", theme_name)),
                                     ),
@@ -777,7 +776,7 @@ impl ComponentsGalleryDriver {
                                                                     },
                                                                     |_cx| Vec::new(),
                                                                 ),
-                                                                decl_text::text_control_label(
+                                                                text::control_label(
                                                                     cx, label,
                                                                 ),
                                                             ]
@@ -1082,14 +1081,14 @@ impl ComponentsGalleryDriver {
                                                 shadcn::Checkbox::new(checkbox)
                                                     .a11y_label("Demo checkbox")
                                                     .into_element(cx),
-                                                decl_text::text_control_readout(
+                                                text::control_readout(
                                                     cx,
                                                     format!("checkbox: {checkbox_value}"),
                                                 ),
                                                 shadcn::Switch::new(switch)
                                                     .a11y_label("Demo switch")
                                                     .into_element(cx),
-                                                decl_text::text_control_readout(
+                                                text::control_readout(
                                                     cx,
                                                     format!("switch: {switch_value}"),
                                                 ),
@@ -1108,7 +1107,7 @@ impl ComponentsGalleryDriver {
                                     },
                                     |cx| {
                                             vec![
-                                                decl_text::text_control_readout(
+                                                text::control_readout(
                                                     cx,
                                                     format!("radio: {radio_label}"),
                                                 ),
@@ -1148,7 +1147,7 @@ impl ComponentsGalleryDriver {
 	                                                    shadcn::SelectItem::new("cherry", "Cherry"),
 	                                                ])
                                                 .into_element(cx),
-                                            decl_text::text_control_readout(
+                                            text::control_readout(
                                                 cx,
                                                 format!("select: {select_label}"),
                                             ),
@@ -1257,8 +1256,8 @@ impl ComponentsGalleryDriver {
                                                                             },
                                                                             |cx| {
                                                                                 vec![
-                                                                                    decl_text::text_paragraph(cx, "HoverCard content (overlay-root)"),
-                                                                                    decl_text::text_paragraph(cx, "Move pointer from trigger to content."),
+                                                                                    text::paragraph(cx, "HoverCard content (overlay-root)"),
+                                                                                    text::paragraph(cx, "Move pointer from trigger to content."),
                                                                                 ]
                                                                             },
                                                                         )]);
@@ -1352,7 +1351,7 @@ impl ComponentsGalleryDriver {
                                                         },
                                                         |cx| {
                                                             shadcn::PopoverContent::new(vec![
-                                                                decl_text::text_paragraph(cx, "Popover content"),
+                                                                text::paragraph(cx, "Popover content"),
                                                                 shadcn::Button::new("Close")
                                                                     .variant(shadcn::ButtonVariant::Secondary)
                                                                     .toggle_model(popover_open.clone())
@@ -1496,16 +1495,16 @@ impl ComponentsGalleryDriver {
                                         });
 
                                         vec![
-                                            decl_text::text_paragraph(
+                                            text::paragraph(
                                                 cx,
                                                 "overlays: tooltip / dropdown / context-menu / popover / dialog / alert-dialog / sheet",
                                             ),
                                             overlays,
-                                            decl_text::text_control_readout(cx, format!(
+                                            text::control_readout(cx, format!(
                                                 "last action: {}",
                                                 last_action_value.as_ref()
                                             )),
-                                            decl_text::text_paragraph(
+                                            text::paragraph(
                                                 cx,
                                                 "cmdk: Ctrl/Cmd+P opens, arrows/hover highlight, Enter selects",
                                             ),
