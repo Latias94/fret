@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use fret::advanced::KernelApp;
 use fret::advanced::driver::{UiAppDriver, ViewElements, ui_app_with_hooks};
+use fret::advanced::text;
 use fret::app::{AppLocalStateExt as _, AppLocalStateTxnExt as _, LocalState};
 use fret_app::{CommandId, Effect, WindowRequest};
 use fret_core::{AppWindowId, Px};
@@ -11,7 +12,6 @@ use fret_runtime::{
 };
 use fret_ui::element::{LayoutStyle, Length, SemanticsDecoration, SizeStyle};
 use fret_ui::{ElementContext, UiHost};
-use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::{LayoutRefinement, Space, ui};
 use fret_ui_shadcn::facade as shadcn;
 
@@ -30,21 +30,21 @@ fn launcher_utility_materials_title_text<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     text: impl Into<Arc<str>>,
 ) -> fret_ui::element::AnyElement {
-    decl_text::text_section_chrome_label(cx, text)
+    text::section_chrome_label(cx, text)
 }
 
 fn launcher_utility_materials_readout_text<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     text: impl Into<Arc<str>>,
 ) -> fret_ui::element::AnyElement {
-    decl_text::text_control_readout(cx, text)
+    text::control_readout(cx, text)
 }
 
 fn launcher_utility_materials_code_label_text<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     text: impl Into<Arc<str>>,
 ) -> fret_ui::element::AnyElement {
-    decl_text::text_code_label(cx, text)
+    text::code_label(cx, text)
 }
 
 fn install_commands(app: &mut KernelApp) {

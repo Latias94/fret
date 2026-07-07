@@ -8,13 +8,13 @@ fn window_hit_test_probe_demo_keeps_fixed_text_on_roles() {
     let source = compact(source);
 
     for needle in [
-        "usefret_ui_kit::declarative::textasdecl_text;",
+        "usefret::advanced::text;",
         "fnwindow_hit_test_title_text<H:UiHost>(",
         "fnwindow_hit_test_readout_text<H:UiHost>(",
         "fnwindow_hit_test_code_label_text<H:UiHost>(",
-        "decl_text::text_section_chrome_label(cx,text)",
-        "decl_text::text_control_readout(cx,text)",
-        "decl_text::text_code_label(cx,text)",
+        "text::section_chrome_label(cx,text)",
+        "text::control_readout(cx,text)",
+        "text::code_label(cx,text)",
         "window_hit_test_title_text(cx,\"Hit-testpassthroughprobe\",)",
         "window_hit_test_code_label_text(cx,format!(\"logical_window_id={logical}\"),)",
         "window_hit_test_readout_text(cx,status)",
@@ -26,6 +26,8 @@ fn window_hit_test_probe_demo_keeps_fixed_text_on_roles() {
     }
 
     for needle in [
+        "usefret_ui_kit::declarative::textasdecl_text;",
+        "decl_text::",
         "ui::text(\"Hit-testpassthroughprobe\").font_semibold().text_sm()",
         "ui::text(format!(\"logical_window_id={logical}\")).font_monospace().text_sm()",
         "ui::text(status).text_sm()",

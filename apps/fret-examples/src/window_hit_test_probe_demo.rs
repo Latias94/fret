@@ -3,6 +3,7 @@ use std::sync::Arc;
 
 use fret::advanced::KernelApp;
 use fret::advanced::interop::run_native_with_compat_driver;
+use fret::advanced::text;
 use fret_app::{CreateWindowKind, CreateWindowRequest, Effect, WindowRequest};
 use fret_bootstrap::ui_app_driver::{self, ViewElements};
 use fret_core::{AppWindowId, Px};
@@ -15,7 +16,6 @@ use fret_ui::element::{LayoutStyle, Length, SizeStyle};
 use fret_ui::{ElementContext, UiHost};
 use fret_ui_kit::IntoUiElement as _;
 use fret_ui_kit::declarative::TrackedModelExt as _;
-use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::declarative::{ElementContextThemeExt as _, UiElementTestIdExt as _};
 use fret_ui_kit::{LayoutRefinement, Space, ui};
 use fret_ui_shadcn::facade as shadcn;
@@ -29,21 +29,21 @@ fn window_hit_test_title_text<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     text: impl Into<Arc<str>>,
 ) -> fret_ui::element::AnyElement {
-    decl_text::text_section_chrome_label(cx, text)
+    text::section_chrome_label(cx, text)
 }
 
 fn window_hit_test_readout_text<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     text: impl Into<Arc<str>>,
 ) -> fret_ui::element::AnyElement {
-    decl_text::text_control_readout(cx, text)
+    text::control_readout(cx, text)
 }
 
 fn window_hit_test_code_label_text<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     text: impl Into<Arc<str>>,
 ) -> fret_ui::element::AnyElement {
-    decl_text::text_code_label(cx, text)
+    text::code_label(cx, text)
 }
 
 pub fn run() -> anyhow::Result<()> {
