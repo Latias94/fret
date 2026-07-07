@@ -4,14 +4,13 @@ use std::sync::Arc;
 
 use fret::advanced::driver::UiAppBuilderAdvancedExt as _;
 use fret::advanced::view::ViewWindowState;
-use fret::app::ElementContextAccess;
 use fret::app::prelude::*;
+use fret::app::{AppRenderContext, text};
 use fret_core::{AlphaMode, ImageColorSpace, ImageId, Px};
 use fret_render::{ImageDescriptor, Renderer, WgpuContext, write_rgba8_texture_region};
 use fret_ui::element::{
     FlexProps, ImageProps, LayoutStyle, Length, ScrollProps, SizeStyle, SpacingEdges, SpacingLength,
 };
-use fret_ui_kit::declarative::text as decl_text;
 
 #[derive(Debug, Clone)]
 struct ImageHeavyImages {
@@ -184,14 +183,13 @@ fn upload_images(app: &mut App, context: &WgpuContext, renderer: &mut Renderer) 
 
 fn render_view<'a, Cx>(cx: &mut Cx) -> Ui
 where
-    Cx: ElementContextAccess<'a, App>,
+    Cx: AppRenderContext<'a>,
 {
-    let cx = cx.elements();
     let images = cx
-        .app
+        .app_mut()
         .with_global_mut_untracked(ImageHeavyImages::default, |g, _app| g.clone());
 
-    let header = decl_text::text_control_readout(
+    let header = text::control_readout(
         cx,
         Arc::<str>::from(format!(
             "image-heavy memory demo: images={} texture_size_px={} estimated_rgba8_bytes={}",
@@ -200,6 +198,8 @@ where
             images.estimated_rgba8_bytes
         )),
     );
+
+    let cx = cx.elements();
 
     let grid = cx.flex(
         FlexProps {
