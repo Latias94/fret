@@ -1,6 +1,7 @@
 use anyhow::Context as _;
 use fret::app::AppLocalStateExt as _;
 use fret::app::LocalState;
+use fret::app::text;
 use fret_app::{App, CommandId, Effect, WindowRequest};
 use fret_core::{AppWindowId, Corners, Edges, Event, Px};
 use fret_launch::{
@@ -8,33 +9,18 @@ use fret_launch::{
     WinitRenderContext, WinitRunnerConfig, WinitWindowContext,
 };
 use fret_runtime::PlatformCapabilities;
+use fret_ui::UiTree;
 use fret_ui::declarative;
 use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
+    ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
 };
-use fret_ui::{ElementContext, UiTree};
 use fret_ui_kit::OverlayController;
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
-use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::headless::table::{ColumnDef, RowKey, TableState, create_column_helper};
 use fret_ui_kit::{Space, ui};
 use fret_ui_shadcn::facade as shadcn;
 use std::sync::Arc;
 use std::time::Instant;
-
-fn datatable_demo_readout_text<H: fret_ui::UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    text: impl Into<Arc<str>>,
-) -> AnyElement {
-    decl_text::text_control_readout(cx, text)
-}
-
-fn datatable_demo_cell_text<H: fret_ui::UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    text: impl Into<Arc<str>>,
-) -> AnyElement {
-    decl_text::text_table_cell(cx, text)
-}
 
 #[derive(Debug, Clone)]
 struct DemoRow {
@@ -271,7 +257,7 @@ fn render(_driver: &mut DataTableDemoDriver, context: WinitRenderContext<'_, Dem
                         .size(shadcn::ButtonSize::Sm)
                         .on_click(CommandId::from("datatable_demo.close"))
                         .into_element(cx),
-                    datatable_demo_readout_text(
+                    text::control_readout(
                         cx,
                         Arc::from(format!("DataTable | selected={selected} sort={sorting}")),
                     ),
@@ -324,11 +310,11 @@ fn render(_driver: &mut DataTableDemoDriver, context: WinitRenderContext<'_, Dem
                             .unwrap_or_else(|| Arc::clone(&col.id))
                     },
                     |cx, col, row| match col.id.as_ref() {
-                        "id" => datatable_demo_cell_text(cx, Arc::from(row.id.to_string())),
-                        "name" => datatable_demo_cell_text(cx, Arc::clone(&row.name)),
-                        "role" => datatable_demo_cell_text(cx, Arc::clone(&row.role)),
-                        "score" => datatable_demo_cell_text(cx, Arc::from(row.score.to_string())),
-                        _ => datatable_demo_cell_text(cx, Arc::from("")),
+                        "id" => text::table_cell(cx, Arc::from(row.id.to_string())),
+                        "name" => text::table_cell(cx, Arc::clone(&row.name)),
+                        "role" => text::table_cell(cx, Arc::clone(&row.role)),
+                        "score" => text::table_cell(cx, Arc::from(row.score.to_string())),
+                        _ => text::table_cell(cx, Arc::from("")),
                     },
                 );
 

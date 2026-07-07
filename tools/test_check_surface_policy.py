@@ -1130,6 +1130,13 @@ class SurfacePolicyTests(unittest.TestCase):
                 for spec in POLICY.ADVANCED_MANUAL_SURFACES
             )
         )
+        datatable_spec = next(
+            spec
+            for spec in POLICY.ADVANCED_MANUAL_SURFACES
+            if spec.path == "apps/fret-examples/src/datatable_demo.rs"
+        )
+        self.assertNotIn("AnyElement", datatable_spec.allowed_raw_seams)
+        self.assertNotIn("ElementContext", datatable_spec.allowed_raw_seams)
         for path in external_import_paths:
             self.assertTrue(
                 any(spec.path == path for spec in POLICY.ADVANCED_MANUAL_SURFACES),
