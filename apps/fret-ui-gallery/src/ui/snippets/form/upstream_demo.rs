@@ -324,7 +324,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                     shadcn::FieldLabel::new("Use different settings for my mobile devices")
                         .for_control(control_id)
                         .into_element(cx),
-                    shadcn::raw::typography::muted(
+                    shadcn::FieldDescription::new(
                         "You can manage your mobile notifications in the mobile settings page.",
                     )
                     .into_element(cx),
@@ -363,8 +363,8 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         [ui::v_flex(|cx| {
             let header = ui::v_stack(|cx| {
                 vec![
-                    shadcn::raw::typography::large("Sidebar").into_element(cx),
-                    shadcn::raw::typography::muted(
+                    shadcn::FieldTitle::new("Sidebar").into_element(cx),
+                    shadcn::FieldDescription::new(
                         "Select the items you want to display in the sidebar.",
                     )
                     .into_element(cx),
@@ -500,7 +500,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             let text = ui::v_stack(|cx| {
                 vec![
                     shadcn::Label::new("Marketing emails").into_element(cx),
-                    shadcn::raw::typography::muted(
+                    shadcn::FieldDescription::new(
                         "Receive emails about new products, features, and more.",
                     )
                     .into_element(cx),
@@ -535,7 +535,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             let text = ui::v_stack(|cx| {
                 vec![
                     shadcn::Label::new("Security emails").into_element(cx),
-                    shadcn::raw::typography::muted("Receive emails about your account security.")
+                    shadcn::FieldDescription::new("Receive emails about your account security.")
                         .into_element(cx),
                 ]
             })
@@ -567,7 +567,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
 
         ui::v_flex(|cx| {
             vec![
-                shadcn::raw::typography::h3("Email Notifications").into_element(cx),
+                shadcn::FieldTitle::new("Email Notifications").into_element(cx),
                 ui::v_flex(|_cx| vec![marketing, security])
                     .gap(Space::N4)
                     .layout(LayoutRefinement::default().w_full().min_w_0())

@@ -28,6 +28,7 @@ instead:
 - Form field helper: `ecosystem/fret-ui-shadcn/src/form_field.rs`
 - Field primitives: `ecosystem/fret-ui-shadcn/src/field.rs`
 - Gallery page: `apps/fret-ui-gallery/src/ui/pages/form.rs`
+- Gallery docs-surface gate: `apps/fret-ui-gallery/tests/form_docs_surface.rs`
 - Copyable usage snippet: `apps/fret-ui-gallery/src/ui/snippets/form/usage.rs`
 
 ## Audit checklist
@@ -76,9 +77,13 @@ instead:
   (`disabled`, `read_only`) stay owned by each control recipe.
 - Result: Follow-up work should focus on richer resolver/validation recipes only if a concrete
   product need appears; the core composition surface no longer forces `FieldContent` defaults.
+- Result: `apps/fret-ui-gallery/tests/form_docs_surface.rs` locks the gallery order, raw-free
+  Form/Field snippet lane, submit-validation semantics anchors, and disabled-field action-state
+  diagnostics.
 
 ## Validation
 
 - `cargo nextest run -p fret-ui-shadcn --lib form_control_is_slot_like_for_single_child form_control_multi_child_fallback_drops_field_content_fill_defaults --status-level fail`
 - `CARGO_TARGET_DIR=target-codex-invalid-semantics cargo test -p fret-ui-shadcn --lib invalid`
 - `CARGO_TARGET_DIR=target-codex-required-semantics cargo test -p fret-ui-shadcn --lib required`
+- `cargo nextest run -p fret-ui-gallery --test form_docs_surface`

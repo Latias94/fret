@@ -64,7 +64,7 @@ pub(super) fn preview_forms(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Start with an upstream-aligned FormDemo, then provide copyable Usage and submit-validation sections plus gallery recipes for composing Input/Textarea/Checkbox/Switch/FieldSet while keeping field-level required semantics and `FormState`-driven invalid decoration on `FormField`.",
+            "Gallery starts with the upstream-aligned Form Demo, then keeps copyable Usage and submit-validation sections plus Disabled Field, Input, Textarea, Checkbox + Switch, Fieldset, RTL, and Notes as Form follow-ups while preserving field-level required semantics and `FormState`-driven invalid decoration on `FormField`.",
         ),
         vec![
             upstream_demo,
