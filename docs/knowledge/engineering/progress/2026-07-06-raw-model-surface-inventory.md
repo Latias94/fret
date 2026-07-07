@@ -222,7 +222,10 @@ Keep raw/shared-model mechanisms for now:
 - `embedded_viewport_demo.rs`. Audited and cleaned after the cookbook utility-window owner pass: it
   remains a Tier A embedded viewport interop demo, while its startup `last_input` readout write now
   routes through the demo-local `EmbeddedViewportDemoModelOwner` helper. Its source-surface test now
-  forbids direct `models_mut().update(...)` calls in the demo source.
+  forbids direct `models_mut().update(...)` calls in the demo source. The demo is now also part of
+  `tools/check_surface_policy.py` as an `examples-embedded-viewport` advanced/manual surface with
+  an owner-boundary gate for direct `models_mut().update(...)` and `ModelStore::update(...)`
+  bypasses.
 - `docking_arbitration_demo.rs`. Audited and cleaned after the table stress owner pass, then
   tightened again after the controls-binding pass: it remains an advanced docking/overlay
   arbitration harness, while drop-mask control, synthetic pointer debug, and viewport-input

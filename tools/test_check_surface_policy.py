@@ -790,6 +790,10 @@ class SurfacePolicyTests(unittest.TestCase):
             "apps/fret-examples/src/chart_stress_demo.rs",
             POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS,
         )
+        self.assertIn(
+            "apps/fret-examples/src/embedded_viewport_demo.rs",
+            POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS,
+        )
         custom_effect_v2_web_paths = {
             "apps/fret-examples/src/custom_effect_v2_web_demo.rs",
             "apps/fret-examples/src/custom_effect_v2_identity_web_demo.rs",
@@ -814,6 +818,12 @@ class SurfacePolicyTests(unittest.TestCase):
             any(
                 spec.path == "apps/fret-examples/src/echarts_demo.rs"
                 for spec in POLICY.COMPARISON_SURFACES
+            )
+        )
+        self.assertTrue(
+            any(
+                spec.path == "apps/fret-examples/src/embedded_viewport_demo.rs"
+                for spec in POLICY.ADVANCED_MANUAL_SURFACES
             )
         )
         echarts_spec = next(
@@ -1401,6 +1411,147 @@ class SurfacePolicyTests(unittest.TestCase):
                     violation
                     for violation in violations
                     if violation.rule == "advanced-surface-gizmo3d-owner-boundary"
+                ]
+            )
+
+    def test_embedded_viewport_direct_model_updates_are_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-examples/src/embedded_viewport_demo.rs",
+                """
+                use fret_runtime::{FrameId, ModelStore, TickId};
+
+                struct EmbeddedViewportDemoModelOwner<'a> {
+                    models: &'a mut ModelStore,
+                }
+
+                impl<'a> EmbeddedViewportDemoModelOwner<'a> {
+                    fn set_last_input(
+                        &mut self,
+                    ) {
+                        let _ = self.models.update(&models.last_input, |_| true);
+                    }
+                }
+
+                impl embedded::EmbeddedViewportView for EmbeddedViewportDemoView {
+                    fn record_embedded_viewport(
+                        &mut self,
+                    ) {}
+                }
+
+                fn run() {
+                    FretApp::new("embedded-viewport-demo")
+                        .view_with_hooks::<EmbeddedViewportDemoView>(|d| d.drive_embedded_viewport())?;
+                }
+
+                fn init(app: &mut App, models: &embedded::EmbeddedViewportModels) {
+                    let _ = EmbeddedViewportDemoModelOwner::new(app.models_mut()).set_last_input(
+                        &models,
+                        "ready",
+                    );
+                    let _ = app.models_mut().update(&models.last_input, |value| {
+                        *value = "bad".into();
+                        true
+                    });
+                    let _ = ModelStore::update(app.models_mut(), &models.last_input, |value| {
+                        *value = "bad".into();
+                        true
+                    });
+                }
+                """,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/embedded_viewport_demo.rs",
+                        "advanced_manual",
+                        "fixture embedded viewport proof surface",
+                        owner="examples-embedded-viewport",
+                        allowed_raw_seams=("fret_runtime", "ModelStore"),
+                        retirement=POLICY.FRET_EXAMPLES_ADVANCED_RETIREMENT,
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            owner_violations = [
+                violation
+                for violation in violations
+                if violation.rule == "advanced-surface-embedded-viewport-owner-boundary"
+            ]
+            self.assertEqual(2, len(owner_violations))
+            messages = "\n".join(violation.message for violation in owner_violations)
+            self.assertIn("models_mut().update", messages)
+            self.assertIn("ModelStore::update", messages)
+
+    def test_embedded_viewport_owner_surface_is_allowed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-examples/src/embedded_viewport_demo.rs",
+                """
+                use fret_runtime::{FrameId, ModelStore, TickId};
+
+                struct EmbeddedViewportDemoModelOwner<'a> {
+                    models: &'a mut ModelStore,
+                }
+
+                impl<'a> EmbeddedViewportDemoModelOwner<'a> {
+                    fn set_last_input(
+                        &mut self,
+                    ) {
+                        let _ = self.models.update(&models.last_input, |_| true);
+                    }
+                }
+
+                impl embedded::EmbeddedViewportView for EmbeddedViewportDemoView {
+                    fn record_embedded_viewport(
+                        &mut self,
+                    ) {}
+                }
+
+                fn run() {
+                    FretApp::new("embedded-viewport-demo")
+                        .view_with_hooks::<EmbeddedViewportDemoView>(|d| d.drive_embedded_viewport())?;
+                }
+
+                fn init(app: &mut App, models: &embedded::EmbeddedViewportModels) {
+                    let _ = EmbeddedViewportDemoModelOwner::new(app.models_mut()).set_last_input(
+                        &models,
+                        "ready",
+                    );
+                }
+                """,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/embedded_viewport_demo.rs",
+                        "advanced_manual",
+                        "fixture embedded viewport proof surface",
+                        owner="examples-embedded-viewport",
+                        allowed_raw_seams=("fret_runtime", "ModelStore"),
+                        retirement=POLICY.FRET_EXAMPLES_ADVANCED_RETIREMENT,
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            self.assertFalse(
+                [
+                    violation
+                    for violation in violations
+                    if violation.rule
+                    == "advanced-surface-embedded-viewport-owner-boundary"
                 ]
             )
 

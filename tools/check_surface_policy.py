@@ -408,6 +408,31 @@ GIZMO3D_DEMO_FORBIDDEN_RAW_UPDATE_PATTERNS: tuple[tuple[str, re.Pattern[str]], .
     ),
 )
 
+EMBEDDED_VIEWPORT_OWNER = "examples-embedded-viewport"
+
+EMBEDDED_VIEWPORT_DEMO_REQUIRED_MARKERS = (
+    "struct EmbeddedViewportDemoModelOwner<'a>",
+    "models: &'a mut ModelStore",
+    "fn set_last_input(",
+    ".update(&models.last_input",
+    "EmbeddedViewportDemoModelOwner::new(app.models_mut()).set_last_input(",
+    "fn record_embedded_viewport(",
+    ".view_with_hooks::<EmbeddedViewportDemoView>(|d| d.drive_embedded_viewport())?",
+)
+
+EMBEDDED_VIEWPORT_DEMO_FORBIDDEN_RAW_WRITE_PATTERNS: tuple[
+    tuple[str, re.Pattern[str]], ...
+] = (
+    (
+        "models_mut().update",
+        re.compile(r"\bmodels_mut\s*\(\s*\)\s*\.\s*update\s*\("),
+    ),
+    (
+        "ModelStore::update",
+        re.compile(r"\bModelStore\s*::\s*update\s*\("),
+    ),
+)
+
 
 def _fret_examples_custom_effect_v2_web_surface(filename: str, variant: str) -> SurfacePath:
     return SurfacePath(
@@ -670,6 +695,21 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
             "UiTree",
         ),
         owner="examples-components-gallery",
+    ),
+    _fret_examples_advanced_surface(
+        "embedded_viewport_demo.rs",
+        "the embedded viewport interop proof owns explicit advanced driver hooks, render target "
+        "interop, and a small demo-local model owner for forwarded-input readouts",
+        (
+            "fret::advanced",
+            "fret_core",
+            "fret_runtime",
+            "fret_ui",
+            "AnyElement",
+            "ElementContext",
+            "ModelStore",
+        ),
+        owner=EMBEDDED_VIEWPORT_OWNER,
     ),
     _fret_examples_advanced_surface(
         "docking_demo.rs",
@@ -985,6 +1025,7 @@ PUBLIC_EXAMPLE_SCAN_ROOTS: tuple[str, ...] = (
     "apps/fret-examples/src/simple_todo_demo.rs",
     "apps/fret-examples/src/todo_demo.rs",
     "apps/fret-examples/src/components_gallery.rs",
+    "apps/fret-examples/src/embedded_viewport_demo.rs",
     "apps/fret-examples/src/docking_demo.rs",
     "apps/fret-examples/src/docking_arbitration_demo.rs",
     "apps/fret-examples/src/plot_demo.rs",
@@ -1268,6 +1309,57 @@ def _scan_gizmo3d_owner_boundary(root: Path, spec: SurfacePath) -> list[SurfaceV
     return violations
 
 
+def _scan_embedded_viewport_owner_boundary(
+    root: Path, spec: SurfacePath
+) -> list[SurfaceViolation]:
+    if spec.owner != EMBEDDED_VIEWPORT_OWNER:
+        return []
+
+    violations: list[SurfaceViolation] = []
+    for path in _iter_source_files(root / spec.path):
+        text = _read_text(path)
+        missing_markers = [
+            marker
+            for marker in EMBEDDED_VIEWPORT_DEMO_REQUIRED_MARKERS
+            if marker not in text
+        ]
+        if missing_markers:
+            violations.append(
+                SurfaceViolation(
+                    rule="advanced-surface-embedded-viewport-owner-boundary",
+                    path=path,
+                    line_no=1,
+                    message=(
+                        "embedded viewport demo model writes must stay behind "
+                        "EmbeddedViewportDemoModelOwner; missing owner markers: "
+                        f"{', '.join(missing_markers)}"
+                    ),
+                )
+            )
+
+        for line_no, line in _code_lines_for_scan(path, text):
+            if path.suffix == ".rs" and _is_rust_source_line_ignorable(line):
+                continue
+            for seam, pattern in EMBEDDED_VIEWPORT_DEMO_FORBIDDEN_RAW_WRITE_PATTERNS:
+                if not pattern.search(line):
+                    continue
+                violations.append(
+                    SurfaceViolation(
+                        rule="advanced-surface-embedded-viewport-owner-boundary",
+                        path=path,
+                        line_no=line_no,
+                        message=(
+                            "embedded viewport app/driver writes must use "
+                            f"EmbeddedViewportDemoModelOwner; direct `{seam}` bypasses the owner boundary"
+                        ),
+                        source=line.strip(),
+                    )
+                )
+                break
+
+    return violations
+
+
 def _scan_default_authoring_surface(root: Path, spec: SurfacePath) -> list[SurfaceViolation]:
     violations: list[SurfaceViolation] = []
     for path in _iter_source_files(root / spec.path):
@@ -1327,6 +1419,7 @@ def _scan_classified_raw_surface(root: Path, spec: SurfacePath) -> list[SurfaceV
                 )
     violations.extend(_scan_custom_effect_v2_web_owner_boundary(root, spec))
     violations.extend(_scan_gizmo3d_owner_boundary(root, spec))
+    violations.extend(_scan_embedded_viewport_owner_boundary(root, spec))
     for seam in sorted(allowed_raw_seams - used_raw_seams):
         violations.append(
             SurfaceViolation(
