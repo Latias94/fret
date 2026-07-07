@@ -30,6 +30,7 @@ pub(super) fn preview_input_group(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement
         "Prefer the high-level `InputGroup::new(model)` shorthand for first-party app code, then reach for the explicit parts lane when you want direct shadcn docs parity at the call site.",
     );
     let align = doc_layout::notes_block([
+        "The upstream `Composition` block maps to Fret's copyable `Parts Usage` section: it keeps `InputGroupInput`, `InputGroupTextarea`, `InputGroupAddon`, `InputGroupButton`, and `InputGroupText` visible without making that parts lane the default shorthand.",
         "Use `InputGroupAddon::align(...)` to map the upstream `inline-start`, `inline-end`, `block-start`, and `block-end` positions.",
         "For proper focus routing, keep the addon after the control in authored order; use `align(...)` to position it visually.",
         "Use inline alignments with `InputGroupInput`, and block alignments with `InputGroupTextarea` / textarea-style controls.",
@@ -77,7 +78,7 @@ pub(super) fn preview_input_group(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement
         .test_id_prefix("ui-gallery-input-group-usage")
         .code_rust_from_file_region(snippets::usage::SOURCE, "example");
     let parts_usage = DocSection::build(cx, "Parts Usage", parts_usage)
-        .description("Direct docs-parity composition with `InputGroupInput` + `InputGroupAddon` lowered through `into_element_parts(...)`.")
+        .description("Typed Fret translation of the upstream Composition block, using `InputGroupInput` + `InputGroupAddon` through `into_element_parts(...)`.")
         .test_id_prefix("ui-gallery-input-group-parts-usage")
         .code_rust_from_file_region(snippets::parts_usage::SOURCE, "example");
     let align_inline_start = DocSection::build(cx, "Align / inline-start", align_inline_start)
@@ -150,7 +151,7 @@ pub(super) fn preview_input_group(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows shadcn Input Group docs order first: Demo, Usage, Parts Usage, Align, the example set through Custom Input, RTL, and API Reference. Tooltip, Label Association, and Button Group remain Fret follow-ups.",
+            "Preview follows shadcn Input Group docs order first: Demo, Usage, Parts Usage (Fret's typed translation of upstream Composition), Align, the example set through Custom Input, RTL, and API Reference. Tooltip, Label Association, and Button Group remain Fret follow-ups.",
         ),
         vec![
             demo,

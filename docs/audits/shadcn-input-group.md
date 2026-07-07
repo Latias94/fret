@@ -46,13 +46,22 @@ and example implementations in `repo-ref/ui`.
 ### Gallery / docs parity
 
 - Pass: the gallery now mirrors the upstream docs path first: `Demo`, `Usage`, `Align`, the example set through `Custom Input`, `RTL`, and `API Reference`.
+- Pass: `Parts Usage` is now documented and gated as the typed Fret translation of the upstream
+  `Composition` block: the part names stay visible through `InputGroupInput` /
+  `InputGroupTextarea` / `InputGroupAddon` / `InputGroupButton` / `InputGroupText`, while
+  `InputGroup::new(model)` remains the first-party shorthand in `Usage`.
 - Pass: the `Usage` section is now a real snippet-backed compact-shorthand example instead of a page-local hand-written Rust string, so the default first-party lane is copyable and compiled.
 - Pass: `Tooltip`, `Label Association`, and `Button Group` remain explicit Fret follow-ups after the upstream path.
 - Pass: the remaining gap was public-surface parity in `fret-ui-shadcn`, not a mechanism bug in `crates/fret-ui`; the custom-control seam now lands in the recipe layer.
+- Pass: the dedicated Gallery docs-surface gate locks the docs order, shorthand/parts lane split,
+  DropdownMenu compose boundary, custom-control seam, RTL anchors, and the canonical runtime diag
+  script references.
 
 ## Validation
 
 - `CARGO_TARGET_DIR=target-codex-avatar cargo check -p fret-ui-gallery --message-format short`
 - Existing shadcn-web layout gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` (`input-group-dropdown`, `input-group-custom`, and related `input-group-*` cases)
 - Source-policy gate: `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs` (`input_group_snippets_prefer_ui_cx_on_the_default_app_surface`, `selected_input_group_snippets_prefer_compact_slot_shorthand`)
+- Gallery docs-surface gate:
+  `cargo nextest run -p fret-ui-gallery --test input_group_docs_surface`
 - Docs smoke gate: `tools/diag-scripts/ui-gallery/input/ui-gallery-input-group-docs-smoke.json`
