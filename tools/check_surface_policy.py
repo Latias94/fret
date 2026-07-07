@@ -634,6 +634,69 @@ TABLE_STRESS_FORBIDDEN_RAW_WRITE_PATTERNS: tuple[tuple[str, re.Pattern[str]], ..
     ),
 )
 
+EDITOR_NOTES_OWNER = "examples-editor-notes"
+
+EDITOR_NOTES_REQUIRED_COMPACT_MARKERS = (
+    "structEditorAssetModels{",
+    "name:Model<String>,",
+    "notes:Model<String>,",
+    "notes_outcome:Model<String>,",
+    "summary_status:Model<String>,",
+    "models:EditorAssetModels,",
+    "structEditorThemePresetBinding{",
+    "theme:EditorThemePresetBinding,",
+    "fneditor_asset_paint_snapshot(",
+    "structEditorNotesModelOwner<'a>{",
+    "models:&'amutModelStore,",
+    "fnset_text(&mutself,model:&Model<String>,value:implInto<String>)->bool{",
+    "fnset_notes_outcome(&self,models:&mutModelStore,value:implInto<String>)->bool{",
+    "fnset_summary_status(&self,models:&mutModelStore,value:implInto<String>)->bool{",
+    "EditorNotesModelOwner::new(models).set_text(&self.notes_outcome,value)",
+    "EditorNotesModelOwner::new(models).set_text(&self.summary_status,value)",
+    "models.set_notes_outcome(host.models_mut(),next",
+    "models.set_notes_outcome(host.models_mut(),\"Committed\"",
+    "models.set_notes_outcome(host.models_mut(),\"Canceled\"",
+    "models.set_summary_status(host.models_mut(),draft_commit_status.clone()",
+    "models.set_summary_status(host.models_mut(),draft_discard_status.clone()",
+    "models.set_summary_status(host.models_mut(),summary_status_next.clone()",
+    "EditorThemePresetPicker::new(theme.picker_model())",
+    "EditorThemePresetBinding::new(app)",
+    "editor_asset_paint_snapshot(cx,&asset)",
+)
+
+EDITOR_NOTES_FORBIDDEN_RAW_WRITE_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
+    (
+        "models_mut().update",
+        re.compile(r"\bmodels_mut\s*\(\s*\)\s*\.\s*update(?:_any)?\s*\("),
+    ),
+    (
+        "ModelStore::update",
+        re.compile(
+            r"(?:\bModelStore\s*::\s*update(?:_any)?\s*\(|<\s*ModelStore\s*>\s*::\s*update(?:_any)?\s*\()"
+        ),
+    ),
+    (
+        "legacy-public-model-field",
+        re.compile(
+            r"\bpub\s*\(\s*crate\s*\)\s*(?:name|notes|notes_outcome|summary_status)_model\s*:\s*Model\s*<"
+        ),
+    ),
+    (
+        "legacy-theme-model-field",
+        re.compile(r"\btheme_preset_model\s*:\s*Model\s*<"),
+    ),
+    (
+        "legacy-model-field",
+        re.compile(
+            r"\b(?:asset\s*\.\s*)?(?:name|notes|notes_outcome|summary_status)_model\b"
+        ),
+    ),
+    (
+        "legacy-free-helper",
+        re.compile(r"\bfn\s+editor_notes_host_(?:update_model|set_model|set_text)\b"),
+    ),
+)
+
 
 def _fret_examples_custom_effect_v2_web_surface(filename: str, variant: str) -> SurfacePath:
     return SurfacePath(
@@ -958,6 +1021,34 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
             "ModelStore",
         ),
         owner=EMBEDDED_VIEWPORT_OWNER,
+    ),
+    _fret_examples_advanced_surface(
+        "editor_notes_demo.rs",
+        "the editor notes demo owns editor app model bindings, shell-mounted rails, and theme "
+        "preset wiring while keeping app-facing writes behind EditorAssetModels, "
+        "EditorNotesModelOwner, and EditorThemePresetBinding",
+        (
+            "fret_app",
+            "fret_core",
+            "fret_runtime",
+            "fret_ui",
+            "AnyElement",
+            "ElementContext",
+            "ModelStore",
+        ),
+        owner=EDITOR_NOTES_OWNER,
+    ),
+    _fret_examples_advanced_surface(
+        "editor_notes_device_shell_demo.rs",
+        "the editor notes device-shell demo owns adaptive shell composition and reuses the "
+        "editor notes asset/theme bindings across desktop rails and mobile drawer surfaces",
+        (
+            "fret_core",
+            "fret_ui",
+            "AnyElement",
+            "ElementContext",
+        ),
+        owner="examples-editor-notes-device-shell",
     ),
     _fret_examples_advanced_surface(
         "external_texture_imports_demo.rs",
@@ -1357,6 +1448,8 @@ PUBLIC_EXAMPLE_SCAN_ROOTS: tuple[str, ...] = (
     "apps/fret-examples/src/todo_demo.rs",
     "apps/fret-examples/src/components_gallery.rs",
     "apps/fret-examples/src/embedded_viewport_demo.rs",
+    "apps/fret-examples/src/editor_notes_demo.rs",
+    "apps/fret-examples/src/editor_notes_device_shell_demo.rs",
     "apps/fret-examples/src/external_texture_imports_demo.rs",
     "apps/fret-examples/src/external_texture_imports_web_demo.rs",
     "apps/fret-examples/src/external_video_imports_avf_demo.rs",
@@ -1448,6 +1541,10 @@ MECHANISM_PUBLIC_MEMBER_FORBIDDEN_PATTERNS: tuple[tuple[str, re.Pattern[str], st
 
 def _read_text(path: Path) -> str:
     return path.read_text(encoding="utf-8", errors="replace")
+
+
+def _compact_source(text: str) -> str:
+    return "".join(text.split())
 
 
 def _iter_source_files(path: Path) -> list[Path]:
@@ -1952,6 +2049,60 @@ def _scan_table_stress_controls_boundary(
     return violations
 
 
+def _scan_editor_notes_bindings_boundary(
+    root: Path, spec: SurfacePath
+) -> list[SurfaceViolation]:
+    if spec.owner != EDITOR_NOTES_OWNER:
+        return []
+
+    violations: list[SurfaceViolation] = []
+    for path in _iter_source_files(root / spec.path):
+        text = _read_text(path)
+        production_text = text.split("#[cfg(test)]", 1)[0]
+        compact_production = _compact_source(production_text)
+        missing_markers = [
+            marker
+            for marker in EDITOR_NOTES_REQUIRED_COMPACT_MARKERS
+            if marker not in compact_production
+        ]
+        if missing_markers:
+            violations.append(
+                SurfaceViolation(
+                    rule="advanced-surface-editor-notes-bindings-boundary",
+                    path=path,
+                    line_no=1,
+                    message=(
+                        "editor notes model and theme state must stay behind "
+                        f"EditorAssetModels/EditorNotesModelOwner/EditorThemePresetBinding; "
+                        f"missing compact markers: {', '.join(missing_markers)}"
+                    ),
+                )
+            )
+
+        for line_no, line in _code_lines_for_scan(path, production_text):
+            if path.suffix == ".rs" and _is_rust_source_line_ignorable(line):
+                continue
+            for seam, pattern in EDITOR_NOTES_FORBIDDEN_RAW_WRITE_PATTERNS:
+                if not pattern.search(line):
+                    continue
+                violations.append(
+                    SurfaceViolation(
+                        rule="advanced-surface-editor-notes-bindings-boundary",
+                        path=path,
+                        line_no=line_no,
+                        message=(
+                            "editor notes app writes and shared model exposure must route through "
+                            f"EditorAssetModels/EditorNotesModelOwner/EditorThemePresetBinding; "
+                            f"direct `{seam}` bypasses the binding boundary"
+                        ),
+                        source=line.strip(),
+                    )
+                )
+                break
+
+    return violations
+
+
 def _scan_default_authoring_surface(root: Path, spec: SurfacePath) -> list[SurfaceViolation]:
     violations: list[SurfaceViolation] = []
     for path in _iter_source_files(root / spec.path):
@@ -2017,6 +2168,7 @@ def _scan_classified_raw_surface(root: Path, spec: SurfacePath) -> list[SurfaceV
     violations.extend(_scan_components_gallery_owner_boundary(root, spec))
     violations.extend(_scan_virtual_list_stress_controls_boundary(root, spec))
     violations.extend(_scan_table_stress_controls_boundary(root, spec))
+    violations.extend(_scan_editor_notes_bindings_boundary(root, spec))
     for seam in sorted(allowed_raw_seams - used_raw_seams):
         violations.append(
             SurfaceViolation(

@@ -223,7 +223,12 @@ Keep raw/shared-model mechanisms for now:
   `editor_notes_demo.rs` from free host helper functions to `EditorNotesModelOwner`; a later
   tightening added `EditorAssetModels`, `editor_asset_paint_snapshot(...)`, and
   `EditorThemePresetBinding`, so the editor notes app and device-shell views no longer expose
-  separate raw text/theme model fields.
+  separate raw text/theme model fields. `tools/check_surface_policy.py` now classifies
+  `editor_notes_demo.rs` and `editor_notes_device_shell_demo.rs` as advanced/manual public examples,
+  includes both in public example scanning, and globally gates the main demo's asset/theme binding
+  boundary. The gate rejects direct production-source `models_mut().update(...)`, `update_any(...)`,
+  UFCS `ModelStore::update(...)`, legacy public model fields, legacy theme model fields, old
+  `*_model` access patterns, and old free host helper functions.
 - `external_texture_imports_demo.rs`, `external_texture_imports_web_demo.rs`, and the platform
   `external_video_imports_*` demos. Audited and cleaned after the wasm `ui-assets` feature fix:
   they remain low-level external import harnesses, while the shared visibility toggle write now
