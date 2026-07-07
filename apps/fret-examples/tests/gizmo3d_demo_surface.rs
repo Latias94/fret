@@ -193,6 +193,31 @@ fn gizmo3d_demo_routes_viewport_input_through_binding() {
 }
 
 #[test]
+fn gizmo3d_demo_routes_frame_render_mutations_through_binding() {
+    let source = compact(include_str!("../src/gizmo3d_demo.rs"));
+
+    for needle in [
+        "letanimating=state.demo.step_frame_animation(app,Instant::now());",
+        "letGizmo3dFrameRenderSnapshot{scene_targets,selection,active_target,draw,thickness_px,view_proj,marquee,depth,}=state.demo.frame_render_snapshot(app,size);",
+    ] {
+        assert!(
+            source.contains(needle),
+            "gizmo3d_demo frame rendering should route model access through binding methods; missing `{needle}`"
+        );
+    }
+
+    for legacy in [
+        "letanimating=state.demo.update(app,|m,_cx|{letnow=Instant::now();letdt=m.last_frame_instant.and_then(|prev|now.checked_duration_since(prev)).unwrap_or_default();m.last_frame_instant=Some(now);step_frame_anim(&mutm.camera,dt.as_secs_f32())})",
+        "let(scene_targets,selection,active_target,draw,thickness_px,view_proj,marquee,depth)=state.demo.update(app,|m,_cx|{letview_proj=camera_view_projection(size,m.camera);",
+    ] {
+        assert!(
+            !source.contains(legacy),
+            "gizmo3d_demo should not keep direct frame-render model updates in record_engine_frame; unexpected `{legacy}`"
+        );
+    }
+}
+
+#[test]
 fn gizmo3d_demo_routes_visual_keyboard_mutations_through_binding() {
     let source = compact(include_str!("../src/gizmo3d_demo.rs"));
 

@@ -110,8 +110,11 @@ Keep raw/shared-model mechanisms for now:
     and custom-scalar replay into binding methods. The render pass moved cursor-scale sync into a
     binding method. The viewport-input pass moved tool arbitration, camera navigation, transform
     updates, HUD state, and pending undo-record construction behind a binding method; the free
-    function now only records pending undo entries and requests redraw. `record_engine_frame(...)`
-    frame animation and draw snapshot updates remain as the semantic-method cleanup area.
+    function now only records pending undo entries and requests redraw. The frame-render pass moved
+    frame animation and draw snapshot updates behind binding methods. `gizmo3d_demo.rs` now has no
+    app-side direct `state.demo.update(...)` or `model.update(...)` callers outside
+    `Gizmo3dDemoModelBinding`; remaining `self.update(...)` calls are the binding's internal model
+    mechanism.
 - Table/data-grid demos.
   - Follow-up: `datatable_demo.rs` now uses `LocalState<shadcn::DataTableViewOutput>` and
     `app.local_state(...)` for the shadcn `DataTable` output handle. The retained table source gate

@@ -985,6 +985,32 @@ struct PendingUndoRecords {
     custom_scalars: Option<UndoRecord<ValueTx<HashMap<CustomScalarKey, f32>>>>,
 }
 
+struct Gizmo3dFrameRenderSnapshot {
+    scene_targets: Vec<GizmoTarget3d>,
+    selection: Vec<GizmoTargetId>,
+    active_target: GizmoTargetId,
+    draw: GizmoDrawList3d,
+    thickness_px: f32,
+    view_proj: Mat4,
+    marquee: Option<MarqueeSelection>,
+    depth: DepthRange,
+}
+
+impl Default for Gizmo3dFrameRenderSnapshot {
+    fn default() -> Self {
+        Self {
+            scene_targets: Vec::new(),
+            selection: Vec::new(),
+            active_target: GizmoTargetId(0),
+            draw: GizmoDrawList3d::default(),
+            thickness_px: 6.0,
+            view_proj: Mat4::IDENTITY,
+            marquee: None,
+            depth: DepthRange::ZeroToOne,
+        }
+    }
+}
+
 struct Gizmo3dDemoModel {
     viewport_target: RenderTargetId,
     viewport_px: (u32, u32),
@@ -2396,6 +2422,87 @@ impl Gizmo3dDemoModelBinding {
 
             pending
         })
+    }
+
+    fn step_frame_animation(&self, app: &mut App, now: Instant) -> bool {
+        self.update(app, |model, _cx| {
+            let dt = model
+                .last_frame_instant
+                .and_then(|prev| now.checked_duration_since(prev))
+                .unwrap_or_default();
+            model.last_frame_instant = Some(now);
+            step_frame_anim(&mut model.camera, dt.as_secs_f32())
+        })
+        .unwrap_or(false)
+    }
+
+    fn frame_render_snapshot(&self, app: &mut App, size: (u32, u32)) -> Gizmo3dFrameRenderSnapshot {
+        self.update(app, |model, _cx| {
+            let view_proj = camera_view_projection(size, model.camera);
+
+            let marquee = model.marquee;
+            let selection = if marquee.is_some() {
+                model.marquee_preview.clone()
+            } else {
+                model.selection.clone()
+            };
+            let active_target = if selection.contains(&model.active_target) {
+                model.active_target
+            } else {
+                selection.first().copied().unwrap_or(model.active_target)
+            };
+
+            let viewport = ViewportRect::new(Vec2::ZERO, Vec2::new(size.0 as f32, size.1 as f32));
+            let mut draw = if marquee.is_some() {
+                GizmoDrawList3d::default()
+            } else {
+                let gizmo_targets: Vec<GizmoTarget3d> = model
+                    .targets
+                    .iter()
+                    .copied()
+                    .filter(|target| selection.contains(&target.id))
+                    .collect();
+                let properties = DemoGizmoPropertySource {
+                    scalars: &model.custom_scalar_values,
+                };
+                model.gizmo_mgr.draw(
+                    view_proj,
+                    viewport,
+                    model.gizmo().config.depth_range,
+                    active_target,
+                    &gizmo_targets,
+                    model.input,
+                    Some(&properties),
+                )
+            };
+            if marquee.is_none() {
+                let projection = match model.camera.projection {
+                    OrbitProjection::Perspective => ViewGizmoProjection::Perspective,
+                    OrbitProjection::Orthographic => ViewGizmoProjection::Orthographic,
+                };
+                let view_draw = model
+                    .view_gizmo
+                    .draw_with_projection(view_proj, viewport, projection);
+                draw.lines.extend(view_draw.lines);
+                draw.triangles.extend(view_draw.triangles);
+            }
+
+            let grid = Grid3d::default().draw();
+            draw.lines.extend(grid.lines);
+            draw.triangles.extend(grid.triangles);
+
+            Gizmo3dFrameRenderSnapshot {
+                scene_targets: model.targets.clone(),
+                selection,
+                active_target,
+                draw,
+                thickness_px: model.gizmo().config.line_thickness_px,
+                view_proj,
+                marquee,
+                depth: model.gizmo().config.depth_range,
+            }
+        })
+        .unwrap_or_default()
     }
 
     fn cancel_active_or_in_progress(&self, app: &mut App) -> bool {
@@ -3974,106 +4081,21 @@ fn record_engine_frame(
     let (target_id, color_view, depth_view, size) =
         Gizmo3dDemoDriver::ensure_target(app, window, state, context, renderer);
 
-    let animating = state
-        .demo
-        .update(app, |m, _cx| {
-            let now = Instant::now();
-            let dt = m
-                .last_frame_instant
-                .and_then(|prev| now.checked_duration_since(prev))
-                .unwrap_or_default();
-            m.last_frame_instant = Some(now);
-            step_frame_anim(&mut m.camera, dt.as_secs_f32())
-        })
-        .unwrap_or(false);
+    let animating = state.demo.step_frame_animation(app, Instant::now());
     if animating {
         app.request_redraw(window);
     }
 
-    let (scene_targets, selection, active_target, draw, thickness_px, view_proj, marquee, depth) =
-        state
-            .demo
-            .update(app, |m, _cx| {
-                let view_proj = camera_view_projection(size, m.camera);
-
-                let marquee = m.marquee;
-                let selection = if marquee.is_some() {
-                    m.marquee_preview.clone()
-                } else {
-                    m.selection.clone()
-                };
-                let active_target = if selection.contains(&m.active_target) {
-                    m.active_target
-                } else {
-                    selection.first().copied().unwrap_or(m.active_target)
-                };
-
-                let viewport =
-                    ViewportRect::new(Vec2::ZERO, Vec2::new(size.0 as f32, size.1 as f32));
-                let mut draw = if marquee.is_some() {
-                    GizmoDrawList3d::default()
-                } else {
-                    let gizmo_targets: Vec<GizmoTarget3d> = m
-                        .targets
-                        .iter()
-                        .copied()
-                        .filter(|t| selection.contains(&t.id))
-                        .collect();
-                    let properties = DemoGizmoPropertySource {
-                        scalars: &m.custom_scalar_values,
-                    };
-                    m.gizmo_mgr.draw(
-                        view_proj,
-                        viewport,
-                        m.gizmo().config.depth_range,
-                        active_target,
-                        &gizmo_targets,
-                        m.input,
-                        Some(&properties),
-                    )
-                };
-                if marquee.is_none() {
-                    let projection = match m.camera.projection {
-                        OrbitProjection::Perspective => ViewGizmoProjection::Perspective,
-                        OrbitProjection::Orthographic => ViewGizmoProjection::Orthographic,
-                    };
-                    let view_draw = m
-                        .view_gizmo
-                        .draw_with_projection(view_proj, viewport, projection);
-                    draw.lines.extend(view_draw.lines);
-                    draw.triangles.extend(view_draw.triangles);
-                }
-
-                let grid = Grid3d::default().draw();
-                draw.lines.extend(grid.lines);
-                draw.triangles.extend(grid.triangles);
-
-                let thickness_px = m.gizmo().config.line_thickness_px;
-                let depth = m.gizmo().config.depth_range;
-
-                (
-                    m.targets.clone(),
-                    selection,
-                    active_target,
-                    draw,
-                    thickness_px,
-                    view_proj,
-                    marquee,
-                    depth,
-                )
-            })
-            .unwrap_or_else(|_| {
-                (
-                    Vec::new(),
-                    Vec::new(),
-                    GizmoTargetId(0),
-                    GizmoDrawList3d::default(),
-                    6.0,
-                    Mat4::IDENTITY,
-                    None,
-                    DepthRange::ZeroToOne,
-                )
-            });
+    let Gizmo3dFrameRenderSnapshot {
+        scene_targets,
+        selection,
+        active_target,
+        draw,
+        thickness_px,
+        view_proj,
+        marquee,
+        depth,
+    } = state.demo.frame_render_snapshot(app, size);
 
     let uniforms = Uniforms {
         view_proj: view_proj.to_cols_array_2d(),
