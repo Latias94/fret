@@ -11,20 +11,22 @@ use std::time::Duration;
 use anyhow::Context as _;
 use fret::advanced::kernel::app::Effect;
 use fret::app::prelude::*;
-use fret::app::{AppComponentCx, LocalState, RenderContextAccess as _, ui_assets};
+use fret::app::{
+    AppComponentCx, AppElement, AppRenderContext, LocalState, RenderContextAccess as _, text,
+    ui_assets,
+};
 use fret::query::{QueryError, QueryKey, QueryPolicy, QueryStatus};
-use fret::style::{ColorRef, LayoutRefinement, Space};
+use fret::scroll::ScrollHandle;
+use fret::style::{Color, ColorRef, LayoutRefinement, Space, ThemeSnapshot};
 use fret_core::{Point, Px, SvgFit};
 use fret_markdown as markdown;
 use fret_ui::element::{
-    AnyElement, ImageProps, LayoutQueryRegionProps, LayoutStyle, Length, PressableProps,
-    SvgIconProps,
+    ImageProps, LayoutQueryRegionProps, LayoutStyle, Length, PressableProps, SvgIconProps,
 };
 use fret_ui::{Invalidation, Theme, ThemeConfig};
 use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::IntoUiElementInExt as _;
 use fret_ui_kit::declarative::QueryHandleWatchExt as _;
-use fret_ui_kit::declarative::text as decl_text;
 
 mod act {
     fret::actions!([RefreshRemoteImages = "markdown_demo.refresh_remote_images.v1"]);
@@ -36,33 +38,40 @@ mod act {
 const REMOTE_IMAGE_NAMESPACE: &str = "fret-examples.markdown_demo.remote_image.v1";
 const TRANSIENT_REFRESH_REMOTE_IMAGES: u64 = 0xAFA0_0103;
 
-fn markdown_demo_readout_text<H: fret_ui::UiHost>(
-    cx: &mut fret_ui::ElementContext<'_, H>,
-    text: impl Into<Arc<str>>,
-) -> AnyElement {
-    decl_text::text_control_readout(cx, text)
+fn markdown_demo_readout_text<'a, Cx, T>(cx: &mut Cx, text: T) -> AppElement
+where
+    Cx: AppRenderContext<'a>,
+    T: Into<Arc<str>>,
+{
+    text::control_readout(cx, text)
 }
 
-fn markdown_demo_title_text<H: fret_ui::UiHost>(
-    cx: &mut fret_ui::ElementContext<'_, H>,
-    text: impl Into<Arc<str>>,
-) -> AnyElement {
-    decl_text::text_section_chrome_label(cx, text)
+fn markdown_demo_title_text<'a, Cx, T>(cx: &mut Cx, text: T) -> AppElement
+where
+    Cx: AppRenderContext<'a>,
+    T: Into<Arc<str>>,
+{
+    text::section_chrome_label(cx, text)
 }
 
-fn markdown_demo_paragraph_text<H: fret_ui::UiHost>(
-    cx: &mut fret_ui::ElementContext<'_, H>,
-    text: impl Into<Arc<str>>,
-) -> AnyElement {
-    decl_text::text_paragraph(cx, text)
+fn markdown_demo_paragraph_text<'a, Cx, T>(cx: &mut Cx, text: T) -> AppElement
+where
+    Cx: AppRenderContext<'a>,
+    T: Into<Arc<str>>,
+{
+    text::paragraph(cx, text)
 }
 
-fn markdown_demo_image_placeholder_text<H: fret_ui::UiHost>(
-    cx: &mut fret_ui::ElementContext<'_, H>,
-    text: impl Into<Arc<str>>,
-    foreground: fret_core::Color,
-) -> AnyElement {
-    decl_text::text_paragraph_break_words(cx, text).inherit_foreground(foreground)
+fn markdown_demo_image_placeholder_text<'a, Cx, T>(
+    cx: &mut Cx,
+    text: T,
+    foreground: Color,
+) -> AppElement
+where
+    Cx: AppRenderContext<'a>,
+    T: Into<Arc<str>>,
+{
+    text::paragraph_break_words_with_foreground(cx, text, foreground)
 }
 
 #[derive(Debug)]
@@ -163,7 +172,7 @@ fn download_remote_image(url: &str) -> Result<RemoteImageData, QueryError> {
 
 struct MarkdownDemoState {
     markdown: Arc<str>,
-    scroll: fret_ui::scroll::ScrollHandle,
+    scroll: ScrollHandle,
     anchor_regions: Rc<RefCell<HashMap<Arc<str>, fret_ui::GlobalElementId>>>,
     demo_svg_bytes: Arc<[u8]>,
     checker_rgba: Arc<[u8]>,
@@ -358,7 +367,7 @@ $$
         Self {
             st: MarkdownDemoState {
                 markdown,
-                scroll: fret_ui::scroll::ScrollHandle::default(),
+                scroll: ScrollHandle::default(),
                 anchor_regions: Rc::new(RefCell::new(HashMap::new())),
                 demo_svg_bytes,
                 checker_rgba,
@@ -710,12 +719,12 @@ fn checkerboard_rgba8(width: u32, height: u32) -> Vec<u8> {
     out
 }
 
-fn render_image_placeholder<H: fret_ui::UiHost>(
-    cx: &mut fret_ui::ElementContext<'_, H>,
-    theme: fret_ui::ThemeSnapshot,
+fn render_image_placeholder(
+    cx: &mut AppComponentCx<'_>,
+    theme: ThemeSnapshot,
     on_link_activate: Option<markdown::OnLinkActivate>,
     link: markdown::LinkInfo,
-) -> impl IntoUiElement<H> + use<H> {
+) -> AppElement {
     let label = link.text.clone();
 
     let text = Arc::<str>::from(format!("{} ({})", label, link.href));

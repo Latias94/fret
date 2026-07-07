@@ -839,6 +839,20 @@ pub mod app {
             fret_ui_kit::declarative::text::text_paragraph(cx.elements(), text)
         }
 
+        /// Prose paragraph text that may break long words, with an inherited foreground.
+        pub fn paragraph_break_words_with_foreground<'a, Cx, T>(
+            cx: &mut Cx,
+            text: T,
+            foreground: fret_core::Color,
+        ) -> fret_ui::element::AnyElement
+        where
+            Cx: crate::app::AppRenderContext<'a>,
+            T: Into<Arc<str>>,
+        {
+            fret_ui_kit::declarative::text::text_paragraph_break_words(cx.elements(), text)
+                .inherit_foreground(foreground)
+        }
+
         /// Compact prose paragraph text.
         pub fn compact_paragraph<'a, Cx, T>(cx: &mut Cx, text: T) -> fret_ui::element::AnyElement
         where
@@ -5140,6 +5154,7 @@ mod authoring_surface_policy_tests {
         let public_surface = crate_public_surface_source();
         assert!(LIB_RS.contains("pub type AppElement = fret_ui::element::AnyElement;"));
         assert!(LIB_RS.contains("pub use crate::AppElement;"));
+        assert!(LIB_RS.contains("pub fn paragraph_break_words_with_foreground<'a, Cx, T>("));
         assert!(LIB_RS.contains("pub use crate::view::LocalState;"));
         assert!(LIB_RS.contains("pub use crate::AppComponentCx;"));
         assert!(LIB_RS.contains("pub use crate::AppRenderCx;"));

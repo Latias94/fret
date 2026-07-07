@@ -1645,13 +1645,11 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
     _fret_examples_advanced_surface(
         "markdown_demo.rs",
         "the native markdown proof owns remote image fetch/decode, markdown-specific low-level "
-        "image/SVG props, pressable code-block affordances, and raw text helper boundaries",
+        "image/SVG props and pressable image-placeholder affordances",
         (
             "fret::advanced",
             "fret_core",
             "fret_ui",
-            "AnyElement",
-            "ElementContext",
         ),
         owner="examples-markdown-demo",
     ),
