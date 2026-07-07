@@ -4,15 +4,14 @@ use fret::advanced::driver::UiAppBuilderAdvancedExt as _;
 use fret::advanced::interop::embedded_viewport::{
     self as embedded, EmbeddedViewportUiAppDriverExt as _,
 };
-use fret::app::AppComponentCx;
 use fret::app::prelude::*;
+use fret::app::{AppComponentCx, AppRenderContext, text};
 use fret_core::{Px, ViewportFit};
 use fret_render::{RenderTargetColorSpace, Renderer, WgpuContext};
 use fret_runtime::{FrameId, ModelStore, TickId};
-use fret_ui::{ElementContext, ThemeSnapshot, UiHost};
+use fret_ui::ThemeSnapshot;
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::declarative::UiElementTestIdExt as _;
-use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::{
     ColorRef, IntoUiElement, IntoUiElementInExt as _, LayoutRefinement, Radius, Space,
     UiSupportsLayout as _, ui,
@@ -24,18 +23,24 @@ const SIZE_PRESET_640: &str = "640x360";
 const SIZE_PRESET_960: &str = "960x540";
 const SIZE_PRESET_1280: &str = "1280x720";
 
-fn embedded_viewport_button_label_text<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
+fn embedded_viewport_button_label_text<'a, Cx>(
+    cx: &mut Cx,
     text: impl Into<Arc<str>>,
-) -> fret_ui::element::AnyElement {
-    decl_text::text_button_label(cx, text)
+) -> fret_ui::element::AnyElement
+where
+    Cx: AppRenderContext<'a>,
+{
+    text::button_label(cx, text)
 }
 
-fn embedded_viewport_readout_text<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
+fn embedded_viewport_readout_text<'a, Cx>(
+    cx: &mut Cx,
     text: impl Into<Arc<str>>,
-) -> fret_ui::element::AnyElement {
-    decl_text::text_control_readout(cx, text)
+) -> fret_ui::element::AnyElement
+where
+    Cx: AppRenderContext<'a>,
+{
+    text::control_readout(cx, text)
 }
 
 fn diag_enabled() -> bool {
@@ -134,26 +139,17 @@ impl View for EmbeddedViewportDemoView {
             .items([
                 shadcn::ToggleGroupItem::new(
                     SIZE_PRESET_640,
-                    [embedded_viewport_button_label_text(
-                        cx.elements(),
-                        "640×360",
-                    )],
+                    [embedded_viewport_button_label_text(cx, "640×360")],
                 )
                 .a11y_label("Viewport size 640 by 360"),
                 shadcn::ToggleGroupItem::new(
                     SIZE_PRESET_960,
-                    [embedded_viewport_button_label_text(
-                        cx.elements(),
-                        "960×540",
-                    )],
+                    [embedded_viewport_button_label_text(cx, "960×540")],
                 )
                 .a11y_label("Viewport size 960 by 540"),
                 shadcn::ToggleGroupItem::new(
                     SIZE_PRESET_1280,
-                    [embedded_viewport_button_label_text(
-                        cx.elements(),
-                        "1280×720",
-                    )],
+                    [embedded_viewport_button_label_text(cx, "1280×720")],
                 )
                 .a11y_label("Viewport size 1280 by 720"),
             ])

@@ -1521,7 +1521,6 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
             "fret_runtime",
             "fret_ui",
             "AnyElement",
-            "ElementContext",
             "ModelStore",
         ),
         owner=EMBEDDED_VIEWPORT_OWNER,
