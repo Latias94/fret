@@ -97,3 +97,4 @@ deciding whether any missing runtime mechanism work exists.
 - Existing layout gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/alert.rs`
 - Existing diag gate: `tools/diag-scripts/ui-gallery/alert/ui-gallery-alert-action-text-non-overlap.json`
 - New docs smoke gate: `cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/alert/ui-gallery-alert-docs-smoke.json --session-auto --launch -- cargo run -p fret-ui-gallery --release`
+- Matrix packet: `docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/alert_agent_packet_p0_v1.json`
