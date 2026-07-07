@@ -348,6 +348,17 @@ MANUAL_CHART_ALLOWED_RAW_SEAMS = (
 
 
 def _fret_examples_manual_chart_surface(filename: str) -> SurfacePath:
+    if filename == "area_demo.rs":
+        return _fret_examples_advanced_surface(
+            filename,
+            (
+                "it owns a manual area-plot runner with FnDriver/UiTree lifecycle while "
+                "area model, query output reads, and panel wiring route through "
+                "AreaPlotPanelBinding"
+            ),
+            MANUAL_CHART_ALLOWED_RAW_SEAMS,
+            owner=PLOT_AREA_OWNER,
+        )
     if filename == "inf_lines_demo.rs":
         return _fret_examples_advanced_surface(
             filename,
@@ -821,6 +832,37 @@ PLOT_INF_LINES_FORBIDDEN_COMPACT_MARKERS = (
     "LinePlotPanelProps::new(plot.clone())",
     ".state(plot_state.clone())",
     ".output(plot_output.clone())",
+    "app.models_mut().insert(PlotOutput::default())",
+)
+
+PLOT_AREA_OWNER = "examples-plot-area"
+
+PLOT_AREA_REQUIRED_COMPACT_MARKERS = (
+    "usefret_plot::AreaPlotPanelBinding;",
+    "usefret_plot::declarative::area_plot_panel_in;",
+    "usefret_plot::models::{AreaPlotModel,AreaSeries};",
+    "usefret_ui::{UiTree,declarative};",
+    "plot:AreaPlotPanelBinding",
+    "AreaPlotPanelBinding::new(app,AreaPlotModel::from_series(vec![",
+    "AreaPlotModel::from_series(vec![",
+    "AreaSeries::new(",
+    "declarative::RenderRootContext::new(&mutstate.ui,app,services,window,bounds).render_root(\"area-demo\"",
+    "plot.panel_props()",
+    "state.plot.output_untracked(app)",
+    "vec![area_plot_panel_in(cx,props)]",
+)
+
+PLOT_AREA_FORBIDDEN_COMPACT_MARKERS = (
+    "usefret_plot::retained",
+    "fret_plot::retained::",
+    "AreaPlotCanvas",
+    "PlotCanvas",
+    "create_node_retained(",
+    "fret_runtime::Model<",
+    "AreaPlotPanelProps::new(",
+    ".state(plot_state.clone())",
+    ".output(plot_output.clone())",
+    "app.models_mut().insert(PlotState::default())",
     "app.models_mut().insert(PlotOutput::default())",
 )
 
@@ -3663,6 +3705,54 @@ def _scan_plot_inf_lines_declarative_binding_boundary(
     return violations
 
 
+def _scan_plot_area_declarative_binding_boundary(
+    root: Path, spec: SurfacePath
+) -> list[SurfaceViolation]:
+    if spec.owner != PLOT_AREA_OWNER:
+        return []
+
+    violations: list[SurfaceViolation] = []
+    for path in _iter_source_files(root / spec.path):
+        text = _read_text(path)
+        production_text = text.split("#[cfg(test)]", 1)[0]
+        compact_production = _compact_source(production_text)
+        missing_markers = [
+            marker
+            for marker in PLOT_AREA_REQUIRED_COMPACT_MARKERS
+            if marker not in compact_production
+        ]
+        if missing_markers:
+            violations.append(
+                SurfaceViolation(
+                    rule="advanced-surface-plot-area-declarative-binding-boundary",
+                    path=path,
+                    line_no=1,
+                    message=(
+                        "Area plot demo must keep query output reads and panel authoring "
+                        "on AreaPlotPanelBinding; "
+                        f"missing compact markers: {', '.join(missing_markers)}"
+                    ),
+                )
+            )
+
+        for marker in PLOT_AREA_FORBIDDEN_COMPACT_MARKERS:
+            if marker not in compact_production:
+                continue
+            violations.append(
+                SurfaceViolation(
+                    rule="advanced-surface-plot-area-declarative-binding-boundary",
+                    path=path,
+                    line_no=1,
+                    message=(
+                        "Area plot demo must not expose retained/manual plot state or output "
+                        f"wiring; compact `{marker}` bypasses the AreaPlotPanelBinding boundary"
+                    ),
+                )
+            )
+
+    return violations
+
+
 def _scan_plot_linked_cursor_declarative_binding_boundary(
     root: Path, spec: SurfacePath
 ) -> list[SurfaceViolation]:
@@ -4841,6 +4931,7 @@ def _scan_classified_raw_surface(root: Path, spec: SurfacePath) -> list[SurfaceV
     violations.extend(_scan_plot_stress_declarative_binding_boundary(root, spec))
     violations.extend(_scan_plot_drag_declarative_binding_boundary(root, spec))
     violations.extend(_scan_plot_inf_lines_declarative_binding_boundary(root, spec))
+    violations.extend(_scan_plot_area_declarative_binding_boundary(root, spec))
     violations.extend(_scan_plot_linked_cursor_declarative_binding_boundary(root, spec))
     violations.extend(_scan_chart_stress_declarative_binding_boundary(root, spec))
     violations.extend(_scan_chart_multi_axis_linked_binding_boundary(root, spec))
