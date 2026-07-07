@@ -1190,11 +1190,39 @@ INTERNAL_HARNESS_SURFACES: tuple[SurfacePath, ...] = (
 
 RENDERER_LAB_SURFACES: tuple[SurfacePath, ...] = (
     _fret_examples_renderer_lab_surface(
+        "alpha_mode_demo.rs",
+        "it validates straight-vs-premultiplied alpha upload and renderer image compositing "
+        "semantics through manual FnDriver scene ops",
+        (
+            "fret::advanced",
+            "fret_app",
+            "fret_core",
+            "fret_launch",
+            "fret_runtime",
+            "FnDriver",
+        ),
+        owner="examples-alpha-mode-renderer-lab",
+    ),
+    _fret_examples_renderer_lab_surface(
+        "drop_shadow_demo.rs",
+        "it is a DropShadowV1 renderer semantics and perf-baseline surface rather than an "
+        "app-authoring lesson",
+        ("fret_core", "fret_ui", "AnyElement", "ElementContext"),
+        owner="examples-drop-shadow-renderer-lab",
+    ),
+    _fret_examples_renderer_lab_surface(
         "effects_demo.rs",
         "it owns manual FnDriver renderer hooks, direct SceneOp effect composition, and "
         "env-driven renderer perf reporting rather than an app-authoring lesson",
         ("fret_app", "fret_core", "fret_launch", "FnDriver"),
         owner="examples-effects-renderer-lab",
+    ),
+    _fret_examples_renderer_lab_surface(
+        "image_upload_demo.rs",
+        "it validates keyed image asset upload, eviction, and direct SceneOp image rendering "
+        "through manual FnDriver hooks",
+        ("fret::advanced", "fret_app", "fret_core", "fret_launch", "FnDriver"),
+        owner="examples-image-upload-renderer-lab",
     ),
     _cookbook_renderer_lab_surface(
         "compositing_alpha_basics.rs",
@@ -1753,6 +1781,9 @@ PUBLIC_EXAMPLE_SCAN_ROOTS: tuple[str, ...] = (
     ),
     "apps/fret-examples/src/effects_demo.rs",
     "apps/fret-examples/src/first_frame_smoke_demo.rs",
+    "apps/fret-examples/src/alpha_mode_demo.rs",
+    "apps/fret-examples/src/drop_shadow_demo.rs",
+    "apps/fret-examples/src/image_upload_demo.rs",
     "apps/fret-examples/src/custom_effect_v2_web_demo.rs",
     "apps/fret-examples/src/custom_effect_v2_identity_web_demo.rs",
     "apps/fret-examples/src/custom_effect_v2_lut_web_demo.rs",

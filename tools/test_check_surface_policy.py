@@ -871,6 +871,11 @@ class SurfacePolicyTests(unittest.TestCase):
             "apps/fret-examples/src/effects_demo.rs",
             "apps/fret-examples/src/first_frame_smoke_demo.rs",
         }
+        renderer_media_lab_paths = {
+            "apps/fret-examples/src/alpha_mode_demo.rs",
+            "apps/fret-examples/src/drop_shadow_demo.rs",
+            "apps/fret-examples/src/image_upload_demo.rs",
+        }
         for path in custom_effect_v2_web_paths:
             self.assertIn(path, POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS)
         for path in custom_effect_reference_paths:
@@ -878,6 +883,8 @@ class SurfacePolicyTests(unittest.TestCase):
         for path in streaming_import_paths:
             self.assertIn(path, POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS)
         for path in smoke_effects_paths:
+            self.assertIn(path, POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS)
+        for path in renderer_media_lab_paths:
             self.assertIn(path, POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS)
         self.assertTrue(
             any(
@@ -3177,7 +3184,10 @@ class SurfacePolicyTests(unittest.TestCase):
             "apps/fret-cookbook/examples/compositing_alpha_basics.rs",
             "apps/fret-cookbook/examples/customv1_basics.rs",
             "apps/fret-cookbook/examples/image_asset_cache_basics.rs",
+            "apps/fret-examples/src/alpha_mode_demo.rs",
+            "apps/fret-examples/src/drop_shadow_demo.rs",
             "apps/fret-examples/src/effects_demo.rs",
+            "apps/fret-examples/src/image_upload_demo.rs",
         }
 
         self.assertTrue(expected.issubset(renderer_lab_paths))
