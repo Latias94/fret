@@ -1024,6 +1024,7 @@ class SurfacePolicyTests(unittest.TestCase):
         )
         self.assertIn("pressable", async_playground_spec.reason)
         self.assertIn("AnyElement", async_playground_spec.allowed_raw_seams)
+        self.assertNotIn("fret_core", async_playground_spec.allowed_raw_seams)
         self.assertTrue(async_playground_spec.retirement)
         for path in shadcn_rich_demo_paths:
             spec = next(

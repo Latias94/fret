@@ -13,9 +13,11 @@ use fret::query::{
     CancellationToken, FutureSpawner, FutureSpawnerHandle, QueryCancelMode, QueryError, QueryKey,
     QueryPolicy, QuerySnapshotEntry, QueryState, QueryStatus,
 };
-use fret_core::{Px, SemanticsRole};
+use fret::scroll::ScrollHandle;
+use fret::semantics::SemanticsRole;
+use fret::style::ThemeSnapshot;
 use fret_ui::element::{AnyElement, PressableA11y, PressableProps};
-use fret_ui::{ElementContext, ThemeSnapshot, UiHost};
+use fret_ui::{ElementContext, UiHost};
 use fret_ui_kit::IntoUiElementInExt as _;
 use fret_ui_kit::declarative::QueryHandleWatchExt as _;
 use fret_ui_kit::declarative::UiElementTestIdExt as _;
@@ -244,8 +246,8 @@ struct AsyncPlaygroundState {
     configs: HashMap<QueryId, QueryConfigLocals>,
     last_diag: HashMap<QueryId, QueryDiag>,
 
-    catalog_scroll: fret_ui::scroll::ScrollHandle,
-    inspector_scroll: fret_ui::scroll::ScrollHandle,
+    catalog_scroll: ScrollHandle,
+    inspector_scroll: ScrollHandle,
 }
 
 #[derive(Clone)]
@@ -311,8 +313,8 @@ impl View for AsyncPlaygroundView {
             st: AsyncPlaygroundState {
                 configs,
                 last_diag: HashMap::new(),
-                catalog_scroll: fret_ui::scroll::ScrollHandle::default(),
-                inspector_scroll: fret_ui::scroll::ScrollHandle::default(),
+                catalog_scroll: ScrollHandle::default(),
+                inspector_scroll: ScrollHandle::default(),
             },
         }
     }

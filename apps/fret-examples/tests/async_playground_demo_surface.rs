@@ -73,7 +73,10 @@ fn async_playground_demo_uses_app_view_imports() {
         "usefret::app::prelude::*;",
         "usefret::app::{AppRenderContext,LocalState,RenderContextAccessas_};",
         "usefret::actions::CommandId;",
-        "usefret_ui::{ElementContext,ThemeSnapshot,UiHost};",
+        "usefret::scroll::ScrollHandle;",
+        "usefret::semantics::SemanticsRole;",
+        "usefret::style::ThemeSnapshot;",
+        "usefret_ui::{ElementContext,UiHost};",
         ".view::<AsyncPlaygroundView>()?",
         "fninstall_tokio_spawner(app:&mutApp)",
         "fnapply_theme(app:&mutApp,dark:bool)",
@@ -92,6 +95,8 @@ fn async_playground_demo_uses_app_view_imports() {
     for forbidden in [
         "advanced::prelude::*",
         "component::prelude::*",
+        "use fret_core::",
+        "fret_core::",
         "KernelApp",
         "AppWindowId",
     ] {

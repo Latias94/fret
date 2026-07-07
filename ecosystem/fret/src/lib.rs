@@ -188,6 +188,11 @@ pub mod style {
     };
 }
 
+/// Explicit scroll state handles for app code that coordinates scrollable surfaces.
+pub mod scroll {
+    pub use fret_ui::scroll::ScrollHandle;
+}
+
 /// Explicit virtual-list mechanism vocabulary for app code that opts into low-level virtualization.
 pub mod virtual_list {
     pub use fret_ui::element::{VirtualListKeyCacheMode, VirtualListOptions};
@@ -5087,6 +5092,8 @@ mod authoring_surface_policy_tests {
         assert!(LIB_RS.contains("AttributedText, Color, Corners, DecorationLineStyle, Edges"));
         assert!(LIB_RS.contains("StrikethroughStyle,"));
         assert!(LIB_RS.contains("TextPaintStyle, TextSpan, TextWrap"));
+        assert!(LIB_RS.contains("pub mod scroll {"));
+        assert!(LIB_RS.contains("pub use fret_ui::scroll::ScrollHandle;"));
         assert!(
             LIB_RS
                 .contains("pub use fret_core::time::{Duration, Instant, SystemTime, UNIX_EPOCH};")
@@ -5353,6 +5360,7 @@ mod authoring_surface_policy_tests {
         assert!(root_header.contains("pub mod commands {"));
         assert!(root_header.contains("pub mod icons {"));
         assert!(root_header.contains("pub mod pointer {"));
+        assert!(root_header.contains("pub mod scroll {"));
         assert!(root_header.contains("pub mod semantics {"));
         assert!(root_header.contains("pub mod style {"));
         assert!(root_header.contains("pub mod virtual_list {"));
@@ -5403,7 +5411,6 @@ mod authoring_surface_policy_tests {
         assert!(root_header.contains("AttributedText, Color, Corners, DecorationLineStyle, Edges"));
         assert!(root_header.contains("StrikethroughStyle,"));
         assert!(root_header.contains("TextPaintStyle, TextSpan, TextWrap"));
-        assert!(root_header.contains("TextWrap};"));
         assert!(root_header.contains(
             "pub use fret_ui::element::{ContainerProps, LayoutStyle, Length, Overflow, SizeStyle};"
         ));
@@ -5418,6 +5425,7 @@ mod authoring_surface_policy_tests {
         assert!(root_header.contains("ChromeRefinement, ColorRef, LayoutRefinement, MetricRef"));
         assert!(root_header.contains("Radius, ShadowPreset, Size,"));
         assert!(root_header.contains("Space,"));
+        assert!(root_header.contains("pub use fret_ui::scroll::ScrollHandle;"));
     }
 
     #[test]
@@ -5724,6 +5732,7 @@ mod authoring_surface_policy_tests {
         assert!(!app_prelude_exports_symbol("SemanticsProps"));
         assert!(!app_prelude_exports_symbol("UiElementSinkExt"));
         assert!(!app_prelude_exports_symbol("VirtualListOptions"));
+        assert!(!app_prelude_exports_symbol("ScrollHandle"));
         assert!(!app_prelude_exports_symbol("VirtualListScrollHandle"));
         assert!(!app_prelude_exports_symbol("VirtualListKeyCacheMode"));
         assert!(!app_prelude_exports_symbol("ScrollStrategy"));
