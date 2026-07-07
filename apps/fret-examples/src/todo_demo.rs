@@ -13,7 +13,6 @@ use fret_core::{
     AttributedText, Color, Corners, DecorationLineStyle, Px, StrikethroughStyle, TextPaintStyle,
     TextSpan,
 };
-use fret_ui::Invalidation;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::{WidgetStateProperty, WidgetStates};
 

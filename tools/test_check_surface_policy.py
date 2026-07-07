@@ -1271,7 +1271,7 @@ class SurfacePolicyTests(unittest.TestCase):
         )
         self.assertEqual(
             todo_demo_spec.allowed_raw_seams,
-            ("fret_core", "fret_ui"),
+            ("fret_core",),
         )
         harness_root_spec = next(
             (

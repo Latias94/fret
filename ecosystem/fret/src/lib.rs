@@ -1021,6 +1021,7 @@ pub mod app {
         pub use crate::view::View;
         pub use crate::{AppUi, Ui, UiChild, WindowId};
         pub use fret_core::Px;
+        pub use fret_ui::Invalidation;
         pub use fret_ui_kit::IntoUiElement as _;
         pub use fret_ui_kit::IntoUiElementInExt as _;
         pub use fret_ui_kit::StyledExt as _;
@@ -4904,6 +4905,7 @@ mod authoring_surface_policy_tests {
             "pub use crate::view::View;",
             "pub use crate::{AppUi, Ui, UiChild, WindowId};",
             "pub use fret_core::Px;",
+            "pub use fret_ui::Invalidation;",
             "pub use fret_ui_kit::IntoUiElement as _;",
             "pub use fret_ui_kit::IntoUiElementInExt as _;",
             "pub use fret_ui_kit::StyledExt as _;",
@@ -4929,6 +4931,7 @@ mod authoring_surface_policy_tests {
             "AppRenderCx",
             "AppUi",
             "FretApp",
+            "Invalidation",
             "Px",
             "Ui",
             "UiChild",

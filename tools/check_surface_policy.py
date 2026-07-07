@@ -1407,7 +1407,6 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
         "runtime cache tests live in the internal harness module",
         (
             "fret_core",
-            "fret_ui",
         ),
         owner="examples-todo",
     ),
