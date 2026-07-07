@@ -1,6 +1,7 @@
 use anyhow::Context as _;
 use fret::advanced;
 use fret::advanced::view::{AppUiRenderRootState, render_root_with_app_ui};
+use fret::app::text;
 use fret::app::{AppLocalStateExt as _, AppLocalStateTxnExt as _};
 use fret::app::{LocalState, TrackedStateExt as _};
 use fret_app::{App, CommandId, Effect, WindowRequest};
@@ -17,7 +18,6 @@ use fret_ui::element::{
 };
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::declarative::form::FormRegistry;
-use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::headless::calendar::CalendarMonth;
 use fret_ui_kit::headless::form_state::{FormState, FormValidateMode};
 use fret_ui_kit::headless::form_validation::{first_error, required_trimmed};
@@ -289,7 +289,7 @@ fn render(_driver: &mut FormDemoDriver, context: WinitRenderContext<'_, DemoWind
                         .size(shadcn::ButtonSize::Sm)
                         .on_click(CommandId::from("form_demo.submit"))
                         .into_element(cx),
-                    decl_text::text_control_readout(
+                    text::control_readout(
                         cx,
                         Arc::from(format!(
                             "submit_count={submit_count} valid={valid} dirty={dirty} status={}",
