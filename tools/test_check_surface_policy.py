@@ -6299,6 +6299,192 @@ class SurfacePolicyTests(unittest.TestCase):
                 ]
             )
 
+    def test_chart_bars_legacy_retained_authoring_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-examples/src/bars_demo.rs",
+                """
+                use fret_chart::{ChartCanvasPanelBinding, chart_canvas_panel};
+                use fret_chart::{ChartCanvasPanelProps, chart_canvas_panel};
+                use fret_chart::retained::ChartCanvas;
+                use fret_runtime::Model;
+                use fret_ui::{UiTree, declarative};
+
+                struct BarsDemoWindowState {
+                    ui: UiTree<App>,
+                    chart: ChartCanvasPanelBinding,
+                }
+
+                impl BarsDemoDriver {
+                    fn build_chart() -> (ChartEngine, ChartSpec) {
+                        (ChartEngine::default(), ChartSpec::default())
+                    }
+
+                    fn build_ui(app: &mut App) -> BarsDemoWindowState {
+                        let (engine, spec) = Self::build_chart();
+                        let chart = ChartCanvasPanelBinding::new(app, spec, engine);
+                        BarsDemoWindowState { ui: UiTree::new(), chart }
+                    }
+                }
+
+                fn handle_event(app: &mut App, state: &mut BarsDemoWindowState) {
+                    let _ = state.chart.output_untracked(app);
+                }
+
+                fn render(
+                    app: &mut App,
+                    services: &mut Services,
+                    window: AppWindowId,
+                    bounds: Rect,
+                    state: &mut BarsDemoWindowState,
+                ) {
+                    let chart = state.chart.clone();
+                    let root = declarative::render_root(
+                        &mut state.ui,
+                        app,
+                        services,
+                        window,
+                        bounds,
+                        "bars-demo-root",
+                        move |cx| {
+                            chart.observe_engine_paint(cx);
+                            let props = chart.panel_props();
+                            vec![chart_canvas_panel(cx, props)]
+                        },
+                    );
+                    let _ = root;
+                }
+
+                struct LegacyBarsChart {
+                    engine: Model<ChartEngine>,
+                    output: Model<ChartCanvasOutput>,
+                }
+
+                fn bad(app: &mut App, cx: &mut Cx, engine: ChartEngine, spec: ChartSpec) {
+                    let engine = app.models_mut().insert(engine);
+                    let output = app.models_mut().insert(ChartCanvasOutput::default());
+                    let _other = app.models_mut().insert(ChartEngine::default());
+                    let mut props = ChartCanvasPanelProps::new(spec).output_model(output);
+                    props.engine = Some(engine);
+                    cx.observe_model(&engine);
+                    let _ = ChartCanvas::new();
+                    let _ = ChartCanvas::create_node();
+                    create_node_retained();
+                }
+                """,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/bars_demo.rs",
+                        "advanced_manual",
+                        "fixture bars chart demo",
+                        owner="examples-chart-bars",
+                        allowed_raw_seams=("fret_runtime", "fret_ui", "UiTree"),
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            owner_violations = [
+                violation
+                for violation in violations
+                if violation.rule
+                == "advanced-surface-chart-bars-declarative-binding-boundary"
+            ]
+            self.assertGreaterEqual(len(owner_violations), 8)
+            messages = "\n".join(violation.message for violation in owner_violations)
+            self.assertIn("ChartCanvasPanelProps", messages)
+            self.assertIn("ChartCanvas::new", messages)
+            self.assertIn("ChartCanvas::create_node", messages)
+            self.assertIn("ChartCanvasOutput", messages)
+
+    def test_chart_bars_declarative_binding_surface_is_allowed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-examples/src/bars_demo.rs",
+                """
+                use fret_chart::{ChartCanvasPanelBinding, chart_canvas_panel};
+                use fret_ui::{UiTree, declarative};
+
+                struct BarsDemoWindowState {
+                    ui: UiTree<App>,
+                    chart: ChartCanvasPanelBinding,
+                }
+
+                impl BarsDemoDriver {
+                    fn build_chart() -> (ChartEngine, ChartSpec) {
+                        (ChartEngine::default(), ChartSpec::default())
+                    }
+
+                    fn build_ui(app: &mut App) -> BarsDemoWindowState {
+                        let (engine, spec) = Self::build_chart();
+                        let chart = ChartCanvasPanelBinding::new(app, spec, engine);
+                        BarsDemoWindowState { ui: UiTree::new(), chart }
+                    }
+                }
+
+                fn handle_event(app: &mut App, state: &mut BarsDemoWindowState) {
+                    let _ = state.chart.output_untracked(app);
+                }
+
+                fn render(
+                    app: &mut App,
+                    services: &mut Services,
+                    window: AppWindowId,
+                    bounds: Rect,
+                    state: &mut BarsDemoWindowState,
+                ) {
+                    let chart = state.chart.clone();
+                    let root = declarative::render_root(
+                        &mut state.ui,
+                        app,
+                        services,
+                        window,
+                        bounds,
+                        "bars-demo-root",
+                        move |cx| {
+                            chart.observe_engine_paint(cx);
+                            let props = chart.panel_props();
+                            vec![chart_canvas_panel(cx, props)]
+                        },
+                    );
+                    let _ = root;
+                }
+                """,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/bars_demo.rs",
+                        "advanced_manual",
+                        "fixture bars chart demo",
+                        owner="examples-chart-bars",
+                        allowed_raw_seams=("fret_ui", "UiTree"),
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            self.assertFalse(
+                [
+                    violation
+                    for violation in violations
+                    if violation.rule
+                    == "advanced-surface-chart-bars-declarative-binding-boundary"
+                ]
+            )
+
     def test_echarts_adapter_raw_chart_and_text_wiring_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

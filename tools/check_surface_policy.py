@@ -501,6 +501,17 @@ def _fret_examples_manual_chart_surface(filename: str) -> SurfacePath:
             MANUAL_CHART_ALLOWED_RAW_SEAMS,
             owner=PLOT_HISTOGRAM2D_OWNER,
         )
+    if filename == "bars_demo.rs":
+        return _fret_examples_advanced_surface(
+            filename,
+            (
+                "it owns a manual chart runner with FnDriver/UiTree lifecycle while "
+                "chart engine authoring, tooltip output reads, and panel wiring route "
+                "through ChartCanvasPanelBinding"
+            ),
+            MANUAL_CHART_ALLOWED_RAW_SEAMS,
+            owner=CHART_BARS_OWNER,
+        )
     stem = filename.removesuffix(".rs").replace("_", "-")
     return _fret_examples_advanced_surface(
         filename,
@@ -1592,6 +1603,56 @@ CHART_STRESS_FORBIDDEN_COMPACT_MARKERS = (
     "ChartCanvas::create_node(",
     "create_node_retained(",
     "avg_canvas_paint",
+)
+
+CHART_BARS_OWNER = "examples-chart-bars"
+
+CHART_BARS_REQUIRED_COMPACT_MARKERS = (
+    "usefret_chart::{ChartCanvasPanelBinding,chart_canvas_panel};",
+    "chart:ChartCanvasPanelBinding",
+    "fnbuild_chart()->(ChartEngine,ChartSpec)",
+    "letchart=ChartCanvasPanelBinding::new(app,spec,engine);",
+    "state.chart.output_untracked(app)",
+    "declarative::render_root(",
+    "\"bars-demo-root\"",
+    "chart.observe_engine_paint(cx);",
+    "letprops=chart.panel_props();",
+    "vec![chart_canvas_panel(cx,props)]",
+)
+
+CHART_BARS_FORBIDDEN_COMPACT_MARKERS = (
+    "usefret_chart::{ChartCanvasPanelProps,chart_canvas_panel};",
+    "usefret_chart::retained",
+    "fret_chart::retained::",
+    "fret_runtime::Model<",
+    "engine:Model<ChartEngine>",
+    "output:Model<ChartCanvasOutput>",
+    "app.models_mut().insert(engine)",
+    "app.models_mut().insert(ChartEngine::",
+    "ChartCanvasPanelProps::new(",
+    "props.engine=Some(engine);",
+    ".output_model(",
+    "cx.observe_model(&engine",
+    "ChartCanvas::new(",
+    "ChartCanvas::create_node(",
+    "create_node_retained(",
+)
+
+CHART_CANVAS_BINDING_BOUNDARIES: tuple[CompactSourceBoundary, ...] = (
+    CompactSourceBoundary(
+        owner=CHART_BARS_OWNER,
+        rule="advanced-surface-chart-bars-declarative-binding-boundary",
+        required_markers=CHART_BARS_REQUIRED_COMPACT_MARKERS,
+        forbidden_markers=CHART_BARS_FORBIDDEN_COMPACT_MARKERS,
+        missing_message_template=(
+            "Bars chart demo must keep chart engine authoring, tooltip output reads, "
+            "and panel wiring on ChartCanvasPanelBinding; missing compact markers: {missing_markers}"
+        ),
+        forbidden_message_template=(
+            "Bars chart demo must not expose retained/manual chart canvas state or output "
+            "wiring; compact `{marker}` bypasses the ChartCanvasPanelBinding boundary"
+        ),
+    ),
 )
 
 CHART_MULTI_AXIS_OWNER = "examples-chart-multi-axis"
@@ -4311,6 +4372,15 @@ def _scan_chart_stress_declarative_binding_boundary(
     return violations
 
 
+def _scan_chart_canvas_binding_boundaries(
+    root: Path, spec: SurfacePath
+) -> list[SurfaceViolation]:
+    violations: list[SurfaceViolation] = []
+    for boundary in CHART_CANVAS_BINDING_BOUNDARIES:
+        violations.extend(_scan_compact_source_boundary(root, spec, boundary))
+    return violations
+
+
 def _scan_chart_multi_axis_linked_binding_boundary(
     root: Path, spec: SurfacePath
 ) -> list[SurfaceViolation]:
@@ -5393,6 +5463,7 @@ def _scan_classified_raw_surface(root: Path, spec: SurfacePath) -> list[SurfaceV
     violations.extend(_scan_docking_arbitration_controls_boundary(root, spec))
     violations.extend(_scan_plot_declarative_binding_boundaries(root, spec))
     violations.extend(_scan_chart_stress_declarative_binding_boundary(root, spec))
+    violations.extend(_scan_chart_canvas_binding_boundaries(root, spec))
     violations.extend(_scan_chart_multi_axis_linked_binding_boundary(root, spec))
     violations.extend(_scan_echarts_adapter_binding_boundary(root, spec))
     violations.extend(_scan_echarts_multi_grid_binding_boundary(root, spec))
