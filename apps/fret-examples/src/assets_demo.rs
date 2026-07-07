@@ -6,12 +6,12 @@ use fret::advanced::kernel::ui::{
     SvgSource,
     element::{ImageProps, SvgIconProps},
 };
-use fret::app::AppComponentCx;
 use fret::app::prelude::*;
+use fret::app::{AppComponentCx, text};
 use fret::style::{ColorRef, LayoutRefinement, Radius, Space, ThemeSnapshot};
 use fret_ui_assets::{image_asset_state, svg_asset_state};
 use fret_ui_kit::IntoUiElement;
-use fret_ui_kit::declarative::{GlobalWatchExt as _, style as decl_style, text as decl_text};
+use fret_ui_kit::declarative::{GlobalWatchExt as _, style as decl_style};
 
 static DEMO_SVG: &[u8] = br##"
 <svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
@@ -139,7 +139,7 @@ where
 
         let muted = theme.color_token("muted-foreground");
         out.extend(lines.into_iter().map(|line| {
-            decl_text::text_control_readout(cx, Arc::<str>::from(line)).inherit_foreground(muted)
+            text::control_readout(cx, Arc::<str>::from(line)).inherit_foreground(muted)
         }));
     })
     .gap(Space::N2)

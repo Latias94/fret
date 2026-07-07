@@ -9,11 +9,13 @@ fn assets_demo_uses_app_ui_assets_facade_for_render_helpers() {
 
     for needle in [
         "usefret::app::prelude::*;",
+        "usefret::app::{AppComponentCx,text};",
         "Cx:fret::app::AppRenderContext<'a>,",
         ".view::<AssetsDemoView>()?",
         "ui_assets::rgba8_image_state(cx,96,96,checker_rgba.as_slice(),ui_assets::ImageColorSpace::Srgb,)",
         "letimage_stats=ui_assets::image_stats(cx);",
         "letsvg_stats=ui_assets::svg_stats(cx);",
+        "text::control_readout(cx,Arc::<str>::from(line)).inherit_foreground(muted)",
     ] {
         assert!(
             source.contains(needle),
@@ -33,6 +35,8 @@ fn assets_demo_uses_app_ui_assets_facade_for_render_helpers() {
         "fnon_event(",
         "fret::advanced::raw::UiTree",
         "AssetsDemoImageEvents",
+        "textasdecl_text",
+        "decl_text::",
     ] {
         assert!(
             !source.contains(needle),
