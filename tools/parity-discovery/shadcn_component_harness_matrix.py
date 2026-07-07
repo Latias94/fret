@@ -220,6 +220,13 @@ def _repo_path(path: str) -> Path:
     return ROOT / candidate
 
 
+def _display_path(path: Path) -> str:
+    try:
+        return path.relative_to(ROOT).as_posix()
+    except ValueError:
+        return path.as_posix()
+
+
 def _read_json(path: Path) -> dict[str, Any]:
     with path.open("r", encoding="utf-8") as handle:
         data = json.load(handle)
@@ -1015,8 +1022,8 @@ def main() -> int:
 
     print(
         "generated {json_path} and {md_path} ({count} components)".format(
-            json_path=output_json.relative_to(ROOT),
-            md_path=output_md.relative_to(ROOT),
+            json_path=_display_path(output_json),
+            md_path=_display_path(output_md),
             count=matrix["summary"]["component_count"],
         )
     )
