@@ -106,10 +106,10 @@
 //!   `resolve_svg_source_from_host_locator(...)` as the lower-level UI-ready source seams, and use
 //!   `fret::assets::resolve_reference(...)` / `resolve_locator_reference(...)` when a non-UI
 //!   integration truly needs the raw external reference
-//! - use `fret::shadcn::{..., app::install, themes::apply_shadcn_new_york, raw::*}` for the
-//!   curated default design-system surface; component families live on `shadcn::Button` /
-//!   `shadcn::Card`, `shadcn::app::*` and `shadcn::themes::*` are setup lanes rather than peer
-//!   discovery lanes, and advanced environment / `UiServices` hooks stay on
+//! - use `fret::shadcn::{Button, Card, ...}` for the curated default design-system surface;
+//!   `shadcn::app::install(...)` and `shadcn::themes::apply_shadcn_new_york(...)` are setup lanes
+//!   rather than peer discovery lanes; only drop to `fret::shadcn::raw::*` when you intentionally
+//!   need the full uncurated recipe surface, and keep advanced environment / `UiServices` hooks on
 //!   `fret::shadcn::raw::advanced::*`
 //! - use `fret::integration::InstallIntoApp` for reusable app-install bundles; small app-local
 //!   composition can also use `.setup((install_a, install_b))` while ordinary app code keeps
@@ -4196,10 +4196,24 @@ mod authoring_surface_policy_tests {
 
         let rustdoc = crate_rustdoc();
         let public_surface = crate_public_surface_source();
-        assert!(rustdoc.contains(
+        let curated_lane = "`fret::shadcn::{Button, Card, ...}`";
+        let raw_escape_hatch = "`fret::shadcn::raw::*`";
+        assert!(rustdoc.contains(curated_lane));
+        assert!(rustdoc.contains("`shadcn::app::install(...)`"));
+        assert!(rustdoc.contains("`shadcn::themes::apply_shadcn_new_york(...)`"));
+        assert!(rustdoc.contains("are setup lanes\n//!   rather than peer discovery lanes"));
+        assert!(
+            rustdoc
+                .find(curated_lane)
+                .expect("rustdoc should teach the curated shadcn lane")
+                < rustdoc
+                    .find(raw_escape_hatch)
+                    .expect("rustdoc should retain raw shadcn as an explicit escape hatch"),
+            "rustdoc should teach the curated shadcn lane before the raw escape hatch"
+        );
+        assert!(!rustdoc.contains(
             "//! - use `fret::shadcn::{..., app::install, themes::apply_shadcn_new_york, raw::*}`"
         ));
-        assert!(rustdoc.contains("`shadcn::app::*` and `shadcn::themes::*` are setup lanes"));
         assert!(rustdoc.contains("`fret::shadcn::raw::advanced::*`"));
         assert!(public_surface.contains("pub use fret_ui_shadcn::facade as shadcn;"));
         assert!(!public_surface.contains("pub use fret_ui_shadcn as shadcn;"));
