@@ -108,7 +108,10 @@ Keep raw/shared-model mechanisms for now:
     coordination to binding request/commit methods while leaving file IO and global Theme
     orchestration in the event branch. The undo/redo pass moved cancel, target-transform replay,
     and custom-scalar replay into binding methods. The render pass moved cursor-scale sync into a
-    binding method, leaving viewport-input routing as the remaining semantic-method cleanup area.
+    binding method. The viewport-input pass moved tool arbitration, camera navigation, transform
+    updates, HUD state, and pending undo-record construction behind a binding method; the free
+    function now only records pending undo entries and requests redraw. `record_engine_frame(...)`
+    frame animation and draw snapshot updates remain as the semantic-method cleanup area.
 - Table/data-grid demos.
   - Follow-up: `datatable_demo.rs` now uses `LocalState<shadcn::DataTableViewOutput>` and
     `app.local_state(...)` for the shadcn `DataTable` output handle. The retained table source gate

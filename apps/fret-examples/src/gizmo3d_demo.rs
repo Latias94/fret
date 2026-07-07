@@ -2049,6 +2049,355 @@ impl Gizmo3dDemoModelBinding {
         });
     }
 
+    fn handle_viewport_input(
+        &self,
+        app: &mut App,
+        event: &ViewportInputEvent,
+    ) -> Result<PendingUndoRecords, ModelUpdateError> {
+        self.update(app, |m, _cx| {
+            if m.viewport_target != event.target {
+                return PendingUndoRecords::default();
+            }
+
+            let tool_input = ViewportToolInput::from_viewport_input_target_px(
+                event,
+                fret_core::MouseButton::Left,
+            );
+            let target_px_per_screen_px = tool_input.cursor_units_per_screen_px;
+            apply_gizmo_cursor_units_per_screen_px(m, target_px_per_screen_px);
+
+            let cursor_target_px = tool_input.cursor_px;
+            let cursor_screen_px = Vec2::new(event.cursor_px.x.0, event.cursor_px.y.0);
+
+            let mut pending = PendingUndoRecords::default();
+
+            match event.kind {
+                ViewportInputKind::PointerDown {
+                    button: fret_core::MouseButton::Right,
+                    ..
+                } => {
+                    m.camera.frame_anim = None;
+                    m.camera.orbiting = true;
+                    m.camera.panning = false;
+                    m.camera.last_cursor_screen_px = cursor_screen_px;
+                }
+                ViewportInputKind::PointerDown {
+                    button: fret_core::MouseButton::Middle,
+                    ..
+                } => {
+                    m.camera.frame_anim = None;
+                    m.camera.panning = true;
+                    m.camera.orbiting = false;
+                    m.camera.last_cursor_screen_px = cursor_screen_px;
+                }
+                ViewportInputKind::PointerUp {
+                    button: fret_core::MouseButton::Right,
+                    ..
+                } => {
+                    m.camera.orbiting = false;
+                }
+                ViewportInputKind::PointerUp {
+                    button: fret_core::MouseButton::Middle,
+                    ..
+                } => {
+                    m.camera.panning = false;
+                }
+                ViewportInputKind::PointerMove { buttons, .. } => {
+                    // Some platforms can produce inconsistent "buttons" state for move events.
+                    // Prefer to keep orbit/pan latched until an explicit PointerUp arrives, but
+                    // still allow the move buttons state to end navigation if it becomes false.
+                    if m.camera.orbiting && !buttons.right {
+                        m.camera.orbiting = false;
+                    }
+                    if m.camera.panning && !buttons.middle {
+                        m.camera.panning = false;
+                    }
+
+                    if m.camera.orbiting || m.camera.panning {
+                        let delta = cursor_screen_px - m.camera.last_cursor_screen_px;
+                        m.camera.last_cursor_screen_px = cursor_screen_px;
+
+                        if m.camera.orbiting {
+                            let orbit_sensitivity = 0.008;
+                            m.camera.yaw_radians -= delta.x * orbit_sensitivity;
+                            m.camera.pitch_radians = (m.camera.pitch_radians
+                                - delta.y * orbit_sensitivity)
+                                .clamp(-1.55, 1.55);
+                        }
+
+                        if m.camera.panning {
+                            let pan_sensitivity = 0.002;
+                            let pitch = m.camera.pitch_radians.clamp(-1.55, 1.55);
+                            let yaw = m.camera.yaw_radians;
+                            let distance = m.camera.distance.max(0.05);
+                            let pan_scale = match m.camera.projection {
+                                OrbitProjection::Perspective => distance,
+                                OrbitProjection::Orthographic => {
+                                    m.camera.ortho_half_height.max(0.05)
+                                }
+                            };
+
+                            let dir = Vec3::new(
+                                yaw.cos() * pitch.cos(),
+                                pitch.sin(),
+                                yaw.sin() * pitch.cos(),
+                            );
+                            let eye = m.camera.target + dir * distance;
+                            let forward = (m.camera.target - eye).normalize_or_zero();
+                            let right = forward.cross(Vec3::Y).normalize_or_zero();
+                            let up = right.cross(forward).normalize_or_zero();
+
+                            if right.length_squared() > 0.0 && up.length_squared() > 0.0 {
+                                let pan = (-right * delta.x + up * delta.y)
+                                    * (pan_scale * pan_sensitivity);
+                                m.camera.target += pan;
+                            }
+                        }
+                    }
+                }
+                ViewportInputKind::Wheel { delta, .. } => {
+                    m.camera.frame_anim = None;
+                    // Positive wheel delta.y typically scrolls up; treat that as "zoom in".
+                    let zoom_sensitivity = 0.0015;
+                    let scroll = delta.y.0;
+                    let factor = (-scroll * zoom_sensitivity).exp();
+                    match m.camera.projection {
+                        OrbitProjection::Perspective => {
+                            m.camera.distance = (m.camera.distance * factor).clamp(0.2, 25.0);
+                        }
+                        OrbitProjection::Orthographic => {
+                            m.camera.ortho_half_height =
+                                (m.camera.ortho_half_height * factor).clamp(0.05, 1000.0);
+                        }
+                    }
+                }
+                _ => {}
+            };
+
+            let modifiers = viewport_modifiers(event.kind);
+            let snap = gizmo_snap_from_modifiers(&modifiers);
+            let precision = precision_multiplier(&modifiers);
+
+            let is_navigating = m.camera.orbiting || m.camera.panning;
+            let hovered = !is_navigating;
+            let cursor_over_draw_rect = tool_input.cursor_over_draw_rect;
+
+            let config = ViewportToolArbitratorConfig {
+                primary_button: fret_core::MouseButton::Left,
+                coordinate_space: ViewportToolCoordinateSpace::TargetPx,
+            };
+            let mut tools = [
+                ViewportToolEntry {
+                    id: TOOL_ID_VIEW_GIZMO,
+                    priority: ViewportToolPriority(1000),
+                    set_hot: Some(view_gizmo_tool_set_hot),
+                    hit_test: view_gizmo_tool_hit_test,
+                    handle_event: view_gizmo_tool_handle_event,
+                    cancel: None,
+                },
+                ViewportToolEntry {
+                    id: TOOL_ID_TRANSFORM_GIZMO,
+                    priority: ViewportToolPriority(500),
+                    set_hot: Some(transform_gizmo_tool_set_hot),
+                    hit_test: transform_gizmo_tool_hit_test,
+                    handle_event: transform_gizmo_tool_handle_event,
+                    cancel: None,
+                },
+                ViewportToolEntry {
+                    id: TOOL_ID_SELECTION,
+                    priority: ViewportToolPriority(0),
+                    set_hot: None,
+                    hit_test: selection_tool_hit_test,
+                    handle_event: selection_tool_handle_event,
+                    cancel: None,
+                },
+            ];
+
+            let mut router = m.viewport_tool_router;
+            let _handled = route_viewport_tools(&mut router, config, m, event, &mut tools);
+            m.viewport_tool_router = router;
+
+            if m.viewport_tool_router.active == Some(TOOL_ID_VIEW_GIZMO)
+                || m.view_gizmo.state.drag_active
+            {
+                return pending;
+            }
+
+            let over_view_gizmo = m.viewport_tool_router.hot == Some(TOOL_ID_VIEW_GIZMO)
+                || m.view_gizmo.state.drag_active
+                || m.view_gizmo.state.hovered.is_some()
+                || m.view_gizmo.state.hovered_center_button;
+            let scene_hovered = hovered && cursor_over_draw_rect && !over_view_gizmo;
+
+            let is_selecting = m.viewport_tool_router.active == Some(TOOL_ID_SELECTION)
+                || m.pending_selection.is_some()
+                || m.marquee.is_some();
+
+            let transform_hot = m.viewport_tool_router.hot == Some(TOOL_ID_TRANSFORM_GIZMO);
+            let transform_active = m.viewport_tool_router.active == Some(TOOL_ID_TRANSFORM_GIZMO)
+                || m.gizmo_mgr.state.active.is_some()
+                || m.input.dragging;
+
+            let wants_transform_update = !is_selecting
+                && matches!(
+                    event.kind,
+                    ViewportInputKind::PointerMove { .. }
+                        | ViewportInputKind::PointerDown { .. }
+                        | ViewportInputKind::PointerUp { .. }
+                )
+                && (transform_hot || transform_active);
+
+            let (drag_started, dragging) = if transform_active {
+                match event.kind {
+                    ViewportInputKind::PointerDown {
+                        button: fret_core::MouseButton::Left,
+                        ..
+                    } => (true, true),
+                    ViewportInputKind::PointerUp {
+                        button: fret_core::MouseButton::Left,
+                        ..
+                    } => (false, false),
+                    ViewportInputKind::PointerMove { .. } => (false, true),
+                    _ => (false, m.input.dragging),
+                }
+            } else {
+                (false, false)
+            };
+
+            let viewport_px = event.geometry.target_px_size;
+            let view_projection = camera_view_projection(viewport_px, m.camera);
+            let viewport = tool_input.viewport;
+            m.input = GizmoInput {
+                cursor_px: cursor_target_px,
+                hovered: scene_hovered && !is_selecting,
+                drag_started,
+                dragging,
+                snap,
+                cancel: false,
+                precision,
+            };
+
+            if wants_transform_update {
+                let selected: Vec<GizmoTarget3d> = m
+                    .targets
+                    .iter()
+                    .copied()
+                    .filter(|t| m.selection.contains(&t.id))
+                    .collect();
+
+                let apply_updated_targets =
+                    |targets: &mut Vec<GizmoTarget3d>, updated: &[GizmoTarget3d]| {
+                        for u in updated {
+                            if let Some(t) = targets.iter_mut().find(|t| t.id == u.id) {
+                                t.transform = u.transform;
+                            }
+                        }
+                    };
+
+                let properties = DemoGizmoPropertySource {
+                    scalars: &m.custom_scalar_values,
+                };
+                if let Some(update) = m.gizmo_mgr.update(
+                    view_projection,
+                    viewport,
+                    m.gizmo().config.depth_range,
+                    m.input,
+                    m.active_target,
+                    &selected,
+                    Some(&properties),
+                ) {
+                    m.hud.last = Some(GizmoHudLastUpdate {
+                        phase: update.phase,
+                        active: update.active,
+                        result: update.result,
+                    });
+                    match update.phase {
+                        GizmoPhase::Begin => {
+                            m.drag_start_targets = Some(selected.clone());
+                            m.capture_custom_scalar_drag_start(&update.custom_edits);
+                            apply_updated_targets(&mut m.targets, &update.updated_targets);
+                            m.apply_custom_scalar_totals(&update.custom_edits);
+                        }
+                        GizmoPhase::Update => {
+                            m.capture_custom_scalar_drag_start(&update.custom_edits);
+                            apply_updated_targets(&mut m.targets, &update.updated_targets);
+                            m.apply_custom_scalar_totals(&update.custom_edits);
+                        }
+                        GizmoPhase::Commit => {
+                            m.capture_custom_scalar_drag_start(&update.custom_edits);
+                            m.apply_custom_scalar_totals(&update.custom_edits);
+
+                            let selection = m.selection.clone();
+                            pending.custom_scalars = m.commit_custom_scalar_undo_record(
+                                &update.custom_edits,
+                                m.active_target,
+                                &selection,
+                            );
+
+                            if let Some(before) = m.drag_start_targets.take() {
+                                let mut after: Vec<GizmoTarget3d> =
+                                    Vec::with_capacity(before.len());
+                                for t in &before {
+                                    if let Some(now) = m.targets.iter().find(|v| v.id == t.id) {
+                                        after.push(*now);
+                                    }
+                                }
+
+                                if before != after {
+                                    let tool = match update.result {
+                                        fret_gizmo::GizmoResult::Translation { .. } => {
+                                            "gizmo.translate"
+                                        }
+                                        fret_gizmo::GizmoResult::Rotation { .. } => "gizmo.rotate",
+                                        fret_gizmo::GizmoResult::Arcball { .. } => "gizmo.arcball",
+                                        fret_gizmo::GizmoResult::Scale { .. } => "gizmo.scale",
+                                        fret_gizmo::GizmoResult::CustomScalar { key, .. } => {
+                                            if key == LightRadiusGizmoPlugin::PROPERTY_RADIUS {
+                                                "gizmo.light_radius"
+                                            } else {
+                                                "gizmo.scalar"
+                                            }
+                                        }
+                                    };
+
+                                    let mut sel = m.selection.clone();
+                                    sel.sort_by_key(|id| id.0);
+                                    let sel_key = sel
+                                        .iter()
+                                        .map(|id| id.0.to_string())
+                                        .collect::<Vec<_>>()
+                                        .join(",");
+                                    let coalesce_key = format!(
+                                        "{tool}:active={}:sel={sel_key}",
+                                        m.active_target.0
+                                    );
+
+                                    let rec = UndoRecord::new(ValueTx::new(before, after))
+                                        .label("Transform")
+                                        .coalesce_key(CoalesceKey::from(coalesce_key));
+                                    pending.transform = Some(rec);
+                                }
+                            }
+                        }
+                        GizmoPhase::Cancel => {
+                            if let Some(start) = m.drag_start_targets.take() {
+                                apply_updated_targets(&mut m.targets, &start);
+                            }
+                            m.cancel_custom_scalar_drag();
+                        }
+                    }
+                }
+            }
+
+            m.hud.hovered = m.gizmo_mgr.state.hovered;
+            m.hud.hovered_kind = m.hud.hovered.and_then(transform_gizmo_kind_for_handle);
+            m.hud.active = m.gizmo_mgr.state.active;
+            m.hud.snap = m.input.snap;
+
+            pending
+        })
+    }
+
     fn cancel_active_or_in_progress(&self, app: &mut App) -> bool {
         self.update(app, |model, _cx| {
             model.cancel_active_viewport_tool_interaction()
@@ -3585,341 +3934,7 @@ fn viewport_input(_driver: &mut Gizmo3dDemoDriver, app: &mut App, event: Viewpor
         return;
     };
 
-    let pending_undo = model.update(app, |m, _cx| {
-        if m.viewport_target != event.target {
-            return PendingUndoRecords::default();
-        }
-
-        let tool_input =
-            ViewportToolInput::from_viewport_input_target_px(&event, fret_core::MouseButton::Left);
-        let target_px_per_screen_px = tool_input.cursor_units_per_screen_px;
-        apply_gizmo_cursor_units_per_screen_px(m, target_px_per_screen_px);
-
-        let cursor_target_px = tool_input.cursor_px;
-        let cursor_screen_px = Vec2::new(event.cursor_px.x.0, event.cursor_px.y.0);
-
-        let mut pending = PendingUndoRecords::default();
-
-        match event.kind {
-            ViewportInputKind::PointerDown {
-                button: fret_core::MouseButton::Right,
-                ..
-            } => {
-                m.camera.frame_anim = None;
-                m.camera.orbiting = true;
-                m.camera.panning = false;
-                m.camera.last_cursor_screen_px = cursor_screen_px;
-            }
-            ViewportInputKind::PointerDown {
-                button: fret_core::MouseButton::Middle,
-                ..
-            } => {
-                m.camera.frame_anim = None;
-                m.camera.panning = true;
-                m.camera.orbiting = false;
-                m.camera.last_cursor_screen_px = cursor_screen_px;
-            }
-            ViewportInputKind::PointerUp {
-                button: fret_core::MouseButton::Right,
-                ..
-            } => {
-                m.camera.orbiting = false;
-            }
-            ViewportInputKind::PointerUp {
-                button: fret_core::MouseButton::Middle,
-                ..
-            } => {
-                m.camera.panning = false;
-            }
-            ViewportInputKind::PointerMove { buttons, .. } => {
-                // Some platforms can produce inconsistent "buttons" state for move events.
-                // Prefer to keep orbit/pan latched until an explicit PointerUp arrives, but
-                // still allow the move buttons state to end navigation if it becomes false.
-                if m.camera.orbiting && !buttons.right {
-                    m.camera.orbiting = false;
-                }
-                if m.camera.panning && !buttons.middle {
-                    m.camera.panning = false;
-                }
-
-                if m.camera.orbiting || m.camera.panning {
-                    let delta = cursor_screen_px - m.camera.last_cursor_screen_px;
-                    m.camera.last_cursor_screen_px = cursor_screen_px;
-
-                    if m.camera.orbiting {
-                        let orbit_sensitivity = 0.008;
-                        m.camera.yaw_radians -= delta.x * orbit_sensitivity;
-                        m.camera.pitch_radians = (m.camera.pitch_radians
-                            - delta.y * orbit_sensitivity)
-                            .clamp(-1.55, 1.55);
-                    }
-
-                    if m.camera.panning {
-                        let pan_sensitivity = 0.002;
-                        let pitch = m.camera.pitch_radians.clamp(-1.55, 1.55);
-                        let yaw = m.camera.yaw_radians;
-                        let distance = m.camera.distance.max(0.05);
-                        let pan_scale = match m.camera.projection {
-                            OrbitProjection::Perspective => distance,
-                            OrbitProjection::Orthographic => m.camera.ortho_half_height.max(0.05),
-                        };
-
-                        let dir = Vec3::new(
-                            yaw.cos() * pitch.cos(),
-                            pitch.sin(),
-                            yaw.sin() * pitch.cos(),
-                        );
-                        let eye = m.camera.target + dir * distance;
-                        let forward = (m.camera.target - eye).normalize_or_zero();
-                        let right = forward.cross(Vec3::Y).normalize_or_zero();
-                        let up = right.cross(forward).normalize_or_zero();
-
-                        if right.length_squared() > 0.0 && up.length_squared() > 0.0 {
-                            let pan =
-                                (-right * delta.x + up * delta.y) * (pan_scale * pan_sensitivity);
-                            m.camera.target += pan;
-                        }
-                    }
-                }
-            }
-            ViewportInputKind::Wheel { delta, .. } => {
-                m.camera.frame_anim = None;
-                // Positive wheel delta.y typically scrolls up; treat that as "zoom in".
-                let zoom_sensitivity = 0.0015;
-                let scroll = delta.y.0;
-                let factor = (-scroll * zoom_sensitivity).exp();
-                match m.camera.projection {
-                    OrbitProjection::Perspective => {
-                        m.camera.distance = (m.camera.distance * factor).clamp(0.2, 25.0);
-                    }
-                    OrbitProjection::Orthographic => {
-                        m.camera.ortho_half_height =
-                            (m.camera.ortho_half_height * factor).clamp(0.05, 1000.0);
-                    }
-                }
-            }
-            _ => {}
-        };
-
-        let modifiers = viewport_modifiers(event.kind);
-        let snap = gizmo_snap_from_modifiers(&modifiers);
-        let precision = precision_multiplier(&modifiers);
-
-        let is_navigating = m.camera.orbiting || m.camera.panning;
-        let hovered = !is_navigating;
-        let cursor_over_draw_rect = tool_input.cursor_over_draw_rect;
-
-        let config = ViewportToolArbitratorConfig {
-            primary_button: fret_core::MouseButton::Left,
-            coordinate_space: ViewportToolCoordinateSpace::TargetPx,
-        };
-        let mut tools = [
-            ViewportToolEntry {
-                id: TOOL_ID_VIEW_GIZMO,
-                priority: ViewportToolPriority(1000),
-                set_hot: Some(view_gizmo_tool_set_hot),
-                hit_test: view_gizmo_tool_hit_test,
-                handle_event: view_gizmo_tool_handle_event,
-                cancel: None,
-            },
-            ViewportToolEntry {
-                id: TOOL_ID_TRANSFORM_GIZMO,
-                priority: ViewportToolPriority(500),
-                set_hot: Some(transform_gizmo_tool_set_hot),
-                hit_test: transform_gizmo_tool_hit_test,
-                handle_event: transform_gizmo_tool_handle_event,
-                cancel: None,
-            },
-            ViewportToolEntry {
-                id: TOOL_ID_SELECTION,
-                priority: ViewportToolPriority(0),
-                set_hot: None,
-                hit_test: selection_tool_hit_test,
-                handle_event: selection_tool_handle_event,
-                cancel: None,
-            },
-        ];
-
-        let mut router = m.viewport_tool_router;
-        let _handled = route_viewport_tools(&mut router, config, m, &event, &mut tools);
-        m.viewport_tool_router = router;
-
-        if m.viewport_tool_router.active == Some(TOOL_ID_VIEW_GIZMO)
-            || m.view_gizmo.state.drag_active
-        {
-            return pending;
-        }
-
-        let over_view_gizmo = m.viewport_tool_router.hot == Some(TOOL_ID_VIEW_GIZMO)
-            || m.view_gizmo.state.drag_active
-            || m.view_gizmo.state.hovered.is_some()
-            || m.view_gizmo.state.hovered_center_button;
-        let scene_hovered = hovered && cursor_over_draw_rect && !over_view_gizmo;
-
-        let is_selecting = m.viewport_tool_router.active == Some(TOOL_ID_SELECTION)
-            || m.pending_selection.is_some()
-            || m.marquee.is_some();
-
-        let transform_hot = m.viewport_tool_router.hot == Some(TOOL_ID_TRANSFORM_GIZMO);
-        let transform_active = m.viewport_tool_router.active == Some(TOOL_ID_TRANSFORM_GIZMO)
-            || m.gizmo_mgr.state.active.is_some()
-            || m.input.dragging;
-
-        let wants_transform_update = !is_selecting
-            && matches!(
-                event.kind,
-                ViewportInputKind::PointerMove { .. }
-                    | ViewportInputKind::PointerDown { .. }
-                    | ViewportInputKind::PointerUp { .. }
-            )
-            && (transform_hot || transform_active);
-
-        let (drag_started, dragging) = if transform_active {
-            match event.kind {
-                ViewportInputKind::PointerDown {
-                    button: fret_core::MouseButton::Left,
-                    ..
-                } => (true, true),
-                ViewportInputKind::PointerUp {
-                    button: fret_core::MouseButton::Left,
-                    ..
-                } => (false, false),
-                ViewportInputKind::PointerMove { .. } => (false, true),
-                _ => (false, m.input.dragging),
-            }
-        } else {
-            (false, false)
-        };
-
-        let viewport_px = event.geometry.target_px_size;
-        let view_projection = camera_view_projection(viewport_px, m.camera);
-        let viewport = tool_input.viewport;
-        m.input = GizmoInput {
-            cursor_px: cursor_target_px,
-            hovered: scene_hovered && !is_selecting,
-            drag_started,
-            dragging,
-            snap,
-            cancel: false,
-            precision,
-        };
-
-        if wants_transform_update {
-            let selected: Vec<GizmoTarget3d> = m
-                .targets
-                .iter()
-                .copied()
-                .filter(|t| m.selection.contains(&t.id))
-                .collect();
-
-            let apply_updated_targets =
-                |targets: &mut Vec<GizmoTarget3d>, updated: &[GizmoTarget3d]| {
-                    for u in updated {
-                        if let Some(t) = targets.iter_mut().find(|t| t.id == u.id) {
-                            t.transform = u.transform;
-                        }
-                    }
-                };
-
-            let properties = DemoGizmoPropertySource {
-                scalars: &m.custom_scalar_values,
-            };
-            if let Some(update) = m.gizmo_mgr.update(
-                view_projection,
-                viewport,
-                m.gizmo().config.depth_range,
-                m.input,
-                m.active_target,
-                &selected,
-                Some(&properties),
-            ) {
-                m.hud.last = Some(GizmoHudLastUpdate {
-                    phase: update.phase,
-                    active: update.active,
-                    result: update.result,
-                });
-                match update.phase {
-                    GizmoPhase::Begin => {
-                        m.drag_start_targets = Some(selected.clone());
-                        m.capture_custom_scalar_drag_start(&update.custom_edits);
-                        apply_updated_targets(&mut m.targets, &update.updated_targets);
-                        m.apply_custom_scalar_totals(&update.custom_edits);
-                    }
-                    GizmoPhase::Update => {
-                        m.capture_custom_scalar_drag_start(&update.custom_edits);
-                        apply_updated_targets(&mut m.targets, &update.updated_targets);
-                        m.apply_custom_scalar_totals(&update.custom_edits);
-                    }
-                    GizmoPhase::Commit => {
-                        m.capture_custom_scalar_drag_start(&update.custom_edits);
-                        m.apply_custom_scalar_totals(&update.custom_edits);
-
-                        let selection = m.selection.clone();
-                        pending.custom_scalars = m.commit_custom_scalar_undo_record(
-                            &update.custom_edits,
-                            m.active_target,
-                            &selection,
-                        );
-
-                        if let Some(before) = m.drag_start_targets.take() {
-                            let mut after: Vec<GizmoTarget3d> = Vec::with_capacity(before.len());
-                            for t in &before {
-                                if let Some(now) = m.targets.iter().find(|v| v.id == t.id) {
-                                    after.push(*now);
-                                }
-                            }
-
-                            if before != after {
-                                let tool = match update.result {
-                                    fret_gizmo::GizmoResult::Translation { .. } => {
-                                        "gizmo.translate"
-                                    }
-                                    fret_gizmo::GizmoResult::Rotation { .. } => "gizmo.rotate",
-                                    fret_gizmo::GizmoResult::Arcball { .. } => "gizmo.arcball",
-                                    fret_gizmo::GizmoResult::Scale { .. } => "gizmo.scale",
-                                    fret_gizmo::GizmoResult::CustomScalar { key, .. } => {
-                                        if key == LightRadiusGizmoPlugin::PROPERTY_RADIUS {
-                                            "gizmo.light_radius"
-                                        } else {
-                                            "gizmo.scalar"
-                                        }
-                                    }
-                                };
-
-                                let mut sel = m.selection.clone();
-                                sel.sort_by_key(|id| id.0);
-                                let sel_key = sel
-                                    .iter()
-                                    .map(|id| id.0.to_string())
-                                    .collect::<Vec<_>>()
-                                    .join(",");
-                                let coalesce_key =
-                                    format!("{tool}:active={}:sel={sel_key}", m.active_target.0);
-
-                                let rec = UndoRecord::new(ValueTx::new(before, after))
-                                    .label("Transform")
-                                    .coalesce_key(CoalesceKey::from(coalesce_key));
-                                pending.transform = Some(rec);
-                            }
-                        }
-                    }
-                    GizmoPhase::Cancel => {
-                        if let Some(start) = m.drag_start_targets.take() {
-                            apply_updated_targets(&mut m.targets, &start);
-                        }
-                        m.cancel_custom_scalar_drag();
-                    }
-                }
-            }
-        }
-
-        m.hud.hovered = m.gizmo_mgr.state.hovered;
-        m.hud.hovered_kind = m.hud.hovered.and_then(transform_gizmo_kind_for_handle);
-        m.hud.active = m.gizmo_mgr.state.active;
-        m.hud.snap = m.input.snap;
-
-        pending
-    });
+    let pending_undo = model.handle_viewport_input(app, &event);
 
     if let Ok(pending) = pending_undo {
         if let Some(rec) = pending.transform {

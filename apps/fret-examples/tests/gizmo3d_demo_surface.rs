@@ -176,6 +176,23 @@ fn gizmo3d_demo_routes_render_cursor_scale_through_binding() {
 }
 
 #[test]
+fn gizmo3d_demo_routes_viewport_input_through_binding() {
+    let source = compact(include_str!("../src/gizmo3d_demo.rs"));
+
+    let needle = "letpending_undo=model.handle_viewport_input(app,&event);";
+    assert!(
+        source.contains(needle),
+        "gizmo3d_demo viewport input should route through the demo model binding; missing `{needle}`"
+    );
+
+    let legacy = "letpending_undo=model.update(app,|m,_cx|{ifm.viewport_target!=event.target{returnPendingUndoRecords::default();}";
+    assert!(
+        !source.contains(legacy),
+        "gizmo3d_demo should not keep direct viewport-input model writes in the free function; unexpected `{legacy}`"
+    );
+}
+
+#[test]
 fn gizmo3d_demo_routes_visual_keyboard_mutations_through_binding() {
     let source = compact(include_str!("../src/gizmo3d_demo.rs"));
 
