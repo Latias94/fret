@@ -15,7 +15,7 @@ use std::sync::Arc;
 use fret::UiAppBuilder;
 use fret::advanced::driver::UiAppBuilderAdvancedExt as _;
 use fret::app::prelude::*;
-use fret::app::{AppComponentCx, AppRenderContext, LocalState};
+use fret::app::{AppComponentCx, AppRenderContext, LocalState, text};
 use fret_core::scene::{
     CustomEffectImageInputV1, CustomEffectPyramidRequestV1, CustomEffectSourcesV3, EffectChain,
     EffectMode, EffectParamsV1, EffectQuality, EffectStep, ImageSamplingHint, UvRect,
@@ -33,7 +33,6 @@ use fret_ui::{ElementContext, Invalidation};
 use fret_ui_kit::custom_effects::CustomEffectProgramV3;
 use fret_ui_kit::declarative::UiElementTestIdExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
-use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::{IntoUiElement, Space, UiSupportsLayout as _, ui};
 use fret_ui_shadcn::facade as shadcn;
 
@@ -47,7 +46,7 @@ fn overlay_label_text<'a, Cx>(cx: &mut Cx, text: impl Into<Arc<str>>) -> AnyElem
 where
     Cx: AppRenderContext<'a>,
 {
-    decl_text::text_section_chrome_label(cx.elements(), text).inherit_foreground(Color {
+    text::section_chrome_label(cx, text).inherit_foreground(Color {
         r: 1.0,
         g: 1.0,
         b: 1.0,

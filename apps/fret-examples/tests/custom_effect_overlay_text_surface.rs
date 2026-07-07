@@ -325,11 +325,10 @@ fn assert_custom_effect_v3_overlay_text_roles(source: &str) {
     let source = compact(source);
 
     for needle in [
-        "usefret::app::{AppComponentCx,AppRenderContext,LocalState};",
-        "usefret_ui_kit::declarative::textasdecl_text;",
+        "usefret::app::{AppComponentCx,AppRenderContext,LocalState,text};",
         "fnoverlay_label_text<'a,Cx>(",
         "Cx:AppRenderContext<'a>,",
-        "decl_text::text_section_chrome_label(cx.elements(),text).inherit_foreground(Color{r:1.0,g:1.0,b:1.0,a:0.92,})",
+        "text::section_chrome_label(cx,text).inherit_foreground(Color{r:1.0,g:1.0,b:1.0,a:0.92,})",
         "letlabel_text=overlay_label_text(cx,title);",
         "move|_cx|vec![label_text]",
     ] {
@@ -340,6 +339,9 @@ fn assert_custom_effect_v3_overlay_text_roles(source: &str) {
     }
 
     for needle in [
+        "usefret_ui_kit::declarative::textasdecl_text;",
+        "decl_text::",
+        "text_section_chrome_label(",
         "cx.text_props(TextProps{",
         "TextProps{",
         "wrap:fret_core::TextWrap::None",
@@ -524,7 +526,7 @@ fn custom_effect_v3_demo_uses_app_view_imports_with_explicit_effect_hooks() {
         "usefret::UiAppBuilder;",
         "usefret::advanced::driver::UiAppBuilderAdvancedExtas_;",
         "usefret::app::prelude::*;",
-        "usefret::app::{AppComponentCx,AppRenderContext,LocalState};",
+        "usefret::app::{AppComponentCx,AppRenderContext,LocalState,text};",
         "usefret_ui_kit::declarative::action_hooks::ActionHooksExtas_;",
         "usefret_ui_kit::{IntoUiElement,Space,UiSupportsLayoutas_,ui};",
         "usefret_ui_shadcn::facadeasshadcn;",
