@@ -359,6 +359,17 @@ def _fret_examples_manual_chart_surface(filename: str) -> SurfacePath:
             MANUAL_CHART_ALLOWED_RAW_SEAMS,
             owner=PLOT_INF_LINES_OWNER,
         )
+    if filename == "linked_cursor_demo.rs":
+        return _fret_examples_advanced_surface(
+            filename,
+            (
+                "it owns a manual linked-plot runner with FnDriver/UiTree lifecycle while "
+                "linked cursor synchronization and panel wiring route through "
+                "LinePlotPanelBinding/AreaPlotPanelBinding"
+            ),
+            MANUAL_CHART_ALLOWED_RAW_SEAMS,
+            owner=PLOT_LINKED_CURSOR_OWNER,
+        )
     stem = filename.removesuffix(".rs").replace("_", "-")
     return _fret_examples_advanced_surface(
         filename,
@@ -811,6 +822,49 @@ PLOT_INF_LINES_FORBIDDEN_COMPACT_MARKERS = (
     ".state(plot_state.clone())",
     ".output(plot_output.clone())",
     "app.models_mut().insert(PlotOutput::default())",
+)
+
+PLOT_LINKED_CURSOR_OWNER = "examples-plot-linked-cursor"
+
+PLOT_LINKED_CURSOR_REQUIRED_COMPACT_MARKERS = (
+    "usefret_plot::declarative::{area_plot_panel_in,line_plot_panel_in};",
+    "usefret_plot::linking::{LinkedPlotGroup,PlotLinkPolicy};",
+    "usefret_plot::models::{AreaPlotModel,AreaSeries,LinePlotModel,LineSeries};",
+    "usefret_plot::{AreaPlotPanelBinding,LinePlotPanelBinding};",
+    "top_plot:LinePlotPanelBinding",
+    "bottom_plot:AreaPlotPanelBinding",
+    "linked:LinkedPlotGroup",
+    "LinePlotPanelBinding::new(app,LinePlotModel::from_series(vec![",
+    "AreaPlotPanelBinding::new(app,AreaPlotModel::from_series(vec![",
+    "letmutlinked=LinkedPlotGroup::new(PlotLinkPolicy::default());",
+    "linked.push_binding(&top_plot).push_binding(&bottom_plot);",
+    "state.linked.tick(app);",
+    "declarative::RenderRootContext::new(&mutstate.ui,app,services,window,bounds).render_root(\"linked-cursor-demo-top\"",
+    "declarative::RenderRootContext::new(&mutstate.ui,app,services,window,bounds).render_root(\"linked-cursor-demo-bottom\"",
+    "top_plot.panel_props().style(top_style)",
+    "bottom_plot.panel_props().style(bottom_style)",
+    "vec![line_plot_panel_in(cx,props)]",
+    "vec![area_plot_panel_in(cx,props)]",
+    "state.ui.set_focus(Some(top_node));",
+)
+
+PLOT_LINKED_CURSOR_FORBIDDEN_COMPACT_MARKERS = (
+    "usefret_plot::retained",
+    "fret_plot::retained::",
+    "LinePlotCanvas::new(",
+    "LinePlotCanvas::create_node(&mutstate.ui,top_canvas)",
+    "AreaPlotCanvas::new(",
+    "AreaPlotCanvas::create_node(&mutstate.ui,bottom_canvas)",
+    "LinkedPlotMember",
+    "fret_runtime::Model<",
+    "PlotState",
+    "PlotOutput",
+    "LinePlotPanelProps::new(top_plot)",
+    "AreaPlotPanelProps::new(bottom_plot.clone())",
+    ".state(top_state)",
+    ".output(top_output)",
+    ".state(bottom_state.clone())",
+    ".output(bottom_output.clone())",
 )
 
 CHART_STRESS_OWNER = "examples-chart-stress"
@@ -3609,6 +3663,54 @@ def _scan_plot_inf_lines_declarative_binding_boundary(
     return violations
 
 
+def _scan_plot_linked_cursor_declarative_binding_boundary(
+    root: Path, spec: SurfacePath
+) -> list[SurfaceViolation]:
+    if spec.owner != PLOT_LINKED_CURSOR_OWNER:
+        return []
+
+    violations: list[SurfaceViolation] = []
+    for path in _iter_source_files(root / spec.path):
+        text = _read_text(path)
+        production_text = text.split("#[cfg(test)]", 1)[0]
+        compact_production = _compact_source(production_text)
+        missing_markers = [
+            marker
+            for marker in PLOT_LINKED_CURSOR_REQUIRED_COMPACT_MARKERS
+            if marker not in compact_production
+        ]
+        if missing_markers:
+            violations.append(
+                SurfaceViolation(
+                    rule="advanced-surface-plot-linked-cursor-declarative-binding-boundary",
+                    path=path,
+                    line_no=1,
+                    message=(
+                        "Linked cursor plot demo must keep linked plot synchronization and "
+                        "line/area panel authoring on LinePlotPanelBinding/AreaPlotPanelBinding; "
+                        f"missing compact markers: {', '.join(missing_markers)}"
+                    ),
+                )
+            )
+
+        for marker in PLOT_LINKED_CURSOR_FORBIDDEN_COMPACT_MARKERS:
+            if marker not in compact_production:
+                continue
+            violations.append(
+                SurfaceViolation(
+                    rule="advanced-surface-plot-linked-cursor-declarative-binding-boundary",
+                    path=path,
+                    line_no=1,
+                    message=(
+                        "Linked cursor plot demo must not expose retained/manual linked plot "
+                        f"state or output wiring; compact `{marker}` bypasses the plot binding boundary"
+                    ),
+                )
+            )
+
+    return violations
+
+
 def _scan_chart_stress_declarative_binding_boundary(
     root: Path, spec: SurfacePath
 ) -> list[SurfaceViolation]:
@@ -4739,6 +4841,7 @@ def _scan_classified_raw_surface(root: Path, spec: SurfacePath) -> list[SurfaceV
     violations.extend(_scan_plot_stress_declarative_binding_boundary(root, spec))
     violations.extend(_scan_plot_drag_declarative_binding_boundary(root, spec))
     violations.extend(_scan_plot_inf_lines_declarative_binding_boundary(root, spec))
+    violations.extend(_scan_plot_linked_cursor_declarative_binding_boundary(root, spec))
     violations.extend(_scan_chart_stress_declarative_binding_boundary(root, spec))
     violations.extend(_scan_chart_multi_axis_linked_binding_boundary(root, spec))
     violations.extend(_scan_echarts_adapter_binding_boundary(root, spec))

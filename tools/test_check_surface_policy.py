@@ -3480,6 +3480,254 @@ class SurfacePolicyTests(unittest.TestCase):
                 ]
             )
 
+    def test_plot_linked_cursor_legacy_retained_authoring_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-examples/src/linked_cursor_demo.rs",
+                """
+                use fret_plot::declarative::{area_plot_panel_in, line_plot_panel_in};
+                use fret_plot::declarative::{AreaPlotPanelProps, LinePlotPanelProps};
+                use fret_plot::linking::{LinkedPlotGroup, LinkedPlotMember, PlotLinkPolicy};
+                use fret_plot::models::{AreaPlotModel, AreaSeries, LinePlotModel, LineSeries};
+                use fret_plot::retained;
+                use fret_plot::{AreaPlotPanelBinding, LinePlotPanelBinding};
+                use fret_runtime::Model;
+                use fret_ui::{UiTree, declarative};
+
+                struct LinkedCursorDemoWindowState {
+                    ui: UiTree<App>,
+                    top_plot: LinePlotPanelBinding,
+                    bottom_plot: AreaPlotPanelBinding,
+                    linked: LinkedPlotGroup,
+                }
+
+                impl LinkedCursorDemoDriver {
+                    fn build_ui(app: &mut App) -> LinkedCursorDemoWindowState {
+                        let top_plot = LinePlotPanelBinding::new(
+                            app,
+                            LinePlotModel::from_series(vec![
+                                LineSeries::new("top", data),
+                            ]),
+                        );
+                        let bottom_plot = AreaPlotPanelBinding::new(
+                            app,
+                            AreaPlotModel::from_series(vec![
+                                AreaSeries::new("bottom", data),
+                            ]),
+                        );
+                        let mut linked = LinkedPlotGroup::new(PlotLinkPolicy::default());
+                        linked.push_binding(&top_plot).push_binding(&bottom_plot);
+                        LinkedCursorDemoWindowState {
+                            ui: UiTree::new(),
+                            top_plot,
+                            bottom_plot,
+                            linked,
+                        }
+                    }
+                }
+
+                fn handle_event(app: &mut App, state: &mut LinkedCursorDemoWindowState) {
+                    state.linked.tick(app);
+                }
+
+                fn render(
+                    app: &mut App,
+                    services: &mut Services,
+                    window: AppWindowId,
+                    bounds: Rect,
+                    state: &mut LinkedCursorDemoWindowState,
+                ) {
+                    let top_node = declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
+                        .render_root("linked-cursor-demo-top", {
+                            let top_plot = state.top_plot.clone();
+                            move |cx| {
+                                let top_style = LinePlotStyle::default();
+                                let props = top_plot.panel_props().style(top_style);
+                                vec![line_plot_panel_in(cx, props)]
+                            }
+                        });
+                    let bottom_node = declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
+                        .render_root("linked-cursor-demo-bottom", {
+                            let bottom_plot = state.bottom_plot.clone();
+                            move |cx| {
+                                let bottom_style = LinePlotStyle::default();
+                                let props = bottom_plot.panel_props().style(bottom_style);
+                                vec![area_plot_panel_in(cx, props)]
+                            }
+                        });
+                    state.ui.set_focus(Some(top_node));
+                    let _ = bottom_node;
+                }
+
+                struct LegacyLinkedCursorPlot {
+                    top_plot: fret_runtime::Model<LinePlotModel>,
+                    output: Model<PlotOutput>,
+                }
+
+                fn bad(
+                    state: &mut LinkedCursorDemoWindowState,
+                    top_plot: Model<LinePlotModel>,
+                    top_state: Model<PlotState>,
+                    top_output: Model<PlotOutput>,
+                    bottom_plot: AreaPlotPanelBinding,
+                    bottom_state: Model<PlotState>,
+                    bottom_output: Model<PlotOutput>,
+                ) {
+                    let _ = retained::legacy();
+                    let _ = fret_plot::retained::legacy();
+                    let _ = LinePlotCanvas::new();
+                    LinePlotCanvas::create_node(&mut state.ui, top_canvas);
+                    let _ = AreaPlotCanvas::new();
+                    AreaPlotCanvas::create_node(&mut state.ui, bottom_canvas);
+                    let _member = LinkedPlotMember;
+                    let _top_props = LinePlotPanelProps::new(top_plot)
+                        .state(top_state)
+                        .output(top_output);
+                    let _bottom_props = AreaPlotPanelProps::new(bottom_plot.clone())
+                        .state(bottom_state.clone())
+                        .output(bottom_output.clone());
+                    let _ = PlotState::default();
+                }
+                """,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/linked_cursor_demo.rs",
+                        "advanced_manual",
+                        "fixture linked cursor plot demo",
+                        owner="examples-plot-linked-cursor",
+                        allowed_raw_seams=("fret_runtime", "fret_ui", "UiTree"),
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            owner_violations = [
+                violation
+                for violation in violations
+                if violation.rule
+                == "advanced-surface-plot-linked-cursor-declarative-binding-boundary"
+            ]
+            self.assertGreaterEqual(len(owner_violations), 10)
+            messages = "\n".join(violation.message for violation in owner_violations)
+            self.assertIn("fret_plot::retained", messages)
+            self.assertIn("LinePlotCanvas", messages)
+            self.assertIn("AreaPlotCanvas", messages)
+            self.assertIn("LinkedPlotMember", messages)
+            self.assertIn("PlotOutput", messages)
+            self.assertIn("LinePlotPanelProps", messages)
+            self.assertIn("AreaPlotPanelProps", messages)
+
+    def test_plot_linked_cursor_declarative_binding_surface_is_allowed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-examples/src/linked_cursor_demo.rs",
+                """
+                use fret_plot::declarative::{area_plot_panel_in, line_plot_panel_in};
+                use fret_plot::linking::{LinkedPlotGroup, PlotLinkPolicy};
+                use fret_plot::models::{AreaPlotModel, AreaSeries, LinePlotModel, LineSeries};
+                use fret_plot::{AreaPlotPanelBinding, LinePlotPanelBinding};
+                use fret_ui::{UiTree, declarative};
+
+                struct LinkedCursorDemoWindowState {
+                    ui: UiTree<App>,
+                    top_plot: LinePlotPanelBinding,
+                    bottom_plot: AreaPlotPanelBinding,
+                    linked: LinkedPlotGroup,
+                }
+
+                impl LinkedCursorDemoDriver {
+                    fn build_ui(app: &mut App) -> LinkedCursorDemoWindowState {
+                        let top_plot = LinePlotPanelBinding::new(
+                            app,
+                            LinePlotModel::from_series(vec![
+                                LineSeries::new("top", data),
+                            ]),
+                        );
+                        let bottom_plot = AreaPlotPanelBinding::new(
+                            app,
+                            AreaPlotModel::from_series(vec![
+                                AreaSeries::new("bottom", data),
+                            ]),
+                        );
+                        let mut linked = LinkedPlotGroup::new(PlotLinkPolicy::default());
+                        linked.push_binding(&top_plot).push_binding(&bottom_plot);
+                        LinkedCursorDemoWindowState {
+                            ui: UiTree::new(),
+                            top_plot,
+                            bottom_plot,
+                            linked,
+                        }
+                    }
+                }
+
+                fn handle_event(app: &mut App, state: &mut LinkedCursorDemoWindowState) {
+                    state.linked.tick(app);
+                }
+
+                fn render(
+                    app: &mut App,
+                    services: &mut Services,
+                    window: AppWindowId,
+                    bounds: Rect,
+                    state: &mut LinkedCursorDemoWindowState,
+                ) {
+                    let top_node = declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
+                        .render_root("linked-cursor-demo-top", {
+                            let top_plot = state.top_plot.clone();
+                            move |cx| {
+                                let top_style = LinePlotStyle::default();
+                                let props = top_plot.panel_props().style(top_style);
+                                vec![line_plot_panel_in(cx, props)]
+                            }
+                        });
+                    let bottom_node = declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
+                        .render_root("linked-cursor-demo-bottom", {
+                            let bottom_plot = state.bottom_plot.clone();
+                            move |cx| {
+                                let bottom_style = LinePlotStyle::default();
+                                let props = bottom_plot.panel_props().style(bottom_style);
+                                vec![area_plot_panel_in(cx, props)]
+                            }
+                        });
+                    state.ui.set_focus(Some(top_node));
+                    let _ = bottom_node;
+                }
+                """,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/linked_cursor_demo.rs",
+                        "advanced_manual",
+                        "fixture linked cursor plot demo",
+                        owner="examples-plot-linked-cursor",
+                        allowed_raw_seams=("fret_ui", "UiTree"),
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            self.assertFalse(
+                [
+                    violation
+                    for violation in violations
+                    if violation.rule
+                    == "advanced-surface-plot-linked-cursor-declarative-binding-boundary"
+                ]
+            )
+
     def test_plot_stress_legacy_retained_authoring_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
