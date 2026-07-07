@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use fret::app::prelude::*;
+use fret::app::{AppRenderContext, text};
 use fret::{Defaults, FretApp, shadcn};
 use fret_app::{CommandId, Model};
 use fret_core::Px;
@@ -16,7 +17,6 @@ use fret_ui_editor::controls::{
 };
 use fret_ui_editor::theme::EditorThemePresetV1;
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
-use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::{IntoUiElementInExt as _, Space};
 use fret_workspace::WorkspaceFrame;
 
@@ -360,25 +360,25 @@ fn editor_notes_draft_action_status(asset: &EditorAssetState, action: &str) -> S
     format!("{action}: {} · TextField draft controller", asset.title)
 }
 
-fn editor_notes_readout_text<H: fret_ui::UiHost>(
-    cx: &mut fret_ui::ElementContext<'_, H>,
-    text: impl Into<Arc<str>>,
-) -> AnyElement {
-    decl_text::text_control_readout(cx, text)
+fn editor_notes_readout_text<'a, Cx>(cx: &mut Cx, text: impl Into<Arc<str>>) -> AnyElement
+where
+    Cx: AppRenderContext<'a>,
+{
+    text::control_readout(cx, text)
 }
 
-fn editor_notes_section_text<H: fret_ui::UiHost>(
-    cx: &mut fret_ui::ElementContext<'_, H>,
-    text: impl Into<Arc<str>>,
-) -> AnyElement {
-    decl_text::text_section_chrome_label(cx, text)
+fn editor_notes_section_text<'a, Cx>(cx: &mut Cx, text: impl Into<Arc<str>>) -> AnyElement
+where
+    Cx: AppRenderContext<'a>,
+{
+    text::section_chrome_label(cx, text)
 }
 
-fn editor_notes_paragraph_text<H: fret_ui::UiHost>(
-    cx: &mut fret_ui::ElementContext<'_, H>,
-    text: impl Into<Arc<str>>,
-) -> AnyElement {
-    decl_text::text_paragraph(cx, text)
+fn editor_notes_paragraph_text<'a, Cx>(cx: &mut Cx, text: impl Into<Arc<str>>) -> AnyElement
+where
+    Cx: AppRenderContext<'a>,
+{
+    text::paragraph(cx, text)
 }
 
 fn selection_button<'a, Cx>(
