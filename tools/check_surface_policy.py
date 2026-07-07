@@ -1527,6 +1527,19 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
         owner="examples-launcher-utility-window-materials",
     ),
     _fret_examples_advanced_surface(
+        "async_playground_demo.rs",
+        "the async query lifecycle playground owns raw pressable row mechanics, scroll handles, "
+        "dynamic AnyElement child vectors, and low-level text helper boundaries until the app "
+        "facade grows equivalent pressable/scroll/typed-child wrappers",
+        (
+            "fret_core",
+            "fret_ui",
+            "AnyElement",
+            "ElementContext",
+        ),
+        owner="examples-async-query-playground",
+    ),
+    _fret_examples_advanced_surface(
         "editor_notes_demo.rs",
         "the editor notes demo owns editor app model bindings, shell-mounted rails, and theme "
         "preset wiring while keeping app-facing writes behind EditorAssetModels, "
@@ -1943,6 +1956,7 @@ PUBLIC_EXAMPLE_SCAN_ROOTS: tuple[str, ...] = (
     "apps/fret-examples/src/container_queries_docking_demo.rs",
     "apps/fret-examples/src/launcher_utility_window_demo.rs",
     "apps/fret-examples/src/launcher_utility_window_materials_demo.rs",
+    "apps/fret-examples/src/async_playground_demo.rs",
     "apps/fret-examples/src/echarts_demo.rs",
     "apps/fret-examples/src/echarts_multi_grid_demo.rs",
     "apps/fret-examples/src/chart_multi_axis_demo.rs",

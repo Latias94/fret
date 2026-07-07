@@ -791,6 +791,10 @@ class SurfacePolicyTests(unittest.TestCase):
             POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS,
         )
         self.assertIn(
+            "apps/fret-examples/src/async_playground_demo.rs",
+            POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS,
+        )
+        self.assertIn(
             "apps/fret-examples/src/plot_stress_demo.rs",
             POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS,
         )
@@ -983,6 +987,21 @@ class SurfacePolicyTests(unittest.TestCase):
             self.assertIn("utility-window", spec.reason)
             self.assertTrue(spec.allowed_raw_seams)
             self.assertTrue(spec.retirement)
+        async_playground_spec = next(
+            (
+                spec
+                for spec in POLICY.ADVANCED_MANUAL_SURFACES
+                if spec.path == "apps/fret-examples/src/async_playground_demo.rs"
+            ),
+            None,
+        )
+        self.assertIsNotNone(
+            async_playground_spec,
+            "async_playground_demo should be classified as an advanced query playground",
+        )
+        self.assertIn("pressable", async_playground_spec.reason)
+        self.assertIn("AnyElement", async_playground_spec.allowed_raw_seams)
+        self.assertTrue(async_playground_spec.retirement)
         for path in editor_notes_paths:
             self.assertTrue(
                 any(spec.path == path for spec in POLICY.ADVANCED_MANUAL_SURFACES),
