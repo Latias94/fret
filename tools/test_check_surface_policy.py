@@ -977,6 +977,13 @@ class SurfacePolicyTests(unittest.TestCase):
                 for spec in POLICY.INTERNAL_HARNESS_SURFACES
             )
         )
+        table_stress_spec = next(
+            spec
+            for spec in POLICY.INTERNAL_HARNESS_SURFACES
+            if spec.path == "apps/fret-examples/src/table_stress_demo.rs"
+        )
+        self.assertNotIn("AnyElement", table_stress_spec.allowed_raw_seams)
+        self.assertIn("ElementContext", table_stress_spec.allowed_raw_seams)
         self.assertTrue(
             any(
                 spec.path == "apps/fret-examples/src/canvas_datagrid_stress_demo.rs"

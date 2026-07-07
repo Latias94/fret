@@ -8,22 +8,22 @@ fn table_stress_demo_keeps_fixed_table_text_on_roles() {
     let source = compact(source);
 
     for needle in [
-        "usefret_ui_kit::declarative::textasdecl_text;",
-        "fntable_stress_readout_text<H:fret_ui::UiHost>(",
-        "fntable_stress_cell_text<H:fret_ui::UiHost>(",
-        "decl_text::text_control_readout(cx,text)",
-        "decl_text::text_table_cell(cx,text)",
-        "table_stress_readout_text(cx,header)",
-        "vec![table_stress_cell_text(cx,label)]",
-        "vec![table_stress_cell_text(cx,text)]",
+        "usefret::app::text;",
+        "text::control_readout(cx,header)",
+        "vec![text::table_cell(cx,label)]",
+        "vec![text::table_cell(cx,text)]",
     ] {
         assert!(
             source.contains(needle),
-            "table stress demo should keep fixed readout/header/cell text on shared text roles; missing `{needle}`"
+            "table stress demo should keep fixed readout/header/cell text on app text facade roles; missing `{needle}`"
         );
     }
 
     for needle in [
+        "usefret_ui_kit::declarative::textasdecl_text;",
+        "decl_text::",
+        "text_control_readout(",
+        "text_table_cell(",
         "cx.text(header)",
         "vec![cx.text(label)]",
         "vec![cx.text(text)]",

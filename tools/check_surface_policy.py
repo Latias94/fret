@@ -1258,7 +1258,7 @@ INTERNAL_HARNESS_SURFACES: tuple[SurfacePath, ...] = (
     _fret_examples_internal_harness(
         "table_stress_demo.rs",
         "the table stress harness owns manual driver state, renderer/allocation perf hooks, and "
-        "retained table plumbing, while shared model allocation, command writes, render "
+        "retained table plumbing with app text roles, while shared model allocation, command writes, render "
         "subscriptions, and readout snapshots route through TableStressControls and "
         "TableStressModelOwner",
         (
@@ -1267,7 +1267,6 @@ INTERNAL_HARNESS_SURFACES: tuple[SurfacePath, ...] = (
             "fret_launch",
             "fret_runtime",
             "fret_ui",
-            "AnyElement",
             "ElementContext",
             "FnDriver",
             "ModelStore",
