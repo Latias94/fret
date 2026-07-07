@@ -218,7 +218,9 @@ Keep raw/shared-model mechanisms for now:
   `external_video_imports_*` demos. Audited and cleaned after the wasm `ui-assets` feature fix:
   they remain low-level external import harnesses, while the shared visibility toggle write now
   routes through the private `ExternalImportsModelOwner` helper instead of duplicated event-handler
-  `models_mut().update(...)` calls.
+  `models_mut().update(...)` calls. These demos and `external_imports_owner.rs` are now classified
+  in `tools/check_surface_policy.py`; the owner-boundary gate rejects direct
+  `models_mut().update(...)` and `ModelStore::update(...)` visibility writes in the demos.
 - `embedded_viewport_demo.rs`. Audited and cleaned after the cookbook utility-window owner pass: it
   remains a Tier A embedded viewport interop demo, while its startup `last_input` readout write now
   routes through the demo-local `EmbeddedViewportDemoModelOwner` helper. Its source-surface test now

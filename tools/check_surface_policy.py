@@ -433,6 +433,33 @@ EMBEDDED_VIEWPORT_DEMO_FORBIDDEN_RAW_WRITE_PATTERNS: tuple[
     ),
 )
 
+EXTERNAL_IMPORTS_OWNER = "examples-external-imports"
+
+EXTERNAL_IMPORTS_OWNER_HELPER_REQUIRED_MARKERS = (
+    "pub(crate) struct ExternalImportsModelOwner<'a>",
+    "models: &'a mut ModelStore",
+    "pub(crate) fn toggle_surface(",
+    ".update(show, |show|",
+)
+
+EXTERNAL_IMPORTS_DEMO_REQUIRED_MARKERS = (
+    "use crate::external_imports_owner::ExternalImportsModelOwner;",
+    "ExternalImportsModelOwner::new(app.models_mut()).toggle_surface(",
+)
+
+EXTERNAL_IMPORTS_DEMO_FORBIDDEN_RAW_WRITE_PATTERNS: tuple[
+    tuple[str, re.Pattern[str]], ...
+] = (
+    (
+        "models_mut().update",
+        re.compile(r"\bmodels_mut\s*\(\s*\)\s*\.\s*update\s*\("),
+    ),
+    (
+        "ModelStore::update",
+        re.compile(r"\bModelStore\s*::\s*update\s*\("),
+    ),
+)
+
 
 def _fret_examples_custom_effect_v2_web_surface(filename: str, variant: str) -> SurfacePath:
     return SurfacePath(
@@ -545,6 +572,13 @@ INTERNAL_HARNESS_SURFACES: tuple[SurfacePath, ...] = (
         "shared private owner helper for custom-effect v2 web demo raw ModelStore writes",
         owner=CUSTOM_EFFECT_V2_WEB_OWNER,
         allowed_raw_seams=CUSTOM_EFFECT_V2_WEB_OWNER_HELPER_ALLOWED_RAW_SEAMS,
+    ),
+    SurfacePath(
+        "apps/fret-examples/src/external_imports_owner.rs",
+        "internal_harness",
+        "shared private owner helper for external import visibility writes",
+        owner=EXTERNAL_IMPORTS_OWNER,
+        allowed_raw_seams=("fret_runtime", "ModelStore"),
     ),
     _fret_examples_internal_harness(
         "lib.rs",
@@ -710,6 +744,71 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
             "ModelStore",
         ),
         owner=EMBEDDED_VIEWPORT_OWNER,
+    ),
+    _fret_examples_advanced_surface(
+        "external_texture_imports_demo.rs",
+        "the native external texture import proof owns advanced view hooks, launch import targets, "
+        "raw renderer interop, and a shared private visibility owner",
+        (
+            "fret::advanced",
+            "fret_app",
+            "fret_core",
+            "fret_launch",
+            "fret_runtime",
+            "fret_ui",
+            "ElementContext",
+            "UiTree",
+        ),
+        owner=EXTERNAL_IMPORTS_OWNER,
+    ),
+    _fret_examples_advanced_surface(
+        "external_texture_imports_web_demo.rs",
+        "the web external texture import proof owns a manual web runner, retained UiTree, launch "
+        "import targets, raw renderer interop, and a shared private visibility owner",
+        (
+            "fret::advanced",
+            "fret_app",
+            "fret_core",
+            "fret_launch",
+            "fret_runtime",
+            "fret_ui",
+            "ElementContext",
+            "FnDriver",
+            "UiTree",
+        ),
+        owner=EXTERNAL_IMPORTS_OWNER,
+    ),
+    _fret_examples_advanced_surface(
+        "external_video_imports_avf_demo.rs",
+        "the AVFoundation external video import proof owns advanced view hooks, launch import "
+        "targets, raw renderer interop, and a shared private visibility owner",
+        (
+            "fret::advanced",
+            "fret_app",
+            "fret_core",
+            "fret_launch",
+            "fret_runtime",
+            "fret_ui",
+            "ElementContext",
+            "UiTree",
+        ),
+        owner=EXTERNAL_IMPORTS_OWNER,
+    ),
+    _fret_examples_advanced_surface(
+        "external_video_imports_mf_demo.rs",
+        "the Media Foundation external video import proof owns advanced view hooks, launch import "
+        "targets, raw renderer interop, and a shared private visibility owner",
+        (
+            "fret::advanced",
+            "fret_app",
+            "fret_core",
+            "fret_launch",
+            "fret_runtime",
+            "fret_ui",
+            "ElementContext",
+            "UiTree",
+        ),
+        owner=EXTERNAL_IMPORTS_OWNER,
     ),
     _fret_examples_advanced_surface(
         "docking_demo.rs",
@@ -1026,6 +1125,10 @@ PUBLIC_EXAMPLE_SCAN_ROOTS: tuple[str, ...] = (
     "apps/fret-examples/src/todo_demo.rs",
     "apps/fret-examples/src/components_gallery.rs",
     "apps/fret-examples/src/embedded_viewport_demo.rs",
+    "apps/fret-examples/src/external_texture_imports_demo.rs",
+    "apps/fret-examples/src/external_texture_imports_web_demo.rs",
+    "apps/fret-examples/src/external_video_imports_avf_demo.rs",
+    "apps/fret-examples/src/external_video_imports_mf_demo.rs",
     "apps/fret-examples/src/docking_demo.rs",
     "apps/fret-examples/src/docking_arbitration_demo.rs",
     "apps/fret-examples/src/plot_demo.rs",
@@ -1360,6 +1463,61 @@ def _scan_embedded_viewport_owner_boundary(
     return violations
 
 
+def _scan_external_imports_owner_boundary(
+    root: Path, spec: SurfacePath
+) -> list[SurfaceViolation]:
+    if spec.owner != EXTERNAL_IMPORTS_OWNER:
+        return []
+
+    violations: list[SurfaceViolation] = []
+    for path in _iter_source_files(root / spec.path):
+        text = _read_text(path)
+        if path.name == "external_imports_owner.rs":
+            required_markers = EXTERNAL_IMPORTS_OWNER_HELPER_REQUIRED_MARKERS
+        else:
+            required_markers = EXTERNAL_IMPORTS_DEMO_REQUIRED_MARKERS
+        missing_markers = [
+            marker for marker in required_markers if marker not in text
+        ]
+        if missing_markers:
+            violations.append(
+                SurfaceViolation(
+                    rule="advanced-surface-external-imports-owner-boundary",
+                    path=path,
+                    line_no=1,
+                    message=(
+                        "external import visibility writes must stay behind "
+                        f"ExternalImportsModelOwner; missing owner markers: {', '.join(missing_markers)}"
+                    ),
+                )
+            )
+
+        if path.name == "external_imports_owner.rs":
+            continue
+
+        for line_no, line in _code_lines_for_scan(path, text):
+            if path.suffix == ".rs" and _is_rust_source_line_ignorable(line):
+                continue
+            for seam, pattern in EXTERNAL_IMPORTS_DEMO_FORBIDDEN_RAW_WRITE_PATTERNS:
+                if not pattern.search(line):
+                    continue
+                violations.append(
+                    SurfaceViolation(
+                        rule="advanced-surface-external-imports-owner-boundary",
+                        path=path,
+                        line_no=line_no,
+                        message=(
+                            "external import app/driver visibility writes must use "
+                            f"ExternalImportsModelOwner; direct `{seam}` bypasses the owner boundary"
+                        ),
+                        source=line.strip(),
+                    )
+                )
+                break
+
+    return violations
+
+
 def _scan_default_authoring_surface(root: Path, spec: SurfacePath) -> list[SurfaceViolation]:
     violations: list[SurfaceViolation] = []
     for path in _iter_source_files(root / spec.path):
@@ -1420,6 +1578,7 @@ def _scan_classified_raw_surface(root: Path, spec: SurfacePath) -> list[SurfaceV
     violations.extend(_scan_custom_effect_v2_web_owner_boundary(root, spec))
     violations.extend(_scan_gizmo3d_owner_boundary(root, spec))
     violations.extend(_scan_embedded_viewport_owner_boundary(root, spec))
+    violations.extend(_scan_external_imports_owner_boundary(root, spec))
     for seam in sorted(allowed_raw_seams - used_raw_seams):
         violations.append(
             SurfaceViolation(

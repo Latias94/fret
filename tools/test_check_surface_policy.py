@@ -794,6 +794,14 @@ class SurfacePolicyTests(unittest.TestCase):
             "apps/fret-examples/src/embedded_viewport_demo.rs",
             POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS,
         )
+        external_import_paths = {
+            "apps/fret-examples/src/external_texture_imports_demo.rs",
+            "apps/fret-examples/src/external_texture_imports_web_demo.rs",
+            "apps/fret-examples/src/external_video_imports_avf_demo.rs",
+            "apps/fret-examples/src/external_video_imports_mf_demo.rs",
+        }
+        for path in external_import_paths:
+            self.assertIn(path, POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS)
         custom_effect_v2_web_paths = {
             "apps/fret-examples/src/custom_effect_v2_web_demo.rs",
             "apps/fret-examples/src/custom_effect_v2_identity_web_demo.rs",
@@ -824,6 +832,17 @@ class SurfacePolicyTests(unittest.TestCase):
             any(
                 spec.path == "apps/fret-examples/src/embedded_viewport_demo.rs"
                 for spec in POLICY.ADVANCED_MANUAL_SURFACES
+            )
+        )
+        for path in external_import_paths:
+            self.assertTrue(
+                any(spec.path == path for spec in POLICY.ADVANCED_MANUAL_SURFACES),
+                f"{path} should be classified as an advanced external import surface",
+            )
+        self.assertTrue(
+            any(
+                spec.path == "apps/fret-examples/src/external_imports_owner.rs"
+                for spec in POLICY.INTERNAL_HARNESS_SURFACES
             )
         )
         echarts_spec = next(
@@ -1552,6 +1571,137 @@ class SurfacePolicyTests(unittest.TestCase):
                     for violation in violations
                     if violation.rule
                     == "advanced-surface-embedded-viewport-owner-boundary"
+                ]
+            )
+
+    def test_external_imports_direct_visibility_writes_are_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-examples/src/external_texture_imports_demo.rs",
+                """
+                use fret_runtime::ModelStore;
+
+                use crate::external_imports_owner::ExternalImportsModelOwner;
+
+                struct ViewState {
+                    show: fret_runtime::Model<bool>,
+                }
+
+                fn toggle(app: &mut App, st: &ViewState) {
+                    ExternalImportsModelOwner::new(app.models_mut()).toggle_surface(&st.show);
+                    let _ = app.models_mut().update(&st.show, |show| {
+                        *show = !*show;
+                        true
+                    });
+                    let _ = ModelStore::update(app.models_mut(), &st.show, |show| {
+                        *show = !*show;
+                        true
+                    });
+                }
+                """,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/external_texture_imports_demo.rs",
+                        "advanced_manual",
+                        "fixture external imports proof surface",
+                        owner="examples-external-imports",
+                        allowed_raw_seams=("fret_runtime", "ModelStore"),
+                        retirement=POLICY.FRET_EXAMPLES_ADVANCED_RETIREMENT,
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            owner_violations = [
+                violation
+                for violation in violations
+                if violation.rule == "advanced-surface-external-imports-owner-boundary"
+            ]
+            self.assertEqual(2, len(owner_violations))
+            messages = "\n".join(violation.message for violation in owner_violations)
+            self.assertIn("models_mut().update", messages)
+            self.assertIn("ModelStore::update", messages)
+
+    def test_external_imports_owner_surface_is_allowed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-examples/src/external_imports_owner.rs",
+                """
+                use fret_runtime::{Model, ModelStore};
+
+                pub(crate) struct ExternalImportsModelOwner<'a> {
+                    models: &'a mut ModelStore,
+                }
+
+                impl<'a> ExternalImportsModelOwner<'a> {
+                    pub(crate) fn toggle_surface(&mut self, show: &Model<bool>) -> bool {
+                        self.models
+                            .update(show, |show| {
+                                *show = !*show;
+                                true
+                            })
+                            .unwrap_or(false)
+                    }
+                }
+                """,
+            )
+            write(
+                root / "apps/fret-examples/src/external_texture_imports_demo.rs",
+                """
+                use fret_runtime::PlatformCapabilities;
+
+                use crate::external_imports_owner::ExternalImportsModelOwner;
+
+                struct ViewState {
+                    show: fret_runtime::Model<bool>,
+                }
+
+                fn toggle(app: &mut App, st: &ViewState) {
+                    ExternalImportsModelOwner::new(app.models_mut()).toggle_surface(&st.show);
+                }
+                """,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/external_texture_imports_demo.rs",
+                        "advanced_manual",
+                        "fixture external imports proof surface",
+                        owner="examples-external-imports",
+                        allowed_raw_seams=("fret_runtime",),
+                        retirement=POLICY.FRET_EXAMPLES_ADVANCED_RETIREMENT,
+                    )
+                ],
+                internal_harness_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/external_imports_owner.rs",
+                        "internal_harness",
+                        "fixture external imports owner helper",
+                        owner="examples-external-imports",
+                        allowed_raw_seams=("fret_runtime", "ModelStore"),
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            self.assertFalse(
+                [
+                    violation
+                    for violation in violations
+                    if violation.rule
+                    == "advanced-surface-external-imports-owner-boundary"
                 ]
             )
 
