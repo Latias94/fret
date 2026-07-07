@@ -1,8 +1,7 @@
 use std::sync::Arc;
 
 use fret::app::prelude::*;
-use fret_core::scene::DashPatternV1;
-use fret_core::{Color, Px};
+use fret::style::{Color, DashPatternV1};
 use fret_node::core::{
     CanvasPoint, Edge, EdgeId, EdgeKind, Graph, GraphId, Node, NodeId, NodeKindKey, Port,
     PortCapacity, PortDirection, PortId, PortKey, PortKind,

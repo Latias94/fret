@@ -1338,10 +1338,13 @@ class SurfacePolicyTests(unittest.TestCase):
                 for spec in POLICY.DEFAULT_AUTHORING_SURFACES
             )
         )
-        for path in query_paths:
+        for path in [
+            *query_paths,
+            "apps/fret-examples/src/node_graph_demo.rs",
+        ]:
             self.assertTrue(
                 any(spec.path == path for spec in POLICY.DEFAULT_AUTHORING_SURFACES),
-                f"{path} should stay classified as default-clean query authoring",
+                f"{path} should stay classified as default-clean app authoring",
             )
             self.assertFalse(
                 any(spec.path == path for spec in POLICY.ADVANCED_MANUAL_SURFACES),

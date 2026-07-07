@@ -221,6 +221,11 @@ DEFAULT_AUTHORING_SURFACES: tuple[SurfacePath, ...] = (
         "default_app_clean",
         "plot tags/text overlay example should stay on the default declarative plot app surface",
     ),
+    SurfacePath(
+        "apps/fret-examples/src/node_graph_demo.rs",
+        "default_app_clean",
+        "node graph example should stay on app-facing view, style, and node facades",
+    ),
 )
 
 POLICY_RECIPE_SURFACES: tuple[SurfacePath, ...] = (
@@ -1949,17 +1954,6 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
             "fret_runtime",
             "ElementContext",
             "UiTree",
-        ),
-    ),
-    SurfacePath(
-        "apps/fret-examples/src/node_graph_demo.rs",
-        "advanced_manual",
-        "node graph demo is an advanced proof only for app-view prelude plus low-level paint override types",
-        owner="examples-node-graph",
-        allowed_raw_seams=("fret_core",),
-        retirement=(
-            "Reclassify after node/canvas public starter covers graph creation, selection, "
-            "diagnostics, and edge paint overrides without direct fret_core paint types"
         ),
     ),
     SurfacePath(

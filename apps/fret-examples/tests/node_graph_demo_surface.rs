@@ -4,6 +4,7 @@ fn node_graph_demo_uses_default_app_prelude() {
 
     for needle in [
         "use fret::app::prelude::*;",
+        "use fret::style::{Color, DashPatternV1};",
         ".view::<NodeGraphDemoView>()?",
         "impl View for NodeGraphDemoView",
         "fn init(app: &mut App, _window: WindowId) -> Self",
@@ -16,7 +17,12 @@ fn node_graph_demo_uses_default_app_prelude() {
         );
     }
 
-    for forbidden in ["advanced::prelude::*", "component::prelude::*"] {
+    for forbidden in [
+        "advanced::prelude::*",
+        "component::prelude::*",
+        "use fret_core::",
+        "fret_core::",
+    ] {
         assert!(
             !source.contains(forbidden),
             "node_graph_demo should not reintroduce broad prelude imports: `{forbidden}`",
