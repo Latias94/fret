@@ -3287,6 +3287,190 @@ class SurfacePolicyTests(unittest.TestCase):
                 ]
             )
 
+    def test_echarts_multi_grid_retained_helpers_are_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-examples/src/echarts_multi_grid_demo.rs",
+                """
+                use fret_chart::{ChartCanvasMultiGridBinding, chart_canvas_panel};
+                use fret_chart::retained::{UniformGrid, create_multi_grid_chart_canvas_nodes};
+                use fret_runtime::Model;
+                use fret_ui::UiTree;
+
+                pub struct EchartsMultiGridDemoWindowState {
+                    ui: UiTree<App>,
+                    chart: ChartCanvasMultiGridBinding,
+                }
+
+                impl EchartsMultiGridDemoDriver {
+                    fn build_ui(app: &mut App, window: AppWindowId) -> EchartsMultiGridDemoWindowState {
+                        let (engine, spec, grids) = Self::build_chart();
+                        EchartsMultiGridDemoWindowState {
+                            ui: UiTree::new(),
+                            chart: ChartCanvasMultiGridBinding::new(app, spec, engine, grids),
+                        }
+                    }
+                }
+
+                fn render(
+                    app: &mut App,
+                    services: &mut Services,
+                    window: AppWindowId,
+                    bounds: Rect,
+                    state: &mut EchartsMultiGridDemoWindowState,
+                ) {
+                    let chart = state.chart.clone();
+                    let root = declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
+                        .render_root("echarts-multi-grid-demo", move |cx| {
+                            chart.observe_engine_paint(cx);
+                            let mut overlay_props = chart.overlay_panel_props();
+                            let grid_views = cx.container(container, move |cx| {
+                                chart
+                                    .grids()
+                                    .iter()
+                                    .copied()
+                                    .map(|grid| {
+                                        let props = chart.grid_panel_props(grid);
+                                        chart_canvas_panel(cx, props)
+                                    })
+                                    .collect::<Vec<_>>()
+                            });
+                            vec![grid_views, chart_canvas_panel(cx, overlay_props)]
+                        });
+                    let _ = root;
+                }
+
+                struct LegacyMultiGridChart {
+                    engine: Model<ChartEngine>,
+                    spec: ChartSpec,
+                }
+
+                fn bad(app: &mut App, grid: GridId, spec: ChartSpec, engine: ChartEngine) {
+                    let _ = create_multi_grid_chart_canvas_nodes();
+                    let _ = UniformGrid;
+                    let _ = ChartCanvas::new_grid_view();
+                    let _ = ChartCanvas::new_overlay();
+                    let _ = ChartCanvas::create_node();
+                    let _ = create_node_retained();
+                    let mut props = ChartCanvasPanelProps::new(spec).grid_view(grid);
+                    props.engine = Some(engine);
+                    let mut overlay_props = ChartCanvasPanelProps::new(spec.clone()).overlay_only();
+                    overlay_props.engine = Some(engine.clone());
+                    let _ = app.models_mut().insert(engine);
+                    let _engine_cell: Rc<RefCell<ChartEngine>> = todo!();
+                    let _other: std::rc::Rc<std::cell::RefCell<ChartEngine>> = todo!();
+                }
+                """,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/echarts_multi_grid_demo.rs",
+                        "advanced_manual",
+                        "fixture ECharts multi-grid surface",
+                        owner="examples-echarts-multi-grid",
+                        allowed_raw_seams=("fret_runtime", "fret_ui", "UiTree"),
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            owner_violations = [
+                violation
+                for violation in violations
+                if violation.rule == "advanced-surface-echarts-multi-grid-binding-boundary"
+            ]
+            self.assertGreaterEqual(len(owner_violations), 8)
+            messages = "\n".join(violation.message for violation in owner_violations)
+            self.assertIn("create_multi_grid_chart_canvas_nodes", messages)
+            self.assertIn("UniformGrid", messages)
+            self.assertIn("ChartCanvas::new_grid_view", messages)
+            self.assertIn("ChartCanvasPanelProps", messages)
+            self.assertIn("Rc<RefCell<ChartEngine>>", messages)
+
+    def test_echarts_multi_grid_binding_surface_is_allowed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-examples/src/echarts_multi_grid_demo.rs",
+                """
+                use fret_chart::{ChartCanvasMultiGridBinding, chart_canvas_panel};
+                use fret_ui::UiTree;
+
+                pub struct EchartsMultiGridDemoWindowState {
+                    ui: UiTree<App>,
+                    chart: ChartCanvasMultiGridBinding,
+                }
+
+                impl EchartsMultiGridDemoDriver {
+                    fn build_ui(app: &mut App, window: AppWindowId) -> EchartsMultiGridDemoWindowState {
+                        let (engine, spec, grids) = Self::build_chart();
+                        EchartsMultiGridDemoWindowState {
+                            ui: UiTree::new(),
+                            chart: ChartCanvasMultiGridBinding::new(app, spec, engine, grids),
+                        }
+                    }
+                }
+
+                fn render(
+                    app: &mut App,
+                    services: &mut Services,
+                    window: AppWindowId,
+                    bounds: Rect,
+                    state: &mut EchartsMultiGridDemoWindowState,
+                ) {
+                    let chart = state.chart.clone();
+                    let root = declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
+                        .render_root("echarts-multi-grid-demo", move |cx| {
+                            chart.observe_engine_paint(cx);
+                            let mut overlay_props = chart.overlay_panel_props();
+                            let grid_views = cx.container(container, move |cx| {
+                                chart
+                                    .grids()
+                                    .iter()
+                                    .copied()
+                                    .map(|grid| {
+                                        let props = chart.grid_panel_props(grid);
+                                        chart_canvas_panel(cx, props)
+                                    })
+                                    .collect::<Vec<_>>()
+                            });
+                            vec![grid_views, chart_canvas_panel(cx, overlay_props)]
+                        });
+                    let _ = root;
+                }
+                """,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/echarts_multi_grid_demo.rs",
+                        "advanced_manual",
+                        "fixture ECharts multi-grid surface",
+                        owner="examples-echarts-multi-grid",
+                        allowed_raw_seams=("fret_ui", "UiTree"),
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            self.assertFalse(
+                [
+                    violation
+                    for violation in violations
+                    if violation.rule == "advanced-surface-echarts-multi-grid-binding-boundary"
+                ]
+            )
+
     def test_workspace_shell_driver_direct_model_writes_are_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

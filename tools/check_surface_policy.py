@@ -795,6 +795,41 @@ ECHARTS_ADAPTER_FORBIDDEN_COMPACT_MARKERS = (
     "props.engine=Some(chart.engine.clone());",
 )
 
+ECHARTS_MULTI_GRID_OWNER = "examples-echarts-multi-grid"
+
+ECHARTS_MULTI_GRID_REQUIRED_COMPACT_MARKERS = (
+    "usefret_chart::{ChartCanvasMultiGridBinding,chart_canvas_panel};",
+    "chart:ChartCanvasMultiGridBinding",
+    "ChartCanvasMultiGridBinding::new(app,spec,engine,grids)",
+    "chart.observe_engine_paint(cx);",
+    "chart.overlay_panel_props()",
+    "chart.grid_panel_props(grid)",
+    "chart.grids().iter().copied()",
+    "declarative::RenderRootContext::new(&mutstate.ui,app,services,window,bounds).render_root(\"echarts-multi-grid-demo\"",
+    "chart_canvas_panel(cx,props)",
+    "chart_canvas_panel(cx,overlay_props)",
+)
+
+ECHARTS_MULTI_GRID_FORBIDDEN_COMPACT_MARKERS = (
+    "usefret_chart::retained::{UniformGrid,create_multi_grid_chart_canvas_nodes};",
+    "create_multi_grid_chart_canvas_nodes",
+    "UniformGrid",
+    "ChartCanvas::new_grid_view",
+    "ChartCanvas::new_overlay",
+    "ChartCanvas::create_node",
+    "create_node_retained",
+    "usefret_runtime::Model;",
+    "engine:Model<ChartEngine>",
+    "spec:ChartSpec",
+    "ChartCanvasPanelProps::new(spec).grid_view(grid)",
+    "ChartCanvasPanelProps::new(spec.clone()).overlay_only()",
+    "props.engine=Some(engine);",
+    "overlay_props.engine=Some(engine.clone());",
+    "app.models_mut().insert(engine)",
+    "Rc<RefCell<ChartEngine>>",
+    "std::rc::Rc<std::cell::RefCell<ChartEngine>>",
+)
+
 WORKSPACE_SHELL_OWNER = "examples-workspace-shell"
 
 WORKSPACE_SHELL_DRIVER_REQUIRED_COMPACT_MARKERS = (
@@ -2281,7 +2316,7 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
             "FnDriver",
             "UiTree",
         ),
-        owner="examples-echarts-multi-grid",
+        owner=ECHARTS_MULTI_GRID_OWNER,
     ),
     _fret_examples_advanced_surface(
         "chart_multi_axis_demo.rs",
@@ -3248,6 +3283,53 @@ def _scan_echarts_adapter_binding_boundary(
     return violations
 
 
+def _scan_echarts_multi_grid_binding_boundary(
+    root: Path, spec: SurfacePath
+) -> list[SurfaceViolation]:
+    if spec.owner != ECHARTS_MULTI_GRID_OWNER:
+        return []
+
+    violations: list[SurfaceViolation] = []
+    for path in _iter_source_files(root / spec.path):
+        text = _read_text(path)
+        production_text = text.split("#[cfg(test)]", 1)[0]
+        compact_production = _compact_source(production_text)
+        missing_markers = [
+            marker
+            for marker in ECHARTS_MULTI_GRID_REQUIRED_COMPACT_MARKERS
+            if marker not in compact_production
+        ]
+        if missing_markers:
+            violations.append(
+                SurfaceViolation(
+                    rule="advanced-surface-echarts-multi-grid-binding-boundary",
+                    path=path,
+                    line_no=1,
+                    message=(
+                        "ECharts multi-grid proof must mount grid panels and overlay through "
+                        f"ChartCanvasMultiGridBinding; missing compact markers: {', '.join(missing_markers)}"
+                    ),
+                )
+            )
+
+        for marker in ECHARTS_MULTI_GRID_FORBIDDEN_COMPACT_MARKERS:
+            if marker not in compact_production:
+                continue
+            violations.append(
+                SurfaceViolation(
+                    rule="advanced-surface-echarts-multi-grid-binding-boundary",
+                    path=path,
+                    line_no=1,
+                    message=(
+                        "ECharts multi-grid proof must not expose retained/manual chart model "
+                        f"helpers; compact `{marker}` bypasses the ChartCanvasMultiGridBinding boundary"
+                    ),
+                )
+            )
+
+    return violations
+
+
 def _scan_workspace_shell_driver_owner_boundary(
     root: Path, spec: SurfacePath
 ) -> list[SurfaceViolation]:
@@ -4094,6 +4176,7 @@ def _scan_classified_raw_surface(root: Path, spec: SurfacePath) -> list[SurfaceV
     violations.extend(_scan_plot_stress_declarative_binding_boundary(root, spec))
     violations.extend(_scan_chart_stress_declarative_binding_boundary(root, spec))
     violations.extend(_scan_echarts_adapter_binding_boundary(root, spec))
+    violations.extend(_scan_echarts_multi_grid_binding_boundary(root, spec))
     violations.extend(_scan_workspace_shell_driver_owner_boundary(root, spec))
     violations.extend(_scan_api_workbench_model_owner_boundary(root, spec))
     violations.extend(_scan_genui_model_owner_boundary(root, spec))
