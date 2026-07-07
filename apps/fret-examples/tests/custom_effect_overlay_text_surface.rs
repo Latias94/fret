@@ -6,9 +6,10 @@ fn assert_custom_effect_overlay_text_roles(source: &str, label: &str) {
     let source = compact(source);
 
     for needle in [
-        "usefret_ui_kit::declarative::textasdecl_text;",
-        "fncustom_effect_label_text<H:UiHost>(",
-        "decl_text::text_section_chrome_label(cx,text).inherit_foreground(srgb(255,255,255,0.92))",
+        "usefret::app::{AppComponentCx,AppRenderContext,LocalState,text};",
+        "fncustom_effect_label_text<'a,Cx>(",
+        "Cx:AppRenderContext<'a>,",
+        "text::section_chrome_label(cx,text).inherit_foreground(srgb(255,255,255,0.92))",
         "lettitle=custom_effect_label_text(cx,label.clone());",
     ] {
         assert!(
@@ -18,6 +19,9 @@ fn assert_custom_effect_overlay_text_roles(source: &str, label: &str) {
     }
 
     for needle in [
+        "usefret_ui_kit::declarative::textasdecl_text;",
+        "decl_text::",
+        "text_section_chrome_label(",
         "cx.text_props(TextProps{",
         "TextProps{layout:Default::default(),text:label.clone()",
         "wrap:fret_core::TextWrap::None",
@@ -433,7 +437,7 @@ fn custom_effect_v1_demo_uses_app_view_imports_with_explicit_effect_hook() {
     for needle in [
         "usefret::advanced::driver::UiAppBuilderAdvancedExtas_;",
         "usefret::app::prelude::*;",
-        "usefret::app::{AppComponentCx,LocalState};",
+        "usefret::app::{AppComponentCx,AppRenderContext,LocalState,text};",
         "usefret_ui_kit::declarative::action_hooks::ActionHooksExtas_;",
         "usefret_ui_kit::{IntoUiElement,Space,UiSupportsLayoutas_,ui};",
         ".view::<CustomEffectV1View>()?",
@@ -475,7 +479,7 @@ fn custom_effect_v2_demo_uses_app_view_imports_with_explicit_effect_hooks() {
         "usefret::UiAppBuilder;",
         "usefret::advanced::driver::UiAppBuilderAdvancedExtas_;",
         "usefret::app::prelude::*;",
-        "usefret::app::{AppComponentCx,LocalState};",
+        "usefret::app::{AppComponentCx,AppRenderContext,LocalState,text};",
         "usefret_ui_kit::declarative::action_hooks::ActionHooksExtas_;",
         "usefret_ui_kit::{IntoUiElement,Space,UiSupportsLayoutas_,ui};",
         ".view::<CustomEffectV2View>()?",

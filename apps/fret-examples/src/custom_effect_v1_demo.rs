@@ -14,19 +14,18 @@ use std::sync::Arc;
 
 use fret::advanced::driver::UiAppBuilderAdvancedExt as _;
 use fret::app::prelude::*;
-use fret::app::{AppComponentCx, LocalState};
+use fret::app::{AppComponentCx, AppRenderContext, LocalState, text};
 use fret_core::scene::{EffectChain, EffectMode, EffectParamsV1, EffectQuality, EffectStep};
 use fret_core::{Color, Corners, Edges, EffectId, Px};
+use fret_ui::ElementContext;
 use fret_ui::element::{
     AnyElement, ContainerProps, EffectLayerProps, LayoutStyle, Length, Overflow, PositionStyle,
     SpacerProps,
 };
-use fret_ui::{ElementContext, UiHost};
 use fret_ui_kit::custom_effects::CustomEffectProgramV1;
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::declarative::UiElementTestIdExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
-use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::{IntoUiElement, Space, UiSupportsLayout as _, ui};
 
 mod act {
@@ -299,11 +298,11 @@ fn srgb(r: u8, g: u8, b: u8, a: f32) -> Color {
     c
 }
 
-fn custom_effect_label_text<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    text: impl Into<Arc<str>>,
-) -> AnyElement {
-    decl_text::text_section_chrome_label(cx, text).inherit_foreground(srgb(255, 255, 255, 0.92))
+fn custom_effect_label_text<'a, Cx>(cx: &mut Cx, text: impl Into<Arc<str>>) -> AnyElement
+where
+    Cx: AppRenderContext<'a>,
+{
+    text::section_chrome_label(cx, text).inherit_foreground(srgb(255, 255, 255, 0.92))
 }
 
 fn watch_first_f32(cx: &mut AppComponentCx<'_>, model: &LocalState<Vec<f32>>, default: f32) -> f32 {
