@@ -802,6 +802,10 @@ class SurfacePolicyTests(unittest.TestCase):
         }
         for path in external_import_paths:
             self.assertIn(path, POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS)
+        self.assertIn(
+            "apps/fret-examples/src/window_hit_test_probe_demo.rs",
+            POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS,
+        )
         custom_effect_v2_web_paths = {
             "apps/fret-examples/src/custom_effect_v2_web_demo.rs",
             "apps/fret-examples/src/custom_effect_v2_identity_web_demo.rs",
@@ -843,6 +847,12 @@ class SurfacePolicyTests(unittest.TestCase):
             any(
                 spec.path == "apps/fret-examples/src/external_imports_owner.rs"
                 for spec in POLICY.INTERNAL_HARNESS_SURFACES
+            )
+        )
+        self.assertTrue(
+            any(
+                spec.path == "apps/fret-examples/src/window_hit_test_probe_demo.rs"
+                for spec in POLICY.ADVANCED_MANUAL_SURFACES
             )
         )
         echarts_spec = next(
@@ -1702,6 +1712,115 @@ class SurfacePolicyTests(unittest.TestCase):
                     for violation in violations
                     if violation.rule
                     == "advanced-surface-external-imports-owner-boundary"
+                ]
+            )
+
+    def test_window_hit_test_probe_broad_manual_prelude_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-examples/src/window_hit_test_probe_demo.rs",
+                """
+                use fret::advanced::prelude::*;
+                use fret::advanced::KernelApp;
+                use fret::advanced::interop::run_native_with_compat_driver;
+                use fret_app::{CreateWindowKind, CreateWindowRequest, Effect, WindowRequest};
+                use fret_bootstrap::ui_app_driver::{self, ViewElements};
+                use fret_runtime::Model;
+
+                fn run() -> anyhow::Result<()> {
+                    let driver = ui_app_driver::UiAppDriver::new(
+                        "window-hit-test-probe-demo",
+                        init_window,
+                        view,
+                    )
+                    .into_fn_driver();
+                    run_native_with_compat_driver(config, KernelApp::new(), driver)?;
+                    Ok(())
+                }
+                """,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/window_hit_test_probe_demo.rs",
+                        "advanced_manual",
+                        "fixture window hit-test probe surface",
+                        owner="examples-window-hit-test-probe",
+                        allowed_raw_seams=(
+                            "fret::advanced",
+                            "fret_app",
+                            "fret_runtime",
+                        ),
+                        retirement=POLICY.FRET_EXAMPLES_ADVANCED_RETIREMENT,
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            manual_driver_violations = [
+                violation
+                for violation in violations
+                if violation.rule == "advanced-surface-window-hit-test-probe-boundary"
+            ]
+            self.assertEqual(1, len(manual_driver_violations))
+            self.assertIn("advanced::prelude", manual_driver_violations[0].message)
+
+    def test_window_hit_test_probe_explicit_manual_driver_surface_is_allowed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-examples/src/window_hit_test_probe_demo.rs",
+                """
+                use fret::advanced::KernelApp;
+                use fret::advanced::interop::run_native_with_compat_driver;
+                use fret_app::{CreateWindowKind, CreateWindowRequest, Effect, WindowRequest};
+                use fret_bootstrap::ui_app_driver::{self, ViewElements};
+                use fret_runtime::Model;
+
+                fn run() -> anyhow::Result<()> {
+                    let driver = ui_app_driver::UiAppDriver::new(
+                        "window-hit-test-probe-demo",
+                        init_window,
+                        view,
+                    )
+                    .into_fn_driver();
+                    run_native_with_compat_driver(config, KernelApp::new(), driver)?;
+                    Ok(())
+                }
+                """,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/window_hit_test_probe_demo.rs",
+                        "advanced_manual",
+                        "fixture window hit-test probe surface",
+                        owner="examples-window-hit-test-probe",
+                        allowed_raw_seams=(
+                            "fret::advanced",
+                            "fret_app",
+                            "fret_runtime",
+                        ),
+                        retirement=POLICY.FRET_EXAMPLES_ADVANCED_RETIREMENT,
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            self.assertFalse(
+                [
+                    violation
+                    for violation in violations
+                    if violation.rule == "advanced-surface-window-hit-test-probe-boundary"
                 ]
             )
 

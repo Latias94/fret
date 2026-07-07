@@ -228,6 +228,12 @@ Keep raw/shared-model mechanisms for now:
   `tools/check_surface_policy.py` as an `examples-embedded-viewport` advanced/manual surface with
   an owner-boundary gate for direct `models_mut().update(...)` and `ModelStore::update(...)`
   bypasses.
+- `window_hit_test_probe_demo.rs`. Audited after the external-import surface-policy pass: it remains
+  an advanced/manual compatibility-driver probe because it intentionally owns `KernelApp` window
+  creation and hit-test passthrough diagnostics. It is now classified in
+  `tools/check_surface_policy.py` as `examples-window-hit-test-probe`, with a boundary gate that
+  keeps manual driver imports explicit and rejects broad `advanced::prelude::*` /
+  `component::prelude::*` imports.
 - `docking_arbitration_demo.rs`. Audited and cleaned after the table stress owner pass, then
   tightened again after the controls-binding pass: it remains an advanced docking/overlay
   arbitration harness, while drop-mask control, synthetic pointer debug, and viewport-input

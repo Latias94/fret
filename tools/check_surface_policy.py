@@ -460,6 +460,27 @@ EXTERNAL_IMPORTS_DEMO_FORBIDDEN_RAW_WRITE_PATTERNS: tuple[
     ),
 )
 
+WINDOW_HIT_TEST_PROBE_OWNER = "examples-window-hit-test-probe"
+
+WINDOW_HIT_TEST_PROBE_REQUIRED_MARKERS = (
+    "use fret::advanced::KernelApp;",
+    "use fret::advanced::interop::run_native_with_compat_driver;",
+    "use fret_bootstrap::ui_app_driver::{self, ViewElements};",
+    "ui_app_driver::UiAppDriver::new(",
+    "run_native_with_compat_driver(config, KernelApp::new(), driver)?;",
+)
+
+WINDOW_HIT_TEST_PROBE_FORBIDDEN_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
+    (
+        "advanced::prelude",
+        re.compile(r"\badvanced\s*::\s*prelude\s*::\s*\*"),
+    ),
+    (
+        "component::prelude",
+        re.compile(r"\bcomponent\s*::\s*prelude\s*::\s*\*"),
+    ),
+)
+
 
 def _fret_examples_custom_effect_v2_web_surface(filename: str, variant: str) -> SurfacePath:
     return SurfacePath(
@@ -829,6 +850,22 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
         owner="examples-docking",
     ),
     _fret_examples_advanced_surface(
+        "window_hit_test_probe_demo.rs",
+        "the hit-test passthrough probe owns manual compatibility-driver startup, explicit "
+        "KernelApp window creation, and runtime window-style diagnostics",
+        (
+            "fret::advanced",
+            "fret_app",
+            "fret_core",
+            "fret_launch",
+            "fret_runtime",
+            "fret_ui",
+            "AnyElement",
+            "ElementContext",
+        ),
+        owner=WINDOW_HIT_TEST_PROBE_OWNER,
+    ),
+    _fret_examples_advanced_surface(
         "plot_demo.rs",
         "the plot proof owns manual driver state and retained plot model integration",
         (
@@ -1131,6 +1168,7 @@ PUBLIC_EXAMPLE_SCAN_ROOTS: tuple[str, ...] = (
     "apps/fret-examples/src/external_video_imports_mf_demo.rs",
     "apps/fret-examples/src/docking_demo.rs",
     "apps/fret-examples/src/docking_arbitration_demo.rs",
+    "apps/fret-examples/src/window_hit_test_probe_demo.rs",
     "apps/fret-examples/src/plot_demo.rs",
     "apps/fret-examples/src/plot_stress_demo.rs",
     "apps/fret-examples/src/gizmo3d_demo.rs",
@@ -1518,6 +1556,54 @@ def _scan_external_imports_owner_boundary(
     return violations
 
 
+def _scan_window_hit_test_probe_boundary(
+    root: Path, spec: SurfacePath
+) -> list[SurfaceViolation]:
+    if spec.owner != WINDOW_HIT_TEST_PROBE_OWNER:
+        return []
+
+    violations: list[SurfaceViolation] = []
+    for path in _iter_source_files(root / spec.path):
+        text = _read_text(path)
+        missing_markers = [
+            marker for marker in WINDOW_HIT_TEST_PROBE_REQUIRED_MARKERS if marker not in text
+        ]
+        if missing_markers:
+            violations.append(
+                SurfaceViolation(
+                    rule="advanced-surface-window-hit-test-probe-boundary",
+                    path=path,
+                    line_no=1,
+                    message=(
+                        "window hit-test probe must keep manual driver seams explicit; "
+                        f"missing markers: {', '.join(missing_markers)}"
+                    ),
+                )
+            )
+
+        for line_no, line in _code_lines_for_scan(path, text):
+            if path.suffix == ".rs" and _is_rust_source_line_ignorable(line):
+                continue
+            for marker, pattern in WINDOW_HIT_TEST_PROBE_FORBIDDEN_PATTERNS:
+                if not pattern.search(line):
+                    continue
+                violations.append(
+                    SurfaceViolation(
+                        rule="advanced-surface-window-hit-test-probe-boundary",
+                        path=path,
+                        line_no=line_no,
+                        message=(
+                            "window hit-test probe must not hide manual runtime seams behind "
+                            f"`{marker}::*`; import the required driver/kernel nouns explicitly"
+                        ),
+                        source=line.strip(),
+                    )
+                )
+                break
+
+    return violations
+
+
 def _scan_default_authoring_surface(root: Path, spec: SurfacePath) -> list[SurfaceViolation]:
     violations: list[SurfaceViolation] = []
     for path in _iter_source_files(root / spec.path):
@@ -1579,6 +1665,7 @@ def _scan_classified_raw_surface(root: Path, spec: SurfacePath) -> list[SurfaceV
     violations.extend(_scan_gizmo3d_owner_boundary(root, spec))
     violations.extend(_scan_embedded_viewport_owner_boundary(root, spec))
     violations.extend(_scan_external_imports_owner_boundary(root, spec))
+    violations.extend(_scan_window_hit_test_probe_boundary(root, spec))
     for seam in sorted(allowed_raw_seams - used_raw_seams):
         violations.append(
             SurfaceViolation(
