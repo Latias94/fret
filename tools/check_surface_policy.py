@@ -2593,6 +2593,159 @@ DEFAULT_FORBIDDEN_PATTERNS: tuple[tuple[str, str], ...] = (
     ),
 )
 
+DEFAULT_PLOT_OVERLAY_REQUIRED_COMPACT_MARKERS: dict[str, tuple[str, ...]] = {
+    "apps/fret-examples/src/tags_demo.rs": (
+        "usefret::app::prelude::*;",
+        "usefret_plot::LinePlotPanelBinding;",
+        "usefret_plot::declarative::line_plot_panel_in;",
+        "TagsDemoView",
+        "plot:LinePlotPanelBinding",
+        "fninit(app:&mutApp,_window:WindowId)->Self",
+        "LinePlotModel::from_series(",
+        "LineSeries::new(",
+        "Series::from_points_sorted(",
+        "PlotOverlays{",
+        "tags_x:vec![",
+        "tags_y:vec![",
+        "text:vec![",
+        "LinePlotPanelBinding::new_with_state(app,model,state)",
+        "moddriver;",
+        "pubusedriver::{build_app,build_fn_driver,build_runner_config,run};",
+        "self.plot.panel_props()",
+        "line_plot_panel_in(cx,props).into()",
+    ),
+    "apps/fret-examples/src/plot_image_demo.rs": (
+        "usefret::app::prelude::*;",
+        "usefret::app::{RenderContextAccessas_,ui_assets};",
+        "usefret_plot::LinePlotPanelBinding;",
+        "usefret_plot::declarative::line_plot_panel_in;",
+        "PlotImageDemoView",
+        "plot:LinePlotPanelBinding",
+        "image:Option<ui_assets::ImageId>",
+        "fninit(app:&mutApp,_window:WindowId)->Self",
+        "LinePlotModel::from_series(",
+        "LineSeries::new(",
+        "Series::from_points_sorted(",
+        "ui_assets::rgba8_image_state(cx,self.image_size.0,self.image_size.1,self.image_bytes.as_slice(),ui_assets::ImageColorSpace::Srgb,)",
+        "LinePlotPanelBinding::new(app,model)",
+        "self.plot.update_state(cx.app_mut(),|state|{",
+        "PlotImage::new(",
+        "PlotImageLayer::BelowGrid",
+        "AxisLabelFormatter::number(AxisNumberFormat::Fixed(2))",
+        "moddriver;",
+        "pubusedriver::{build_app,build_fn_driver,build_runner_config,run};",
+        "self.plot.panel_props()",
+        ".y_axis_labels(AxisLabelFormatter::number(AxisNumberFormat::Fixed(2)))",
+        "line_plot_panel_in(cx,props).into()",
+    ),
+}
+
+DEFAULT_PLOT_OVERLAY_FORBIDDEN_COMPACT_MARKERS: dict[str, tuple[str, ...]] = {
+    "apps/fret-examples/src/tags_demo.rs": (
+        "usefret::advanced::raw::Model;",
+        "usefret_plot::retained",
+        "fret_plot::retained::",
+        "LinePlotCanvas",
+        "PlotCanvas",
+        "create_node_retained(",
+        "advanced::prelude::*",
+        "component::prelude::*",
+        "KernelApp",
+        "AppWindowId",
+        "usefret_runtime::Model;",
+        "model:Model<LinePlotModel>",
+        "plot_state:Model<PlotState>",
+        "plot_output:Model<PlotOutput>",
+        "app.models_mut().insert(PlotOutput::default())",
+        "LinePlotPanelProps::new(self.model.clone())",
+        ".state(self.plot_state.clone())",
+        ".output(self.plot_output.clone())",
+        "usefret_bootstrap::ui_app_driver;",
+        "ui_app_driver::UiAppDriver::new(",
+        "usefret_runtime::PlatformCapabilities;",
+        "fret::advanced::view::view_init_window",
+        "fret::advanced::view::view_view",
+        "fret::advanced::view::ViewWindowState",
+        "fret_launch::",
+        "FnDriver",
+        "build_default_view_demo_app()",
+        "build_default_view_demo_runner_config(",
+        "build_default_view_demo_fn_driver::<",
+    ),
+    "apps/fret-examples/src/plot_image_demo.rs": (
+        "usefret::advanced::raw::Model;",
+        "usefret_plot::retained",
+        "fret_plot::retained::",
+        "LinePlotCanvas",
+        "PlotCanvas",
+        "create_node_retained(",
+        "advanced::prelude::*",
+        "component::prelude::*",
+        "KernelApp",
+        "AppWindowId",
+        "ImageAssetCacheHostExt",
+        "ImageAssetKey",
+        "with_image_asset_cache",
+        "use_image_asset(",
+        "fret_core::ImageColorSpace",
+        "usefret_runtime::Model;",
+        "model:Model<LinePlotModel>",
+        "plot_state:Model<PlotState>",
+        "plot_output:Model<PlotOutput>",
+        "app.models_mut().insert(PlotState",
+        "app.models_mut().insert(PlotOutput::default())",
+        "cx.app_mut().models_mut().update(&self.plot_state",
+        "LinePlotPanelProps::new(self.model.clone())",
+        ".state(self.plot_state.clone())",
+        ".output(self.plot_output.clone())",
+        "usefret_bootstrap::ui_app_driver;",
+        "ui_app_driver::UiAppDriver::new(",
+        "usefret_runtime::PlatformCapabilities;",
+        "fret::advanced::view::view_init_window",
+        "fret::advanced::view::view_view",
+        "fret::advanced::view::ViewWindowState",
+        "fret_launch::",
+        "FnDriver",
+        "build_default_view_demo_app()",
+        "build_default_view_demo_runner_config(",
+        "build_default_view_demo_fn_driver::<",
+    ),
+}
+
+DEFAULT_PLOT_OVERLAY_DRIVER_REQUIRED_COMPACT_MARKERS: dict[str, tuple[str, ...]] = {
+    "apps/fret-examples/src/tags_demo/driver.rs": (
+        "useanyhow::Contextas_;",
+        "usefret::app::prelude::*;",
+        "usesuper::TagsDemoView;",
+        "crate::build_default_view_demo_app()",
+        "crate::build_default_view_demo_runner_config(\"fret-demotags_demo\",(960.0,640.0))",
+        "crate::build_default_view_demo_fn_driver::<TagsDemoView>(\"tags-demo\")",
+        "FretApp::new(\"tags-demo\")",
+        ".window(\"tags_demo\",(960.0,640.0))",
+        ".view::<TagsDemoView>()?",
+    ),
+    "apps/fret-examples/src/plot_image_demo/driver.rs": (
+        "useanyhow::Contextas_;",
+        "usefret::app::prelude::*;",
+        "usesuper::PlotImageDemoView;",
+        "crate::build_default_view_demo_app()",
+        "crate::build_default_view_demo_runner_config(\"fret-demoplot_image_demo\",(960.0,640.0))",
+        "crate::build_default_view_demo_fn_driver::<PlotImageDemoView>(\"plot-image-demo\")",
+        "FretApp::new(\"plot-image-demo\")",
+        ".window(\"plot_image_demo\",(960.0,640.0))",
+        ".view::<PlotImageDemoView>()?",
+    ),
+}
+
+DEFAULT_PLOT_OVERLAY_DRIVER_FORBIDDEN_COMPACT_MARKERS = (
+    "usefret_launch::{FnDriver",
+    "FnDriver::new(",
+    "run_native_with_fn_driver",
+    "usefret_runtime::PlatformCapabilities;",
+    "UiTree",
+    "WinitRenderContext",
+)
+
 RAW_SEAM_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("fret::advanced", re.compile(r"\bfret::advanced\b|\badvanced::prelude::\*")),
     ("fret_app", re.compile(r"\bfret_app::")),
@@ -4309,6 +4462,99 @@ def _scan_default_authoring_surface(root: Path, spec: SurfacePath) -> list[Surfa
                         )
                     )
                     break
+        violations.extend(_scan_default_plot_overlay_binding_boundary(path, spec.path, text))
+    return violations
+
+
+def _scan_default_plot_overlay_binding_boundary(
+    path: Path, spec_path: str, text: str
+) -> list[SurfaceViolation]:
+    required_markers = DEFAULT_PLOT_OVERLAY_REQUIRED_COMPACT_MARKERS.get(spec_path)
+    forbidden_markers = DEFAULT_PLOT_OVERLAY_FORBIDDEN_COMPACT_MARKERS.get(spec_path)
+    if required_markers is None and forbidden_markers is None:
+        return []
+
+    violations: list[SurfaceViolation] = []
+    production_text = text.split("#[cfg(test)]", 1)[0]
+    compact_production = _compact_source(production_text)
+
+    missing_markers = [
+        marker for marker in required_markers or () if marker not in compact_production
+    ]
+    if missing_markers:
+        violations.append(
+            SurfaceViolation(
+                rule="default-app-plot-overlay-binding-boundary",
+                path=path,
+                line_no=1,
+                message=(
+                    "Default plot overlay demos must teach the app View plus "
+                    f"LinePlotPanelBinding path; missing compact markers: {', '.join(missing_markers)}"
+                ),
+            )
+        )
+
+    for marker in forbidden_markers or ():
+        if marker not in compact_production:
+            continue
+        violations.append(
+            SurfaceViolation(
+                rule="default-app-plot-overlay-binding-boundary",
+                path=path,
+                line_no=1,
+                message=(
+                    "Default plot overlay demos must not regress to retained/manual plot "
+                    f"or launch authoring; compact `{marker}` bypasses the app-facing plot binding path"
+                ),
+            )
+        )
+
+    return violations
+
+
+def _scan_default_plot_overlay_driver_boundary(
+    root: Path, spec: SurfacePath
+) -> list[SurfaceViolation]:
+    required_markers = DEFAULT_PLOT_OVERLAY_DRIVER_REQUIRED_COMPACT_MARKERS.get(spec.path)
+    if required_markers is None:
+        return []
+
+    violations: list[SurfaceViolation] = []
+    for path in _iter_source_files(root / spec.path):
+        text = _read_text(path)
+        production_text = text.split("#[cfg(test)]", 1)[0]
+        compact_production = _compact_source(production_text)
+        missing_markers = [
+            marker for marker in required_markers if marker not in compact_production
+        ]
+        if missing_markers:
+            violations.append(
+                SurfaceViolation(
+                    rule="internal_harness-default-view-plot-driver-boundary",
+                    path=path,
+                    line_no=1,
+                    message=(
+                        "Plot overlay default View drivers must keep launch wiring behind the "
+                        f"shared default-view helpers; missing compact markers: {', '.join(missing_markers)}"
+                    ),
+                )
+            )
+
+        for marker in DEFAULT_PLOT_OVERLAY_DRIVER_FORBIDDEN_COMPACT_MARKERS:
+            if marker not in compact_production:
+                continue
+            violations.append(
+                SurfaceViolation(
+                    rule="internal_harness-default-view-plot-driver-boundary",
+                    path=path,
+                    line_no=1,
+                    message=(
+                        "Plot overlay default View drivers must not regress to hand-written "
+                        f"FnDriver/runtime launch wiring; compact `{marker}` bypasses the shared driver boundary"
+                    ),
+                )
+            )
+
     return violations
 
 
@@ -4348,6 +4594,7 @@ def _scan_classified_raw_surface(root: Path, spec: SurfacePath) -> list[SurfaceV
                     )
                 )
     violations.extend(_scan_custom_effect_v2_web_owner_boundary(root, spec))
+    violations.extend(_scan_default_plot_overlay_driver_boundary(root, spec))
     violations.extend(_scan_gizmo3d_owner_boundary(root, spec))
     violations.extend(_scan_embedded_viewport_owner_boundary(root, spec))
     violations.extend(_scan_external_imports_owner_boundary(root, spec))

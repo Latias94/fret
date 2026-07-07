@@ -757,6 +757,384 @@ class SurfacePolicyTests(unittest.TestCase):
                 violations[0].path,
             )
 
+    def test_default_plot_overlay_retained_authoring_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-examples/src/plot_image_demo.rs",
+                """
+                use fret::app::prelude::*;
+                use fret::app::{RenderContextAccess as _, ui_assets};
+                use fret::advanced::raw::Model;
+                use fret_plot::LinePlotPanelBinding;
+                use fret_plot::declarative::{LinePlotPanelProps, line_plot_panel_in};
+                use fret_plot::models::{LinePlotModel, LineSeries, YAxis};
+                use fret_plot::plot::axis::{AxisLabelFormatter, AxisNumberFormat};
+                use fret_plot::retained;
+                use fret_plot::series::Series;
+                use fret_plot::state::{PlotImage, PlotImageLayer};
+                use fret_runtime::Model;
+
+                mod driver;
+                pub use driver::{build_app, build_fn_driver, build_runner_config, run};
+
+                struct PlotImageDemoView {
+                    plot: LinePlotPanelBinding,
+                    model: Model<LinePlotModel>,
+                    plot_state: Model<PlotState>,
+                    plot_output: Model<PlotOutput>,
+                    image: Option<ui_assets::ImageId>,
+                    image_size: (u32, u32),
+                    image_bytes: Vec<u8>,
+                }
+
+                impl View for PlotImageDemoView {
+                    fn init(app: &mut App, _window: WindowId) -> Self {
+                        let model = LinePlotModel::from_series(vec![LineSeries::new(
+                            "signal",
+                            Series::from_points_sorted(points, true),
+                        )]);
+                        Self {
+                            plot: LinePlotPanelBinding::new(app, model),
+                            model: app.models_mut().insert(LinePlotModel::from_series(vec![])),
+                            plot_state: app.models_mut().insert(PlotState::default()),
+                            plot_output: app.models_mut().insert(PlotOutput::default()),
+                            image: None,
+                            image_size: (1, 1),
+                            image_bytes: vec![],
+                        }
+                    }
+
+                    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
+                        let (_key, image, _status) = ui_assets::rgba8_image_state(
+                            cx,
+                            self.image_size.0,
+                            self.image_size.1,
+                            self.image_bytes.as_slice(),
+                            ui_assets::ImageColorSpace::Srgb,
+                        );
+                        let _ = cx.app_mut().models_mut().update(&self.plot_state, |_| {});
+                        let _ = ImageAssetCacheHostExt::default();
+                        let _ = ImageAssetKey;
+                        with_image_asset_cache();
+                        use_image_asset();
+                        let _ = fret_core::ImageColorSpace::Srgb;
+                        let _ = fret_plot::retained::legacy();
+                        let _ = retained::legacy();
+                        let _ = LinePlotCanvas;
+                        let _ = PlotCanvas;
+                        create_node_retained();
+                        let _props = LinePlotPanelProps::new(self.model.clone())
+                            .state(self.plot_state.clone())
+                            .output(self.plot_output.clone());
+                        self.image = image;
+                        let _ = self.plot.update_state(cx.app_mut(), |state| {
+                            state.overlays.images.push(
+                                PlotImage::new(image.unwrap(), rect, YAxis::Left)
+                                    .layer(PlotImageLayer::BelowGrid),
+                            );
+                        });
+                        let props = self
+                            .plot
+                            .panel_props()
+                            .y_axis_labels(AxisLabelFormatter::number(AxisNumberFormat::Fixed(2)));
+                        line_plot_panel_in(cx, props).into()
+                    }
+                }
+                """,
+            )
+            write(
+                root / "apps/fret-examples/src/plot_image_demo/driver.rs",
+                """
+                use anyhow::Context as _;
+                use fret::app::prelude::*;
+                use fret_launch::{FnDriver, WinitRunnerConfig};
+                use fret_runtime::PlatformCapabilities;
+                use fret_ui::UiTree;
+
+                use super::PlotImageDemoView;
+
+                pub fn build_app() -> fret::app::App {
+                    crate::build_default_view_demo_app()
+                }
+
+                pub fn build_runner_config() -> fret_launch::WinitRunnerConfig {
+                    crate::build_default_view_demo_runner_config("fret-demo plot_image_demo", (960.0, 640.0))
+                }
+
+                pub fn build_fn_driver() -> impl fret_launch::WinitAppDriver {
+                    crate::build_default_view_demo_fn_driver::<PlotImageDemoView>("plot-image-demo");
+                    FnDriver::new()
+                }
+
+                fn render(_cx: WinitRenderContext<'_, PlotImageDemoView>) {}
+
+                pub fn run() -> anyhow::Result<()> {
+                    FretApp::new("plot-image-demo")
+                        .window("plot_image_demo", (960.0, 640.0))
+                        .view::<PlotImageDemoView>()?
+                        .run()
+                        .context("run plot_image_demo app")
+                }
+                """,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/plot_image_demo.rs",
+                        "default_app_clean",
+                        "fixture default plot image demo",
+                    )
+                ],
+                advanced_manual_surfaces=[],
+                internal_harness_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/plot_image_demo/driver.rs",
+                        "internal_harness",
+                        "fixture plot image driver",
+                        owner="examples-plot-image-driver",
+                        allowed_raw_seams=("fret_launch",),
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            boundary_violations = [
+                violation
+                for violation in violations
+                if violation.rule
+                in {
+                    "default-app-plot-overlay-binding-boundary",
+                    "internal_harness-default-view-plot-driver-boundary",
+                }
+            ]
+            self.assertGreaterEqual(len(boundary_violations), 8)
+            messages = "\n".join(violation.message for violation in boundary_violations)
+            self.assertIn("LinePlotPanelProps", messages)
+            self.assertIn("PlotOutput", messages)
+            self.assertIn("fret_plot::retained", messages)
+            self.assertIn("FnDriver", messages)
+            self.assertIn("WinitRenderContext", messages)
+
+    def test_default_plot_overlay_binding_and_driver_surfaces_are_allowed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-examples/src/tags_demo.rs",
+                """
+                use fret::app::prelude::*;
+                use fret_plot::LinePlotPanelBinding;
+                use fret_plot::declarative::line_plot_panel_in;
+                use fret_plot::models::{LinePlotModel, LineSeries};
+                use fret_plot::series::Series;
+                use fret_plot::state::{PlotOverlays, PlotState};
+
+                mod driver;
+                pub use driver::{build_app, build_fn_driver, build_runner_config, run};
+
+                struct TagsDemoView {
+                    plot: LinePlotPanelBinding,
+                }
+
+                impl View for TagsDemoView {
+                    fn init(app: &mut App, _window: WindowId) -> Self {
+                        let model = LinePlotModel::from_series(vec![LineSeries::new(
+                            "signal",
+                            Series::from_points_sorted(points, true),
+                        )]);
+                        let mut state = PlotState::default();
+                        state.overlays = PlotOverlays {
+                            tags_x: vec![fret_plot::state::TagX::new(25.0).label("T1")],
+                            tags_y: vec![fret_plot::state::TagY::new(0.5, fret_plot::models::YAxis::Left).label("limit")],
+                            text: vec![fret_plot::state::PlotText::new(50.0, -0.75, fret_plot::models::YAxis::Left, "PlotText at (50, -0.75)")],
+                        };
+                        Self {
+                            plot: LinePlotPanelBinding::new_with_state(app, model, state),
+                        }
+                    }
+
+                    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
+                        let props = self.plot.panel_props();
+                        line_plot_panel_in(cx, props).into()
+                    }
+                }
+                """,
+            )
+            write(
+                root / "apps/fret-examples/src/tags_demo/driver.rs",
+                """
+                use anyhow::Context as _;
+                use fret::app::prelude::*;
+
+                use super::TagsDemoView;
+
+                pub fn build_app() -> fret::app::App {
+                    crate::build_default_view_demo_app()
+                }
+
+                pub fn build_runner_config() -> fret_launch::WinitRunnerConfig {
+                    crate::build_default_view_demo_runner_config("fret-demo tags_demo", (960.0, 640.0))
+                }
+
+                pub fn build_fn_driver() -> impl fret_launch::WinitAppDriver {
+                    crate::build_default_view_demo_fn_driver::<TagsDemoView>("tags-demo")
+                }
+
+                pub fn run() -> anyhow::Result<()> {
+                    FretApp::new("tags-demo")
+                        .window("tags_demo", (960.0, 640.0))
+                        .view::<TagsDemoView>()?
+                        .run()
+                        .context("run tags_demo app")
+                }
+                """,
+            )
+            write(
+                root / "apps/fret-examples/src/plot_image_demo.rs",
+                """
+                use fret::app::prelude::*;
+                use fret::app::{RenderContextAccess as _, ui_assets};
+                use fret_plot::LinePlotPanelBinding;
+                use fret_plot::cartesian::{AxisScale, DataRect};
+                use fret_plot::declarative::line_plot_panel_in;
+                use fret_plot::models::{LinePlotModel, LineSeries, YAxis};
+                use fret_plot::plot::axis::{AxisLabelFormatter, AxisNumberFormat};
+                use fret_plot::series::Series;
+                use fret_plot::state::{PlotImage, PlotImageLayer};
+
+                mod driver;
+                pub use driver::{build_app, build_fn_driver, build_runner_config, run};
+
+                struct PlotImageDemoView {
+                    plot: LinePlotPanelBinding,
+                    image: Option<ui_assets::ImageId>,
+                    image_size: (u32, u32),
+                    image_bytes: Vec<u8>,
+                }
+
+                impl View for PlotImageDemoView {
+                    fn init(app: &mut App, _window: WindowId) -> Self {
+                        let model = LinePlotModel::from_series(vec![LineSeries::new(
+                            "signal",
+                            Series::from_points_sorted(points, true),
+                        )]);
+                        Self {
+                            plot: LinePlotPanelBinding::new(app, model),
+                            image: None,
+                            image_size: (1, 1),
+                            image_bytes: vec![],
+                        }
+                    }
+
+                    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
+                        let (_key, image, _status) = ui_assets::rgba8_image_state(
+                            cx,
+                            self.image_size.0,
+                            self.image_size.1,
+                            self.image_bytes.as_slice(),
+                            ui_assets::ImageColorSpace::Srgb,
+                        );
+                        let _ = self.plot.update_state(cx.app_mut(), |state| {
+                            state.overlays.images.push(
+                                PlotImage::new(
+                                    image.unwrap(),
+                                    DataRect { x_min: 0.0, x_max: 1.0, y_min: 0.0, y_max: 1.0 },
+                                    YAxis::Left,
+                                )
+                                .layer(PlotImageLayer::BelowGrid),
+                            );
+                        });
+                        let props = self
+                            .plot
+                            .panel_props()
+                            .y_axis_labels(AxisLabelFormatter::number(AxisNumberFormat::Fixed(2)))
+                            .x_scale(AxisScale::Linear)
+                            .y_scale(AxisScale::Linear);
+                        line_plot_panel_in(cx, props).into()
+                    }
+                }
+                """,
+            )
+            write(
+                root / "apps/fret-examples/src/plot_image_demo/driver.rs",
+                """
+                use anyhow::Context as _;
+                use fret::app::prelude::*;
+
+                use super::PlotImageDemoView;
+
+                pub fn build_app() -> fret::app::App {
+                    crate::build_default_view_demo_app()
+                }
+
+                pub fn build_runner_config() -> fret_launch::WinitRunnerConfig {
+                    crate::build_default_view_demo_runner_config("fret-demo plot_image_demo", (960.0, 640.0))
+                }
+
+                pub fn build_fn_driver() -> impl fret_launch::WinitAppDriver {
+                    crate::build_default_view_demo_fn_driver::<PlotImageDemoView>("plot-image-demo")
+                }
+
+                pub fn run() -> anyhow::Result<()> {
+                    FretApp::new("plot-image-demo")
+                        .window("plot_image_demo", (960.0, 640.0))
+                        .view::<PlotImageDemoView>()?
+                        .run()
+                        .context("run plot_image_demo app")
+                }
+                """,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/tags_demo.rs",
+                        "default_app_clean",
+                        "fixture default tags demo",
+                    ),
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/plot_image_demo.rs",
+                        "default_app_clean",
+                        "fixture default plot image demo",
+                    ),
+                ],
+                advanced_manual_surfaces=[],
+                internal_harness_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/tags_demo/driver.rs",
+                        "internal_harness",
+                        "fixture tags demo driver",
+                        owner="examples-plot-tags-driver",
+                        allowed_raw_seams=("fret_launch",),
+                    ),
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/plot_image_demo/driver.rs",
+                        "internal_harness",
+                        "fixture plot image driver",
+                        owner="examples-plot-image-driver",
+                        allowed_raw_seams=("fret_launch",),
+                    ),
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            self.assertFalse(
+                [
+                    violation
+                    for violation in violations
+                    if violation.rule
+                    in {
+                        "default-app-plot-overlay-binding-boundary",
+                        "internal_harness-default-view-plot-driver-boundary",
+                    }
+                ]
+            )
+
     def test_fret_examples_public_scan_roots_stay_precise(self) -> None:
         self.assertIn(
             "apps/fret-examples/src/lib.rs",
