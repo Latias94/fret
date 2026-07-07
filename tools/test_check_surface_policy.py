@@ -1885,6 +1885,17 @@ class SurfacePolicyTests(unittest.TestCase):
         ):
             POLICY._fret_examples_manual_chart_surface("future_chart_demo.rs")
 
+    def test_fret_examples_classified_helpers_require_explicit_owners(self) -> None:
+        for helper in (
+            POLICY._fret_examples_advanced_surface,
+            POLICY._fret_examples_comparison_surface,
+            POLICY._fret_examples_internal_harness,
+            POLICY._fret_examples_renderer_lab_surface,
+        ):
+            owner_parameter = inspect.signature(helper).parameters["owner"]
+            self.assertEqual(inspect.Parameter.KEYWORD_ONLY, owner_parameter.kind)
+            self.assertIs(inspect.Parameter.empty, owner_parameter.default)
+
     def test_custom_effect_v2_web_legacy_owner_surface_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

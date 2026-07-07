@@ -314,14 +314,14 @@ def _fret_examples_advanced_surface(
     filename: str,
     reason: str,
     allowed_raw_seams: tuple[str, ...],
-    owner: str | None = None,
+    *,
+    owner: str,
 ) -> SurfacePath:
-    stem = filename.removesuffix(".rs").replace("_", "-")
     return SurfacePath(
         f"apps/fret-examples/src/{filename}",
         "advanced_manual",
         f"{filename} remains classified as an advanced examples surface because {reason}",
-        owner=owner or f"examples-{stem}",
+        owner=owner,
         allowed_raw_seams=allowed_raw_seams,
         retirement=FRET_EXAMPLES_ADVANCED_RETIREMENT,
     )
@@ -2584,14 +2584,14 @@ def _fret_examples_comparison_surface(
     path: str,
     reason: str,
     allowed_raw_seams: tuple[str, ...],
-    owner: str | None = None,
+    *,
+    owner: str,
 ) -> SurfacePath:
-    stem = path.removesuffix(".rs").replace("/", "-").replace("_", "-")
     return SurfacePath(
         f"apps/fret-examples/src/{path}",
         "comparison_surface",
         f"{path} remains classified as a comparison surface because {reason}",
-        owner=owner or f"examples-{stem}",
+        owner=owner,
         allowed_raw_seams=allowed_raw_seams,
     )
 
@@ -2600,14 +2600,14 @@ def _fret_examples_internal_harness(
     path: str,
     reason: str,
     allowed_raw_seams: tuple[str, ...],
-    owner: str | None = None,
+    *,
+    owner: str,
 ) -> SurfacePath:
-    stem = path.removesuffix(".rs").replace("/", "-").replace("_", "-")
     return SurfacePath(
         f"apps/fret-examples/src/{path}",
         "internal_harness",
         f"{path} remains classified as an internal harness because {reason}",
-        owner=owner or f"examples-{stem}",
+        owner=owner,
         allowed_raw_seams=allowed_raw_seams,
     )
 
@@ -2616,14 +2616,14 @@ def _fret_examples_renderer_lab_surface(
     path: str,
     reason: str,
     allowed_raw_seams: tuple[str, ...],
-    owner: str | None = None,
+    *,
+    owner: str,
 ) -> SurfacePath:
-    stem = path.removesuffix(".rs").replace("/", "-").replace("_", "-")
     return SurfacePath(
         f"apps/fret-examples/src/{path}",
         "renderer_lab",
         f"{path} remains classified as a renderer lab because {reason}",
-        owner=owner or f"examples-{stem}",
+        owner=owner,
         allowed_raw_seams=allowed_raw_seams,
     )
 
