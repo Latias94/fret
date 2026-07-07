@@ -128,7 +128,12 @@ Keep raw/shared-model mechanisms for now:
     while preserving retained stress-control models for variable sizing, clamping, and revision
     state. A later tightening moved those retained stress controls behind
     `CanvasDataGridStressControls`, so the window state no longer exposes three separate raw model
-    fields and render reads them through a single layout snapshot.
+    fields and render reads them through a single layout snapshot. `tools/check_surface_policy.py`
+    now classifies it as an internal harness, includes it in public example scanning, and globally
+    rejects legacy raw `Model<DataGridCanvasOutput>` output plumbing, direct stress-control model
+    fields on `CanvasDataGridStressWindowState`, direct variable/clamp/revision model allocation
+    outside the controls bundle, and old direct `&state.variable_sizes`/`&state.clamp_rows`/
+    `&state.revision` reads.
   - Follow-up: `table_stress_demo.rs` remains a retained table/perf harness, but keyboard command
     writes for sorting, role/global filters, clearing filters, and `items_revision` now route
     through the demo-local `TableStressModelOwner` helper. Its source-surface test forbids direct

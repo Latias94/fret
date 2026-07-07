@@ -799,6 +799,10 @@ class SurfacePolicyTests(unittest.TestCase):
             POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS,
         )
         self.assertIn(
+            "apps/fret-examples/src/canvas_datagrid_stress_demo.rs",
+            POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS,
+        )
+        self.assertIn(
             "apps/fret-examples/src/embedded_viewport_demo.rs",
             POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS,
         )
@@ -849,6 +853,12 @@ class SurfacePolicyTests(unittest.TestCase):
         self.assertTrue(
             any(
                 spec.path == "apps/fret-examples/src/table_stress_demo.rs"
+                for spec in POLICY.INTERNAL_HARNESS_SURFACES
+            )
+        )
+        self.assertTrue(
+            any(
+                spec.path == "apps/fret-examples/src/canvas_datagrid_stress_demo.rs"
                 for spec in POLICY.INTERNAL_HARNESS_SURFACES
             )
         )
@@ -2457,6 +2467,210 @@ class SurfacePolicyTests(unittest.TestCase):
                     violation
                     for violation in violations
                     if violation.rule == "internal_harness-table-stress-controls-boundary"
+                ]
+            )
+
+    def test_canvas_datagrid_stress_raw_control_plumbing_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-examples/src/canvas_datagrid_stress_demo.rs",
+                """
+                use fret::app::{AppLocalStateExt as _, AppLocalStateTxnExt as _, LocalState};
+
+                struct CanvasDataGridStressWindowState {
+                    ui: UiTree<App>,
+                    rows: Arc<Vec<u64>>,
+                    cols: Arc<Vec<u64>>,
+                    cell_texts: Arc<Vec<Arc<str>>>,
+                    controls: CanvasDataGridStressControls,
+                    variable_sizes: Model<bool>,
+                    clamp_rows: Model<bool>,
+                    revision: Model<u64>,
+                    grid_output: Model<shadcn::DataGridCanvasOutput>,
+                }
+
+                struct CanvasDataGridStressControls {
+                    variable_sizes: Model<bool>,
+                    clamp_rows: Model<bool>,
+                    revision: Model<u64>,
+                }
+
+                impl CanvasDataGridStressControls {
+                    fn new(app: &mut App) -> Self {
+                        Self {
+                            variable_sizes: app.models_mut().insert(false),
+                            clamp_rows: app.models_mut().insert(false),
+                            revision: app.models_mut().insert(1u64),
+                        }
+                    }
+
+                    fn layout_snapshot(&self, cx: &mut ElementContext<'_, App>) -> CanvasDataGridStressControlsSnapshot {
+                        CanvasDataGridStressControlsSnapshot
+                    }
+                }
+
+                fn build_ui(app: &mut App) {
+                    let controls = CanvasDataGridStressControls::new(app);
+                    let grid_output = app.local_state(shadcn::DataGridCanvasOutput::default());
+                    let variable_sizes = app.models_mut().insert(false);
+                    let clamp_rows = app.models_mut().insert(false);
+                    let revision = app.models_mut().insert(1u64);
+                    let raw_grid_output = app.models_mut().insert(shadcn::DataGridCanvasOutput::default());
+                    let _ = (controls, grid_output, variable_sizes, clamp_rows, revision, raw_grid_output);
+                }
+
+                fn gpu_frame_prepare(app: &mut App, state: &mut CanvasDataGridStressWindowState) {
+                    let grid = app.local_state_txn(|tx| tx.value_or_default(&state.grid_output));
+                }
+
+                fn render(cx: &mut ElementContext<'_, App>, state: &mut CanvasDataGridStressWindowState) {
+                    let controls = state.controls.layout_snapshot(cx);
+                    let grid = state.grid_output.layout_value(cx);
+                    let mut axis = shadcn::DataGridCanvasAxis::new(Arc::clone(&rows), controls.revision, Px(24.0));
+                    let mut axis = shadcn::DataGridCanvasAxis::new(Arc::clone(&cols), controls.revision, Px(120.0));
+                    let grid = shadcn::DataGrid::new(rows_axis, cols_axis)
+                        .output_model(state.grid_output.clone());
+                    let _ = (&state.variable_sizes, &state.clamp_rows, &state.revision);
+                }
+                """,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[],
+                internal_harness_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/canvas_datagrid_stress_demo.rs",
+                        "internal_harness",
+                        "fixture canvas datagrid stress harness",
+                        owner="examples-canvas-datagrid-stress",
+                        allowed_raw_seams=(
+                            "fret::advanced",
+                            "fret_app",
+                            "fret_core",
+                            "fret_launch",
+                            "fret_runtime",
+                            "fret_ui",
+                            "AnyElement",
+                            "ElementContext",
+                            "FnDriver",
+                            "UiTree",
+                        ),
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            owner_violations = [
+                violation
+                for violation in violations
+                if violation.rule == "internal_harness-canvas-datagrid-stress-controls-boundary"
+            ]
+            self.assertEqual(7, len(owner_violations))
+            messages = "\n".join(violation.message for violation in owner_violations)
+            self.assertIn("legacy-window-state-control-field", messages)
+            self.assertIn("legacy-grid-output-model", messages)
+            self.assertIn("direct-variable-size-model-insert", messages)
+            self.assertIn("direct-clamp-rows-model-insert", messages)
+            self.assertIn("direct-revision-model-insert", messages)
+            self.assertIn("legacy-state-control-reference", messages)
+
+    def test_canvas_datagrid_stress_controls_surface_is_allowed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-examples/src/canvas_datagrid_stress_demo.rs",
+                """
+                use fret::app::{AppLocalStateExt as _, AppLocalStateTxnExt as _, LocalState};
+
+                struct CanvasDataGridStressWindowState {
+                    ui: UiTree<App>,
+                    rows: Arc<Vec<u64>>,
+                    cols: Arc<Vec<u64>>,
+                    cell_texts: Arc<Vec<Arc<str>>>,
+                    controls: CanvasDataGridStressControls,
+                    grid_output: LocalState<shadcn::DataGridCanvasOutput>,
+                }
+
+                struct CanvasDataGridStressControls {
+                    variable_sizes: Model<bool>,
+                    clamp_rows: Model<bool>,
+                    revision: Model<u64>,
+                }
+
+                impl CanvasDataGridStressControls {
+                    fn new(app: &mut App) -> Self {
+                        Self {
+                            variable_sizes: app.models_mut().insert(false),
+                            clamp_rows: app.models_mut().insert(false),
+                            revision: app.models_mut().insert(1u64),
+                        }
+                    }
+
+                    fn layout_snapshot(&self, cx: &mut ElementContext<'_, App>) -> CanvasDataGridStressControlsSnapshot {
+                        CanvasDataGridStressControlsSnapshot
+                    }
+                }
+
+                fn build_ui(app: &mut App) {
+                    let controls = CanvasDataGridStressControls::new(app);
+                    let grid_output = app.local_state(shadcn::DataGridCanvasOutput::default());
+                    let _ = (controls, grid_output);
+                }
+
+                fn gpu_frame_prepare(app: &mut App, state: &mut CanvasDataGridStressWindowState) {
+                    let grid = app.local_state_txn(|tx| tx.value_or_default(&state.grid_output));
+                }
+
+                fn render(cx: &mut ElementContext<'_, App>, state: &mut CanvasDataGridStressWindowState) {
+                    let controls = state.controls.layout_snapshot(cx);
+                    let grid = state.grid_output.layout_value(cx);
+                    let mut axis = shadcn::DataGridCanvasAxis::new(Arc::clone(&rows), controls.revision, Px(24.0));
+                    let mut axis = shadcn::DataGridCanvasAxis::new(Arc::clone(&cols), controls.revision, Px(120.0));
+                    let grid = shadcn::DataGrid::new(rows_axis, cols_axis)
+                        .output_model(state.grid_output.clone());
+                    let _ = (controls, grid, axis);
+                }
+                """,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[],
+                internal_harness_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/canvas_datagrid_stress_demo.rs",
+                        "internal_harness",
+                        "fixture canvas datagrid stress harness",
+                        owner="examples-canvas-datagrid-stress",
+                        allowed_raw_seams=(
+                            "fret::advanced",
+                            "fret_app",
+                            "fret_core",
+                            "fret_launch",
+                            "fret_runtime",
+                            "fret_ui",
+                            "AnyElement",
+                            "ElementContext",
+                            "FnDriver",
+                            "UiTree",
+                        ),
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            self.assertFalse(
+                [
+                    violation
+                    for violation in violations
+                    if violation.rule
+                    == "internal_harness-canvas-datagrid-stress-controls-boundary"
                 ]
             )
 

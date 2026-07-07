@@ -634,6 +634,71 @@ TABLE_STRESS_FORBIDDEN_RAW_WRITE_PATTERNS: tuple[tuple[str, re.Pattern[str]], ..
     ),
 )
 
+CANVAS_DATAGRID_STRESS_OWNER = "examples-canvas-datagrid-stress"
+
+CANVAS_DATAGRID_STRESS_REQUIRED_COMPACT_MARKERS = (
+    "usefret::app::{AppLocalStateExtas_,AppLocalStateTxnExtas_,LocalState};",
+    "grid_output:LocalState<shadcn::DataGridCanvasOutput>,",
+    "letgrid_output=app.local_state(shadcn::DataGridCanvasOutput::default());",
+    "letgrid=app.local_state_txn(|tx|tx.value_or_default(&state.grid_output));",
+    "letgrid=state.grid_output.layout_value(cx);",
+    ".output_model(state.grid_output.clone())",
+    "structCanvasDataGridStressControls{",
+    "variable_sizes:Model<bool>,",
+    "clamp_rows:Model<bool>,",
+    "revision:Model<u64>,",
+    "fnnew(app:&mutApp)->Self{",
+    "letcontrols=CanvasDataGridStressControls::new(app);",
+    "controls:CanvasDataGridStressControls,",
+    "letcontrols=state.controls.layout_snapshot(cx);",
+    "letmutaxis=shadcn::DataGridCanvasAxis::new(Arc::clone(&rows),controls.revision,Px(24.0)",
+    "letmutaxis=shadcn::DataGridCanvasAxis::new(Arc::clone(&cols),controls.revision,Px(120.0)",
+)
+
+CANVAS_DATAGRID_STRESS_FORBIDDEN_COMPACT_PATTERNS: tuple[
+    tuple[str, re.Pattern[str]], ...
+] = (
+    (
+        "legacy-window-state-control-field",
+        re.compile(
+            r"structCanvasDataGridStressWindowState\{[^}]*variable_sizes:Model<bool>,[^}]*clamp_rows:Model<bool>,[^}]*revision:Model<u64>,"
+        ),
+    ),
+    (
+        "legacy-grid-output-model",
+        re.compile(
+            r"(?:grid_output:Model<shadcn::DataGridCanvasOutput>|app\.models_mut\(\)\.insert\(shadcn::DataGridCanvasOutput::default\(\)\))"
+        ),
+    ),
+    (
+        "legacy-state-control-reference",
+        re.compile(r"&state\.(?:variable_sizes|clamp_rows|revision)\b"),
+    ),
+)
+
+CANVAS_DATAGRID_STRESS_FORBIDDEN_RAW_WRITE_PATTERNS: tuple[
+    tuple[str, re.Pattern[str]], ...
+] = (
+    (
+        "direct-variable-size-model-insert",
+        re.compile(
+            r"\blet\s+variable_sizes\s*=\s*app\s*\.\s*models_mut\s*\(\s*\)\s*\.\s*insert\s*\("
+        ),
+    ),
+    (
+        "direct-clamp-rows-model-insert",
+        re.compile(
+            r"\blet\s+clamp_rows\s*=\s*app\s*\.\s*models_mut\s*\(\s*\)\s*\.\s*insert\s*\("
+        ),
+    ),
+    (
+        "direct-revision-model-insert",
+        re.compile(
+            r"\blet\s+revision\s*=\s*app\s*\.\s*models_mut\s*\(\s*\)\s*\.\s*insert\s*\("
+        ),
+    ),
+)
+
 EDITOR_NOTES_OWNER = "examples-editor-notes"
 
 EDITOR_NOTES_REQUIRED_COMPACT_MARKERS = (
@@ -912,6 +977,25 @@ INTERNAL_HARNESS_SURFACES: tuple[SurfacePath, ...] = (
             "UiTree",
         ),
         owner=TABLE_STRESS_OWNER,
+    ),
+    _fret_examples_internal_harness(
+        "canvas_datagrid_stress_demo.rs",
+        "the canvas datagrid stress harness owns manual driver state, renderer perf hooks, "
+        "app-facing LocalState grid telemetry, and retained stress controls behind "
+        "CanvasDataGridStressControls",
+        (
+            "fret::advanced",
+            "fret_app",
+            "fret_core",
+            "fret_launch",
+            "fret_runtime",
+            "fret_ui",
+            "AnyElement",
+            "ElementContext",
+            "FnDriver",
+            "UiTree",
+        ),
+        owner=CANVAS_DATAGRID_STRESS_OWNER,
     ),
     _fret_examples_internal_harness(
         "simple_todo_demo/driver.rs",
@@ -1439,6 +1523,7 @@ PUBLIC_EXAMPLE_SCAN_ROOTS: tuple[str, ...] = (
     "apps/fret-examples/src/chart_stress_demo.rs",
     "apps/fret-examples/src/virtual_list_stress_demo.rs",
     "apps/fret-examples/src/table_stress_demo.rs",
+    "apps/fret-examples/src/canvas_datagrid_stress_demo.rs",
     "apps/fret-examples/src/custom_effect_v2_web_demo.rs",
     "apps/fret-examples/src/custom_effect_v2_identity_web_demo.rs",
     "apps/fret-examples/src/custom_effect_v2_lut_web_demo.rs",
@@ -2049,6 +2134,74 @@ def _scan_table_stress_controls_boundary(
     return violations
 
 
+def _scan_canvas_datagrid_stress_controls_boundary(
+    root: Path, spec: SurfacePath
+) -> list[SurfaceViolation]:
+    if spec.owner != CANVAS_DATAGRID_STRESS_OWNER:
+        return []
+
+    violations: list[SurfaceViolation] = []
+    for path in _iter_source_files(root / spec.path):
+        text = _read_text(path)
+        production_text = text.split("#[cfg(test)]", 1)[0]
+        compact_production = _compact_source(production_text)
+        missing_markers = [
+            marker
+            for marker in CANVAS_DATAGRID_STRESS_REQUIRED_COMPACT_MARKERS
+            if marker not in compact_production
+        ]
+        if missing_markers:
+            violations.append(
+                SurfaceViolation(
+                    rule="internal_harness-canvas-datagrid-stress-controls-boundary",
+                    path=path,
+                    line_no=1,
+                    message=(
+                        "canvas datagrid stress telemetry and retained controls must stay behind "
+                        f"LocalState and CanvasDataGridStressControls; missing compact markers: "
+                        f"{', '.join(missing_markers)}"
+                    ),
+                )
+            )
+
+        for seam, pattern in CANVAS_DATAGRID_STRESS_FORBIDDEN_COMPACT_PATTERNS:
+            if not pattern.search(compact_production):
+                continue
+            violations.append(
+                SurfaceViolation(
+                    rule="internal_harness-canvas-datagrid-stress-controls-boundary",
+                    path=path,
+                    line_no=1,
+                    message=(
+                        "canvas datagrid stress grid telemetry must use LocalState and stress "
+                        f"controls must stay bundled; compact `{seam}` bypasses the controls boundary"
+                    ),
+                )
+            )
+
+        for line_no, line in _code_lines_for_scan(path, production_text):
+            if path.suffix == ".rs" and _is_rust_source_line_ignorable(line):
+                continue
+            for seam, pattern in CANVAS_DATAGRID_STRESS_FORBIDDEN_RAW_WRITE_PATTERNS:
+                if not pattern.search(line):
+                    continue
+                violations.append(
+                    SurfaceViolation(
+                        rule="internal_harness-canvas-datagrid-stress-controls-boundary",
+                        path=path,
+                        line_no=line_no,
+                        message=(
+                            "canvas datagrid stress retained control model allocation must stay "
+                            f"inside CanvasDataGridStressControls; direct `{seam}` bypasses the controls boundary"
+                        ),
+                        source=line.strip(),
+                    )
+                )
+                break
+
+    return violations
+
+
 def _scan_editor_notes_bindings_boundary(
     root: Path, spec: SurfacePath
 ) -> list[SurfaceViolation]:
@@ -2168,6 +2321,7 @@ def _scan_classified_raw_surface(root: Path, spec: SurfacePath) -> list[SurfaceV
     violations.extend(_scan_components_gallery_owner_boundary(root, spec))
     violations.extend(_scan_virtual_list_stress_controls_boundary(root, spec))
     violations.extend(_scan_table_stress_controls_boundary(root, spec))
+    violations.extend(_scan_canvas_datagrid_stress_controls_boundary(root, spec))
     violations.extend(_scan_editor_notes_bindings_boundary(root, spec))
     for seam in sorted(allowed_raw_seams - used_raw_seams):
         violations.append(
