@@ -1877,6 +1877,13 @@ class SurfacePolicyTests(unittest.TestCase):
         )
         self.assertNotIn("apps/fret-examples/src", POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS)
 
+    def test_manual_chart_demo_classification_requires_explicit_owner(self) -> None:
+        with self.assertRaisesRegex(
+            AssertionError,
+            "manual chart/plot surface owner",
+        ):
+            POLICY._fret_examples_manual_chart_surface("future_chart_demo.rs")
+
     def test_custom_effect_v2_web_legacy_owner_surface_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

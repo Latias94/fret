@@ -556,15 +556,9 @@ def _fret_examples_manual_chart_surface(filename: str) -> SurfacePath:
             MANUAL_CHART_ALLOWED_RAW_SEAMS,
             owner=PLOT3D_PANEL_OWNER,
         )
-    stem = filename.removesuffix(".rs").replace("_", "-")
-    return _fret_examples_advanced_surface(
-        filename,
-        (
-            "it owns a manual retained-chart demo runner with FnDriver/UiTree lifecycle and "
-            "direct chart viewport wiring"
-        ),
-        MANUAL_CHART_ALLOWED_RAW_SEAMS,
-        owner=f"examples-chart-{stem}",
+    raise AssertionError(
+        f"{filename} is listed in MANUAL_CHART_DEMO_FILENAMES but has no explicit "
+        "manual chart/plot surface owner"
     )
 
 
