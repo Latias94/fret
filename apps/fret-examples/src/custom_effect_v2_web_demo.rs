@@ -21,6 +21,7 @@ use crate::custom_effect_v2_web_owner::{
     CustomEffectV2WebVariantControls, CustomEffectV2WebVariantReset,
 };
 use fret::advanced::view::AppRenderDataExt as _;
+use fret::app::{AppRenderContext, text};
 use fret_app::{App, Effect};
 use fret_bootstrap::ui_diagnostics::UiDiagnosticsService;
 use fret_core::scene::{
@@ -39,9 +40,8 @@ use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, EffectLayerProps, Elements, FlexProps, LayoutStyle,
     Length, MainAlign, Overflow, SpacerProps, SpacingLength,
 };
-use fret_ui::{ElementContext, Invalidation, UiHost, UiTree};
+use fret_ui::{ElementContext, Invalidation, UiTree};
 use fret_ui_kit::custom_effects::CustomEffectProgramV2;
-use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::on_activate_request_redraw;
 use fret_ui_kit::ui;
 use fret_ui_kit::{IntoUiElement, Space, UiExt};
@@ -214,20 +214,22 @@ impl CustomEffectV2WebDriver {
         c
     }
 
-    fn overlay_label_text<H: UiHost>(
-        cx: &mut ElementContext<'_, H>,
-        text: impl Into<Arc<str>>,
-    ) -> AnyElement {
-        decl_text::text_section_chrome_label(cx, text)
-            .inherit_foreground(Self::srgb(255, 255, 255, 0.92))
+    fn overlay_label_text<'a, Cx>(cx: &mut Cx, text: impl Into<Arc<str>>) -> AnyElement
+    where
+        Cx: AppRenderContext<'a>,
+    {
+        text::section_chrome_label(cx, text).inherit_foreground(Self::srgb(255, 255, 255, 0.92))
     }
 
-    fn overlay_readout_text<H: UiHost>(
-        cx: &mut ElementContext<'_, H>,
+    fn overlay_readout_text<'a, Cx>(
+        cx: &mut Cx,
         text: impl Into<Arc<str>>,
         foreground: fret_core::Color,
-    ) -> AnyElement {
-        decl_text::text_control_readout(cx, text).inherit_foreground(foreground)
+    ) -> AnyElement
+    where
+        Cx: AppRenderContext<'a>,
+    {
+        text::control_readout(cx, text).inherit_foreground(foreground)
     }
 
     fn build_ui(app: &mut App, window: AppWindowId) -> CustomEffectV2WebWindowState {

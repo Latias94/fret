@@ -38,11 +38,12 @@ fn assert_custom_effect_v2_web_overlay_text_roles(source: &str) {
     let source = compact(source);
 
     for needle in [
-        "usefret_ui_kit::declarative::textasdecl_text;",
-        "fnoverlay_label_text<H:UiHost>(",
-        "fnoverlay_readout_text<H:UiHost>(",
-        "decl_text::text_section_chrome_label(cx,text).inherit_foreground(Self::srgb(255,255,255,0.92))",
-        "decl_text::text_control_readout(cx,text).inherit_foreground(foreground)",
+        "usefret::app::{AppRenderContext,text};",
+        "fnoverlay_label_text<'a,Cx>(",
+        "fnoverlay_readout_text<'a,Cx>(",
+        "Cx:AppRenderContext<'a>,",
+        "text::section_chrome_label(cx,text).inherit_foreground(Self::srgb(255,255,255,0.92))",
+        "text::control_readout(cx,text).inherit_foreground(foreground)",
         "Self::overlay_readout_text(cx,\"CustomV2unsupportedonthisadapter/backend\",theme.color_token(\"muted_foreground\"),)",
         "letbadge_text=Self::overlay_label_text(cx,\"CustomEffectV2(WebGPU)\");",
         "Self::overlay_readout_text(cx,\"PressVtotogglethedemosurface.PressRtoresetcontrols.\",Self::with_alpha(theme.color_token(\"foreground\"),0.55),)",
@@ -54,6 +55,10 @@ fn assert_custom_effect_v2_web_overlay_text_roles(source: &str) {
     }
 
     for needle in [
+        "usefret_ui_kit::declarative::textasdecl_text;",
+        "decl_text::",
+        "text_section_chrome_label(",
+        "text_control_readout(",
         "cx.text_props(TextProps{",
         "TextProps{",
         "wrap:fret_core::TextWrap::None",
@@ -75,11 +80,12 @@ fn assert_custom_effect_v2_template_overlay_text_roles(
     let source = compact(source);
 
     for needle in [
-        "usefret_ui_kit::declarative::textasdecl_text;",
-        "fnoverlay_label_text<H:UiHost>(",
-        "fnoverlay_readout_text<H:UiHost>(",
-        "decl_text::text_section_chrome_label(cx,text).inherit_foreground(Self::srgb(255,255,255,0.92))",
-        "decl_text::text_control_readout(cx,text).inherit_foreground(foreground)",
+        "usefret::app::{AppRenderContext,text};",
+        "fnoverlay_label_text<'a,Cx>(",
+        "fnoverlay_readout_text<'a,Cx>(",
+        "Cx:AppRenderContext<'a>,",
+        "text::section_chrome_label(cx,text).inherit_foreground(Self::srgb(255,255,255,0.92))",
+        "text::control_readout(cx,text).inherit_foreground(foreground)",
         "Self::overlay_readout_text(cx,\"CustomV2unsupportedonthisadapter/backend\",theme.color_token(\"muted_foreground\"),)",
         &format!("letbadge_text=Self::overlay_label_text(cx,\"{badge}\");"),
         &format!(
@@ -93,6 +99,10 @@ fn assert_custom_effect_v2_template_overlay_text_roles(
     }
 
     for needle in [
+        "usefret_ui_kit::declarative::textasdecl_text;",
+        "decl_text::",
+        "text_section_chrome_label(",
+        "text_control_readout(",
         "cx.text_props(TextProps{",
         "TextProps{",
         "wrap:fret_core::TextWrap::None",
