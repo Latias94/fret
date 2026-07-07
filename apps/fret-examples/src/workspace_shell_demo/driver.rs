@@ -1,5 +1,6 @@
 use anyhow::Context as _;
 use fret::advanced::view::AppRenderDataExt as _;
+use fret::app::{AppRenderContext, text};
 use fret::imui::{UiWriterImUiFacadeExt as _, imui_build, kit};
 use fret::{shadcn, shadcn::themes::ShadcnColorScheme};
 use fret_app::{App, CommandId, Effect, Model, WindowRequest};
@@ -26,7 +27,6 @@ use fret_ui_editor::composites::{
 };
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::declarative::file_tree::{FileTreeViewProps, file_tree_view_retained_v0};
-use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::{
     LayoutRefinement, MetricRef, OverlayController, OverlayPresence, OverlayRequest, Space,
     TreeItem, TreeState,
@@ -268,31 +268,40 @@ where
                     padding: Edges::all(padding).into(),
                     ..Default::default()
                 },
-                move |cx| vec![decl_text::text_button_label(cx, label.clone())],
+                move |cx| vec![text::button_label(cx, label.clone())],
             )]
         },
     )
 }
 
-fn workspace_shell_readout_text<H: fret_ui::UiHost>(
-    cx: &mut fret_ui::ElementContext<'_, H>,
+fn workspace_shell_readout_text<'a, Cx>(
+    cx: &mut Cx,
     text: impl Into<Arc<str>>,
-) -> fret_ui::element::AnyElement {
-    decl_text::text_control_readout(cx, text)
+) -> fret_ui::element::AnyElement
+where
+    Cx: AppRenderContext<'a>,
+{
+    text::control_readout(cx, text)
 }
 
-fn workspace_shell_section_chrome_label<H: fret_ui::UiHost>(
-    cx: &mut fret_ui::ElementContext<'_, H>,
+fn workspace_shell_section_chrome_label<'a, Cx>(
+    cx: &mut Cx,
     text: impl Into<Arc<str>>,
-) -> fret_ui::element::AnyElement {
-    decl_text::text_section_chrome_label(cx, text)
+) -> fret_ui::element::AnyElement
+where
+    Cx: AppRenderContext<'a>,
+{
+    text::section_chrome_label(cx, text)
 }
 
-fn workspace_shell_paragraph_text<H: fret_ui::UiHost>(
-    cx: &mut fret_ui::ElementContext<'_, H>,
+fn workspace_shell_paragraph_text<'a, Cx>(
+    cx: &mut Cx,
     text: impl Into<Arc<str>>,
-) -> fret_ui::element::AnyElement {
-    decl_text::text_paragraph(cx, text)
+) -> fret_ui::element::AnyElement
+where
+    Cx: AppRenderContext<'a>,
+{
+    text::paragraph(cx, text)
 }
 
 fn workspace_shell_editor_rail<'a, Cx>(
