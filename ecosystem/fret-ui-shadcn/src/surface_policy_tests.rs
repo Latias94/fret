@@ -527,6 +527,30 @@ fn crate_source_tree_avoids_root_icon_glue_lane() {
 }
 
 #[test]
+fn crate_source_tree_avoids_legacy_conversion_vocabulary() {
+    let src_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
+    visit_rust_files(&src_dir, &mut |path, source| {
+        let file_name = path.file_name().and_then(std::ffi::OsStr::to_str);
+        if matches!(file_name, Some("surface_policy_tests.rs")) {
+            return;
+        }
+
+        for marker in [
+            "UiIntoElement",
+            "UiChildIntoElement",
+            "UiHostBoundIntoElement",
+            "UiBuilderHostBoundIntoElementExt",
+        ] {
+            assert!(
+                !source.contains(marker),
+                "{} reintroduced legacy conversion vocabulary `{marker}`; use `IntoUiElement<H>` or the app-facing `Ui`/`UiChild` aliases instead",
+                path.display()
+            );
+        }
+    });
+}
+
+#[test]
 fn authoring_critical_family_exports_live_on_curated_facade_only() {
     assert_facade_only_reexports(
         "select",
