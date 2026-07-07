@@ -52,6 +52,7 @@ semantic-link caveats and the underlying button primitive contract.
 
 ## Validation
 
+- Docs-order gate: `apps/fret-ui-gallery/tests/button_docs_surface.rs`
 - `CARGO_TARGET_DIR=target-codex-avatar cargo check -p fret-ui-gallery --message-format short`
 - `cargo test -p fret-ui-shadcn --lib button_single_child_helpers_append_without_replacing_existing_content`
 - `cargo test -p fret-ui-shadcn --lib button_inline_slot`

@@ -61,3 +61,77 @@ fn button_link_diag_script_gates_action_state() {
         "button link action-state suite should reference the promoted script",
     );
 }
+
+fn normalize_ws(source: &str) -> String {
+    source.split_whitespace().collect()
+}
+
+#[test]
+fn button_page_keeps_upstream_docs_order_before_fret_followups() {
+    let source = include_str!("../src/ui/pages/button.rs");
+
+    for needle in [
+        "Preview mirrors the shadcn Button docs order first while keeping the current `new-york-v4` button chrome baseline and a shared semantic-link lane for the Base `As Link` / Radix `As Child` follow-up.",
+        "Gallery sections now mirror shadcn Button docs first: Demo, Usage, Cursor, Size, Default, Outline, Secondary, Ghost, Destructive, Link, Icon, With Icon, Rounded, Spinner, Button Group, As Link / As Child (Semantic), RTL, API Reference.",
+        "`Children (Fret)` stays after the upstream path to document the landed-element equivalent of JSX child composition without widening `Button` into a generic root `asChild` surface.",
+        "`Variants Overview (Fret)` stays after the upstream path so existing variant chrome diagnostics remain easy to compare without displacing the docs order.",
+        "DocSection::build(cx, \"Demo\", demo)",
+        "DocSection::build(cx, \"Usage\", usage)",
+        "DocSection::build(cx, \"Cursor\", cursor)",
+        "DocSection::build(cx, \"Size\", size)",
+        "DocSection::build(cx, \"Default\", default)",
+        "DocSection::build(cx, \"Outline\", outline)",
+        "DocSection::build(cx, \"Secondary\", secondary)",
+        "DocSection::build(cx, \"Ghost\", ghost)",
+        "DocSection::build(cx, \"Destructive\", destructive)",
+        "DocSection::build(cx, \"Link\", link)",
+        "DocSection::build(cx, \"Icon\", icon_only)",
+        "DocSection::build(cx, \"With Icon\", with_icon)",
+        "DocSection::build(cx, \"Rounded\", rounded)",
+        "DocSection::build(cx, \"Spinner\", spinner)",
+        "DocSection::build(cx, \"Button Group\", button_group)",
+        "DocSection::build(cx, \"As Link / As Child (Semantic)\", link_render)",
+        "DocSection::build(cx, \"RTL\", rtl)",
+        "DocSection::build(cx, \"API Reference\", api_reference)",
+        "DocSection::build(cx, \"Children (Fret)\", children)",
+        "DocSection::build(cx, \"Variants Overview (Fret)\", variants)",
+    ] {
+        assert!(
+            source.contains(needle),
+            "button page should document the docs-path order and Fret follow-ups; missing `{needle}`",
+        );
+    }
+
+    let normalized = normalize_ws(source);
+    let ordered_sections = normalize_ws(
+        r#"
+        vec![
+            demo,
+            usage,
+            cursor,
+            size,
+            default,
+            outline,
+            secondary,
+            ghost,
+            destructive,
+            link,
+            icon_only,
+            with_icon,
+            rounded,
+            spinner,
+            button_group,
+            link_render,
+            rtl,
+            api_reference,
+            children,
+            variants,
+            notes,
+        ]
+        "#,
+    );
+    assert!(
+        normalized.contains(&ordered_sections),
+        "button page should keep the upstream docs path through API Reference before Fret-only follow-ups",
+    );
+}
