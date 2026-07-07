@@ -457,6 +457,17 @@ def _fret_examples_manual_chart_surface(filename: str) -> SurfacePath:
             MANUAL_CHART_ALLOWED_RAW_SEAMS,
             owner=PLOT_GROUPED_BARS_OWNER,
         )
+    if filename == "stacked_bars_demo.rs":
+        return _fret_examples_advanced_surface(
+            filename,
+            (
+                "it owns a manual stacked-bars runner with FnDriver/UiTree lifecycle while "
+                "category bar series, query output reads, and panel wiring route through "
+                "BarsPlotPanelBinding"
+            ),
+            MANUAL_CHART_ALLOWED_RAW_SEAMS,
+            owner=PLOT_STACKED_BARS_OWNER,
+        )
     stem = filename.removesuffix(".rs").replace("_", "-")
     return _fret_examples_advanced_surface(
         filename,
@@ -1172,6 +1183,36 @@ PLOT_GROUPED_BARS_FORBIDDEN_COMPACT_MARKERS = (
     "app.models_mut().insert(PlotOutput::default())",
 )
 
+PLOT_STACKED_BARS_OWNER = "examples-plot-stacked-bars"
+
+PLOT_STACKED_BARS_REQUIRED_COMPACT_MARKERS = (
+    "usefret_plot::BarsPlotPanelBinding;",
+    "usefret_plot::declarative::bars_plot_panel_in;",
+    "usefret_plot::models::{BarsPlotModel,CategoryBarSeries};",
+    "usefret_ui::{UiTree,declarative};",
+    "plot:BarsPlotPanelBinding",
+    "CategoryBarSeries::new(",
+    "BarsPlotPanelBinding::new(app,BarsPlotModel::stacked_categories(categories,series,0.8),)",
+    "declarative::RenderRootContext::new(&mutstate.ui,app,services,window,bounds).render_root(\"stacked-bars-demo\"",
+    "plot.panel_props()",
+    "state.plot.output_untracked(app)",
+    "vec![bars_plot_panel_in(cx,props)]",
+)
+
+PLOT_STACKED_BARS_FORBIDDEN_COMPACT_MARKERS = (
+    "usefret_plot::retained",
+    "fret_plot::retained::",
+    "BarsPlotCanvas",
+    "PlotCanvas",
+    "create_node_retained(",
+    "fret_runtime::Model<",
+    "BarsPlotPanelProps::new(",
+    ".state(plot_state.clone())",
+    ".output(plot_output.clone())",
+    "app.models_mut().insert(PlotState::default())",
+    "app.models_mut().insert(PlotOutput::default())",
+)
+
 PLOT_DECLARATIVE_BINDING_BOUNDARIES: tuple[CompactSourceBoundary, ...] = (
     CompactSourceBoundary(
         owner=PLOT_STRESS_OWNER,
@@ -1327,6 +1368,20 @@ PLOT_DECLARATIVE_BINDING_BOUNDARIES: tuple[CompactSourceBoundary, ...] = (
         ),
         forbidden_message_template=(
             "Grouped bars demo must not expose retained/manual plot state or output "
+            "wiring; compact `{marker}` bypasses the BarsPlotPanelBinding boundary"
+        ),
+    ),
+    CompactSourceBoundary(
+        owner=PLOT_STACKED_BARS_OWNER,
+        rule="advanced-surface-plot-stacked-bars-declarative-binding-boundary",
+        required_markers=PLOT_STACKED_BARS_REQUIRED_COMPACT_MARKERS,
+        forbidden_markers=PLOT_STACKED_BARS_FORBIDDEN_COMPACT_MARKERS,
+        missing_message_template=(
+            "Stacked bars demo must keep category bar authoring and query output reads "
+            "on BarsPlotPanelBinding; missing compact markers: {missing_markers}"
+        ),
+        forbidden_message_template=(
+            "Stacked bars demo must not expose retained/manual plot state or output "
             "wiring; compact `{marker}` bypasses the BarsPlotPanelBinding boundary"
         ),
     ),
