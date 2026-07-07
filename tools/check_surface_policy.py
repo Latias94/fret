@@ -479,6 +479,17 @@ def _fret_examples_manual_chart_surface(filename: str) -> SurfacePath:
             MANUAL_CHART_ALLOWED_RAW_SEAMS,
             owner=PLOT_CANDLESTICK_OWNER,
         )
+    if filename == "heatmap_demo.rs":
+        return _fret_examples_advanced_surface(
+            filename,
+            (
+                "it owns a manual heatmap runner with FnDriver/UiTree lifecycle while "
+                "heatmap model, style props, query output reads, and panel wiring route "
+                "through HeatmapPlotPanelBinding"
+            ),
+            MANUAL_CHART_ALLOWED_RAW_SEAMS,
+            owner=PLOT_HEATMAP_OWNER,
+        )
     stem = filename.removesuffix(".rs").replace("_", "-")
     return _fret_examples_advanced_surface(
         filename,
@@ -1256,6 +1267,37 @@ PLOT_CANDLESTICK_FORBIDDEN_COMPACT_MARKERS = (
     "app.models_mut().insert(PlotOutput::default())",
 )
 
+PLOT_HEATMAP_OWNER = "examples-plot-heatmap"
+
+PLOT_HEATMAP_REQUIRED_COMPACT_MARKERS = (
+    "usefret_plot::HeatmapPlotPanelBinding;",
+    "usefret_plot::declarative::heatmap_plot_panel_in;",
+    "usefret_plot::models::HeatmapPlotModel;",
+    "usefret_ui::{UiTree,declarative};",
+    "plot:HeatmapPlotPanelBinding",
+    "HeatmapPlotPanelBinding::new(app,HeatmapPlotModel::new(data_bounds,cols,rows,values),)",
+    "HeatmapPlotModel::new(data_bounds,cols,rows,values)",
+    "declarative::RenderRootContext::new(&mutstate.ui,app,services,window,bounds).render_root(\"heatmap-demo\"",
+    "plot.panel_props()",
+    ".style(style)",
+    "state.plot.output_untracked(app)",
+    "vec![heatmap_plot_panel_in(cx,props)]",
+)
+
+PLOT_HEATMAP_FORBIDDEN_COMPACT_MARKERS = (
+    "usefret_plot::retained",
+    "fret_plot::retained::",
+    "HeatmapPlotCanvas",
+    "PlotCanvas",
+    "create_node_retained(",
+    "fret_runtime::Model<",
+    "HeatmapPlotPanelProps::new(",
+    ".state(plot_state.clone())",
+    ".output(plot_output.clone())",
+    "app.models_mut().insert(PlotState::default())",
+    "app.models_mut().insert(PlotOutput::default())",
+)
+
 PLOT_DECLARATIVE_BINDING_BOUNDARIES: tuple[CompactSourceBoundary, ...] = (
     CompactSourceBoundary(
         owner=PLOT_STRESS_OWNER,
@@ -1440,6 +1482,20 @@ PLOT_DECLARATIVE_BINDING_BOUNDARIES: tuple[CompactSourceBoundary, ...] = (
         forbidden_message_template=(
             "Candlestick demo must not expose retained/manual plot state or output "
             "wiring; compact `{marker}` bypasses the CandlestickPlotPanelBinding boundary"
+        ),
+    ),
+    CompactSourceBoundary(
+        owner=PLOT_HEATMAP_OWNER,
+        rule="advanced-surface-plot-heatmap-declarative-binding-boundary",
+        required_markers=PLOT_HEATMAP_REQUIRED_COMPACT_MARKERS,
+        forbidden_markers=PLOT_HEATMAP_FORBIDDEN_COMPACT_MARKERS,
+        missing_message_template=(
+            "Heatmap demo must keep heatmap model authoring, style props, and query "
+            "output reads on HeatmapPlotPanelBinding; missing compact markers: {missing_markers}"
+        ),
+        forbidden_message_template=(
+            "Heatmap demo must not expose retained/manual plot state or output "
+            "wiring; compact `{marker}` bypasses the HeatmapPlotPanelBinding boundary"
         ),
     ),
 )

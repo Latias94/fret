@@ -5442,6 +5442,210 @@ class SurfacePolicyTests(unittest.TestCase):
                 ]
             )
 
+    def test_plot_heatmap_legacy_retained_authoring_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-examples/src/heatmap_demo.rs",
+                """
+                use fret_plot::HeatmapPlotPanelBinding;
+                use fret_plot::declarative::{HeatmapPlotPanelProps, heatmap_plot_panel_in};
+                use fret_plot::models::HeatmapPlotModel;
+                use fret_plot::retained;
+                use fret_runtime::Model;
+                use fret_ui::{UiTree, declarative};
+
+                struct HeatmapDemoWindowState {
+                    ui: UiTree<App>,
+                    plot: HeatmapPlotPanelBinding,
+                }
+
+                impl HeatmapDemoDriver {
+                    fn build_ui(app: &mut App) -> HeatmapDemoWindowState {
+                        let cols = 2usize;
+                        let rows = 2usize;
+                        let data_bounds = DataRect {
+                            x_min: 0.0,
+                            x_max: 1.0,
+                            y_min: 0.0,
+                            y_max: 1.0,
+                        };
+                        let values = vec![0.0, 0.2, 0.4, 0.6];
+                        let plot = HeatmapPlotPanelBinding::new(
+                            app,
+                            HeatmapPlotModel::new(data_bounds, cols, rows, values),
+                        );
+                        HeatmapDemoWindowState {
+                            ui: UiTree::new(),
+                            plot,
+                        }
+                    }
+                }
+
+                fn handle_event(app: &mut App, state: &mut HeatmapDemoWindowState) {
+                    let _ = state.plot.output_untracked(app);
+                }
+
+                fn render(
+                    app: &mut App,
+                    services: &mut Services,
+                    window: AppWindowId,
+                    bounds: Rect,
+                    state: &mut HeatmapDemoWindowState,
+                ) {
+                    let plot = state.plot.clone();
+                    let root = declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
+                        .render_root("heatmap-demo", move |cx| {
+                            let mut style = LinePlotStyle::default();
+                            style.heatmap_show_colorbar = true;
+                            let props = plot.panel_props().style(style);
+                            vec![heatmap_plot_panel_in(cx, props)]
+                        });
+                    let _ = root;
+                }
+
+                struct LegacyHeatmapPlot {
+                    plot: fret_runtime::Model<HeatmapPlotModel>,
+                    output: Model<PlotOutput>,
+                }
+
+                fn bad(
+                    app: &mut App,
+                    plot: Model<HeatmapPlotModel>,
+                    plot_state: Model<PlotState>,
+                    plot_output: Model<PlotOutput>,
+                ) {
+                    let _ = retained::legacy();
+                    let _ = fret_plot::retained::legacy();
+                    let _ = HeatmapPlotCanvas;
+                    let _ = PlotCanvas;
+                    create_node_retained();
+                    let _props = HeatmapPlotPanelProps::new(plot.clone())
+                        .state(plot_state.clone())
+                        .output(plot_output.clone());
+                    let _ = app.models_mut().insert(PlotState::default());
+                    let _ = app.models_mut().insert(PlotOutput::default());
+                }
+                """,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/heatmap_demo.rs",
+                        "advanced_manual",
+                        "fixture heatmap plot demo",
+                        owner="examples-plot-heatmap",
+                        allowed_raw_seams=("fret_runtime", "fret_ui", "UiTree"),
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            owner_violations = [
+                violation
+                for violation in violations
+                if violation.rule
+                == "advanced-surface-plot-heatmap-declarative-binding-boundary"
+            ]
+            self.assertGreaterEqual(len(owner_violations), 8)
+            messages = "\n".join(violation.message for violation in owner_violations)
+            self.assertIn("fret_plot::retained", messages)
+            self.assertIn("HeatmapPlotCanvas", messages)
+            self.assertIn("PlotCanvas", messages)
+            self.assertIn("PlotOutput", messages)
+            self.assertIn("HeatmapPlotPanelProps", messages)
+
+    def test_plot_heatmap_declarative_binding_surface_is_allowed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-examples/src/heatmap_demo.rs",
+                """
+                use fret_plot::HeatmapPlotPanelBinding;
+                use fret_plot::declarative::heatmap_plot_panel_in;
+                use fret_plot::models::HeatmapPlotModel;
+                use fret_ui::{UiTree, declarative};
+
+                struct HeatmapDemoWindowState {
+                    ui: UiTree<App>,
+                    plot: HeatmapPlotPanelBinding,
+                }
+
+                impl HeatmapDemoDriver {
+                    fn build_ui(app: &mut App) -> HeatmapDemoWindowState {
+                        let cols = 2usize;
+                        let rows = 2usize;
+                        let data_bounds = DataRect {
+                            x_min: 0.0,
+                            x_max: 1.0,
+                            y_min: 0.0,
+                            y_max: 1.0,
+                        };
+                        let values = vec![0.0, 0.2, 0.4, 0.6];
+                        let plot = HeatmapPlotPanelBinding::new(
+                            app,
+                            HeatmapPlotModel::new(data_bounds, cols, rows, values),
+                        );
+                        HeatmapDemoWindowState {
+                            ui: UiTree::new(),
+                            plot,
+                        }
+                    }
+                }
+
+                fn handle_event(app: &mut App, state: &mut HeatmapDemoWindowState) {
+                    let _ = state.plot.output_untracked(app);
+                }
+
+                fn render(
+                    app: &mut App,
+                    services: &mut Services,
+                    window: AppWindowId,
+                    bounds: Rect,
+                    state: &mut HeatmapDemoWindowState,
+                ) {
+                    let plot = state.plot.clone();
+                    let root = declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
+                        .render_root("heatmap-demo", move |cx| {
+                            let mut style = LinePlotStyle::default();
+                            style.heatmap_show_colorbar = true;
+                            let props = plot.panel_props().style(style);
+                            vec![heatmap_plot_panel_in(cx, props)]
+                        });
+                    let _ = root;
+                }
+                """,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/heatmap_demo.rs",
+                        "advanced_manual",
+                        "fixture heatmap plot demo",
+                        owner="examples-plot-heatmap",
+                        allowed_raw_seams=("fret_ui", "UiTree"),
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            self.assertFalse(
+                [
+                    violation
+                    for violation in violations
+                    if violation.rule
+                    == "advanced-surface-plot-heatmap-declarative-binding-boundary"
+                ]
+            )
+
     def test_plot_stress_legacy_retained_authoring_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
