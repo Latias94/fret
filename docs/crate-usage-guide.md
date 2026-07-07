@@ -272,6 +272,10 @@ When app code intentionally builds low-level containers or virtualized lists, ke
 explicit lanes too: use `fret::style::{ContainerProps, LayoutStyle, Length, ...}` for layout props
 and `fret::virtual_list::{VirtualListOptions, VirtualListScrollHandle, ...}` for virtualization
 state.
+When extracted app helpers need common text roles, prefer `fret::app::text::{control_readout,
+control_label, button_label, list_row_label, table_cell, table_cell_emphasis,
+section_chrome_label, chrome_glyph, code_label, code_block, paragraph, compact_paragraph}` instead
+of importing `fret_ui_kit::declarative::text` or spelling `cx.elements()` directly.
 When extracted app helpers need hover shells or attributed text leaves, prefer
 `fret_ui_kit::ui::hover_region(...)` and `fret_ui_kit::ui::rich_text(...)` over spelling
 `HoverRegionProps`, `StyledTextProps`, or `cx.elements()` directly.

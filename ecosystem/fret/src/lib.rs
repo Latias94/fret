@@ -830,6 +830,15 @@ pub mod app {
             fret_ui_kit::declarative::text::text_control_readout(cx.elements(), text)
         }
 
+        /// Compact control label text.
+        pub fn control_label<'a, Cx, T>(cx: &mut Cx, text: T) -> fret_ui::element::AnyElement
+        where
+            Cx: crate::app::AppRenderContext<'a>,
+            T: Into<Arc<str>>,
+        {
+            fret_ui_kit::declarative::text::text_control_label(cx.elements(), text)
+        }
+
         /// Prose paragraph text.
         pub fn paragraph<'a, Cx, T>(cx: &mut Cx, text: T) -> fret_ui::element::AnyElement
         where
@@ -903,6 +912,24 @@ pub mod app {
             fret_ui_kit::declarative::text::text_button_label(cx.elements(), text)
         }
 
+        /// Dense table-cell text.
+        pub fn table_cell<'a, Cx, T>(cx: &mut Cx, text: T) -> fret_ui::element::AnyElement
+        where
+            Cx: crate::app::AppRenderContext<'a>,
+            T: Into<Arc<str>>,
+        {
+            fret_ui_kit::declarative::text::text_table_cell(cx.elements(), text)
+        }
+
+        /// Emphasized dense table-cell text.
+        pub fn table_cell_emphasis<'a, Cx, T>(cx: &mut Cx, text: T) -> fret_ui::element::AnyElement
+        where
+            Cx: crate::app::AppRenderContext<'a>,
+            T: Into<Arc<str>>,
+        {
+            fret_ui_kit::declarative::text::text_table_cell_emphasis(cx.elements(), text)
+        }
+
         /// Attributed list-row label text with an inherited foreground.
         pub fn list_row_label_attributed_with_foreground<'a, Cx>(
             cx: &mut Cx,
@@ -925,6 +952,15 @@ pub mod app {
             fret_ui_kit::declarative::text::text_section_chrome_label(cx.elements(), text)
         }
 
+        /// Compact chrome glyph text.
+        pub fn chrome_glyph<'a, Cx, T>(cx: &mut Cx, text: T) -> fret_ui::element::AnyElement
+        where
+            Cx: crate::app::AppRenderContext<'a>,
+            T: Into<Arc<str>>,
+        {
+            fret_ui_kit::declarative::text::text_chrome_glyph(cx.elements(), text)
+        }
+
         /// Inline code label text.
         pub fn code_label<'a, Cx, T>(cx: &mut Cx, text: T) -> fret_ui::element::AnyElement
         where
@@ -932,6 +968,15 @@ pub mod app {
             T: Into<Arc<str>>,
         {
             fret_ui_kit::declarative::text::text_code_label(cx.elements(), text)
+        }
+
+        /// Block code text.
+        pub fn code_block<'a, Cx, T>(cx: &mut Cx, text: T) -> fret_ui::element::AnyElement
+        where
+            Cx: crate::app::AppRenderContext<'a>,
+            T: Into<Arc<str>>,
+        {
+            fret_ui_kit::declarative::text::text_code_block(cx.elements(), text)
         }
     }
 
@@ -5054,20 +5099,30 @@ mod authoring_surface_policy_tests {
     fn app_text_facade_keeps_first_contact_text_off_raw_element_context() {
         assert!(LIB_RS.contains("pub mod text {"));
         assert!(LIB_RS.contains("pub fn control_readout<'a, Cx, T>("));
+        assert!(LIB_RS.contains("pub fn control_label<'a, Cx, T>("));
         assert!(LIB_RS.contains("pub fn paragraph<'a, Cx, T>("));
         assert!(LIB_RS.contains("pub fn compact_paragraph<'a, Cx, T>("));
         assert!(LIB_RS.contains("pub fn list_row_label<'a, Cx, T>("));
         assert!(LIB_RS.contains("pub fn list_row_label_with_foreground<'a, Cx, T>("));
         assert!(LIB_RS.contains("pub fn chrome_title<'a, Cx, T>("));
         assert!(LIB_RS.contains("pub fn button_label<'a, Cx, T>("));
+        assert!(LIB_RS.contains("pub fn table_cell<'a, Cx, T>("));
+        assert!(LIB_RS.contains("pub fn table_cell_emphasis<'a, Cx, T>("));
         assert!(LIB_RS.contains("pub fn list_row_label_attributed_with_foreground<'a, Cx>("));
         assert!(LIB_RS.contains("pub fn section_chrome_label<'a, Cx, T>("));
+        assert!(LIB_RS.contains("pub fn chrome_glyph<'a, Cx, T>("));
         assert!(LIB_RS.contains("pub fn code_label<'a, Cx, T>("));
+        assert!(LIB_RS.contains("pub fn code_block<'a, Cx, T>("));
         assert!(LIB_RS.contains(") -> fret_ui::element::AnyElement"));
         assert!(LIB_RS.contains("Cx: crate::app::AppRenderContext<'a>"));
         assert!(
             LIB_RS.contains(
                 "fret_ui_kit::declarative::text::text_control_readout(cx.elements(), text)"
+            )
+        );
+        assert!(
+            LIB_RS.contains(
+                "fret_ui_kit::declarative::text::text_control_label(cx.elements(), text)"
             )
         );
         assert!(
@@ -5083,9 +5138,22 @@ mod authoring_surface_policy_tests {
             LIB_RS
                 .contains("fret_ui_kit::declarative::text::text_button_label(cx.elements(), text)")
         );
+        assert!(
+            LIB_RS.contains("fret_ui_kit::declarative::text::text_table_cell(cx.elements(), text)")
+        );
+        assert!(LIB_RS.contains(
+            "fret_ui_kit::declarative::text::text_table_cell_emphasis(cx.elements(), text)"
+        ));
         assert!(LIB_RS.contains(
             "fret_ui_kit::declarative::text::text_list_row_label_attributed(cx.elements(), rich)"
         ));
+        assert!(
+            LIB_RS
+                .contains("fret_ui_kit::declarative::text::text_chrome_glyph(cx.elements(), text)")
+        );
+        assert!(
+            LIB_RS.contains("fret_ui_kit::declarative::text::text_code_block(cx.elements(), text)")
+        );
         assert!(app_prelude_exports_symbol("text"));
         assert!(!app_prelude_exports_symbol("AnyElement"));
         assert!(!app_prelude_exports_symbol("ElementContext"));
