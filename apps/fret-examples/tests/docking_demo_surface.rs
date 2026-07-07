@@ -8,11 +8,12 @@ fn docking_demo_keeps_panel_text_on_roles() {
     let source = compact(source);
 
     for needle in [
-        "usefret_ui_kit::declarative::textasdecl_text;",
-        "fndocking_demo_list_row_text<H:fret_ui::UiHost>(",
-        "fndocking_demo_readout_text<H:fret_ui::UiHost>(",
-        "decl_text::text_list_row_label(cx,text)",
-        "decl_text::text_control_readout(cx,text)",
+        "usefret::app::{AppRenderContext,text};",
+        "fndocking_demo_list_row_text<'a,Cx>(",
+        "fndocking_demo_readout_text<'a,Cx>(",
+        "Cx:AppRenderContext<'a>,",
+        "text::list_row_label(cx,text)",
+        "text::control_readout(cx,text)",
         "docking_demo_list_row_text(cx,\"Scene\")",
         "docking_demo_list_row_text(cx,\"Camera\")",
         "docking_demo_list_row_text(cx,\"DirectionalLight\")",
@@ -35,6 +36,10 @@ fn docking_demo_keeps_panel_text_on_roles() {
         "cx.text(\"Name:Player\")",
         "cx.text(\"Position:(12.0,3.0,-8.0)\")",
         "cx.text(\"Rotation:(0.0,90.0,0.0)\")",
+        "usefret_ui_kit::declarative::textasdecl_text;",
+        "decl_text::",
+        "text_list_row_label(",
+        "text_control_readout(",
     ] {
         assert!(
             !source.contains(needle),

@@ -1,4 +1,5 @@
 use anyhow::Context as _;
+use fret::app::{AppRenderContext, text};
 use fret_app::{App, CommandId, Effect, WindowRequest};
 use fret_bootstrap::ui_diagnostics::UiDiagnosticsService;
 use fret_core::{
@@ -20,7 +21,6 @@ use fret_ui::element::{
     AnyElement, ContainerProps, InsetEdge, LayoutStyle, Length, PositionStyle, SemanticsProps,
 };
 use fret_ui::{ElementContext, Theme, UiTree};
-use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
 use fret_ui_shadcn::facade as shadcn;
@@ -32,18 +32,18 @@ const DOCKING_DEMO_DRAG_ANCHOR_SIZE: Px = Px(12.0);
 const CMD_DOCK_DEMO_SPLIT_TOGGLE: &str = "dock_demo.split.toggle";
 const DEV_STATE_DOCKING_LAYOUT_KEY: &str = "docking.layout";
 
-fn docking_demo_list_row_text<H: fret_ui::UiHost>(
-    cx: &mut fret_ui::ElementContext<'_, H>,
-    text: impl Into<Arc<str>>,
-) -> fret_ui::element::AnyElement {
-    decl_text::text_list_row_label(cx, text)
+fn docking_demo_list_row_text<'a, Cx>(cx: &mut Cx, text: impl Into<Arc<str>>) -> AnyElement
+where
+    Cx: AppRenderContext<'a>,
+{
+    text::list_row_label(cx, text)
 }
 
-fn docking_demo_readout_text<H: fret_ui::UiHost>(
-    cx: &mut fret_ui::ElementContext<'_, H>,
-    text: impl Into<Arc<str>>,
-) -> fret_ui::element::AnyElement {
-    decl_text::text_control_readout(cx, text)
+fn docking_demo_readout_text<'a, Cx>(cx: &mut Cx, text: impl Into<Arc<str>>) -> AnyElement
+where
+    Cx: AppRenderContext<'a>,
+{
+    text::control_readout(cx, text)
 }
 
 fn docking_demo_absolute_layout(bounds: Rect, rect: Rect) -> LayoutStyle {
