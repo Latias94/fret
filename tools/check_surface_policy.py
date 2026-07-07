@@ -1504,7 +1504,6 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
             "fret::advanced",
             "fret_core",
             "fret_ui",
-            "AnyElement",
         ),
         owner="examples-postprocess-theme-reference",
     ),

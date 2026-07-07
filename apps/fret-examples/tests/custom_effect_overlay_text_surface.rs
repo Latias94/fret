@@ -352,12 +352,11 @@ fn assert_postprocess_theme_overlay_text_roles(source: &str) {
     let source = compact(source);
 
     for needle in [
-        "usefret::app::{AppComponentCx,AppRenderContext,LocalState};",
-        "usefret_ui_kit::declarative::textasdecl_text;",
+        "usefret::app::{AppComponentCx,AppElement,AppRenderContext,LocalState,text};",
         "fnpostprocess_title_text<'a,Cx>(",
         "fnpostprocess_readout_text<'a,Cx>(",
-        "decl_text::text_section_chrome_label(cx.elements(),text).inherit_foreground(srgb(255,255,255,0.92))",
-        "decl_text::text_control_readout(cx.elements(),text).inherit_foreground(srgb(255,255,255,0.68))",
+        "text::section_chrome_label(cx,text).inherit_foreground(srgb(255,255,255,0.92))",
+        "text::control_readout(cx,text).inherit_foreground(srgb(255,255,255,0.68))",
         "lettitle=postprocess_title_text(cx,\"Theme-likePostprocess(CustomV1)\");",
         "letsubtitle=postprocess_readout_text(cx,\"Scanlines+vignette+chromatic+grain(bounded,deterministic).\",);",
     ] {
@@ -372,6 +371,8 @@ fn assert_postprocess_theme_overlay_text_roles(source: &str) {
         "TextProps{",
         "wrap:fret_core::TextWrap::None",
         "overflow:fret_core::TextOverflow::Clip",
+        "usefret_ui_kit::declarative::textasdecl_text;",
+        "AnyElement",
     ] {
         assert!(
             !source.contains(needle),
@@ -565,7 +566,7 @@ fn postprocess_theme_demo_uses_app_view_imports_with_explicit_effect_hook() {
     for needle in [
         "usefret::advanced::driver::UiAppBuilderAdvancedExtas_;",
         "usefret::app::prelude::*;",
-        "usefret::app::{AppComponentCx,AppRenderContext,LocalState};",
+        "usefret::app::{AppComponentCx,AppElement,AppRenderContext,LocalState,text};",
         "usefret_ui::Theme;",
         "usefret_ui_kit::declarative::action_hooks::ActionHooksExtas_;",
         "usefret_ui_kit::{IntoUiElement,IntoUiElementInExtas_,LayoutRefinement,Space,UiSupportsLayoutas_,ui,};",

@@ -14,20 +14,18 @@ use std::sync::Arc;
 
 use fret::advanced::driver::UiAppBuilderAdvancedExt as _;
 use fret::app::prelude::*;
-use fret::app::{AppComponentCx, AppRenderContext, LocalState};
+use fret::app::{AppComponentCx, AppElement, AppRenderContext, LocalState, text};
 use fret_core::scene::{
     DitherMode, EffectChain, EffectMode, EffectParamsV1, EffectQuality, EffectStep,
 };
 use fret_core::{Color, Corners, Edges, EffectId, Px};
 use fret_ui::Theme;
 use fret_ui::element::{
-    AnyElement, ContainerProps, EffectLayerProps, LayoutStyle, Length, Overflow, PositionStyle,
-    SpacerProps,
+    ContainerProps, EffectLayerProps, LayoutStyle, Length, Overflow, PositionStyle, SpacerProps,
 };
 use fret_ui_kit::custom_effects::CustomEffectProgramV1;
 use fret_ui_kit::declarative::UiElementTestIdExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
-use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::{
     IntoUiElement, IntoUiElementInExt as _, LayoutRefinement, Space, UiSupportsLayout as _, ui,
 };
@@ -37,20 +35,18 @@ mod act {
     fret::actions!([Reset = "postprocess_theme_demo.reset.v1"]);
 }
 
-fn postprocess_title_text<'a, Cx>(cx: &mut Cx, text: impl Into<Arc<str>>) -> AnyElement
+fn postprocess_title_text<'a, Cx>(cx: &mut Cx, text: impl Into<Arc<str>>) -> AppElement
 where
     Cx: AppRenderContext<'a>,
 {
-    decl_text::text_section_chrome_label(cx.elements(), text)
-        .inherit_foreground(srgb(255, 255, 255, 0.92))
+    text::section_chrome_label(cx, text).inherit_foreground(srgb(255, 255, 255, 0.92))
 }
 
-fn postprocess_readout_text<'a, Cx>(cx: &mut Cx, text: impl Into<Arc<str>>) -> AnyElement
+fn postprocess_readout_text<'a, Cx>(cx: &mut Cx, text: impl Into<Arc<str>>) -> AppElement
 where
     Cx: AppRenderContext<'a>,
 {
-    decl_text::text_control_readout(cx.elements(), text)
-        .inherit_foreground(srgb(255, 255, 255, 0.68))
+    text::control_readout(cx, text).inherit_foreground(srgb(255, 255, 255, 0.68))
 }
 
 fn install_demo_theme(app: &mut App) {

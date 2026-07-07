@@ -1061,6 +1061,13 @@ class SurfacePolicyTests(unittest.TestCase):
         self.assertIn("image/SVG", markdown_spec.reason)
         self.assertNotIn("AnyElement", markdown_spec.allowed_raw_seams)
         self.assertNotIn("ElementContext", markdown_spec.allowed_raw_seams)
+        postprocess_spec = next(
+            spec
+            for spec in POLICY.ADVANCED_MANUAL_SURFACES
+            if spec.path == "apps/fret-examples/src/postprocess_theme_demo.rs"
+        )
+        self.assertIn("postprocess", postprocess_spec.reason)
+        self.assertNotIn("AnyElement", postprocess_spec.allowed_raw_seams)
         for path in default_plot_overlay_paths:
             self.assertTrue(
                 any(spec.path == path for spec in POLICY.DEFAULT_AUTHORING_SURFACES),
