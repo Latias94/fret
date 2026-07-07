@@ -8,8 +8,8 @@ fn echarts_demo_chart_titles_use_section_chrome_role() {
     let source = compact(source);
 
     for needle in [
-        "usefret_ui_kit::declarative::textasdecl_text;",
-        "decl_text::text_section_chrome_label(",
+        "usefret::advanced::text;",
+        "text::section_chrome_label(",
         "std::sync::Arc::clone(&chart.title)",
     ] {
         assert!(
@@ -21,6 +21,14 @@ fn echarts_demo_chart_titles_use_section_chrome_role() {
     assert!(
         !source.contains("cx.text(std::sync::Arc::clone(&chart.title))"),
         "echarts demo chart titles should not use bare wrapping text"
+    );
+    assert!(
+        !source.contains("usefret_ui_kit::declarative::textasdecl_text;"),
+        "echarts demo chart titles should not import raw kit text helpers"
+    );
+    assert!(
+        !source.contains("decl_text::"),
+        "echarts demo chart titles should not call raw kit text helpers"
     );
 }
 

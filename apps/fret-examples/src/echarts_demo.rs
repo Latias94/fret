@@ -1,12 +1,12 @@
 use fret::advanced::KernelApp;
 use fret::advanced::driver::{ViewElements, ui_app_with_hooks};
+use fret::advanced::text;
 use fret_core::AppWindowId;
 use fret_ui::ElementContext;
 use fret_ui::element::AnyElement;
 
 use delinea::{ChartEngine, ChartSpec};
 use fret_chart::{ChartCanvasPanelBinding, chart_canvas_panel};
-use fret_ui_kit::declarative::text as decl_text;
 
 struct EchartsDemoChart {
     title: std::sync::Arc<str>,
@@ -105,7 +105,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut EchartsDemoState) -> Vi
 
     let mut out: Vec<AnyElement> = Vec::new();
     for chart in &st.charts {
-        out.push(decl_text::text_section_chrome_label(
+        out.push(text::section_chrome_label(
             cx,
             std::sync::Arc::clone(&chart.title),
         ));

@@ -12,12 +12,13 @@ fn imui_editor_proof_main_fixed_text_uses_shared_roles() {
         "fn proof_imui_compact_paragraph_text(",
         "use fret::AppComponentCx;",
         "use fret::advanced::KernelApp;",
+        "use fret::advanced::text;",
         "use fret::app::AppRenderDataExt as _;",
         "use fret::imui::UiWriterImUiFacadeExt;",
         "use fret_ui_kit::IntoUiElement;",
-        "decl_text::text_section_chrome_label(cx, text)",
-        "decl_text::text_control_readout(cx, text)",
-        "decl_text::text_compact_paragraph(cx, text)",
+        "text::section_chrome_label(cx, text)",
+        "text::control_readout(cx, text)",
+        "text::compact_paragraph(cx, text)",
     ] {
         assert!(
             helper_source.contains(needle),
@@ -31,6 +32,8 @@ fn imui_editor_proof_main_fixed_text_uses_shared_roles() {
         "advanced::prelude::*",
         "component::prelude::*",
         "use fret::imui::prelude::UiWriterImUiFacadeExt;",
+        "use fret_ui_kit::declarative::text as decl_text;",
+        "decl_text::",
     ] {
         assert!(
             !helper_source.contains(forbidden),

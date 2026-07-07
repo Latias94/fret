@@ -14,6 +14,7 @@ use std::sync::Arc;
 use fret::AppComponentCx;
 use fret::advanced::KernelApp;
 use fret::advanced::driver::ViewElements;
+use fret::advanced::text;
 use fret::app::LocalState;
 use fret::app::prelude::*;
 use fret::style::{ColorRef, Space, ThemeSnapshot};
@@ -38,7 +39,6 @@ use fret_ui::{ElementContext, UiHost};
 use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::declarative::TrackedModelExt as _;
-use fret_ui_kit::declarative::text as decl_text;
 use serde_json::Value;
 mod act {
     fret::actions!([
@@ -66,21 +66,21 @@ fn genui_code_line_text<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     text: impl Into<Arc<str>>,
 ) -> AnyElement {
-    decl_text::text_code_block(cx, text)
+    text::code_block(cx, text)
 }
 
 fn genui_readout_text<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     text: impl Into<Arc<str>>,
 ) -> AnyElement {
-    decl_text::text_control_readout(cx, text)
+    text::control_readout(cx, text)
 }
 
 fn genui_paragraph_text<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     text: impl Into<Arc<str>>,
 ) -> AnyElement {
-    decl_text::text_compact_paragraph(cx, text)
+    text::compact_paragraph(cx, text)
 }
 
 struct GenUiModelOwner<'a> {

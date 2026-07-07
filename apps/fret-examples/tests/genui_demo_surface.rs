@@ -9,13 +9,13 @@ fn genui_demo_keeps_tool_text_on_roles() {
 
     for needle in [
         "usefret_ui::{ElementContext,UiHost};",
-        "usefret_ui_kit::declarative::textasdecl_text;",
+        "usefret::advanced::text;",
         "fngenui_code_line_text<H:UiHost>(",
         "fngenui_readout_text<H:UiHost>(",
         "fngenui_paragraph_text<H:UiHost>(",
-        "decl_text::text_code_block(cx,text)",
-        "decl_text::text_control_readout(cx,text)",
-        "decl_text::text_compact_paragraph(cx,text)",
+        "text::code_block(cx,text)",
+        "text::control_readout(cx,text)",
+        "text::compact_paragraph(cx,text)",
         ".map(|line|genui_code_line_text(cx,line))",
         "items.push(genui_readout_text(cx,\"auto-apply\"));",
         "items.push(genui_readout_text(cx,\"auto-fixonapply\"));",
@@ -34,6 +34,8 @@ fn genui_demo_keeps_tool_text_on_roles() {
     }
 
     for needle in [
+        "usefret_ui_kit::declarative::textasdecl_text;",
+        "decl_text::",
         "ui::text(",
         "ui::rich_text(",
         ".text_sm()",
@@ -57,6 +59,7 @@ fn genui_demo_uses_explicit_public_surfaces() {
     for needle in [
         "usefret::advanced::KernelApp;",
         "usefret::advanced::driver::ViewElements;",
+        "usefret::advanced::text;",
         "usefret::app::LocalState;",
         "usefret::app::prelude::*;",
         "usefret::style::{ColorRef,Space,ThemeSnapshot};",

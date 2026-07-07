@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use fret::AppComponentCx;
 use fret::advanced::KernelApp;
+use fret::advanced::text;
 use fret::app::AppRenderDataExt as _;
 use fret::imui::UiWriterImUiFacadeExt;
 use fret_core::{Color, Corners, Edges, Px};
@@ -15,7 +16,6 @@ use fret_ui_editor::controls::{
 };
 use fret_ui_editor::primitives::{EditSessionOutcome, EditorTokenKeys};
 use fret_ui_kit::IntoUiElement;
-use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::headless::text_assist::{
     TextAssistItem, TextAssistMatchMode, controller_with_active_item_id,
     input_owned_text_assist_expanded,
@@ -163,7 +163,7 @@ pub(super) fn proof_compact_readout<H: UiHost>(
     test_id: Option<Arc<str>>,
 ) -> fret_ui::element::AnyElement {
     let readout = Arc::<str>::from(readout);
-    let mut el = decl_text::text_control_readout(cx, readout.clone());
+    let mut el = text::control_readout(cx, readout.clone());
     if let Some(test_id) = test_id {
         el = el.test_id(test_id);
     }
@@ -176,7 +176,7 @@ pub(super) fn proof_compact_readout_element<H: UiHost>(
     test_id: impl Into<Arc<str>>,
 ) -> AnyElement {
     let readout = readout.into();
-    let mut el = decl_text::text_control_readout(cx, readout.clone()).test_id(test_id.into());
+    let mut el = text::control_readout(cx, readout.clone()).test_id(test_id.into());
     el = el.a11y_label(readout);
     el
 }
@@ -194,7 +194,7 @@ pub(super) fn proof_section_chrome_label<H: UiHost>(
     text: &'static str,
     test_id: &'static str,
 ) -> AnyElement {
-    decl_text::text_section_chrome_label(cx, text).test_id(test_id)
+    text::section_chrome_label(cx, text).test_id(test_id)
 }
 
 pub(super) fn proof_imui_section_text(
@@ -202,7 +202,7 @@ pub(super) fn proof_imui_section_text(
     text: impl Into<Arc<str>>,
 ) {
     let text = text.into();
-    let element = ui.with_cx_mut(move |cx| decl_text::text_section_chrome_label(cx, text));
+    let element = ui.with_cx_mut(move |cx| text::section_chrome_label(cx, text));
     ui.add(element);
 }
 
@@ -211,7 +211,7 @@ pub(super) fn proof_imui_readout_text(
     text: impl Into<Arc<str>>,
 ) {
     let text = text.into();
-    let element = ui.with_cx_mut(move |cx| decl_text::text_control_readout(cx, text));
+    let element = ui.with_cx_mut(move |cx| text::control_readout(cx, text));
     ui.add(element);
 }
 
@@ -220,7 +220,7 @@ pub(super) fn proof_imui_compact_paragraph_text(
     text: impl Into<Arc<str>>,
 ) {
     let text = text.into();
-    let element = ui.with_cx_mut(move |cx| decl_text::text_compact_paragraph(cx, text));
+    let element = ui.with_cx_mut(move |cx| text::compact_paragraph(cx, text));
     ui.add(element);
 }
 
@@ -373,9 +373,9 @@ pub(super) fn proof_drag_preview_card<H: UiHost>(
 
         out.push(cx.container(props, move |cx| {
             let mut children = Vec::new();
-            children.push(decl_text::text_section_chrome_label(cx, title.clone()));
+            children.push(text::section_chrome_label(cx, title.clone()));
             if let Some(subtitle) = subtitle.as_ref() {
-                children.push(decl_text::text_control_readout(cx, subtitle.clone()));
+                children.push(text::control_readout(cx, subtitle.clone()));
             }
             children
         }));
