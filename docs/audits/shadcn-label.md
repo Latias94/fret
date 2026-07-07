@@ -24,6 +24,7 @@ registry examples, and the current label layout/interaction gates.
 - Primitive implementation: `ecosystem/fret-ui-kit/src/primitives/label.rs`
 - Re-export surface: `ecosystem/fret-ui-shadcn/src/label.rs`
 - Gallery page: `apps/fret-ui-gallery/src/ui/pages/label.rs`
+- Gallery docs-surface gate: `apps/fret-ui-gallery/tests/label_docs_surface.rs`
 - Label docs gate: `tools/diag-scripts/ui-gallery/label/ui-gallery-label-docs-smoke.json`
 - Label interaction gate: `tools/diag-scripts/ui-gallery/label/ui-gallery-label-click-label-toggles-checkbox.json`
 
@@ -50,6 +51,7 @@ registry examples, and the current label layout/interaction gates.
 
 - Pass: the gallery now mirrors the current upstream docs path first: checkbox `Demo` and `Usage`.
 - Pass: `Label in Field`, `RTL`, `Composable Content`, and `API Reference` are explicitly retained after the current upstream docs path as Fret follow-ups.
+- Pass: `apps/fret-ui-gallery/tests/label_docs_surface.rs` locks the page order, copyable association snippets, raw-free `Label in Field` example, and Label diagnostics anchors.
 - Pass: this work is still a narrow public-surface/recipe alignment plus existing primitive association fixes: disabled associated-label opacity and associated-label forwarding under ambient pressable shells.
 
 ## Validation
@@ -59,6 +61,7 @@ registry examples, and the current label layout/interaction gates.
 - `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail label_demo`
 - `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_misc_targeted --status-level fail`
 - `cargo nextest run -p fret-ui-shadcn --test input_label_focus --test textarea_label_focus --status-level fail`
+- `cargo nextest run -p fret-ui-gallery --test label_docs_surface`
 - `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --status-level fail label`
 - Existing layout gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/basic.rs` (`web_vs_fret_layout_label_demo_geometry`)
 - Existing targeted marker gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_misc_targeted.rs`

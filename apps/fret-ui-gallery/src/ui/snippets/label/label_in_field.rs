@@ -12,7 +12,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
 
     ui::v_stack(|cx| {
         vec![
-            shadcn::raw::typography::muted(
+            shadcn::FieldDescription::new(
                 "For forms, prefer Field + FieldLabel for built-in description/error structure.",
             )
             .into_element(cx),
