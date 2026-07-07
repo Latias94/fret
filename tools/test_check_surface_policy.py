@@ -876,6 +876,11 @@ class SurfacePolicyTests(unittest.TestCase):
             "apps/fret-examples/src/drop_shadow_demo.rs",
             "apps/fret-examples/src/image_upload_demo.rs",
         }
+        text_input_conformance_paths = {
+            "apps/fret-examples/src/cjk_conformance_demo.rs",
+            "apps/fret-examples/src/emoji_conformance_demo.rs",
+            "apps/fret-examples/src/ime_smoke_demo.rs",
+        }
         for path in custom_effect_v2_web_paths:
             self.assertIn(path, POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS)
         for path in custom_effect_reference_paths:
@@ -885,6 +890,8 @@ class SurfacePolicyTests(unittest.TestCase):
         for path in smoke_effects_paths:
             self.assertIn(path, POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS)
         for path in renderer_media_lab_paths:
+            self.assertIn(path, POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS)
+        for path in text_input_conformance_paths:
             self.assertIn(path, POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS)
         self.assertTrue(
             any(
@@ -1033,6 +1040,20 @@ class SurfacePolicyTests(unittest.TestCase):
                 for spec in POLICY.INTERNAL_HARNESS_SURFACES
             )
         )
+        for path in text_input_conformance_paths:
+            spec = next(
+                (
+                    spec
+                    for spec in POLICY.INTERNAL_HARNESS_SURFACES
+                    if spec.path == path
+                ),
+                None,
+            )
+            self.assertIsNotNone(
+                spec, f"{path} should be classified as a text/input conformance harness"
+            )
+            self.assertIn("conformance", spec.reason)
+            self.assertTrue(spec.allowed_raw_seams)
         helper_spec = next(
             (
                 spec

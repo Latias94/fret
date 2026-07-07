@@ -1068,6 +1068,56 @@ INTERNAL_HARNESS_SURFACES: tuple[SurfacePath, ...] = (
         owner="examples-first-frame-smoke",
     ),
     _fret_examples_internal_harness(
+        "cjk_conformance_demo.rs",
+        "the CJK text conformance harness owns manual UiTree rendering, font catalog inspection, "
+        "hot reload hooks, and direct frame layout/paint validation",
+        (
+            "fret_app",
+            "fret_core",
+            "fret_launch",
+            "fret_runtime",
+            "fret_ui",
+            "AnyElement",
+            "FnDriver",
+            "UiTree",
+        ),
+        owner="examples-cjk-conformance",
+    ),
+    _fret_examples_internal_harness(
+        "emoji_conformance_demo.rs",
+        "the emoji text conformance harness owns manual UiTree rendering, font catalog "
+        "inspection, local font override controls, hot reload hooks, and direct frame "
+        "layout/paint validation",
+        (
+            "fret::advanced",
+            "fret_app",
+            "fret_core",
+            "fret_launch",
+            "fret_runtime",
+            "fret_ui",
+            "AnyElement",
+            "FnDriver",
+            "UiTree",
+        ),
+        owner="examples-emoji-conformance",
+    ),
+    _fret_examples_internal_harness(
+        "ime_smoke_demo.rs",
+        "the IME conformance smoke harness owns manual UiTree rendering, command/keymap glue, "
+        "IME event recording, hot reload hooks, and direct frame layout/paint validation",
+        (
+            "fret::advanced",
+            "fret_app",
+            "fret_core",
+            "fret_launch",
+            "fret_runtime",
+            "fret_ui",
+            "FnDriver",
+            "UiTree",
+        ),
+        owner="examples-ime-conformance-smoke",
+    ),
+    _fret_examples_internal_harness(
         "docking_arbitration_demo.rs",
         "the arbitration harness is ADR/conformance infrastructure for docking, viewports, "
         "overlays, and launch hooks",
@@ -1784,6 +1834,9 @@ PUBLIC_EXAMPLE_SCAN_ROOTS: tuple[str, ...] = (
     "apps/fret-examples/src/alpha_mode_demo.rs",
     "apps/fret-examples/src/drop_shadow_demo.rs",
     "apps/fret-examples/src/image_upload_demo.rs",
+    "apps/fret-examples/src/cjk_conformance_demo.rs",
+    "apps/fret-examples/src/emoji_conformance_demo.rs",
+    "apps/fret-examples/src/ime_smoke_demo.rs",
     "apps/fret-examples/src/custom_effect_v2_web_demo.rs",
     "apps/fret-examples/src/custom_effect_v2_identity_web_demo.rs",
     "apps/fret-examples/src/custom_effect_v2_lut_web_demo.rs",
