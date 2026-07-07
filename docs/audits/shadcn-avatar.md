@@ -35,6 +35,7 @@ upstream shadcn/ui v4 docs plus Radix/Base UI interaction expectations.
 ### Docs/gallery surface
 
 - Pass: the gallery page now mirrors the upstream docs path much more explicitly: `Demo`, `Usage`, `Basic`, `Badge`, `Badge with Icon`, `Avatar Group`, `Avatar Group Count`, `Avatar Group with Icon`, `Sizes`, `Dropdown`, `RTL`, and `API Reference`, before a Fret-only fallback check.
+- Pass: `apps/fret-ui-gallery/tests/avatar_docs_surface.rs` now locks that docs order, copyable usage/dropdown snippets, and the dropdown trigger relation/action-state diagnostics in one focused gate.
 - Pass: the `Usage` snippet is copyable and complete enough for authors to lift directly.
 - Pass: avatar-in-dropdown demos are exposed with stable `test_id` anchors for diagnostics.
 
@@ -142,6 +143,7 @@ Observed outcomes:
 
 ## Validation
 
+- `cargo nextest run -p fret-ui-gallery --test avatar_docs_surface`
 - `cargo build -p fret-ui-gallery`
 - `cargo test -p fret-diag-protocol script_v2_roundtrip_ui_gallery_avatar_dropdown_activate_open -- --exact`
 - `cargo test -p fret-diag-protocol script_v2_roundtrip_ui_gallery_avatar_dropdown_focus_trigger -- --exact`
