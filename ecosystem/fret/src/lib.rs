@@ -1632,6 +1632,78 @@ pub mod advanced {
         pub use crate::interop::run_native_with_compat_driver;
     }
 
+    /// Text helpers for advanced/manual render lanes.
+    ///
+    /// These mirror the default `fret::app::text` helpers without constraining callers to the
+    /// default `App` host. Use them from manual `KernelApp` / custom-host examples that still need
+    /// a named text recipe instead of importing `fret-ui-kit`'s raw declarative text module.
+    pub mod text {
+        use std::sync::Arc;
+
+        /// Compact control/status readout text.
+        pub fn control_readout<'a, H, Cx, T>(cx: &mut Cx, text: T) -> fret_ui::element::AnyElement
+        where
+            H: fret_ui::UiHost + 'a,
+            Cx: fret_ui::ElementContextAccess<'a, H>,
+            T: Into<Arc<str>>,
+        {
+            fret_ui_kit::declarative::text::text_control_readout(cx.elements(), text)
+        }
+
+        /// Compact prose paragraph text.
+        pub fn compact_paragraph<'a, H, Cx, T>(cx: &mut Cx, text: T) -> fret_ui::element::AnyElement
+        where
+            H: fret_ui::UiHost + 'a,
+            Cx: fret_ui::ElementContextAccess<'a, H>,
+            T: Into<Arc<str>>,
+        {
+            fret_ui_kit::declarative::text::text_compact_paragraph(cx.elements(), text)
+        }
+
+        /// Section/chrome label text.
+        pub fn section_chrome_label<'a, H, Cx, T>(
+            cx: &mut Cx,
+            text: T,
+        ) -> fret_ui::element::AnyElement
+        where
+            H: fret_ui::UiHost + 'a,
+            Cx: fret_ui::ElementContextAccess<'a, H>,
+            T: Into<Arc<str>>,
+        {
+            fret_ui_kit::declarative::text::text_section_chrome_label(cx.elements(), text)
+        }
+
+        /// Compact chrome glyph text.
+        pub fn chrome_glyph<'a, H, Cx, T>(cx: &mut Cx, text: T) -> fret_ui::element::AnyElement
+        where
+            H: fret_ui::UiHost + 'a,
+            Cx: fret_ui::ElementContextAccess<'a, H>,
+            T: Into<Arc<str>>,
+        {
+            fret_ui_kit::declarative::text::text_chrome_glyph(cx.elements(), text)
+        }
+
+        /// Inline code label text.
+        pub fn code_label<'a, H, Cx, T>(cx: &mut Cx, text: T) -> fret_ui::element::AnyElement
+        where
+            H: fret_ui::UiHost + 'a,
+            Cx: fret_ui::ElementContextAccess<'a, H>,
+            T: Into<Arc<str>>,
+        {
+            fret_ui_kit::declarative::text::text_code_label(cx.elements(), text)
+        }
+
+        /// Block code text.
+        pub fn code_block<'a, H, Cx, T>(cx: &mut Cx, text: T) -> fret_ui::element::AnyElement
+        where
+            H: fret_ui::UiHost + 'a,
+            Cx: fret_ui::ElementContextAccess<'a, H>,
+            T: Into<Arc<str>>,
+        {
+            fret_ui_kit::declarative::text::text_code_block(cx.elements(), text)
+        }
+    }
+
     /// Explicit raw retained-tree and hook seams for advanced/manual assembly.
     ///
     /// Import these from `fret::advanced::raw` at the call site that actually needs the raw
@@ -5157,6 +5229,56 @@ mod authoring_surface_policy_tests {
         assert!(app_prelude_exports_symbol("text"));
         assert!(!app_prelude_exports_symbol("AnyElement"));
         assert!(!app_prelude_exports_symbol("ElementContext"));
+    }
+
+    #[test]
+    fn advanced_text_facade_keeps_manual_text_off_raw_kit_imports() {
+        let advanced_surface = advanced_prelude_source();
+        let advanced_common_prelude = advanced_common_prelude_source();
+
+        assert!(advanced_surface.contains("pub mod text {"));
+        assert!(advanced_surface.contains("pub fn control_readout<'a, H, Cx, T>("));
+        assert!(advanced_surface.contains("pub fn compact_paragraph<'a, H, Cx, T>("));
+        assert!(advanced_surface.contains("pub fn section_chrome_label<'a, H, Cx, T>("));
+        assert!(advanced_surface.contains("pub fn chrome_glyph<'a, H, Cx, T>("));
+        assert!(advanced_surface.contains("pub fn code_label<'a, H, Cx, T>("));
+        assert!(advanced_surface.contains("pub fn code_block<'a, H, Cx, T>("));
+        assert!(advanced_surface.contains("H: fret_ui::UiHost + 'a"));
+        assert!(advanced_surface.contains("Cx: fret_ui::ElementContextAccess<'a, H>"));
+        assert!(
+            advanced_surface.contains(
+                "fret_ui_kit::declarative::text::text_control_readout(cx.elements(), text)"
+            )
+        );
+        assert!(advanced_surface.contains(
+            "fret_ui_kit::declarative::text::text_compact_paragraph(cx.elements(), text)"
+        ));
+        assert!(advanced_surface.contains(
+            "fret_ui_kit::declarative::text::text_section_chrome_label(cx.elements(), text)"
+        ));
+        assert!(
+            advanced_surface
+                .contains("fret_ui_kit::declarative::text::text_chrome_glyph(cx.elements(), text)")
+        );
+        assert!(
+            advanced_surface
+                .contains("fret_ui_kit::declarative::text::text_code_label(cx.elements(), text)")
+        );
+        assert!(
+            advanced_surface
+                .contains("fret_ui_kit::declarative::text::text_code_block(cx.elements(), text)")
+        );
+        assert!(
+            !advanced_common_prelude.contains("pub use crate::advanced::text"),
+            "advanced text helpers should stay on the explicit module, not prelude imports"
+        );
+        assert!(CRATE_USAGE_GUIDE.contains("manual `KernelApp` or custom-host helpers"));
+        assert!(CRATE_USAGE_GUIDE.contains("`fret::advanced::text::{control_readout"));
+        assert!(
+            CRATE_USAGE_GUIDE.contains(
+                "instead of importing `fret_ui_kit::declarative::text` in the app\nexample"
+            )
+        );
     }
 
     #[test]

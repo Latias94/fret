@@ -2,20 +2,20 @@ use std::sync::Arc;
 
 use fret::advanced::KernelApp;
 use fret::advanced::driver::{ViewElements, ui_app_with_hooks};
+use fret::advanced::text;
 use fret_core::{AppWindowId, Px};
+use fret_ui::ElementContext;
 use fret_ui::element::AnyElement;
-use fret_ui::{ElementContext, UiHost};
-use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::{LayoutRefinement, Space, ui};
 use fret_ui_shadcn::facade as shadcn;
 
 struct ExtrasMarqueePerfState;
 
-fn marquee_perf_title_text<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
+fn marquee_perf_title_text(
+    cx: &mut ElementContext<'_, KernelApp>,
     text: impl Into<Arc<str>>,
 ) -> AnyElement {
-    decl_text::text_section_chrome_label(cx, text)
+    text::section_chrome_label(cx, text)
 }
 
 pub fn run() -> anyhow::Result<()> {

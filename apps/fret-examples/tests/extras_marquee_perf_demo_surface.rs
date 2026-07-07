@@ -8,9 +8,9 @@ fn extras_marquee_perf_demo_keeps_title_on_chrome_role() {
     let compact_source = compact(source);
 
     for needle in [
-        "usefret_ui_kit::declarative::textasdecl_text;",
-        "fnmarquee_perf_title_text<H:UiHost>(",
-        "decl_text::text_section_chrome_label(cx,text)",
+        "usefret::advanced::text;",
+        "fnmarquee_perf_title_text(cx:&mutElementContext<'_,KernelApp>,",
+        "text::section_chrome_label(cx,text)",
         "marquee_perf_title_text(cx,\"Marqueeperfprobe(extras)\")",
     ] {
         assert!(
@@ -20,6 +20,8 @@ fn extras_marquee_perf_demo_keeps_title_on_chrome_role() {
     }
 
     for needle in [
+        "usefret_ui_kit::declarative::textasdecl_text;",
+        "decl_text::",
         "ui::text(\"Marqueeperfprobe(extras)\")",
         ".font_semibold()",
         ".text_sm()",

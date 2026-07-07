@@ -276,6 +276,10 @@ When extracted app helpers need common text roles, prefer `fret::app::text::{con
 control_label, button_label, list_row_label, table_cell, table_cell_emphasis,
 section_chrome_label, chrome_glyph, code_label, code_block, paragraph, compact_paragraph}` instead
 of importing `fret_ui_kit::declarative::text` or spelling `cx.elements()` directly.
+When manual `KernelApp` or custom-host helpers need the same text-role vocabulary, use
+`fret::advanced::text::{control_readout, section_chrome_label, chrome_glyph, code_label,
+code_block, compact_paragraph}` instead of importing `fret_ui_kit::declarative::text` in the app
+example.
 When extracted app helpers need hover shells or attributed text leaves, prefer
 `fret_ui_kit::ui::hover_region(...)` and `fret_ui_kit::ui::rich_text(...)` over spelling
 `HoverRegionProps`, `StyledTextProps`, or `cx.elements()` directly.
