@@ -803,6 +803,10 @@ class SurfacePolicyTests(unittest.TestCase):
             POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS,
         )
         self.assertIn(
+            "apps/fret-examples/src/datatable_demo.rs",
+            POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS,
+        )
+        self.assertIn(
             "apps/fret-examples/src/embedded_viewport_demo.rs",
             POLICY.PUBLIC_EXAMPLE_SCAN_ROOTS,
         )
@@ -879,6 +883,12 @@ class SurfacePolicyTests(unittest.TestCase):
                 any(spec.path == path for spec in POLICY.ADVANCED_MANUAL_SURFACES),
                 f"{path} should be classified as an advanced editor notes surface",
             )
+        self.assertTrue(
+            any(
+                spec.path == "apps/fret-examples/src/datatable_demo.rs"
+                for spec in POLICY.ADVANCED_MANUAL_SURFACES
+            )
+        )
         for path in external_import_paths:
             self.assertTrue(
                 any(spec.path == path for spec in POLICY.ADVANCED_MANUAL_SURFACES),
@@ -2671,6 +2681,134 @@ class SurfacePolicyTests(unittest.TestCase):
                     for violation in violations
                     if violation.rule
                     == "internal_harness-canvas-datagrid-stress-controls-boundary"
+                ]
+            )
+
+    def test_datatable_raw_output_model_plumbing_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-examples/src/datatable_demo.rs",
+                """
+                use fret_app::{App, CommandId, Effect, Model, WindowRequest};
+
+                struct DemoWindowState {
+                    table_output: Model<shadcn::DataTableViewOutput>,
+                }
+
+                fn build_ui(app: &mut App) {
+                    let table_output = app.models_mut().insert(shadcn::DataTableViewOutput::default());
+                    let _ = table_output;
+                }
+
+                fn render(cx: &mut ElementContext<'_, App>, state: &DemoWindowState) {
+                    let table_output = state.table_output.clone();
+                    cx.observe_model(&table_output, Invalidation::Layout);
+                    let _ = table_output.layout_value(cx);
+                    shadcn::DataTablePagination::new(&table_state, table_output.clone());
+                    shadcn::DataTable::new(rows, columns).output_model(table_output.clone());
+                }
+                """,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/datatable_demo.rs",
+                        "advanced_manual",
+                        "fixture datatable demo surface",
+                        owner="examples-datatable",
+                        allowed_raw_seams=(
+                            "fret_app",
+                            "fret_core",
+                            "fret_launch",
+                            "fret_runtime",
+                            "fret_ui",
+                            "AnyElement",
+                            "ElementContext",
+                            "FnDriver",
+                            "UiTree",
+                        ),
+                        retirement=POLICY.FRET_EXAMPLES_ADVANCED_RETIREMENT,
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            owner_violations = [
+                violation
+                for violation in violations
+                if violation.rule == "advanced-surface-datatable-output-boundary"
+            ]
+            self.assertEqual(5, len(owner_violations))
+            messages = "\n".join(violation.message for violation in owner_violations)
+            self.assertIn("legacy-output-model", messages)
+            self.assertIn("legacy-output-model-insert", messages)
+            self.assertIn("legacy-observe-model", messages)
+            self.assertIn("legacy-model-import", messages)
+
+    def test_datatable_local_state_output_surface_is_allowed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-examples/src/datatable_demo.rs",
+                """
+                use fret::app::AppLocalStateExt as _;
+                use fret::app::LocalState;
+
+                struct DemoWindowState {
+                    table_output: LocalState<shadcn::DataTableViewOutput>,
+                }
+
+                fn build_ui(app: &mut App) {
+                    let table_output = app.local_state(shadcn::DataTableViewOutput::default());
+                    let _ = table_output;
+                }
+
+                fn render(cx: &mut ElementContext<'_, App>, state: &DemoWindowState) {
+                    let table_output = state.table_output.clone();
+                    let _ = table_output.layout_value(cx);
+                    shadcn::DataTablePagination::new(&table_state, table_output.clone());
+                    shadcn::DataTable::new(rows, columns).output_model(table_output.clone());
+                }
+                """,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/datatable_demo.rs",
+                        "advanced_manual",
+                        "fixture datatable demo surface",
+                        owner="examples-datatable",
+                        allowed_raw_seams=(
+                            "fret_app",
+                            "fret_core",
+                            "fret_launch",
+                            "fret_runtime",
+                            "fret_ui",
+                            "AnyElement",
+                            "ElementContext",
+                            "FnDriver",
+                            "UiTree",
+                        ),
+                        retirement=POLICY.FRET_EXAMPLES_ADVANCED_RETIREMENT,
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            self.assertFalse(
+                [
+                    violation
+                    for violation in violations
+                    if violation.rule == "advanced-surface-datatable-output-boundary"
                 ]
             )
 

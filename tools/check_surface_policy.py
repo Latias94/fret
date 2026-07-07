@@ -699,6 +699,38 @@ CANVAS_DATAGRID_STRESS_FORBIDDEN_RAW_WRITE_PATTERNS: tuple[
     ),
 )
 
+DATATABLE_OWNER = "examples-datatable"
+
+DATATABLE_REQUIRED_COMPACT_MARKERS = (
+    "usefret::app::AppLocalStateExtas_;",
+    "usefret::app::LocalState;",
+    "table_output:LocalState<shadcn::DataTableViewOutput>,",
+    "lettable_output=app.local_state(shadcn::DataTableViewOutput::default());",
+    "lettable_output=state.table_output.clone();",
+    "let_=table_output.layout_value(cx);",
+    "shadcn::DataTablePagination::new(&table_state,table_output.clone())",
+    ".output_model(table_output.clone())",
+)
+
+DATATABLE_FORBIDDEN_COMPACT_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
+    (
+        "legacy-output-model",
+        re.compile(r"Model<shadcn::DataTableViewOutput>"),
+    ),
+    (
+        "legacy-output-model-insert",
+        re.compile(r"app\.models_mut\(\)\.insert\(shadcn::DataTableViewOutput::default\(\)\)"),
+    ),
+    (
+        "legacy-observe-model",
+        re.compile(r"cx\.observe_model\(&table_output,Invalidation::Layout\);"),
+    ),
+    (
+        "legacy-model-import",
+        re.compile(r"usefret_app::\{App,CommandId,Effect,Model,WindowRequest\};"),
+    ),
+)
+
 EDITOR_NOTES_OWNER = "examples-editor-notes"
 
 EDITOR_NOTES_REQUIRED_COMPACT_MARKERS = (
@@ -1090,6 +1122,23 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
             "UiTree",
         ),
         owner=COMPONENTS_GALLERY_OWNER,
+    ),
+    _fret_examples_advanced_surface(
+        "datatable_demo.rs",
+        "the datatable demo owns manual driver/table harness plumbing while keeping DataTable "
+        "output on app-facing LocalState instead of raw shared model output handles",
+        (
+            "fret_app",
+            "fret_core",
+            "fret_launch",
+            "fret_runtime",
+            "fret_ui",
+            "AnyElement",
+            "ElementContext",
+            "FnDriver",
+            "UiTree",
+        ),
+        owner=DATATABLE_OWNER,
     ),
     _fret_examples_advanced_surface(
         "embedded_viewport_demo.rs",
@@ -1524,6 +1573,7 @@ PUBLIC_EXAMPLE_SCAN_ROOTS: tuple[str, ...] = (
     "apps/fret-examples/src/virtual_list_stress_demo.rs",
     "apps/fret-examples/src/table_stress_demo.rs",
     "apps/fret-examples/src/canvas_datagrid_stress_demo.rs",
+    "apps/fret-examples/src/datatable_demo.rs",
     "apps/fret-examples/src/custom_effect_v2_web_demo.rs",
     "apps/fret-examples/src/custom_effect_v2_identity_web_demo.rs",
     "apps/fret-examples/src/custom_effect_v2_lut_web_demo.rs",
@@ -2202,6 +2252,51 @@ def _scan_canvas_datagrid_stress_controls_boundary(
     return violations
 
 
+def _scan_datatable_output_boundary(root: Path, spec: SurfacePath) -> list[SurfaceViolation]:
+    if spec.owner != DATATABLE_OWNER:
+        return []
+
+    violations: list[SurfaceViolation] = []
+    for path in _iter_source_files(root / spec.path):
+        text = _read_text(path)
+        production_text = text.split("#[cfg(test)]", 1)[0]
+        compact_production = _compact_source(production_text)
+        missing_markers = [
+            marker
+            for marker in DATATABLE_REQUIRED_COMPACT_MARKERS
+            if marker not in compact_production
+        ]
+        if missing_markers:
+            violations.append(
+                SurfaceViolation(
+                    rule="advanced-surface-datatable-output-boundary",
+                    path=path,
+                    line_no=1,
+                    message=(
+                        "datatable output must stay on app-facing LocalState; "
+                        f"missing compact markers: {', '.join(missing_markers)}"
+                    ),
+                )
+            )
+
+        for seam, pattern in DATATABLE_FORBIDDEN_COMPACT_PATTERNS:
+            if not pattern.search(compact_production):
+                continue
+            violations.append(
+                SurfaceViolation(
+                    rule="advanced-surface-datatable-output-boundary",
+                    path=path,
+                    line_no=1,
+                    message=(
+                        "datatable output must not regress to raw shared model plumbing; "
+                        f"compact `{seam}` bypasses the LocalState boundary"
+                    ),
+                )
+            )
+
+    return violations
+
+
 def _scan_editor_notes_bindings_boundary(
     root: Path, spec: SurfacePath
 ) -> list[SurfaceViolation]:
@@ -2322,6 +2417,7 @@ def _scan_classified_raw_surface(root: Path, spec: SurfacePath) -> list[SurfaceV
     violations.extend(_scan_virtual_list_stress_controls_boundary(root, spec))
     violations.extend(_scan_table_stress_controls_boundary(root, spec))
     violations.extend(_scan_canvas_datagrid_stress_controls_boundary(root, spec))
+    violations.extend(_scan_datatable_output_boundary(root, spec))
     violations.extend(_scan_editor_notes_bindings_boundary(root, spec))
     for seam in sorted(allowed_raw_seams - used_raw_seams):
         violations.append(

@@ -121,7 +121,10 @@ Keep raw/shared-model mechanisms for now:
     `app.local_state(...)` for the shadcn `DataTable` output handle. The retained table source gate
     has been refreshed from the old `layout_read_ref_in(...)` / `advanced::prelude::LocalState`
     markers to the current app-facing `LocalState` API and now forbids raw
-    `Model<DataTableViewOutput>` plumbing in this example.
+    `Model<DataTableViewOutput>` plumbing in this example. `tools/check_surface_policy.py` now
+    classifies it as an advanced/manual public example, includes it in public example scanning, and
+    globally rejects legacy `Model<shadcn::DataTableViewOutput>`, raw output model insertion,
+    `cx.observe_model(&table_output, Invalidation::Layout)`, and the old `fret_app::Model` import.
   - Follow-up: `DataGridCanvas::output_model(...)` now accepts the dedicated
     `IntoDataGridCanvasOutputModel` bridge, and `fret::app::LocalState<DataGridCanvasOutput>`
     implements it. `canvas_datagrid_stress_demo.rs` uses `LocalState` for grid telemetry output
