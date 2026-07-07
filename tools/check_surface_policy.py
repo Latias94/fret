@@ -281,8 +281,9 @@ def _cookbook_advanced_surface(
     filename: str,
     reason: str,
     allowed_raw_seams: tuple[str, ...],
+    *,
+    owner: str,
 ) -> SurfacePath:
-    owner = f"cookbook-{filename.removesuffix('.rs').removesuffix('_basics').replace('_', '-')}"
     return SurfacePath(
         f"apps/fret-cookbook/examples/{filename}",
         "advanced_manual",
@@ -297,8 +298,9 @@ def _cookbook_renderer_lab_surface(
     filename: str,
     reason: str,
     allowed_raw_seams: tuple[str, ...],
+    *,
+    owner: str,
 ) -> SurfacePath:
-    owner = f"cookbook-{filename.removesuffix('.rs').removesuffix('_basics').replace('_', '-')}"
     return SurfacePath(
         f"apps/fret-cookbook/examples/{filename}",
         "renderer_lab",
@@ -3018,18 +3020,21 @@ RENDERER_LAB_SURFACES: tuple[SurfacePath, ...] = (
         "it is a deterministic screenshot baseline for straight-vs-premultiplied alpha renderer "
         "semantics rather than an app-authoring lesson",
         ("fret::advanced", "fret_app", "fret_core", "fret_launch", "FnDriver"),
+        owner="cookbook-compositing-alpha",
     ),
     _cookbook_renderer_lab_surface(
         "image_asset_cache_basics.rs",
         "it is a deterministic screenshot baseline for keyed ImageAssetCache upload, eviction, "
         "and reload behavior rather than an app-authoring lesson",
         ("fret::advanced", "fret_app", "fret_core", "fret_launch", "FnDriver"),
+        owner="cookbook-image-asset-cache",
     ),
     _cookbook_renderer_lab_surface(
         "customv1_basics.rs",
         "it is a capability-gated CustomV1 renderer/effect smoke surface rather than an "
         "app-authoring lesson",
         ("fret::advanced", "fret_core", "fret_ui", "AnyElement"),
+        owner="cookbook-customv1",
     ),
 )
 
@@ -3524,11 +3529,13 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
             "ElementContext",
             "UiTree",
         ),
+        owner="cookbook-docking",
     ),
     _cookbook_advanced_surface(
         "embedded_viewport_basics.rs",
         "embedded viewport interop still needs manual kernel, model, and element context seams",
         ("fret::advanced", "fret_core", "fret_runtime", "fret_ui", "ElementContext"),
+        owner="cookbook-embedded-viewport",
     ),
     _cookbook_advanced_surface(
         "external_texture_import_basics.rs",
@@ -3542,6 +3549,7 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
             "ElementContext",
             "UiTree",
         ),
+        owner="cookbook-external-texture-import",
     ),
     _cookbook_advanced_surface(
         "utility_window_materials_windows.rs",
@@ -3554,6 +3562,7 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
             "ElementContext",
             "UiTree",
         ),
+        owner="cookbook-utility-window-materials-windows",
     ),
     SurfacePath(
         "apps/fret-examples-imui/src",

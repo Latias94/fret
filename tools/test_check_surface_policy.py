@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import inspect
 import sys
 import tempfile
 import textwrap
@@ -10303,6 +10304,34 @@ class SurfacePolicyTests(unittest.TestCase):
 
         self.assertTrue(migrated.issubset(default_paths))
         self.assertTrue(migrated.isdisjoint(advanced_paths))
+
+    def test_cookbook_classified_surfaces_require_explicit_owners(self) -> None:
+        for helper in (
+            POLICY._cookbook_advanced_surface,
+            POLICY._cookbook_renderer_lab_surface,
+        ):
+            owner_parameter = inspect.signature(helper).parameters["owner"]
+            self.assertEqual(inspect.Parameter.KEYWORD_ONLY, owner_parameter.kind)
+            self.assertIs(inspect.Parameter.empty, owner_parameter.default)
+
+        specs_by_path = {
+            spec.path: spec
+            for spec in (
+                *POLICY.ADVANCED_MANUAL_SURFACES,
+                *POLICY.RENDERER_LAB_SURFACES,
+            )
+        }
+        expected_owners = {
+            "apps/fret-cookbook/examples/compositing_alpha_basics.rs": "cookbook-compositing-alpha",
+            "apps/fret-cookbook/examples/customv1_basics.rs": "cookbook-customv1",
+            "apps/fret-cookbook/examples/docking_basics.rs": "cookbook-docking",
+            "apps/fret-cookbook/examples/embedded_viewport_basics.rs": "cookbook-embedded-viewport",
+            "apps/fret-cookbook/examples/external_texture_import_basics.rs": "cookbook-external-texture-import",
+            "apps/fret-cookbook/examples/image_asset_cache_basics.rs": "cookbook-image-asset-cache",
+            "apps/fret-cookbook/examples/utility_window_materials_windows.rs": "cookbook-utility-window-materials-windows",
+        }
+        for path, owner in expected_owners.items():
+            self.assertEqual(owner, specs_by_path[path].owner)
 
     def test_renderer_labs_do_not_count_as_advanced_manual_quarantine(self) -> None:
         renderer_lab_paths = {spec.path for spec in POLICY.RENDERER_LAB_SURFACES}
