@@ -1,8 +1,9 @@
 use fret_core::{AppWindowId, DockOp};
-use fret_runtime::{Effect, UiHost, WindowRequest};
+use fret_runtime::UiHost;
 
 use crate::DockManager;
 
+use super::commands::{self, CloseWindowDispatch};
 use super::tear_off::DockFloatingOsWindowRegistry;
 
 pub(super) fn collect_empty_dock_floating_windows<H: UiHost>(
@@ -41,6 +42,7 @@ pub(super) fn close_empty_dock_floating_windows<H: UiHost>(
     app: &mut H,
     op: &DockOp,
     windows: Vec<AppWindowId>,
+    dispatch: CloseWindowDispatch,
 ) {
     if windows.is_empty() {
         return;
@@ -58,6 +60,6 @@ pub(super) fn close_empty_dock_floating_windows<H: UiHost>(
         app.with_global_mut(DockFloatingOsWindowRegistry::default, |reg, _app| {
             reg.remove(window);
         });
-        app.push_effect(Effect::Window(WindowRequest::Close(window)));
+        commands::dispatch_close_window(app, dispatch, window);
     }
 }

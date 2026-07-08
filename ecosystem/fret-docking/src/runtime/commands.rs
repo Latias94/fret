@@ -1,10 +1,16 @@
 use fret_core::AppWindowId;
-use fret_runtime::{CreateWindowRequest, UiHost};
+use fret_runtime::{CreateWindowRequest, Effect, UiHost, WindowRequest};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum DockRuntimeCommand {
     CreateWindow(CreateWindowRequest),
     CloseWindow(AppWindowId),
+}
+
+#[derive(Clone, Copy)]
+pub(super) enum CloseWindowDispatch {
+    Effect,
+    CommandQueue,
 }
 
 #[derive(Default)]
@@ -30,6 +36,21 @@ pub(super) fn push_runtime_command<H: UiHost>(app: &mut H, command: DockRuntimeC
 
 pub(super) fn queue_close_window<H: UiHost>(app: &mut H, window: AppWindowId) {
     push_runtime_command(app, DockRuntimeCommand::CloseWindow(window));
+}
+
+pub(super) fn dispatch_close_window<H: UiHost>(
+    app: &mut H,
+    dispatch: CloseWindowDispatch,
+    window: AppWindowId,
+) {
+    match dispatch {
+        CloseWindowDispatch::Effect => {
+            app.push_effect(Effect::Window(WindowRequest::Close(window)));
+        }
+        CloseWindowDispatch::CommandQueue => {
+            queue_close_window(app, window);
+        }
+    }
 }
 
 pub(super) fn take_runtime_commands<H: UiHost>(app: &mut H) -> Vec<DockRuntimeCommand> {

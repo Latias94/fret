@@ -50,12 +50,24 @@ pub fn handle_dock_op<H: UiHost>(app: &mut H, op: DockOp) -> bool {
     }
 }
 
-/// Queue a docking-owned OS-window tear-off command for a single panel.
+/// Handle a docking transaction on the docking-owned runtime command route.
 ///
-/// This is the command-queue route used by [`crate::DockSurface`]. Unlike the legacy
-/// `Effect::Dock(DockOp::RequestFloatPanelToNewWindow)` path, this does not emit an OS-window
-/// request through the pure core graph operation channel.
-pub fn request_float_panel_to_new_window<H: UiHost>(
+/// This is the route used by [`crate::DockSurface`]. Graph mutations are still applied through the
+/// core `DockOp` vocabulary, while docking-owned OS-window creates/closes are queued as
+/// [`DockRuntimeCommand`] instead of being pushed through the host effect queue.
+pub(crate) fn handle_dock_op_with_runtime_commands<H: UiHost>(app: &mut H, op: DockOp) -> bool {
+    match op {
+        op @ DockOp::RequestFloatPanelToNewWindow { .. } => {
+            request::queue_request_float_to_new_window(app, op)
+        }
+        op @ DockOp::RequestFloatTabsToNewWindow { .. } => {
+            request::queue_request_float_to_new_window(app, op)
+        }
+        op => apply::queue_applied_dock_op(app, op),
+    }
+}
+
+pub(crate) fn request_float_panel_to_new_window<H: UiHost>(
     app: &mut H,
     source_window: AppWindowId,
     panel: PanelKey,
@@ -72,7 +84,7 @@ pub fn request_float_panel_to_new_window<H: UiHost>(
 }
 
 /// Queue a docking-owned OS-window tear-off command for a tab stack.
-pub fn request_float_tabs_to_new_window<H: UiHost>(
+pub(crate) fn request_float_tabs_to_new_window<H: UiHost>(
     app: &mut H,
     source_window: AppWindowId,
     source_tabs: DockNodeId,
@@ -91,7 +103,7 @@ pub fn request_float_tabs_to_new_window<H: UiHost>(
 }
 
 /// Drain docking-owned runtime commands queued by [`crate::DockSurface`] or host adapters.
-pub fn take_runtime_commands<H: UiHost>(app: &mut H) -> Vec<DockRuntimeCommand> {
+pub(crate) fn take_runtime_commands<H: UiHost>(app: &mut H) -> Vec<DockRuntimeCommand> {
     commands::take_runtime_commands(app)
 }
 
@@ -99,7 +111,7 @@ pub fn take_runtime_commands<H: UiHost>(app: &mut H) -> Vec<DockRuntimeCommand> 
 ///
 /// Cancellation and missing-manager cleanup are queued as [`DockRuntimeCommand::CloseWindow`]
 /// instead of being pushed through the host effect queue.
-pub fn complete_queued_window_created<H: UiHost>(
+pub(crate) fn complete_queued_window_created<H: UiHost>(
     app: &mut H,
     request: &CreateWindowRequest,
     new_window: AppWindowId,

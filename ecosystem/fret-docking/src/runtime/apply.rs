@@ -3,10 +3,23 @@ use fret_runtime::UiHost;
 
 use crate::DockManager;
 
+use super::commands::CloseWindowDispatch;
 use super::tear_off::DockTearOffMachine;
 use super::{auto_close, layout_invalidation};
 
 pub(super) fn handle_applied_dock_op<H: UiHost>(app: &mut H, op: DockOp) -> bool {
+    handle_applied_dock_op_with_close_dispatch(app, op, CloseWindowDispatch::Effect)
+}
+
+pub(super) fn queue_applied_dock_op<H: UiHost>(app: &mut H, op: DockOp) -> bool {
+    handle_applied_dock_op_with_close_dispatch(app, op, CloseWindowDispatch::CommandQueue)
+}
+
+fn handle_applied_dock_op_with_close_dispatch<H: UiHost>(
+    app: &mut H,
+    op: DockOp,
+    close_dispatch: CloseWindowDispatch,
+) -> bool {
     if app.global::<DockManager>().is_none() {
         return false;
     }
@@ -35,7 +48,7 @@ pub(super) fn handle_applied_dock_op<H: UiHost>(app: &mut H, op: DockOp) -> bool
         true
     });
 
-    auto_close::close_empty_dock_floating_windows(app, &op, windows_to_auto_close);
+    auto_close::close_empty_dock_floating_windows(app, &op, windows_to_auto_close, close_dispatch);
 
     handled
 }

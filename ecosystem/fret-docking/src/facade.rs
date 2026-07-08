@@ -141,26 +141,7 @@ impl DockSurface {
     }
 
     pub fn on_dock_op<H: UiHost>(&self, app: &mut H, op: DockOp) -> bool {
-        match op {
-            DockOp::RequestFloatPanelToNewWindow {
-                source_window,
-                panel,
-                anchor,
-            } => self.request_float_panel_to_new_window(app, source_window, panel, anchor),
-            DockOp::RequestFloatTabsToNewWindow {
-                source_window,
-                source_tabs,
-                panel,
-                anchor,
-            } => self.request_float_tabs_to_new_window(
-                app,
-                source_window,
-                source_tabs,
-                panel,
-                anchor,
-            ),
-            op => self.runtime.on_dock_op(app, op),
-        }
+        crate::runtime::handle_dock_op_with_runtime_commands(app, op)
     }
 
     pub fn on_window_created<H: UiHost>(
@@ -216,7 +197,7 @@ impl DockingRuntime {
 mod tests {
     use super::*;
     use crate::test_host::TestHost;
-    use fret_core::{DockNode, PanelKey};
+    use fret_core::{DockNode, DropZone, PanelKey};
     use fret_runtime::{CreateWindowKind, Effect, PlatformCapabilities, WindowRequest};
     use slotmap::KeyData;
 
@@ -411,6 +392,78 @@ mod tests {
         assert!(
             dock.graph.find_panel_in_window(window_c, &panel).is_some(),
             "stale queued window completion must preserve the current graph owner"
+        );
+    }
+
+    #[test]
+    fn dock_surface_redock_auto_close_uses_runtime_command_queue() {
+        let window_a = AppWindowId::from(KeyData::from_ffi(1));
+        let window_b = AppWindowId::from(KeyData::from_ffi(2));
+        let panel = PanelKey::new("test.panel");
+        let placeholder = PanelKey::new("test.placeholder");
+        let surface = DockSurface::new(window_a);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        app.set_global(DockManager::default());
+        surface.register_panel(&mut app, panel.clone(), test_panel("Panel"));
+        surface.register_panel(&mut app, placeholder.clone(), test_panel("Placeholder"));
+        app.with_global_mut(DockManager::default, |dock, _app| {
+            let tabs = dock.graph.insert_node(DockNode::Tabs {
+                tabs: vec![placeholder.clone(), panel.clone()],
+                active: 1,
+            });
+            dock.graph.set_window_root(window_a, tabs);
+        });
+
+        assert!(surface.request_float_panel_to_new_window(&mut app, window_a, panel.clone(), None));
+        let commands = surface.take_runtime_commands(&mut app);
+        let DockRuntimeCommand::CreateWindow(create) = commands[0].clone() else {
+            panic!("expected create-window docking runtime command");
+        };
+        assert!(surface.on_window_created(&mut app, &create, window_b));
+        assert!(
+            surface.take_runtime_commands(&mut app).is_empty(),
+            "successful window creation should not queue a close command"
+        );
+
+        let target_tabs = app
+            .global::<DockManager>()
+            .expect("dock manager exists")
+            .graph
+            .first_tabs_in_window(window_a)
+            .expect("source window should still have placeholder tabs");
+
+        assert!(surface.on_dock_op(
+            &mut app,
+            DockOp::MovePanel {
+                source_window: window_b,
+                panel: panel.clone(),
+                target_window: window_a,
+                target_tabs,
+                zone: DropZone::Center,
+                insert_index: None,
+            },
+        ));
+
+        assert_eq!(
+            surface.take_runtime_commands(&mut app),
+            vec![DockRuntimeCommand::CloseWindow(window_b)]
+        );
+        assert!(
+            app.take_effects()
+                .iter()
+                .all(|effect| !matches!(effect, Effect::Window(WindowRequest::Close(_)))),
+            "DockSurface auto-close should stay on the docking command queue"
+        );
+        let dock = app.global::<DockManager>().expect("dock manager exists");
+        assert!(
+            dock.graph.find_panel_in_window(window_a, &panel).is_some(),
+            "redocked panel should return to the target window"
+        );
+        assert!(
+            dock.graph.collect_panels_in_window(window_b).is_empty(),
+            "redocking the last panel should empty the dock-floating window"
         );
     }
 }

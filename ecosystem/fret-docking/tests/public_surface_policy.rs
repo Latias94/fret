@@ -88,6 +88,22 @@ fn dock_surface_root_entry_point_is_public_without_internal_command_queue() {
         commands.contains("pub(super) struct DockRuntimeCommandQueue"),
         "`DockRuntimeCommandQueue` should remain internal to the runtime implementation"
     );
+    for helper in [
+        "request_float_panel_to_new_window",
+        "request_float_tabs_to_new_window",
+        "take_runtime_commands",
+        "complete_queued_window_created",
+        "handle_dock_op_with_runtime_commands",
+    ] {
+        assert!(
+            runtime.contains(&format!("pub(crate) fn {helper}")),
+            "`runtime::{helper}` should stay crate-private; use `DockSurface` from outside the crate"
+        );
+        assert!(
+            !runtime.contains(&format!("pub fn {helper}")),
+            "`runtime::{helper}` must not be exposed as a public advanced API by accident"
+        );
+    }
 }
 
 #[test]

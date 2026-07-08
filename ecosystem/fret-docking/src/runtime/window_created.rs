@@ -1,9 +1,9 @@
 use fret_core::AppWindowId;
-use fret_runtime::{CreateWindowKind, CreateWindowRequest, Effect, UiHost, WindowRequest};
+use fret_runtime::{CreateWindowKind, CreateWindowRequest, UiHost};
 
 use crate::DockManager;
 
-use super::commands;
+use super::commands::{self, CloseWindowDispatch};
 use super::layout_invalidation::invalidate_windows;
 use super::tear_off::{
     DockFloatingOsWindowRegistry, DockTearOffCompletion, DockTearOffKind, DockTearOffMachine,
@@ -35,12 +35,6 @@ pub(super) fn queue_dock_window_created<H: UiHost>(
     )
 }
 
-#[derive(Clone, Copy)]
-enum CloseWindowDispatch {
-    Effect,
-    CommandQueue,
-}
-
 fn handle_dock_window_created_with_close_dispatch<H: UiHost>(
     app: &mut H,
     request: &CreateWindowRequest,
@@ -60,7 +54,7 @@ fn handle_dock_window_created_with_close_dispatch<H: UiHost>(
                 "dock tear-off: cancel and close newly created window"
             );
         }
-        dispatch_close_window(app, close_dispatch, new_window);
+        commands::dispatch_close_window(app, close_dispatch, new_window);
         return true;
     }
 
@@ -80,7 +74,7 @@ fn handle_dock_window_created_with_close_dispatch<H: UiHost>(
                 "dock tear-off: missing DockManager; closing newly created window"
             );
         }
-        dispatch_close_window(app, close_dispatch, new_window);
+        commands::dispatch_close_window(app, close_dispatch, new_window);
         return true;
     }
 
@@ -132,19 +126,4 @@ fn handle_dock_window_created_with_close_dispatch<H: UiHost>(
     }
 
     handled
-}
-
-fn dispatch_close_window<H: UiHost>(
-    app: &mut H,
-    close_dispatch: CloseWindowDispatch,
-    window: AppWindowId,
-) {
-    match close_dispatch {
-        CloseWindowDispatch::Effect => {
-            app.push_effect(Effect::Window(WindowRequest::Close(window)));
-        }
-        CloseWindowDispatch::CommandQueue => {
-            commands::queue_close_window(app, window);
-        }
-    }
 }
