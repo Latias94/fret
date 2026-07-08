@@ -1333,9 +1333,12 @@ mod authoring_surface_policy_tests {
         assert!(DOCKING_EXAMPLE.contains("surface.install_policy"));
         assert!(DOCKING_EXAMPLE.contains(".host("));
         assert!(DOCKING_EXAMPLE.contains("surface.host_lifecycle().on_dock_op(app, op)"));
+        assert!(DOCKING_EXAMPLE.contains(".try_import_layout_for_windows"));
+        assert!(DOCKING_EXAMPLE.contains("surface.select_panel(app, &panel)"));
         assert!(!DOCKING_EXAMPLE.contains("surface.driver()"));
         assert!(!DOCKING_EXAMPLE.contains("flush_runtime_commands_to_effects"));
-        assert!(DOCKING_EXAMPLE.contains("advanced::{DockManager, request_dock_invalidation}"));
+        assert!(!DOCKING_EXAMPLE.contains("DockManager"));
+        assert!(!DOCKING_EXAMPLE.contains("request_dock_invalidation"));
         assert!(DOCKING_EXAMPLE.contains("impl InstallIntoApp for DockingBasicsBundle"));
         assert!(
             DOCKING_EXAMPLE

@@ -506,6 +506,45 @@ fn dock_surface_snapshot_reports_descriptor_only_imported_panels() {
 }
 
 #[test]
+fn dock_surface_import_layout_invalidates_imported_windows() {
+    let window = AppWindowId::from(KeyData::from_ffi(1));
+    let panel = PanelKey::new("test.imported");
+    let surface = DockSurface::new(window);
+
+    let mut app = TestHost::new();
+    app.set_global(DockManager::default());
+
+    let layout = DockLayout::new(
+        vec![DockLayoutWindow {
+            logical_window_id: "main".to_string(),
+            root: 1,
+            placement: None,
+            floatings: Vec::new(),
+        }],
+        vec![DockLayoutNode::Tabs {
+            id: 1,
+            tabs: vec![panel],
+            active: 0,
+        }],
+    );
+
+    assert!(
+        surface
+            .try_import_layout_for_windows(&mut app, &layout, &[(window, "main".to_string())])
+            .expect("layout imports")
+    );
+
+    assert!(
+        !app.take_changed_models().is_empty(),
+        "importing a layout should bump dock host invalidation models"
+    );
+    assert!(
+        app.take_redraws().contains(&window),
+        "importing a layout should request redraw for imported windows"
+    );
+}
+
+#[test]
 fn dock_surface_viewport_session_queues_create_with_typed_outcome() {
     let window = AppWindowId::from(KeyData::from_ffi(1));
     let panel = PanelKey::new("test.panel");

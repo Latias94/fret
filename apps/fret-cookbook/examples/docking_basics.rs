@@ -3,10 +3,10 @@ use std::sync::Arc;
 use fret::advanced::raw::UiTree;
 use fret::{advanced::prelude::*, component::prelude::*, integration::InstallIntoApp, shadcn};
 use fret_app::{CommandMeta, CommandScope};
-use fret_core::{Axis, Color, DockNode, DockNodeId, DockOp, PanelKey, Px};
+use fret_core::{Axis, Color, DockLayout, DockLayoutNode, DockLayoutWindow, DockOp, PanelKey, Px};
 use fret_docking::{
-    DockHostOptions, DockPanel, DockPanelElementRegistry, DockSurface, DockingPolicy,
-    advanced::{DockManager, request_dock_invalidation},
+    DockHostOptions, DockPanel, DockPanelElementRegistry, DockSurface, DockSurfacePanelPlacement,
+    DockSurfacePanelSnapshot, DockingPolicy,
 };
 use fret_runtime::CommandId;
 use fret_ui::ElementContext;
@@ -103,62 +103,66 @@ fn panel_console() -> PanelKey {
     PanelKey::new("core.console")
 }
 
-#[derive(Debug, Clone, Copy)]
-struct DockLayoutIds {
-    left_tabs: DockNodeId,
-    right_tabs: DockNodeId,
-}
-
-fn reset_dock_layout(dock: &mut DockManager, window: AppWindowId) -> DockLayoutIds {
-    dock.workspace.graph = fret_core::DockGraph::new();
-    dock.workspace.graph.remove_window_root(window);
-    dock.workspace.graph.floating_windows_mut(window).clear();
-
-    let hierarchy = panel_hierarchy();
-    let inspector = panel_inspector();
-    let editor = panel_editor();
-    let console = panel_console();
-
-    dock.ensure_panel(&hierarchy, || DockPanel {
+fn ensure_dock_panels(app: &mut KernelApp, surface: DockSurface) {
+    surface.ensure_panel(app, &panel_hierarchy(), || DockPanel {
         title: "Hierarchy".to_string(),
         color: Color::from_srgb_hex_rgb(0x3B82F6),
         viewport: None,
     });
-    dock.ensure_panel(&inspector, || DockPanel {
+    surface.ensure_panel(app, &panel_inspector(), || DockPanel {
         title: "Inspector".to_string(),
         color: Color::from_srgb_hex_rgb(0xA855F7),
         viewport: None,
     });
-    dock.ensure_panel(&editor, || DockPanel {
+    surface.ensure_panel(app, &panel_editor(), || DockPanel {
         title: "Editor".to_string(),
         color: Color::from_srgb_hex_rgb(0x22C55E),
         viewport: None,
     });
-    dock.ensure_panel(&console, || DockPanel {
+    surface.ensure_panel(app, &panel_console(), || DockPanel {
         title: "Console".to_string(),
         color: Color::from_srgb_hex_rgb(0xF97316),
         viewport: None,
     });
+}
 
-    let left_tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
-        tabs: vec![hierarchy, inspector],
-        active: 0,
-    });
-    let right_tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
-        tabs: vec![editor, console],
-        active: 0,
-    });
-    let root = dock.workspace.graph.insert_node(DockNode::Split {
-        axis: Axis::Horizontal,
-        children: vec![left_tabs, right_tabs],
-        fractions: vec![0.3, 0.7],
-    });
-    dock.workspace.graph.set_window_root(window, root);
+fn default_dock_layout() -> DockLayout {
+    DockLayout::new(
+        vec![DockLayoutWindow {
+            logical_window_id: "main".to_string(),
+            root: 3,
+            placement: None,
+            floatings: Vec::new(),
+        }],
+        vec![
+            DockLayoutNode::Tabs {
+                id: 1,
+                tabs: vec![panel_hierarchy(), panel_inspector()],
+                active: 0,
+            },
+            DockLayoutNode::Tabs {
+                id: 2,
+                tabs: vec![panel_editor(), panel_console()],
+                active: 0,
+            },
+            DockLayoutNode::Split {
+                id: 3,
+                axis: Axis::Horizontal,
+                children: vec![1, 2],
+                fractions: vec![0.3, 0.7],
+            },
+        ],
+    )
+}
 
-    DockLayoutIds {
-        left_tabs,
-        right_tabs,
-    }
+fn reset_dock_layout(app: &mut KernelApp, window: AppWindowId) {
+    let surface = DockSurface::new(window);
+    ensure_dock_panels(app, surface);
+    let layout = default_dock_layout();
+    let windows = [(window, "main".to_string())];
+    surface
+        .try_import_layout_for_windows(app, &layout, &windows)
+        .expect("default dock layout should import");
 }
 
 struct DockingBasicsPolicy;
@@ -226,7 +230,6 @@ impl DockPanelElementRegistry<KernelApp> for DockingBasicsPanelRegistry {
 #[derive(Debug)]
 struct DockingBasicsWindowState {
     window: AppWindowId,
-    layout_ids: DockLayoutIds,
 }
 
 fn install_docking_services(app: &mut KernelApp) {
@@ -236,62 +239,86 @@ fn install_docking_services(app: &mut KernelApp) {
 }
 
 fn init_window(app: &mut KernelApp, window: AppWindowId) -> DockingBasicsWindowState {
-    let layout_ids = app.with_global_mut(DockManager::default, |dock, _app| {
-        reset_dock_layout(dock, window)
-    });
-
-    DockingBasicsWindowState { window, layout_ids }
+    reset_dock_layout(app, window);
+    DockingBasicsWindowState { window }
 }
 
-fn active_tab_title(app: &KernelApp, tabs: DockNodeId) -> Option<String> {
-    let dock = app.global::<DockManager>()?;
-    let DockNode::Tabs { tabs, active } = dock.workspace.graph.node(tabs)? else {
-        return None;
-    };
-    let panel = tabs.get(*active)?;
-    dock.panel(panel).map(|p| p.title.clone())
+#[derive(Debug, Clone)]
+struct ActiveGroupStatus {
+    title: String,
+    index: u32,
+    count: u32,
 }
 
-fn active_tab_state(app: &KernelApp, tabs: DockNodeId) -> Option<(u32, u32)> {
-    let dock = app.global::<DockManager>()?;
-    let DockNode::Tabs { tabs, active } = dock.workspace.graph.node(tabs)? else {
-        return None;
+fn active_group_status(
+    app: &KernelApp,
+    window: AppWindowId,
+    panels: &[PanelKey],
+) -> ActiveGroupStatus {
+    let surface = DockSurface::new(window);
+    let snapshots = surface.panels_in_window(app, window);
+
+    for panel in panels {
+        let Some(snapshot) = snapshots.iter().find(|snapshot| &snapshot.key == panel) else {
+            continue;
+        };
+        let Some(location) = snapshot.location.as_ref() else {
+            continue;
+        };
+        if location.placement == DockSurfacePanelPlacement::Docked && location.active {
+            return status_from_snapshot(snapshot);
+        }
+    }
+
+    ActiveGroupStatus {
+        title: "Unknown".to_string(),
+        index: 0,
+        count: panels.len() as u32,
+    }
+}
+
+fn status_from_snapshot(snapshot: &DockSurfacePanelSnapshot) -> ActiveGroupStatus {
+    let Some(location) = snapshot.location.as_ref() else {
+        return ActiveGroupStatus {
+            title: snapshot.title.clone(),
+            index: 0,
+            count: 1,
+        };
     };
 
-    Some((*active as u32, tabs.len() as u32))
+    ActiveGroupStatus {
+        title: snapshot.title.clone(),
+        index: location.tab_index as u32,
+        count: location.tab_count as u32,
+    }
 }
 
 fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut DockingBasicsWindowState) -> ViewElements {
-    let active_left = active_tab_title(cx.app, st.layout_ids.left_tabs).unwrap_or("Unknown".into());
-    let active_right =
-        active_tab_title(cx.app, st.layout_ids.right_tabs).unwrap_or("Unknown".into());
-
-    let (active_left_index, left_count) =
-        active_tab_state(cx.app, st.layout_ids.left_tabs).unwrap_or((0, 0));
-    let (active_right_index, right_count) =
-        active_tab_state(cx.app, st.layout_ids.right_tabs).unwrap_or((0, 0));
+    let active_left =
+        active_group_status(cx.app, st.window, &[panel_hierarchy(), panel_inspector()]);
+    let active_right = active_group_status(cx.app, st.window, &[panel_editor(), panel_console()]);
 
     let toolbar = ui::h_flex(|cx| {
-        let left_max = (left_count.saturating_sub(1)) as f64;
-        let right_max = (right_count.saturating_sub(1)) as f64;
+        let left_max = (active_left.count.saturating_sub(1)) as f64;
+        let right_max = (active_right.count.saturating_sub(1)) as f64;
 
-        let active_left_badge = shadcn::Badge::new(format!("Left: {active_left}"))
+        let active_left_badge = shadcn::Badge::new(format!("Left: {}", active_left.title))
             .variant(shadcn::BadgeVariant::Secondary)
             .a11y(
                 SemanticsDecoration::default()
                     .role(SemanticsRole::Generic)
                     .test_id(TEST_ID_ACTIVE_LEFT)
-                    .numeric_value(active_left_index as f64)
+                    .numeric_value(active_left.index as f64)
                     .numeric_range(0.0, left_max),
             );
 
-        let active_right_badge = shadcn::Badge::new(format!("Right: {active_right}"))
+        let active_right_badge = shadcn::Badge::new(format!("Right: {}", active_right.title))
             .variant(shadcn::BadgeVariant::Secondary)
             .a11y(
                 SemanticsDecoration::default()
                     .role(SemanticsRole::Generic)
                     .test_id(TEST_ID_ACTIVE_RIGHT)
-                    .numeric_value(active_right_index as f64)
+                    .numeric_value(active_right.index as f64)
                     .numeric_range(0.0, right_max),
             );
 
@@ -386,17 +413,13 @@ fn on_command(
     _services: &mut dyn fret_core::UiServices,
     window: AppWindowId,
     _ui: &mut UiTree<KernelApp>,
-    st: &mut DockingBasicsWindowState,
+    _st: &mut DockingBasicsWindowState,
     command: &CommandId,
 ) {
     let cmd = command.as_str();
 
     if cmd == CMD_RESET_LAYOUT {
-        let ids = app.with_global_mut(DockManager::default, |dock, _app| {
-            reset_dock_layout(dock, window)
-        });
-        st.layout_ids = ids;
-        request_dock_invalidation(app, [window]);
+        reset_dock_layout(app, window);
         return;
     }
 
@@ -412,17 +435,8 @@ fn on_command(
         return;
     };
 
-    let Some((_, op)) = app
-        .global::<DockManager>()
-        .and_then(|dock| dock.activate_panel_tab_best_effort([window], &panel))
-    else {
-        return;
-    };
-
-    // Apply directly (not via Effect) to keep this example self-contained.
     let surface = DockSurface::new(window);
-    let _ = surface.host_lifecycle().on_dock_op(app, op);
-    request_dock_invalidation(app, [window]);
+    let _ = surface.select_panel(app, &panel);
 }
 
 fn on_dock_op(app: &mut KernelApp, op: DockOp) {

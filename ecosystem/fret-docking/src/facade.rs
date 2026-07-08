@@ -35,6 +35,17 @@ pub use viewport::DockSurfaceViewportSession;
 
 use query::{panel_location, panel_snapshot, registered_panel_snapshots, selected_panel_in_window};
 
+fn invalidate_imported_layout_windows<H: UiHost>(
+    app: &mut H,
+    windows: impl IntoIterator<Item = AppWindowId>,
+) {
+    let windows: Vec<AppWindowId> = windows.into_iter().collect();
+    crate::runtime::request_dock_invalidation(app, windows.iter().copied());
+    for window in windows {
+        app.request_redraw(window);
+    }
+}
+
 /// App-facing docking surface.
 ///
 /// `DockSurface` is the preferred ordinary entry point for applications. It keeps common app code
@@ -91,10 +102,14 @@ impl DockSurface {
         layout: &DockLayout,
         windows: &[(AppWindowId, String)],
     ) -> Result<bool, DockLayoutValidationError> {
-        app.with_global_mut(DockManager::default, |dock, _app| {
+        let changed = app.with_global_mut(DockManager::default, |dock, _app| {
             dock.workspace
                 .import_layout_for_windows_checked(layout, windows)
-        })
+        })?;
+        if changed {
+            invalidate_imported_layout_windows(app, windows.iter().map(|(window, _)| *window));
+        }
+        Ok(changed)
     }
 
     pub fn try_import_layout_for_windows_with_fallback_floatings<H: UiHost>(
@@ -104,14 +119,24 @@ impl DockSurface {
         windows: &[(AppWindowId, String)],
         fallback_window: AppWindowId,
     ) -> Result<bool, DockLayoutValidationError> {
-        app.with_global_mut(DockManager::default, |dock, _app| {
+        let changed = app.with_global_mut(DockManager::default, |dock, _app| {
             dock.workspace
                 .import_layout_for_windows_with_fallback_floatings_checked(
                     layout,
                     windows,
                     fallback_window,
                 )
-        })
+        })?;
+        if changed {
+            invalidate_imported_layout_windows(
+                app,
+                windows
+                    .iter()
+                    .map(|(window, _)| *window)
+                    .chain(std::iter::once(fallback_window)),
+            );
+        }
+        Ok(changed)
     }
 
     pub fn export_layout<H: UiHost>(
