@@ -3,8 +3,8 @@ use fret::app::{AppRenderContext, text};
 use fret_app::{App, CommandId, Effect, WindowRequest};
 use fret_bootstrap::ui_diagnostics::UiDiagnosticsService;
 use fret_core::{
-    AppWindowId, Color, Corners, DrawOrder, Edges, Event, Rect, Scene, SceneOp, UiServices,
-    geometry::Px,
+    AppWindowId, Axis, Color, Corners, DockLayout, DockLayoutNode, DockLayoutWindow, DrawOrder,
+    Edges, Event, Rect, Scene, SceneOp, UiServices, geometry::Px,
 };
 use fret_docking::{
     DockHostOptions, DockPanel, DockPanelElementRegistry, DockSurface, DockViewportLayout,
@@ -270,7 +270,7 @@ impl DockingDemoDriver {
     }
 
     fn ensure_dock_graph(surface: DockSurface, app: &mut App, window: AppWindowId) {
-        use fret_core::{Axis, DockNode, PanelKey};
+        use fret_core::PanelKey;
 
         let incoming_layout = app
             .with_global_mut_untracked(DockingDemoDevStateIncoming::default, |st, _app| {
@@ -299,21 +299,34 @@ impl DockingDemoDriver {
             }
         }
 
-        surface.driver().ensure_window_root(app, window, |graph| {
-            let left = graph.insert_node(DockNode::Tabs {
-                tabs: vec![PanelKey::new("core.hierarchy")],
-                active: 0,
-            });
-            let right = graph.insert_node(DockNode::Tabs {
-                tabs: vec![PanelKey::new("core.inspector")],
-                active: 0,
-            });
-            graph.insert_node(DockNode::Split {
-                axis: Axis::Horizontal,
-                children: vec![left, right],
-                fractions: vec![0.5, 0.5],
-            })
-        });
+        let layout = DockLayout::new(
+            vec![DockLayoutWindow {
+                logical_window_id: "main".to_string(),
+                root: 3,
+                placement: None,
+                floatings: Vec::new(),
+            }],
+            vec![
+                DockLayoutNode::Tabs {
+                    id: 1,
+                    tabs: vec![PanelKey::new("core.hierarchy")],
+                    active: 0,
+                },
+                DockLayoutNode::Tabs {
+                    id: 2,
+                    tabs: vec![PanelKey::new("core.inspector")],
+                    active: 0,
+                },
+                DockLayoutNode::Split {
+                    id: 3,
+                    axis: Axis::Horizontal,
+                    children: vec![1, 2],
+                    fractions: vec![0.5, 0.5],
+                },
+            ],
+        );
+        let windows = [(window, "main".to_string())];
+        let _ = surface.import_layout_for_windows(app, &layout, &windows);
     }
 
     fn render_dock(
@@ -469,15 +482,14 @@ fn handle_command(
         };
 
         let target = if first_fraction < 0.2 { 0.5 } else { 0.12 };
-        let changed = surface.driver().on_dock_op(
+        let changed = surface.host_lifecycle().on_dock_op(
             app,
-            fret_core::DockOp::SetSplitFractionTwo {
+            fret_core::DockOp::SetSplitFractions {
                 split,
-                first_fraction: target,
+                fractions: vec![target, (1.0 - target).max(0.0)],
             },
         );
         let _ = changed;
-        surface.driver().flush_runtime_commands_to_effects(app);
         return;
     }
     if command.as_str() == "dock_demo.close" {
@@ -510,8 +522,7 @@ fn handle_event(
 
 fn dock_op(driver: &mut DockingDemoDriver, app: &mut App, op: fret_core::DockOp) {
     if let Some(surface) = driver.dock_surface {
-        let _ = surface.driver().on_dock_op(app, op);
-        surface.driver().flush_runtime_commands_to_effects(app);
+        let _ = surface.host_lifecycle().on_dock_op(app, op);
     }
 }
 
@@ -656,15 +667,15 @@ fn window_created(
     new_window: AppWindowId,
 ) {
     if let Some(surface) = driver.dock_surface {
-        let _ = surface.driver().on_window_created(app, request, new_window);
-        surface.driver().flush_runtime_commands_to_effects(app);
+        let _ = surface
+            .host_lifecycle()
+            .on_window_created(app, request, new_window);
     }
 }
 
 fn before_close_window(driver: &mut DockingDemoDriver, app: &mut App, window: AppWindowId) -> bool {
     if let Some(surface) = driver.dock_surface {
-        let _ = surface.driver().before_close_window(app, window);
-        surface.driver().flush_runtime_commands_to_effects(app);
+        let _ = surface.host_lifecycle().before_close_window(app, window);
     }
     true
 }

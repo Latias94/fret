@@ -178,10 +178,6 @@ impl DockGraph {
                 }
                 changed
             }
-            DockOp::SetSplitFractionTwo {
-                split,
-                first_fraction,
-            } => self.update_split_two(*split, *first_fraction),
         }
     }
 }

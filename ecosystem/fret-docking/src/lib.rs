@@ -20,7 +20,7 @@ pub use dock::{
     DockingPolicy, ViewportPanel,
 };
 pub use facade::{
-    DockHostOptions, DockSurface, DockSurfaceChange, DockSurfacePanelError,
+    DockHostOptions, DockSurface, DockSurfaceChange, DockSurfaceHostSession, DockSurfacePanelError,
     DockSurfacePanelLocation, DockSurfacePanelOutcome, DockSurfacePanelPlacement,
     DockSurfacePanelSnapshot, DockSurfaceSnapshot, DockSurfaceViewportCloseOutcome,
     DockSurfaceViewportError, DockSurfaceViewportOpenOutcome, DockSurfaceViewportOpenStatus,

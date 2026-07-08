@@ -2,7 +2,10 @@ use anyhow::Context as _;
 use fret::app::{AppRenderContext, text};
 use fret_app::{App, CommandId, Effect, WindowRequest};
 use fret_bootstrap::ui_diagnostics::UiDiagnosticsService;
-use fret_core::{AppWindowId, Event, Rect, UiServices, geometry::Px};
+use fret_core::{
+    AppWindowId, Axis, DockLayout, DockLayoutNode, DockLayoutWindow, Event, Rect, UiServices,
+    geometry::Px,
+};
 use fret_docking::{DockHostOptions, DockPanel, DockPanelElementRegistry, DockSurface};
 use fret_launch::{
     FnDriver, WindowCreateSpec, WinitCommandContext, WinitEventContext, WinitHotReloadContext,
@@ -241,7 +244,7 @@ impl ContainerQueriesDockingDemoDriver {
     }
 
     fn ensure_dock_graph(surface: DockSurface, app: &mut App, window: AppWindowId) {
-        use fret_core::{Axis, DockNode, PanelKey};
+        use fret_core::PanelKey;
 
         surface.ensure_panel(app, &PanelKey::new("examples.cq.left"), || DockPanel {
             title: "Container queries".to_string(),
@@ -254,24 +257,41 @@ impl ContainerQueriesDockingDemoDriver {
             viewport: None,
         });
 
-        surface.driver().ensure_window_root(app, window, |graph| {
-            let left = graph.insert_node(DockNode::Tabs {
-                tabs: vec![PanelKey::new("examples.cq.left")],
-                active: 0,
-            });
-            let right = graph.insert_node(DockNode::Tabs {
-                tabs: vec![PanelKey::new("examples.cq.right")],
-                active: 0,
-            });
-            graph.insert_node(DockNode::Split {
-                axis: Axis::Horizontal,
-                children: vec![left, right],
-                fractions: vec![
-                    INITIAL_SPLIT_FRACTION_LEFT,
-                    1.0 - INITIAL_SPLIT_FRACTION_LEFT,
-                ],
-            })
-        });
+        if surface.has_window_root(app, window) {
+            return;
+        }
+
+        let layout = DockLayout::new(
+            vec![DockLayoutWindow {
+                logical_window_id: "main".to_string(),
+                root: 3,
+                placement: None,
+                floatings: Vec::new(),
+            }],
+            vec![
+                DockLayoutNode::Tabs {
+                    id: 1,
+                    tabs: vec![PanelKey::new("examples.cq.left")],
+                    active: 0,
+                },
+                DockLayoutNode::Tabs {
+                    id: 2,
+                    tabs: vec![PanelKey::new("examples.cq.right")],
+                    active: 0,
+                },
+                DockLayoutNode::Split {
+                    id: 3,
+                    axis: Axis::Horizontal,
+                    children: vec![1, 2],
+                    fractions: vec![
+                        INITIAL_SPLIT_FRACTION_LEFT,
+                        1.0 - INITIAL_SPLIT_FRACTION_LEFT,
+                    ],
+                },
+            ],
+        );
+        let windows = [(window, "main".to_string())];
+        let _ = surface.import_layout_for_windows(app, &layout, &windows);
     }
 
     fn render_dock(
@@ -426,8 +446,7 @@ fn handle_event(
 
 fn dock_op(driver: &mut ContainerQueriesDockingDemoDriver, app: &mut App, op: fret_core::DockOp) {
     if let Some(surface) = driver.dock_surface {
-        let _ = surface.driver().on_dock_op(app, op);
-        surface.driver().flush_runtime_commands_to_effects(app);
+        let _ = surface.host_lifecycle().on_dock_op(app, op);
     }
 }
 
@@ -579,8 +598,9 @@ fn window_created(
     new_window: AppWindowId,
 ) {
     if let Some(surface) = driver.dock_surface {
-        let _ = surface.driver().on_window_created(app, request, new_window);
-        surface.driver().flush_runtime_commands_to_effects(app);
+        let _ = surface
+            .host_lifecycle()
+            .on_window_created(app, request, new_window);
     }
 }
 
@@ -590,8 +610,7 @@ fn before_close_window(
     window: AppWindowId,
 ) -> bool {
     if let Some(surface) = driver.dock_surface {
-        let _ = surface.driver().before_close_window(app, window);
-        surface.driver().flush_runtime_commands_to_effects(app);
+        let _ = surface.host_lifecycle().before_close_window(app, window);
     }
     true
 }

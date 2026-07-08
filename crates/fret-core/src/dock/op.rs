@@ -145,11 +145,6 @@ pub enum DockOp {
     SetSplitFractionsMany {
         updates: Vec<SplitFractionsUpdate>,
     },
-
-    SetSplitFractionTwo {
-        split: DockNodeId,
-        first_fraction: f32,
-    },
 }
 
 #[derive(Debug, Clone, PartialEq)]

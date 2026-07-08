@@ -684,24 +684,6 @@ impl DockGraph {
         true
     }
 
-    pub fn update_split_two(&mut self, split: DockNodeId, first_fraction: f32) -> bool {
-        let Some(DockNode::Split {
-            children,
-            fractions,
-            ..
-        }) = self.nodes.get_mut(split)
-        else {
-            return false;
-        };
-        if children.len() != 2 || fractions.len() != 2 {
-            return false;
-        }
-        let f0 = first_fraction.clamp(0.0, 1.0);
-        fractions[0] = f0;
-        fractions[1] = 1.0 - f0;
-        true
-    }
-
     pub fn update_split_fractions(&mut self, split: DockNodeId, mut next: Vec<f32>) -> bool {
         let Some(DockNode::Split {
             children,

@@ -17,6 +17,10 @@ pub struct DockSurfaceDriver {
 }
 
 impl DockSurfaceDriver {
+    pub fn new(surface: DockSurface) -> Self {
+        Self { surface }
+    }
+
     pub fn main_window(&self) -> AppWindowId {
         self.surface.main_window
     }

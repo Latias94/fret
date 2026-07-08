@@ -1,4 +1,5 @@
 use super::*;
+use crate::DockViewportLayout;
 use std::{collections::HashMap, sync::Mutex};
 
 use fret_runtime::CreateWindowKind;
@@ -6118,10 +6119,20 @@ fn public_declarative_dock_space_entry_point_syncs_viewport_layouts() {
             active: 0,
         });
         dock.workspace.graph.set_window_root(window, tabs);
-        dock.set_viewport_content_rect(
+        let stale_rect = Rect::new(Point::new(Px(1.0), Px(1.0)), Size::new(Px(2.0), Px(2.0)));
+        let stale_mapping = ViewportMapping {
+            content_rect: stale_rect,
+            target_px_size: (1, 1),
+            fit: ViewportFit::Stretch,
+        };
+        dock.set_viewport_layout(
             window,
             stale_target,
-            Rect::new(Point::new(Px(1.0), Px(1.0)), Size::new(Px(2.0), Px(2.0))),
+            DockViewportLayout {
+                content_rect: stale_rect,
+                mapping: stale_mapping,
+                draw_rect: stale_mapping.map().draw_rect,
+            },
         );
     });
 

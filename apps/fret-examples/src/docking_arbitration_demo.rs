@@ -3272,11 +3272,7 @@ fn viewport_input(driver: &mut DockingArbitrationDriver, app: &mut App, event: V
 fn dock_op(driver: &mut DockingArbitrationDriver, app: &mut App, op: fret_core::DockOp) {
     let changed = driver
         .dock_surface
-        .map(|surface| {
-            let changed = surface.driver().on_dock_op(app, op);
-            surface.driver().flush_runtime_commands_to_effects(app);
-            changed
-        })
+        .map(|surface| surface.host_lifecycle().on_dock_op(app, op))
         .unwrap_or(false);
     if changed {
         driver.sync_dev_state_models(app);
@@ -3511,8 +3507,9 @@ fn window_created(
     match &request.kind {
         CreateWindowKind::DockFloating { .. } => {
             if let Some(surface) = driver.dock_surface {
-                let _ = surface.driver().on_window_created(app, request, new_window);
-                surface.driver().flush_runtime_commands_to_effects(app);
+                let _ = surface
+                    .host_lifecycle()
+                    .on_window_created(app, request, new_window);
             }
             let logical = driver.alloc_floating_logical_window_id();
             let logical_key = logical.clone();
@@ -3558,8 +3555,7 @@ fn before_close_window(
     }
 
     if let Some(surface) = driver.dock_surface {
-        let _ = surface.driver().before_close_window(app, window);
-        surface.driver().flush_runtime_commands_to_effects(app);
+        let _ = surface.host_lifecycle().before_close_window(app, window);
     }
     true
 }

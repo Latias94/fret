@@ -48,12 +48,10 @@ fn container_queries_docking_demo_uses_dock_surface_for_common_docking_assembly(
         "DockSurface::new",
         "surface.install_panel_registry",
         "surface.ensure_panel",
-        "surface.driver().ensure_window_root",
+        "surface.import_layout_for_windows",
         "surface.host",
-        "surface.driver().on_dock_op",
-        "surface.driver().on_window_created",
-        "surface.driver().before_close_window",
-        "surface.driver().flush_runtime_commands_to_effects",
+        "surface.host_lifecycle().on_dock_op",
+        ".host_lifecycle()",
     ] {
         assert!(
             source.contains(needle),
@@ -76,6 +74,8 @@ fn container_queries_docking_demo_uses_dock_surface_for_common_docking_assembly(
         "render_and_bind_dock_panels",
         "dock_space_with(",
         "DockSpaceImUiOptions",
+        "surface.driver()",
+        "flush_runtime_commands_to_effects",
     ] {
         assert!(
             !source.contains(forbidden),

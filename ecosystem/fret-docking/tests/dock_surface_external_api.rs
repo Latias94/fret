@@ -1,11 +1,10 @@
 use fret_core::{AppWindowId, Color, PanelKey};
-use fret_docking::advanced::DockRuntimeCommand;
 use fret_docking::{
-    DockHostOptions, DockPanel, DockSurface, DockSurfaceChange, DockSurfacePanelError,
-    DockSurfacePanelLocation, DockSurfacePanelOutcome, DockSurfacePanelPlacement,
-    DockSurfacePanelSnapshot, DockSurfaceSnapshot, DockSurfaceViewportCloseOutcome,
-    DockSurfaceViewportError, DockSurfaceViewportOpenOutcome, DockSurfaceViewportOpenStatus,
-    DockSurfaceViewportSession,
+    DockHostOptions, DockPanel, DockSurface, DockSurfaceChange, DockSurfaceHostSession,
+    DockSurfacePanelError, DockSurfacePanelLocation, DockSurfacePanelOutcome,
+    DockSurfacePanelPlacement, DockSurfacePanelSnapshot, DockSurfaceSnapshot,
+    DockSurfaceViewportCloseOutcome, DockSurfaceViewportError, DockSurfaceViewportOpenOutcome,
+    DockSurfaceViewportOpenStatus, DockSurfaceViewportSession,
 };
 use slotmap::KeyData;
 
@@ -70,9 +69,6 @@ fn public_root_consumer_constructs_dock_surface_without_internal_runtime_helpers
         DockSurfaceViewportError::DockManagerUnavailable
     );
 
-    fn accepts_runtime_command_type(_: Option<DockRuntimeCommand>) {}
-    accepts_runtime_command_type(None);
-
     fn accepts_panel_outcome_type(_: Option<DockSurfacePanelOutcome>) {}
     accepts_panel_outcome_type(None);
 
@@ -81,6 +77,9 @@ fn public_root_consumer_constructs_dock_surface_without_internal_runtime_helpers
 
     fn accepts_viewport_session_type(_: Option<DockSurfaceViewportSession>) {}
     accepts_viewport_session_type(Some(surface.viewports()));
+
+    fn accepts_host_session_type(_: Option<DockSurfaceHostSession>) {}
+    accepts_host_session_type(Some(surface.host_lifecycle()));
 
     fn accepts_viewport_open_outcome_type(_: Option<DockSurfaceViewportOpenOutcome>) {}
     accepts_viewport_open_outcome_type(None);

@@ -15,6 +15,7 @@ use crate::dock::{
 pub type DockHostOptions = DockSpaceElementOptions;
 
 mod driver;
+mod host;
 mod query;
 #[cfg(test)]
 mod tests;
@@ -22,6 +23,7 @@ mod types;
 mod viewport;
 
 pub use driver::DockSurfaceDriver;
+pub use host::DockSurfaceHostSession;
 pub use types::{
     DockSurfaceChange, DockSurfacePanelError, DockSurfacePanelLocation, DockSurfacePanelOutcome,
     DockSurfacePanelPlacement, DockSurfacePanelSnapshot, DockSurfaceSnapshot,
@@ -274,7 +276,7 @@ impl DockSurface {
         }
         let before = panel_location(dock, panel);
 
-        let driver = self.driver();
+        let driver = DockSurfaceDriver::new(*self);
         let command_cursor = driver.runtime_command_cursor(app);
         driver.on_dock_op(
             app,
@@ -305,7 +307,7 @@ impl DockSurface {
         };
 
         let before = self.panel_location(app, panel);
-        let driver = self.driver();
+        let driver = DockSurfaceDriver::new(*self);
         let command_cursor = driver.runtime_command_cursor(app);
         driver.on_dock_op(app, op);
         driver.flush_runtime_commands_since_to_effects(app, command_cursor);
@@ -328,7 +330,7 @@ impl DockSurface {
 
         let close_window = location.window;
         let before = Some(location);
-        let driver = self.driver();
+        let driver = DockSurfaceDriver::new(*self);
         let command_cursor = driver.runtime_command_cursor(app);
         driver.on_dock_op(
             app,
@@ -382,9 +384,8 @@ impl DockSurface {
         dock_space_element_from_registry(cx, window, options)
     }
 
-    /// Returns the explicit driver-tier API for runtime and host integration callbacks.
-    pub fn driver(&self) -> DockSurfaceDriver {
-        DockSurfaceDriver { surface: *self }
+    pub fn host_lifecycle(&self) -> DockSurfaceHostSession {
+        DockSurfaceHostSession { surface: *self }
     }
 
     pub fn viewports(&self) -> DockSurfaceViewportSession {

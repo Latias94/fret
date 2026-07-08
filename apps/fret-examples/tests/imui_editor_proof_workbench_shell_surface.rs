@@ -43,10 +43,8 @@ fn imui_editor_proof_demo_routes_dock_window_shell_through_demo_local_owner() {
         "WindowRole::Auxiliary",
         "ActivationPolicy::NonActivating",
         "DockSurface::new",
-        "surface.driver().on_dock_op",
-        "surface.driver().on_window_created",
-        "surface.driver().before_close_window",
-        "surface.driver().flush_runtime_commands_to_effects",
+        "surface.host_lifecycle().on_dock_op",
+        ".host_lifecycle()",
         "request_dock_invalidation",
     ] {
         assert!(
@@ -66,6 +64,13 @@ fn imui_editor_proof_demo_routes_dock_window_shell_through_demo_local_owner() {
         assert!(
             !demo_source.contains(unexpected),
             "imui_editor_proof_demo.rs should stay focused on proof rendering after shell owner split; unexpected `{unexpected}`"
+        );
+    }
+
+    for forbidden in ["surface.driver()", "flush_runtime_commands_to_effects"] {
+        assert!(
+            !shell_source.contains(forbidden),
+            "workbench_shell should route dock runtime callbacks through DockSurface host lifecycle; unexpected `{forbidden}`"
         );
     }
 }

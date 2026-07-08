@@ -717,13 +717,15 @@ fn dock_surface_open_panel_invalidates_layout_and_cancels_pending_tearoff() {
         "EnsurePanelVisible should bump docking invalidation models"
     );
 
-    assert!(surface.driver().request_float_panel_to_new_window(
-        &mut app,
-        window_a,
-        panel.clone(),
-        None
-    ));
-    let commands = surface.driver().take_runtime_commands(&mut app);
+    assert!(
+        DockSurfaceDriver::new(surface).request_float_panel_to_new_window(
+            &mut app,
+            window_a,
+            panel.clone(),
+            None
+        )
+    );
+    let commands = DockSurfaceDriver::new(surface).take_runtime_commands(&mut app);
     let DockRuntimeCommand::CreateWindow(create) = commands[0].clone() else {
         panic!("expected create-window docking runtime command");
     };
@@ -735,13 +737,9 @@ fn dock_surface_open_panel_invalidates_layout_and_cancels_pending_tearoff() {
             .change,
         DockSurfaceChange::Unchanged
     );
-    assert!(
-        surface
-            .driver()
-            .on_window_created(&mut app, &create, window_b)
-    );
+    assert!(DockSurfaceDriver::new(surface).on_window_created(&mut app, &create, window_b));
     assert_eq!(
-        surface.driver().take_runtime_commands(&mut app),
+        DockSurfaceDriver::new(surface).take_runtime_commands(&mut app),
         vec![DockRuntimeCommand::CloseWindow(window_b)],
         "EnsurePanelVisible should cancel an outstanding tear-off for the same panel"
     );
@@ -772,12 +770,14 @@ fn dock_surface_semantic_open_does_not_flush_existing_runtime_commands() {
     surface
         .open_panel(&mut app, &panel)
         .expect("make panel active again");
-    assert!(surface.driver().request_float_panel_to_new_window(
-        &mut app,
-        window,
-        queued_panel.clone(),
-        None
-    ));
+    assert!(
+        DockSurfaceDriver::new(surface).request_float_panel_to_new_window(
+            &mut app,
+            window,
+            queued_panel.clone(),
+            None
+        )
+    );
     app.take_effects();
 
     let outcome = surface
@@ -792,8 +792,7 @@ fn dock_surface_semantic_open_does_not_flush_existing_runtime_commands() {
         "semantic panel commands must not flush pre-existing docking runtime commands"
     );
     assert!(
-        surface
-            .driver()
+        DockSurfaceDriver::new(surface)
             .take_runtime_commands(&mut app)
             .iter()
             .any(|command| queued_create_panel(command) == Some((window, queued_panel.clone()))),
@@ -817,18 +816,22 @@ fn dock_surface_semantic_open_removes_canceled_create_for_same_panel_only() {
     surface
         .open_panel(&mut app, &other_panel)
         .expect("open other panel");
-    assert!(surface.driver().request_float_panel_to_new_window(
-        &mut app,
-        window,
-        panel.clone(),
-        None
-    ));
-    assert!(surface.driver().request_float_panel_to_new_window(
-        &mut app,
-        window,
-        other_panel.clone(),
-        None
-    ));
+    assert!(
+        DockSurfaceDriver::new(surface).request_float_panel_to_new_window(
+            &mut app,
+            window,
+            panel.clone(),
+            None
+        )
+    );
+    assert!(
+        DockSurfaceDriver::new(surface).request_float_panel_to_new_window(
+            &mut app,
+            window,
+            other_panel.clone(),
+            None
+        )
+    );
     app.take_effects();
 
     surface.open_panel(&mut app, &panel).expect("reopen panel");
@@ -839,7 +842,7 @@ fn dock_surface_semantic_open_removes_canceled_create_for_same_panel_only() {
             .all(|effect| !matches!(effect, Effect::Window(WindowRequest::Create(_)))),
         "semantic panel commands must not emit a canceled create-window request"
     );
-    let queued = surface.driver().take_runtime_commands(&mut app);
+    let queued = DockSurfaceDriver::new(surface).take_runtime_commands(&mut app);
     assert_eq!(queued.len(), 1);
     assert_eq!(
         queued_create_panel(&queued[0]),
@@ -860,22 +863,24 @@ fn dock_surface_close_flushes_auto_close_after_canceled_create_removal() {
     app.set_global(DockManager::default());
     surface.register_panel(&mut app, panel.clone(), test_panel("Panel"));
     surface.open_panel(&mut app, &panel).expect("open panel");
-    assert!(surface.driver().request_float_panel_to_new_window(
-        &mut app,
-        window_a,
-        panel.clone(),
-        None
-    ));
-    let commands = surface.driver().take_runtime_commands(&mut app);
+    assert!(
+        DockSurfaceDriver::new(surface).request_float_panel_to_new_window(
+            &mut app,
+            window_a,
+            panel.clone(),
+            None
+        )
+    );
+    let commands = DockSurfaceDriver::new(surface).take_runtime_commands(&mut app);
     let DockRuntimeCommand::CreateWindow(create) = commands[0].clone() else {
         panic!("expected create-window docking runtime command");
     };
+    assert!(DockSurfaceDriver::new(surface).on_window_created(&mut app, &create, window_b));
     assert!(
-        surface
-            .driver()
-            .on_window_created(&mut app, &create, window_b)
+        DockSurfaceDriver::new(surface)
+            .take_runtime_commands(&mut app)
+            .is_empty()
     );
-    assert!(surface.driver().take_runtime_commands(&mut app).is_empty());
     assert_eq!(
         surface
             .panel_location(&app, &panel)
@@ -883,19 +888,23 @@ fn dock_surface_close_flushes_auto_close_after_canceled_create_removal() {
         Some(window_b)
     );
 
-    assert!(surface.driver().request_float_panel_to_new_window(
-        &mut app,
-        window_b,
-        panel.clone(),
-        None
-    ));
+    assert!(
+        DockSurfaceDriver::new(surface).request_float_panel_to_new_window(
+            &mut app,
+            window_b,
+            panel.clone(),
+            None
+        )
+    );
     app.take_effects();
 
     let outcome = surface.close_panel(&mut app, &panel).expect("close panel");
 
     assert_eq!(outcome.location, None);
     assert!(
-        surface.driver().take_runtime_commands(&mut app).is_empty(),
+        DockSurfaceDriver::new(surface)
+            .take_runtime_commands(&mut app)
+            .is_empty(),
         "canceled create and operation-local auto-close should both be drained"
     );
     let effects = app.take_effects();
@@ -920,12 +929,14 @@ fn dock_surface_viewport_open_flushes_only_new_runtime_commands() {
     surface.register_panel(&mut app, new_panel.clone(), test_panel("New"));
     surface.open_panel(&mut app, &old_panel).expect("open old");
     surface.open_panel(&mut app, &new_panel).expect("open new");
-    assert!(surface.driver().request_float_panel_to_new_window(
-        &mut app,
-        window,
-        old_panel.clone(),
-        None
-    ));
+    assert!(
+        DockSurfaceDriver::new(surface).request_float_panel_to_new_window(
+            &mut app,
+            window,
+            old_panel.clone(),
+            None
+        )
+    );
     app.take_effects();
 
     let outcome = surface
@@ -946,7 +957,7 @@ fn dock_surface_viewport_open_flushes_only_new_runtime_commands() {
             panel: ref requested,
         } if source_window == window && requested == &new_panel
     ));
-    let queued = surface.driver().take_runtime_commands(&mut app);
+    let queued = DockSurfaceDriver::new(surface).take_runtime_commands(&mut app);
     assert_eq!(queued.len(), 1);
     assert_eq!(queued_create_panel(&queued[0]), Some((window, old_panel)));
 }
@@ -962,12 +973,14 @@ fn dock_surface_viewport_before_close_does_not_flush_existing_runtime_commands()
     app.set_global(DockManager::default());
     surface.register_panel(&mut app, panel.clone(), test_panel("Panel"));
     surface.open_panel(&mut app, &panel).expect("open panel");
-    assert!(surface.driver().request_float_panel_to_new_window(
-        &mut app,
-        window,
-        panel.clone(),
-        None
-    ));
+    assert!(
+        DockSurfaceDriver::new(surface).request_float_panel_to_new_window(
+            &mut app,
+            window,
+            panel.clone(),
+            None
+        )
+    );
     app.take_effects();
 
     let outcome = surface
@@ -984,8 +997,7 @@ fn dock_surface_viewport_before_close_does_not_flush_existing_runtime_commands()
         "viewport close lifecycle must not flush pre-existing docking runtime commands"
     );
     assert!(
-        surface
-            .driver()
+        DockSurfaceDriver::new(surface)
             .take_runtime_commands(&mut app)
             .iter()
             .any(|command| matches!(command, DockRuntimeCommand::CreateWindow(_))),
@@ -1012,18 +1024,20 @@ fn dock_surface_request_float_panel_uses_runtime_command_queue() {
         dock.workspace.graph.set_window_root(window_a, tabs);
     });
 
-    assert!(surface.driver().request_float_panel_to_new_window(
-        &mut app,
-        window_a,
-        panel.clone(),
-        None
-    ));
+    assert!(
+        DockSurfaceDriver::new(surface).request_float_panel_to_new_window(
+            &mut app,
+            window_a,
+            panel.clone(),
+            None
+        )
+    );
 
     assert!(
         app.take_effects().is_empty(),
         "DockSurface command path should not emit Effect::Dock or WindowRequest::Create"
     );
-    let commands = surface.driver().take_runtime_commands(&mut app);
+    let commands = DockSurfaceDriver::new(surface).take_runtime_commands(&mut app);
     assert_eq!(commands.len(), 1);
     let DockRuntimeCommand::CreateWindow(create) = commands[0].clone() else {
         panic!("expected create-window docking runtime command");
@@ -1037,11 +1051,7 @@ fn dock_surface_request_float_panel_uses_runtime_command_queue() {
             if source_window == window_a && requested == &panel
     ));
 
-    assert!(
-        surface
-            .driver()
-            .on_window_created(&mut app, &create, window_b)
-    );
+    assert!(DockSurfaceDriver::new(surface).on_window_created(&mut app, &create, window_b));
     let dock = app.global::<DockManager>().expect("dock manager exists");
     assert!(
         dock.workspace
@@ -1077,19 +1087,20 @@ fn dock_surface_runtime_command_queue_deduplicates_until_window_created() {
         dock.workspace.graph.set_window_root(window, tabs);
     });
 
-    assert!(surface.driver().request_float_panel_to_new_window(
-        &mut app,
-        window,
-        panel.clone(),
-        None
-    ));
     assert!(
-        surface
-            .driver()
+        DockSurfaceDriver::new(surface).request_float_panel_to_new_window(
+            &mut app,
+            window,
+            panel.clone(),
+            None
+        )
+    );
+    assert!(
+        DockSurfaceDriver::new(surface)
             .request_float_panel_to_new_window(&mut app, window, panel, None)
     );
 
-    let commands = surface.driver().take_runtime_commands(&mut app);
+    let commands = DockSurfaceDriver::new(surface).take_runtime_commands(&mut app);
     assert_eq!(
         commands
             .iter()
@@ -1125,12 +1136,14 @@ fn dock_surface_request_float_panel_does_not_emit_host_effects_before_flush() {
         dock.workspace.graph.set_window_root(window, tabs);
     });
 
-    assert!(surface.driver().request_float_panel_to_new_window(
-        &mut app,
-        window,
-        panel.clone(),
-        None
-    ));
+    assert!(
+        DockSurfaceDriver::new(surface).request_float_panel_to_new_window(
+            &mut app,
+            window,
+            panel.clone(),
+            None
+        )
+    );
 
     assert!(
         app.take_effects().iter().all(|effect| !matches!(
@@ -1140,8 +1153,7 @@ fn dock_surface_request_float_panel_does_not_emit_host_effects_before_flush() {
         "DockSurface request helpers should route float requests through docking runtime commands"
     );
     assert_eq!(
-        surface
-            .driver()
+        DockSurfaceDriver::new(surface)
             .take_runtime_commands(&mut app)
             .iter()
             .filter(|command| matches!(command, DockRuntimeCommand::CreateWindow(_)))
@@ -1168,19 +1180,23 @@ fn dock_surface_flushes_runtime_commands_to_host_effects() {
         dock.workspace.graph.set_window_root(window, tabs);
     });
 
-    assert!(surface.driver().request_float_panel_to_new_window(
-        &mut app,
-        window,
-        panel.clone(),
-        None
-    ));
+    assert!(
+        DockSurfaceDriver::new(surface).request_float_panel_to_new_window(
+            &mut app,
+            window,
+            panel.clone(),
+            None
+        )
+    );
 
     assert_eq!(
-        surface.driver().flush_runtime_commands_to_effects(&mut app),
+        DockSurfaceDriver::new(surface).flush_runtime_commands_to_effects(&mut app),
         1
     );
     assert!(
-        surface.driver().take_runtime_commands(&mut app).is_empty(),
+        DockSurfaceDriver::new(surface)
+            .take_runtime_commands(&mut app)
+            .is_empty(),
         "flushed commands should be drained from the docking runtime queue"
     );
     let effects = app.take_effects();
@@ -1203,7 +1219,7 @@ fn dock_surface_flushes_runtime_commands_to_host_effects() {
             if source_window == window && requested == &panel
     ));
     assert_eq!(
-        surface.driver().flush_runtime_commands_to_effects(&mut app),
+        DockSurfaceDriver::new(surface).flush_runtime_commands_to_effects(&mut app),
         0,
         "flushing an empty runtime command queue should be a no-op"
     );
@@ -1229,17 +1245,19 @@ fn dock_surface_flushes_close_runtime_commands_to_host_effects() {
         dock.workspace.graph.set_window_root(window_a, tabs);
     });
 
-    assert!(surface.driver().request_float_panel_to_new_window(
-        &mut app,
-        window_a,
-        panel.clone(),
-        None
-    ));
-    let commands = surface.driver().take_runtime_commands(&mut app);
+    assert!(
+        DockSurfaceDriver::new(surface).request_float_panel_to_new_window(
+            &mut app,
+            window_a,
+            panel.clone(),
+            None
+        )
+    );
+    let commands = DockSurfaceDriver::new(surface).take_runtime_commands(&mut app);
     let DockRuntimeCommand::CreateWindow(create) = commands[0].clone() else {
         panic!("expected create-window docking runtime command");
     };
-    assert!(surface.driver().on_dock_op(
+    assert!(DockSurfaceDriver::new(surface).on_dock_op(
         &mut app,
         DockOp::MovePanelToEmptyDockSpace {
             source_window: window_a,
@@ -1247,18 +1265,16 @@ fn dock_surface_flushes_close_runtime_commands_to_host_effects() {
             target_window: window_c,
         },
     ));
-    assert!(
-        surface
-            .driver()
-            .on_window_created(&mut app, &create, window_b)
-    );
+    assert!(DockSurfaceDriver::new(surface).on_window_created(&mut app, &create, window_b));
 
     assert_eq!(
-        surface.driver().flush_runtime_commands_to_effects(&mut app),
+        DockSurfaceDriver::new(surface).flush_runtime_commands_to_effects(&mut app),
         1
     );
     assert!(
-        surface.driver().take_runtime_commands(&mut app).is_empty(),
+        DockSurfaceDriver::new(surface)
+            .take_runtime_commands(&mut app)
+            .is_empty(),
         "flushed close command should be drained from the docking runtime queue"
     );
     let effects = app.take_effects();
@@ -1289,17 +1305,19 @@ fn dock_surface_window_created_for_stale_source_queues_close_command() {
         dock.workspace.graph.set_window_root(window_a, tabs);
     });
 
-    assert!(surface.driver().request_float_panel_to_new_window(
-        &mut app,
-        window_a,
-        panel.clone(),
-        None
-    ));
-    let commands = surface.driver().take_runtime_commands(&mut app);
+    assert!(
+        DockSurfaceDriver::new(surface).request_float_panel_to_new_window(
+            &mut app,
+            window_a,
+            panel.clone(),
+            None
+        )
+    );
+    let commands = DockSurfaceDriver::new(surface).take_runtime_commands(&mut app);
     let DockRuntimeCommand::CreateWindow(create) = commands[0].clone() else {
         panic!("expected create-window docking runtime command");
     };
-    assert!(surface.driver().on_dock_op(
+    assert!(DockSurfaceDriver::new(surface).on_dock_op(
         &mut app,
         DockOp::MovePanelToEmptyDockSpace {
             source_window: window_a,
@@ -1308,13 +1326,9 @@ fn dock_surface_window_created_for_stale_source_queues_close_command() {
         },
     ));
 
-    assert!(
-        surface
-            .driver()
-            .on_window_created(&mut app, &create, window_b)
-    );
+    assert!(DockSurfaceDriver::new(surface).on_window_created(&mut app, &create, window_b));
     assert_eq!(
-        surface.driver().take_runtime_commands(&mut app),
+        DockSurfaceDriver::new(surface).take_runtime_commands(&mut app),
         vec![DockRuntimeCommand::CloseWindow(window_b)]
     );
     assert!(
@@ -1352,13 +1366,15 @@ fn dock_surface_window_created_graph_commit_failure_queues_close_command() {
         dock.workspace.graph.set_window_root(window_a, tabs);
     });
 
-    assert!(surface.driver().request_float_panel_to_new_window(
-        &mut app,
-        window_a,
-        panel.clone(),
-        None
-    ));
-    let commands = surface.driver().take_runtime_commands(&mut app);
+    assert!(
+        DockSurfaceDriver::new(surface).request_float_panel_to_new_window(
+            &mut app,
+            window_a,
+            panel.clone(),
+            None
+        )
+    );
+    let commands = DockSurfaceDriver::new(surface).take_runtime_commands(&mut app);
     let DockRuntimeCommand::CreateWindow(create) = commands[0].clone() else {
         panic!("expected create-window docking runtime command");
     };
@@ -1369,13 +1385,9 @@ fn dock_surface_window_created_graph_commit_failure_queues_close_command() {
         );
     });
 
-    assert!(
-        surface
-            .driver()
-            .on_window_created(&mut app, &create, window_b)
-    );
+    assert!(DockSurfaceDriver::new(surface).on_window_created(&mut app, &create, window_b));
     assert_eq!(
-        surface.driver().take_runtime_commands(&mut app),
+        DockSurfaceDriver::new(surface).take_runtime_commands(&mut app),
         vec![DockRuntimeCommand::CloseWindow(window_b)]
     );
     assert!(
@@ -1415,23 +1427,23 @@ fn dock_surface_redock_auto_close_uses_runtime_command_queue() {
         dock.workspace.graph.set_window_root(window_a, tabs);
     });
 
-    assert!(surface.driver().request_float_panel_to_new_window(
-        &mut app,
-        window_a,
-        panel.clone(),
-        None
-    ));
-    let commands = surface.driver().take_runtime_commands(&mut app);
+    assert!(
+        DockSurfaceDriver::new(surface).request_float_panel_to_new_window(
+            &mut app,
+            window_a,
+            panel.clone(),
+            None
+        )
+    );
+    let commands = DockSurfaceDriver::new(surface).take_runtime_commands(&mut app);
     let DockRuntimeCommand::CreateWindow(create) = commands[0].clone() else {
         panic!("expected create-window docking runtime command");
     };
+    assert!(DockSurfaceDriver::new(surface).on_window_created(&mut app, &create, window_b));
     assert!(
-        surface
-            .driver()
-            .on_window_created(&mut app, &create, window_b)
-    );
-    assert!(
-        surface.driver().take_runtime_commands(&mut app).is_empty(),
+        DockSurfaceDriver::new(surface)
+            .take_runtime_commands(&mut app)
+            .is_empty(),
         "successful window creation should not queue a close command"
     );
 
@@ -1443,7 +1455,7 @@ fn dock_surface_redock_auto_close_uses_runtime_command_queue() {
         .first_tabs_in_window(window_a)
         .expect("source window should still have placeholder tabs");
 
-    assert!(surface.driver().on_dock_op(
+    assert!(DockSurfaceDriver::new(surface).on_dock_op(
         &mut app,
         DockOp::MovePanel {
             source_window: window_b,
@@ -1456,7 +1468,7 @@ fn dock_surface_redock_auto_close_uses_runtime_command_queue() {
     ));
 
     assert_eq!(
-        surface.driver().take_runtime_commands(&mut app),
+        DockSurfaceDriver::new(surface).take_runtime_commands(&mut app),
         vec![DockRuntimeCommand::CloseWindow(window_b)]
     );
     assert!(

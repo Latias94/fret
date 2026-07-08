@@ -93,8 +93,7 @@ pub(super) fn invalidate_after_dock_op<H: UiHost>(
         }
         DockOp::SetActiveTab { .. }
         | DockOp::SetSplitFractions { .. }
-        | DockOp::SetSplitFractionsMany { .. }
-        | DockOp::SetSplitFractionTwo { .. } => {
+        | DockOp::SetSplitFractionsMany { .. } => {
             invalidate_windows(app, dock.workspace.graph.windows());
         }
         _ => {}

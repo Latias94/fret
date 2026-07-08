@@ -930,7 +930,6 @@ fn run_dock_op_sequence_case(case: &DockOpSequenceCase) {
                         DockOp::MergeWindowInto { .. } => "merge_window_into",
                         DockOp::SetSplitFractions { .. } => "set_split_fractions",
                         DockOp::SetSplitFractionsMany { .. } => "set_split_fractions_many",
-                        DockOp::SetSplitFractionTwo { .. } => "set_split_fraction_two",
                     };
                     *failed_ops.entry(kind).or_default() += 1;
                     last_failed_op = Some(op);

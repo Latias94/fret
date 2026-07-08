@@ -8,6 +8,7 @@ fn public_docking_surface_prefers_dock_surface_entry_points() {
         "DockSurface",
         "DockHostOptions",
         "DockSurfaceChange",
+        "DockSurfaceHostSession",
         "DockSurfacePanelError",
         "DockSurfacePanelLocation",
         "DockSurfacePanelOutcome",
@@ -114,6 +115,7 @@ fn dock_surface_root_entry_point_is_public_without_internal_command_queue() {
         "DockHostOptions",
         "DockSurfacePanelOutcome",
         "DockSurfaceSnapshot",
+        "DockSurfaceHostSession",
         "DockSurfaceViewportSession",
     ] {
         assert!(
@@ -235,6 +237,7 @@ fn dock_surface_common_signatures_do_not_expose_driver_tier_types() {
         "DockNodeId",
         "DockOp",
         "CreateWindowRequest",
+        "DockSurfaceDriver",
         "DockRuntimeCommand",
     ] {
         assert!(
@@ -264,6 +267,21 @@ fn dock_surface_common_signatures_do_not_expose_driver_tier_types() {
             .iter()
             .any(|signature| signature.contains("DockSurfaceViewportSession")),
         "`DockSurface` should expose the typed viewport session facade without leaking runtime callback types"
+    );
+}
+
+#[test]
+fn viewport_overlay_hooks_no_longer_accept_legacy_paint_only_implementations() {
+    let dock_mod = include_str!("../src/dock/mod.rs");
+    let hooks = impl_block(dock_mod, "pub trait DockViewportOverlayHooks");
+
+    assert!(
+        hooks.contains("fn paint_with_layout("),
+        "`DockViewportOverlayHooks` should expose layout-aware overlay painting"
+    );
+    assert!(
+        !hooks.contains("fn paint("),
+        "`DockViewportOverlayHooks` must not keep the legacy `paint(...)` fallback"
     );
 }
 
@@ -319,6 +337,10 @@ fn first_party_docking_examples_use_current_declarative_entry_points() {
             "render_and_bind_dock_panels",
             "dock_space_with(",
             "DockSpaceImUiOptions",
+            "surface.driver()",
+            "flush_runtime_commands_to_effects",
+            "DockSurfaceDriver",
+            "DockRuntimeCommand",
         ] {
             assert!(
                 !source.contains(forbidden),
@@ -373,6 +395,10 @@ fn first_party_docking_examples_use_current_declarative_entry_points() {
             "render_and_bind_dock_panels",
             "dock_space_with(",
             "DockSpaceImUiOptions",
+            "surface.driver()",
+            "flush_runtime_commands_to_effects",
+            "DockSurfaceDriver",
+            "DockRuntimeCommand",
         ] {
             assert!(
                 !source.contains(forbidden),

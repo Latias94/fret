@@ -324,21 +324,6 @@ impl DockManager {
         self.workspace.panels()
     }
 
-    /// Legacy API: returns the unclipped content rect for a viewport panel.
-    ///
-    /// Prefer `viewport_layout(...)` (or `viewport_mapping(...)` / `viewport_draw_rect(...)`) for
-    /// new code so callers share a single, stable mapping contract.
-    pub fn viewport_content_rect(
-        &self,
-        window: fret_core::AppWindowId,
-        target: RenderTargetId,
-    ) -> Option<Rect> {
-        self.presentation
-            .viewport_layouts
-            .get(&(window, target))
-            .map(|layout| layout.content_rect)
-    }
-
     pub fn viewport_draw_rect(
         &self,
         window: fret_core::AppWindowId,
@@ -415,30 +400,6 @@ impl DockManager {
             .viewport_layouts
             .retain(|(w, target), _| *w != window || live_targets.contains(target));
         changed || self.presentation.viewport_layouts.len() != before
-    }
-
-    /// Legacy API: records only a content rect and leaves mapping details unspecified.
-    ///
-    /// Prefer `set_viewport_layout(...)` so the cached entry includes `ViewportMapping` and the
-    /// resulting `draw_rect` for consistent hit testing / input forwarding.
-    pub fn set_viewport_content_rect(
-        &mut self,
-        window: fret_core::AppWindowId,
-        target: RenderTargetId,
-        rect: Rect,
-    ) {
-        self.presentation.viewport_layouts.insert(
-            (window, target),
-            DockViewportLayout {
-                content_rect: rect,
-                mapping: ViewportMapping {
-                    content_rect: rect,
-                    target_px_size: (1, 1),
-                    fit: ViewportFit::Stretch,
-                },
-                draw_rect: rect,
-            },
-        );
     }
 
     pub fn set_viewport_layout(

@@ -5,8 +5,8 @@ use crate::dock::DockManager;
 
 use super::query::panel_location_in_window;
 use super::{
-    DockSurface, DockSurfaceChange, DockSurfaceViewportCloseOutcome, DockSurfaceViewportError,
-    DockSurfaceViewportOpenOutcome, DockSurfaceViewportOpenStatus,
+    DockSurface, DockSurfaceChange, DockSurfaceDriver, DockSurfaceViewportCloseOutcome,
+    DockSurfaceViewportError, DockSurfaceViewportOpenOutcome, DockSurfaceViewportOpenStatus,
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -48,7 +48,7 @@ impl DockSurfaceViewportSession {
 
         let supported =
             crate::runtime::dock_tear_off_supported(app.global::<PlatformCapabilities>());
-        let driver = self.surface.driver();
+        let driver = DockSurfaceDriver::new(self.surface);
         let command_cursor = driver.runtime_command_cursor(app);
         let requested =
             driver.request_float_panel_to_new_window(app, source_window, panel.clone(), anchor);
@@ -94,7 +94,9 @@ impl DockSurfaceViewportSession {
             .global::<DockManager>()
             .map(|dock| dock.workspace.graph.collect_panels_in_window(window))
             .unwrap_or_default();
-        self.surface.driver().before_close_window(app, window);
+        self.surface
+            .host_lifecycle()
+            .before_close_window(app, window);
         let after_panels = app
             .global::<DockManager>()
             .map(|dock| dock.workspace.graph.collect_panels_in_window(window))
