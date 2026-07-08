@@ -8,7 +8,6 @@ use fret::{AppComponentCx, UiChild};
 use fret_ui::Invalidation;
 use fret_ui::element::AnyElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
-use shadcn::raw::breadcrumb::primitives as bc;
 use std::sync::Arc;
 
 const ITEMS_TO_DISPLAY: usize = 3;
@@ -41,7 +40,7 @@ fn render_breadcrumb_overflow_trigger(
 ) -> AnyElement {
     cx.pressable(breadcrumb_trigger_props(trigger_test_id), move |cx, _st| {
         vec![
-            bc::BreadcrumbEllipsis::new()
+            shadcn::BreadcrumbEllipsis::new()
                 .size(fret_core::Px(16.0))
                 .into_element(cx),
         ]
@@ -56,7 +55,7 @@ fn render_breadcrumb_overflow_drawer_trigger(
     cx.pressable(breadcrumb_trigger_props(trigger_test_id), move |cx, _st| {
         cx.pressable_on_activate(toggle.clone());
         vec![
-            bc::BreadcrumbEllipsis::new()
+            shadcn::BreadcrumbEllipsis::new()
                 .size(fret_core::Px(16.0))
                 .into_element(cx),
         ]
@@ -165,22 +164,22 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
 
     let trigger_test_id: Arc<str> = Arc::from("ui-gallery-breadcrumb-responsive-trigger");
 
-    let crumb = bc::Breadcrumb::new().into_element(cx, |cx| {
-        vec![bc::BreadcrumbList::new().into_element(cx, |cx| {
+    let crumb = shadcn::BreadcrumbRoot::new().into_element(cx, |cx| {
+        vec![shadcn::BreadcrumbList::new().into_element(cx, |cx| {
             let mut out: Vec<AnyElement> = Vec::new();
 
-            out.push(bc::BreadcrumbItem::new().into_element(cx, |cx| {
+            out.push(shadcn::BreadcrumbItemPart::new().into_element(cx, |cx| {
                 vec![
-                    bc::BreadcrumbLink::new(items[0].0)
+                    shadcn::BreadcrumbLink::new(items[0].0)
                         .href(items[0].1.unwrap_or("#"))
                         .on_activate(Arc::new(|_host, _acx, _reason| {}))
                         .into_element(cx),
                 ]
             }));
-            out.push(bc::BreadcrumbSeparator::new().into_element(cx));
+            out.push(shadcn::BreadcrumbSeparatorPart::new().into_element(cx));
 
             if items.len() > ITEMS_TO_DISPLAY {
-                out.push(bc::BreadcrumbItem::new().into_element(cx, |cx| {
+                out.push(shadcn::BreadcrumbItemPart::new().into_element(cx, |cx| {
                     let desktop_trigger_test_id = trigger_test_id.clone();
                     let mobile_trigger_test_id = trigger_test_id.clone();
                     vec![device_shell_switch(
@@ -225,24 +224,24 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                         },
                     )]
                 }));
-                out.push(bc::BreadcrumbSeparator::new().into_element(cx));
+                out.push(shadcn::BreadcrumbSeparatorPart::new().into_element(cx));
             }
 
             // Tail items (last `ITEMS_TO_DISPLAY - 1` entries).
             for (i, (label, href)) in tail_items.iter().enumerate() {
                 let is_last = i + 1 == tail_items.len();
                 let tail_layout = tail_max_w.clone();
-                out.push(bc::BreadcrumbItem::new().into_element(cx, |cx| {
+                out.push(shadcn::BreadcrumbItemPart::new().into_element(cx, |cx| {
                     if is_last || href.is_none() {
                         vec![
-                            bc::BreadcrumbPage::new(*label)
+                            shadcn::BreadcrumbPage::new(*label)
                                 .truncate(true)
                                 .refine_layout(tail_layout.clone())
                                 .into_element(cx),
                         ]
                     } else {
                         vec![
-                            bc::BreadcrumbLink::new(*label)
+                            shadcn::BreadcrumbLink::new(*label)
                                 .href(href.unwrap_or("#"))
                                 .truncate(true)
                                 .refine_layout(tail_layout.clone())
@@ -253,7 +252,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                 }));
 
                 if !is_last {
-                    out.push(bc::BreadcrumbSeparator::new().into_element(cx));
+                    out.push(shadcn::BreadcrumbSeparatorPart::new().into_element(cx));
                 }
             }
 

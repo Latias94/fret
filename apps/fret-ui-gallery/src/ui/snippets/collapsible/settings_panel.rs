@@ -5,7 +5,6 @@ use fret::{AppComponentCx, UiChild};
 use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
-use shadcn::raw::collapsible::primitives as shadcn_col;
 
 fn radius_input<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -28,7 +27,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let radius_bl = cx.local_model_keyed("radius_bl", || String::from("0"));
     let radius_br = cx.local_model_keyed("radius_br", || String::from("0"));
 
-    let settings_collapsible = shadcn_col::Collapsible::new()
+    let settings_collapsible = shadcn::CollapsibleRoot::new()
         .open(open.clone())
         .refine_layout(LayoutRefinement::default().w_full().min_w_0())
         .into_element(cx, |cx| {
@@ -85,7 +84,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             .layout(LayoutRefinement::default().w_full().min_w_0())
             .into_element(cx);
 
-            let content = shadcn_col::CollapsibleContent::new([bottom_row])
+            let content = shadcn::CollapsibleContentPart::new([bottom_row])
                 .refine_layout(LayoutRefinement::default().w_full())
                 .test_id("ui-gallery-collapsible-settings-content")
                 .into_element(cx);
@@ -103,7 +102,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                 .icon(icon)
                 .test_id("ui-gallery-collapsible-settings-trigger")
                 .into_element(cx);
-            let trigger = shadcn_col::CollapsibleTrigger::new([button])
+            let trigger = shadcn::CollapsibleTriggerPart::new([button])
                 .as_child(true)
                 .into_element(cx);
 

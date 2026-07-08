@@ -103,7 +103,9 @@ fn collapsible_docs_path_snippets_stay_copyable_and_docs_aligned() {
     }
 
     for needle in [
-        "use shadcn::raw::collapsible::primitives as shadcn_col;",
+        "shadcn::CollapsibleRoot::new()",
+        "shadcn::CollapsibleContentPart::new([bottom_row])",
+        "shadcn::CollapsibleTriggerPart::new([button])",
         "String::from(\"0\")",
         "\"ui-gallery-collapsible-settings-trigger\"",
         "\"ui-gallery-collapsible-settings-content\"",
@@ -113,6 +115,11 @@ fn collapsible_docs_path_snippets_stay_copyable_and_docs_aligned() {
             "collapsible settings snippet should keep the source-aligned primitive lane explicit; missing `{needle}`"
         );
     }
+    assert!(
+        !settings.contains("shadcn::raw::collapsible::primitives")
+            && !settings.contains("shadcn_col::"),
+        "collapsible settings snippet should use curated facade primitive aliases"
+    );
 
     for needle in [
         "with_direction_provider(cx, LayoutDirection::Rtl, |cx| {",

@@ -67,14 +67,6 @@ fn documented_raw_shadcn_escape_hatch_reason(trimmed: &str) -> Option<&'static s
 
     for (needle, reason) in [
         (
-            "use shadcn::raw::breadcrumb::primitives as bc;",
-            "breadcrumb primitive source-alignment alias",
-        ),
-        (
-            "use shadcn::raw::collapsible::primitives as shadcn_col;",
-            "collapsible primitive source-alignment alias",
-        ),
-        (
             "shadcn::raw::experimental::DataGridElement::",
             "experimental DataGrid element family",
         ),
@@ -114,8 +106,6 @@ fn raw_shadcn_escape_hatch_gate_is_symbol_level_not_module_level() {
         "shadcn::raw::typography::muted(\"copy\")",
         "shadcn::raw::icon::icon(cx, icon)",
         "shadcn::raw::extras::Ticker::new(\"AAPL\")",
-        "use shadcn::raw::breadcrumb::primitives as bc;",
-        "use shadcn::raw::collapsible::primitives as shadcn_col;",
         "let grid = shadcn::raw::experimental::DataGridElement::new(rows)",
     ] {
         assert!(
@@ -139,6 +129,8 @@ fn raw_shadcn_escape_hatch_gate_is_symbol_level_not_module_level() {
         "shadcn::raw::menubar::MenubarItemVariant::Destructive",
         "shadcn::raw::accordion::composable",
         "shadcn::raw::collapsible::primitives::*",
+        "use shadcn::raw::breadcrumb::primitives as bc;",
+        "use shadcn::raw::collapsible::primitives as shadcn_col;",
         "use shadcn::raw::breadcrumb::private as bc;",
     ] {
         assert!(
@@ -347,39 +339,32 @@ fn gallery_shadcn_extras_batch_uses_explicit_raw_escape_hatch() {
 }
 
 #[test]
-fn gallery_breadcrumb_primitive_batch_uses_explicit_raw_escape_hatch() {
-    let relative_paths = ["src/ui/snippets/breadcrumb/responsive.rs"];
+fn gallery_breadcrumb_responsive_snippet_prefers_curated_parts_aliases() {
+    let relative_path = "src/ui/snippets/breadcrumb/responsive.rs";
+    assert_curated_facade_only(&[relative_path]);
 
-    for relative_path in relative_paths {
-        let path = manifest_path(relative_path);
-        let source = read_path(&path);
+    let path = manifest_path(relative_path);
+    let source = read_path(&path);
+    for needle in [
+        "shadcn::BreadcrumbRoot::new()",
+        "shadcn::BreadcrumbList::new()",
+        "shadcn::BreadcrumbItemPart::new()",
+        "shadcn::BreadcrumbSeparatorPart::new()",
+        "shadcn::BreadcrumbEllipsis::new()",
+        "shadcn::BreadcrumbLink::new(",
+        "shadcn::BreadcrumbPage::new(",
+    ] {
         assert!(
-            source.contains("use fret_ui_shadcn::facade as shadcn;")
-                || source.contains("use fret_ui_shadcn::{facade as shadcn, prelude::*};"),
-            "{} should import the curated shadcn facade before reopening raw breadcrumb primitives",
-            path.display()
-        );
-
-        for line in source.lines() {
-            if !line.contains("fret_ui_shadcn::") {
-                continue;
-            }
-
-            let trimmed = line.trim();
-            assert!(
-                trimmed == "use fret_ui_shadcn::facade as shadcn;"
-                    || trimmed == "use fret_ui_shadcn::{facade as shadcn, prelude::*};",
-                "{} reintroduced a direct fret_ui_shadcn root path: {}",
-                path.display(),
-                trimmed
-            );
-        }
-        assert!(
-            source.contains("use shadcn::raw::breadcrumb::primitives as bc;"),
-            "{} should use the explicit raw breadcrumb primitive escape hatch",
+            source.contains(needle),
+            "{} should keep the responsive breadcrumb primitive lane on the curated facade; missing `{needle}`",
             path.display()
         );
     }
+    assert!(
+        !source.contains("shadcn::raw::breadcrumb::primitives") && !source.contains("bc::"),
+        "{} should not reopen the raw breadcrumb primitive escape hatch",
+        path.display()
+    );
 }
 
 #[test]
