@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
 use fret_core::{AppWindowId, PanelKey, Rect, Size};
-use fret_runtime::Effect;
 use fret_ui::UiHost;
 
 use super::super::manager::DockManager;
@@ -121,7 +120,6 @@ enum DeclarativeTearOffRetryTarget {
 
 #[derive(Default)]
 pub(super) struct DeclarativeTearOffHoverResult {
-    pub(super) effects: Vec<Effect>,
     pub(super) requested_tear_off: bool,
 }
 
@@ -149,8 +147,6 @@ pub(super) fn declarative_resolve_tear_off_hover<H: UiHost>(
     let oob = declarative_is_outside_bounds_with_margin(bounds, position, fret_core::Px(10.0));
     let mut set_tear_off_oob_start_frame: Option<Option<fret_runtime::FrameId>> = None;
     let mut mark_tear_off_requested = false;
-    let mut effects = Vec::new();
-
     if let Some(payload) = panel_payload.as_ref() {
         if allow_tear_off && source_window == window {
             match (oob, payload.tear_off_oob_start_frame) {
@@ -186,17 +182,16 @@ pub(super) fn declarative_resolve_tear_off_hover<H: UiHost>(
             && !payload.tear_off_requested;
 
         if requested_tear_off {
-            mark_tear_off_requested = true;
-            effects.push(Effect::Dock(
-                fret_core::DockOp::RequestFloatPanelToNewWindow {
+            mark_tear_off_requested =
+                crate::runtime::request_float_panel_to_new_window_with_host_effects(
+                    app,
                     source_window,
-                    panel: payload.panel.clone(),
-                    anchor: Some(fret_core::WindowAnchor {
+                    payload.panel.clone(),
+                    Some(fret_core::WindowAnchor {
                         window,
                         position: payload.grab_offset,
                     }),
-                },
-            ));
+                );
         }
     } else if let Some(payload) = tabs_payload.as_ref() {
         if allow_tear_off && source_window == window {
@@ -234,18 +229,17 @@ pub(super) fn declarative_resolve_tear_off_hover<H: UiHost>(
             && !payload.tear_off_requested;
 
         if requested_tear_off && let Some(panel) = panel {
-            mark_tear_off_requested = true;
-            effects.push(Effect::Dock(
-                fret_core::DockOp::RequestFloatTabsToNewWindow {
+            mark_tear_off_requested =
+                crate::runtime::request_float_tabs_to_new_window_with_host_effects(
+                    app,
                     source_window,
-                    source_tabs: payload.source_tabs,
-                    panel: panel.clone(),
-                    anchor: Some(fret_core::WindowAnchor {
+                    payload.source_tabs,
+                    panel.clone(),
+                    Some(fret_core::WindowAnchor {
                         window,
                         position: payload.grab_offset,
                     }),
-                },
-            ));
+                );
         }
     }
 
@@ -320,7 +314,6 @@ pub(super) fn declarative_resolve_tear_off_hover<H: UiHost>(
     }
 
     DeclarativeTearOffHoverResult {
-        effects,
         requested_tear_off: mark_tear_off_requested,
     }
 }

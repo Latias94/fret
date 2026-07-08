@@ -1,6 +1,8 @@
 use super::*;
 use std::{collections::HashMap, sync::Mutex};
 
+use fret_runtime::CreateWindowKind;
+
 struct EmptyRegistry;
 
 impl DockPanelElementRegistry<TestHost> for EmptyRegistry {
@@ -5883,8 +5885,11 @@ fn public_declarative_dock_space_entry_point_requests_tear_off_after_stable_oob_
     assert!(
         !effects.iter().any(|effect| matches!(
             effect,
-            Effect::Dock(DockOp::RequestFloatPanelToNewWindow { panel: requested, .. })
-                if *requested == panel
+            Effect::Window(WindowRequest::Create(create))
+                if matches!(
+                    &create.kind,
+                    CreateWindowKind::DockFloating { panel: requested, .. } if requested == &panel
+                )
         )),
         "expected no declarative tear-off request on first OOB frame, got: {effects:?}"
     );
@@ -5905,8 +5910,11 @@ fn public_declarative_dock_space_entry_point_requests_tear_off_after_stable_oob_
     assert!(
         effects.iter().any(|effect| matches!(
             effect,
-            Effect::Dock(DockOp::RequestFloatPanelToNewWindow { panel: requested, .. })
-                if *requested == panel
+            Effect::Window(WindowRequest::Create(create))
+                if matches!(
+                    &create.kind,
+                    CreateWindowKind::DockFloating { panel: requested, .. } if requested == &panel
+                )
         )),
         "expected declarative tear-off request after stable OOB frame, got: {effects:?}"
     );

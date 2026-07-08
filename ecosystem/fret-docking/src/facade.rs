@@ -369,7 +369,7 @@ mod tests {
     }
 
     #[test]
-    fn dock_surface_on_dock_op_request_uses_runtime_command_queue() {
+    fn dock_surface_request_float_panel_does_not_emit_host_effects_before_flush() {
         let window = AppWindowId::from(KeyData::from_ffi(1));
         let panel = PanelKey::new("test.panel");
         let surface = DockSurface::new(window);
@@ -386,21 +386,14 @@ mod tests {
             dock.workspace.graph.set_window_root(window, tabs);
         });
 
-        assert!(surface.on_dock_op(
-            &mut app,
-            DockOp::RequestFloatPanelToNewWindow {
-                source_window: window,
-                panel: panel.clone(),
-                anchor: None,
-            },
-        ));
+        assert!(surface.request_float_panel_to_new_window(&mut app, window, panel.clone(), None));
 
         assert!(
             app.take_effects().iter().all(|effect| !matches!(
                 effect,
                 Effect::Dock(_) | Effect::Window(WindowRequest::Create(_))
             )),
-            "DockSurface::on_dock_op should route float requests through docking runtime commands"
+            "DockSurface request helpers should route float requests through docking runtime commands"
         );
         assert_eq!(
             surface
@@ -430,14 +423,7 @@ mod tests {
             dock.workspace.graph.set_window_root(window, tabs);
         });
 
-        assert!(surface.on_dock_op(
-            &mut app,
-            DockOp::RequestFloatPanelToNewWindow {
-                source_window: window,
-                panel: panel.clone(),
-                anchor: None,
-            },
-        ));
+        assert!(surface.request_float_panel_to_new_window(&mut app, window, panel.clone(), None));
 
         assert_eq!(surface.flush_runtime_commands_to_effects(&mut app), 1);
         assert!(

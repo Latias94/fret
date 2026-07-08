@@ -31,6 +31,25 @@ fn dock_floating_create_request(
     }
 }
 
+fn request_panel_host(app: &mut TestHost, source_window: AppWindowId, panel: &PanelKey) -> bool {
+    request_float_panel_to_new_window_with_host_effects(app, source_window, panel.clone(), None)
+}
+
+fn request_tabs_host(
+    app: &mut TestHost,
+    source_window: AppWindowId,
+    source_tabs: DockNodeId,
+    panel: &PanelKey,
+) -> bool {
+    request_float_tabs_to_new_window_with_host_effects(
+        app,
+        source_window,
+        source_tabs,
+        panel.clone(),
+        None,
+    )
+}
+
 #[test]
 fn request_float_creates_window_and_window_created_moves_panel() {
     let window_a = AppWindowId::from(KeyData::from_ffi(1));
@@ -57,12 +76,7 @@ fn request_float_creates_window_and_window_created_moves_panel() {
         dock.workspace.graph.set_window_root(window_a, tabs);
     });
 
-    let op = DockOp::RequestFloatPanelToNewWindow {
-        source_window: window_a,
-        panel: panel.clone(),
-        anchor: None,
-    };
-    assert!(handle_dock_op(&mut app, op));
+    assert!(request_panel_host(&mut app, window_a, &panel));
 
     let effects = app.take_effects();
     let create = effects
@@ -120,14 +134,7 @@ fn request_float_without_dock_manager_fails_closed_without_effects() {
     let mut app = TestHost::new();
     app.set_global(PlatformCapabilities::default());
 
-    let handled = handle_dock_op(
-        &mut app,
-        DockOp::RequestFloatPanelToNewWindow {
-            source_window: window_a,
-            panel,
-            anchor: None,
-        },
-    );
+    let handled = request_panel_host(&mut app, window_a, &panel);
 
     assert!(
         !handled,
@@ -187,12 +194,7 @@ fn request_float_degrades_to_in_window_when_multi_window_is_disabled() {
         dock.workspace.graph.set_window_root(window_a, tabs);
     });
 
-    let op = DockOp::RequestFloatPanelToNewWindow {
-        source_window: window_a,
-        panel: panel.clone(),
-        anchor: None,
-    };
-    assert!(handle_dock_op(&mut app, op));
+    assert!(request_panel_host(&mut app, window_a, &panel));
 
     let effects = app.take_effects();
     assert!(
@@ -237,13 +239,7 @@ fn request_float_tabs_degrades_to_in_window_when_multi_window_is_disabled() {
         tabs
     });
 
-    let op = DockOp::RequestFloatTabsToNewWindow {
-        source_window: window_a,
-        source_tabs,
-        panel: panel_b.clone(),
-        anchor: None,
-    };
-    assert!(handle_dock_op(&mut app, op));
+    assert!(request_tabs_host(&mut app, window_a, source_tabs, &panel_b));
 
     let effects = app.take_effects();
     assert!(
@@ -290,12 +286,7 @@ fn request_float_degrades_to_in_window_when_tear_off_is_disabled() {
         dock.workspace.graph.set_window_root(window_a, tabs);
     });
 
-    let op = DockOp::RequestFloatPanelToNewWindow {
-        source_window: window_a,
-        panel: panel.clone(),
-        anchor: None,
-    };
-    assert!(handle_dock_op(&mut app, op));
+    assert!(request_panel_host(&mut app, window_a, &panel));
 
     let effects = app.take_effects();
     assert!(
@@ -345,12 +336,7 @@ fn request_float_degrades_to_in_window_when_window_hover_detection_is_none() {
         dock.workspace.graph.set_window_root(window_a, tabs);
     });
 
-    let op = DockOp::RequestFloatPanelToNewWindow {
-        source_window: window_a,
-        panel: panel.clone(),
-        anchor: None,
-    };
-    assert!(handle_dock_op(&mut app, op));
+    assert!(request_panel_host(&mut app, window_a, &panel));
 
     let effects = app.take_effects();
     assert!(
@@ -396,13 +382,8 @@ fn request_float_is_idempotent_until_window_created() {
         dock.workspace.graph.set_window_root(window_a, tabs);
     });
 
-    let op = DockOp::RequestFloatPanelToNewWindow {
-        source_window: window_a,
-        panel: panel.clone(),
-        anchor: None,
-    };
-    assert!(handle_dock_op(&mut app, op.clone()));
-    assert!(handle_dock_op(&mut app, op));
+    assert!(request_panel_host(&mut app, window_a, &panel));
+    assert!(request_panel_host(&mut app, window_a, &panel));
 
     let effects = app.take_effects();
     let create_count = effects
@@ -433,14 +414,8 @@ fn request_float_tabs_is_idempotent_until_window_created() {
         tabs
     });
 
-    let op = DockOp::RequestFloatTabsToNewWindow {
-        source_window: window_a,
-        source_tabs,
-        panel: panel_b,
-        anchor: None,
-    };
-    assert!(handle_dock_op(&mut app, op.clone()));
-    assert!(handle_dock_op(&mut app, op));
+    assert!(request_tabs_host(&mut app, window_a, source_tabs, &panel_b));
+    assert!(request_tabs_host(&mut app, window_a, source_tabs, &panel_b));
 
     let effects = app.take_effects();
     let create_count = effects
@@ -471,12 +446,7 @@ fn expired_pending_request_allows_later_float_request() {
         dock.workspace.graph.set_window_root(window_a, tabs);
     });
 
-    let op = DockOp::RequestFloatPanelToNewWindow {
-        source_window: window_a,
-        panel: panel.clone(),
-        anchor: None,
-    };
-    assert!(handle_dock_op(&mut app, op.clone()));
+    assert!(request_panel_host(&mut app, window_a, &panel));
     let first_effects = app.take_effects();
     assert_eq!(
         first_effects
@@ -488,7 +458,7 @@ fn expired_pending_request_allows_later_float_request() {
     );
 
     app.advance_ticks(601);
-    assert!(handle_dock_op(&mut app, op));
+    assert!(request_panel_host(&mut app, window_a, &panel));
     let second_effects = app.take_effects();
     assert_eq!(
         second_effects
@@ -535,12 +505,7 @@ fn window_created_updates_drag_source_window_for_active_dock_drag() {
         (),
     );
 
-    let op = DockOp::RequestFloatPanelToNewWindow {
-        source_window: window_a,
-        panel: panel.clone(),
-        anchor: None,
-    };
-    assert!(handle_dock_op(&mut app, op));
+    assert!(request_panel_host(&mut app, window_a, &panel));
 
     let effects = app.take_effects();
     let create = effects
@@ -603,13 +568,7 @@ fn window_created_updates_drag_source_window_for_active_dock_tabs_drag() {
         (),
     );
 
-    let op = DockOp::RequestFloatTabsToNewWindow {
-        source_window: window_a,
-        source_tabs,
-        panel: panel_b.clone(),
-        anchor: None,
-    };
-    assert!(handle_dock_op(&mut app, op));
+    assert!(request_tabs_host(&mut app, window_a, source_tabs, &panel_b));
 
     let effects = app.take_effects();
     let create = effects
@@ -677,12 +636,7 @@ fn window_created_prefers_pending_pointer_id_over_drag_source_window_match() {
         (),
     );
 
-    let op = DockOp::RequestFloatPanelToNewWindow {
-        source_window: window_a,
-        panel: panel.clone(),
-        anchor: None,
-    };
-    assert!(handle_dock_op(&mut app, op));
+    assert!(request_panel_host(&mut app, window_a, &panel));
 
     let effects = app.take_effects();
     let create = effects
@@ -728,14 +682,7 @@ fn window_created_for_stale_source_request_closes_created_window_without_moving_
         dock.workspace.graph.set_window_root(window_a, tabs);
     });
 
-    assert!(handle_dock_op(
-        &mut app,
-        DockOp::RequestFloatPanelToNewWindow {
-            source_window: window_a,
-            panel: panel.clone(),
-            anchor: None,
-        }
-    ));
+    assert!(request_panel_host(&mut app, window_a, &panel));
 
     let mut request = app
         .take_effects()
@@ -795,14 +742,7 @@ fn window_created_graph_commit_failure_closes_created_window() {
         dock.workspace.graph.set_window_root(window_a, tabs);
     });
 
-    assert!(handle_dock_op(
-        &mut app,
-        DockOp::RequestFloatPanelToNewWindow {
-            source_window: window_a,
-            panel: panel.clone(),
-            anchor: None,
-        }
-    ));
+    assert!(request_panel_host(&mut app, window_a, &panel));
 
     let request = app
         .take_effects()
@@ -869,14 +809,7 @@ fn redock_from_dock_floating_window_auto_closes_empty_os_window() {
         dock.workspace.graph.set_window_root(window_a, tabs);
     });
 
-    assert!(handle_dock_op(
-        &mut app,
-        DockOp::RequestFloatPanelToNewWindow {
-            source_window: window_a,
-            panel: panel.clone(),
-            anchor: None,
-        }
-    ));
+    assert!(request_panel_host(&mut app, window_a, &panel));
 
     let create = app
         .take_effects()
@@ -1056,12 +989,7 @@ fn request_float_canceled_by_close_panel_closes_created_window() {
         dock.workspace.graph.set_window_root(window_a, tabs);
     });
 
-    let op = DockOp::RequestFloatPanelToNewWindow {
-        source_window: window_a,
-        panel: panel.clone(),
-        anchor: None,
-    };
-    assert!(handle_dock_op(&mut app, op));
+    assert!(request_panel_host(&mut app, window_a, &panel));
 
     let effects = app.take_effects();
     let create = effects
@@ -1126,14 +1054,7 @@ fn request_float_canceled_by_move_panel_closes_created_window_and_preserves_move
         target_tabs
     });
 
-    assert!(handle_dock_op(
-        &mut app,
-        DockOp::RequestFloatPanelToNewWindow {
-            source_window: window_a,
-            panel: panel.clone(),
-            anchor: None,
-        }
-    ));
+    assert!(request_panel_host(&mut app, window_a, &panel));
 
     let create = app
         .take_effects()
@@ -1217,12 +1138,7 @@ fn window_created_does_not_update_drag_source_when_canceled() {
         (),
     );
 
-    let op = DockOp::RequestFloatPanelToNewWindow {
-        source_window: window_a,
-        panel: panel.clone(),
-        anchor: None,
-    };
-    assert!(handle_dock_op(&mut app, op));
+    assert!(request_panel_host(&mut app, window_a, &panel));
 
     let effects = app.take_effects();
     let create = effects

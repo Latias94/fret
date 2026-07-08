@@ -82,7 +82,5 @@ pub(super) fn invalidate_after_dock_op<H: UiHost>(
         | DockOp::SetSplitFractionTwo { .. } => {
             invalidate_windows(app, dock.workspace.graph.windows());
         }
-        DockOp::RequestFloatPanelToNewWindow { .. }
-        | DockOp::RequestFloatTabsToNewWindow { .. } => unreachable!(),
     }
 }

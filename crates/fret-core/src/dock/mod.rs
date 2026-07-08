@@ -89,7 +89,6 @@ pub struct DockOpApplyError {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DockOpApplyErrorKind {
-    UnsupportedOp,
     TabsNodeNotFound {
         tabs: DockNodeId,
     },

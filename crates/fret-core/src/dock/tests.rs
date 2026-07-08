@@ -921,12 +921,6 @@ fn run_dock_op_sequence_case(case: &DockOpSequenceCase) {
                             "move_window_to_empty_dock_space"
                         }
                         DockOp::FloatPanelToWindow { .. } => "float_panel_to_window",
-                        DockOp::RequestFloatPanelToNewWindow { .. } => {
-                            "request_float_panel_to_new_window"
-                        }
-                        DockOp::RequestFloatTabsToNewWindow { .. } => {
-                            "request_float_tabs_to_new_window"
-                        }
                         DockOp::FloatPanelInWindow { .. } => "float_panel_in_window",
                         DockOp::FloatTabsInWindow { .. } => "float_tabs_in_window",
                         DockOp::SetFloatingRect { .. } => "set_floating_rect",

@@ -55,14 +55,16 @@ pub(crate) fn request_float_panel_to_new_window<H: UiHost>(
     panel: PanelKey,
     anchor: Option<WindowAnchor>,
 ) -> bool {
-    DockRuntimeCoordinator::docking_commands().handle_dock_op(
-        app,
-        DockOp::RequestFloatPanelToNewWindow {
-            source_window,
-            panel,
-            anchor,
-        },
-    )
+    request::queue_request_float_panel_to_new_window(app, source_window, panel, anchor)
+}
+
+pub(crate) fn request_float_panel_to_new_window_with_host_effects<H: UiHost>(
+    app: &mut H,
+    source_window: AppWindowId,
+    panel: PanelKey,
+    anchor: Option<WindowAnchor>,
+) -> bool {
+    request::handle_request_float_panel_to_new_window(app, source_window, panel, anchor)
 }
 
 /// Queue a docking-owned OS-window tear-off command for a tab stack.
@@ -73,15 +75,17 @@ pub(crate) fn request_float_tabs_to_new_window<H: UiHost>(
     panel: PanelKey,
     anchor: Option<WindowAnchor>,
 ) -> bool {
-    DockRuntimeCoordinator::docking_commands().handle_dock_op(
-        app,
-        DockOp::RequestFloatTabsToNewWindow {
-            source_window,
-            source_tabs,
-            panel,
-            anchor,
-        },
-    )
+    request::queue_request_float_tabs_to_new_window(app, source_window, source_tabs, panel, anchor)
+}
+
+pub(crate) fn request_float_tabs_to_new_window_with_host_effects<H: UiHost>(
+    app: &mut H,
+    source_window: AppWindowId,
+    source_tabs: DockNodeId,
+    panel: PanelKey,
+    anchor: Option<WindowAnchor>,
+) -> bool {
+    request::handle_request_float_tabs_to_new_window(app, source_window, source_tabs, panel, anchor)
 }
 
 /// Drain docking-owned runtime commands queued by [`crate::DockSurface`] or host adapters.

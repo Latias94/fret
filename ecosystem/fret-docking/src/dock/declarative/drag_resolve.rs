@@ -101,7 +101,7 @@ pub(super) fn declarative_resolve_internal_drag_drop<H: UiHost>(
         allow_multi_window_tear_off,
         &target_resolution.snapshot.paint_panel_bounds,
     );
-    apply_dock_drop_intent(intent.clone(), &mut effects, &mut invalidate_layout);
+    apply_dock_drop_intent(app, intent.clone(), &mut effects, &mut invalidate_layout);
 
     let diagnostics = capture_drag_drop_diagnostics(
         app,
@@ -181,7 +181,7 @@ pub(super) fn declarative_resolve_internal_drag_hover<H: UiHost>(
         let _hover_cleared = app.with_global_mut(DockManager::default, |dock, _app| {
             dock.presentation.hover.take().is_some()
         });
-        return (tear_off.effects, true, true);
+        return (Vec::new(), true, true);
     }
     let diagnostics_enabled = should_publish_docking_diagnostics(app, diagnostics_env_enabled());
     let Some(mut target_resolution) = resolve_declarative_drag_target(

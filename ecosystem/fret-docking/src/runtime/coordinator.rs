@@ -1,7 +1,7 @@
 use fret_core::{AppWindowId, DockOp};
 use fret_runtime::{CreateWindowRequest, UiHost};
 
-use super::{apply, before_close, request, window_created};
+use super::{apply, before_close, window_created};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum DockRuntimeCommandRoute {
@@ -28,20 +28,9 @@ impl DockRuntimeCoordinator {
     }
 
     pub(super) fn handle_dock_op<H: UiHost>(&self, app: &mut H, op: DockOp) -> bool {
-        match op {
-            op @ DockOp::RequestFloatPanelToNewWindow { .. }
-            | op @ DockOp::RequestFloatTabsToNewWindow { .. } => match self.route {
-                DockRuntimeCommandRoute::HostEffects => {
-                    request::handle_request_float_to_new_window(app, op)
-                }
-                DockRuntimeCommandRoute::DockingCommands => {
-                    request::queue_request_float_to_new_window(app, op)
-                }
-            },
-            op => match self.route {
-                DockRuntimeCommandRoute::HostEffects => apply::handle_applied_dock_op(app, op),
-                DockRuntimeCommandRoute::DockingCommands => apply::queue_applied_dock_op(app, op),
-            },
+        match self.route {
+            DockRuntimeCommandRoute::HostEffects => apply::handle_applied_dock_op(app, op),
+            DockRuntimeCommandRoute::DockingCommands => apply::queue_applied_dock_op(app, op),
         }
     }
 

@@ -5,6 +5,7 @@
 use super::super::prelude_core::*;
 use super::super::prelude_runtime::*;
 use super::super::types::{DockDropIntent, DockDropTarget};
+use fret_ui::UiHost;
 
 #[derive(Clone, Copy)]
 pub(in crate::dock) struct DockPanelDropDrag<'a> {
@@ -175,7 +176,8 @@ where
     }
 }
 
-pub(in crate::dock) fn apply_dock_drop_intent(
+pub(in crate::dock) fn apply_dock_drop_intent<H: UiHost>(
+    app: &mut H,
     intent: DockDropIntent,
     pending_effects: &mut Vec<Effect>,
     invalidate_layout: &mut bool,
@@ -275,12 +277,13 @@ pub(in crate::dock) fn apply_dock_drop_intent(
             panel,
             anchor,
         } => {
-            pending_effects.push(Effect::Dock(DockOp::RequestFloatPanelToNewWindow {
-                source_window,
-                panel,
-                anchor,
-            }));
-            *invalidate_layout = true;
+            *invalidate_layout |=
+                crate::runtime::request_float_panel_to_new_window_with_host_effects(
+                    app,
+                    source_window,
+                    panel,
+                    anchor,
+                );
         }
         DockDropIntent::RequestFloatTabsToNewWindow {
             source_window,
@@ -288,13 +291,14 @@ pub(in crate::dock) fn apply_dock_drop_intent(
             panel,
             anchor,
         } => {
-            pending_effects.push(Effect::Dock(DockOp::RequestFloatTabsToNewWindow {
-                source_window,
-                source_tabs,
-                panel,
-                anchor,
-            }));
-            *invalidate_layout = true;
+            *invalidate_layout |=
+                crate::runtime::request_float_tabs_to_new_window_with_host_effects(
+                    app,
+                    source_window,
+                    source_tabs,
+                    panel,
+                    anchor,
+                );
         }
     }
 }

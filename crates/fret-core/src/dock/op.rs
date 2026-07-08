@@ -1,4 +1,4 @@
-use crate::{AppWindowId, DockNodeId, DropZone, PanelKey, Rect, WindowAnchor};
+use crate::{AppWindowId, DockNodeId, DropZone, PanelKey, Rect};
 
 /// High-level docking operations emitted by the UI layer and applied by the app layer.
 ///
@@ -70,28 +70,6 @@ pub enum DockOp {
         source_window: AppWindowId,
         panel: PanelKey,
         new_window: AppWindowId,
-    },
-
-    /// Request creating a new floating OS window and moving the panel into it.
-    ///
-    /// This is interpreted by the app/runner layer, because `fret-core` does not own window creation.
-    RequestFloatPanelToNewWindow {
-        source_window: AppWindowId,
-        panel: PanelKey,
-        anchor: Option<WindowAnchor>,
-    },
-
-    /// Request creating a new floating OS window and moving an entire tab stack ("tabs node") into it.
-    ///
-    /// This is interpreted by the app/runner layer, because `fret-core` does not own window creation.
-    ///
-    /// Note: `panel` is a representative panel key used for correlating window creation and for
-    /// policy hooks; the runtime is responsible for moving the full `source_tabs` contents.
-    RequestFloatTabsToNewWindow {
-        source_window: AppWindowId,
-        source_tabs: DockNodeId,
-        panel: PanelKey,
-        anchor: Option<WindowAnchor>,
     },
 
     /// Float a panel into an in-window floating dock container (ImGui docking, viewports disabled).
