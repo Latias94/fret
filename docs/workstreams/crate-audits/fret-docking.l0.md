@@ -30,7 +30,8 @@ Evidence anchors:
 - Public-surface rule:
   - Ordinary apps should use `DockSurface` for panel registration, host mounting, semantic panel commands, layout import/export, snapshots, and policy installation.
   - App-facing OS-window tear-off/close lifecycle should use `DockSurface::viewports()` for typed outcomes.
-  - Host/runtime integrations should opt into `DockSurface::driver()` for graph root construction, runtime command handoff, window-created callbacks, and before-close merge.
+  - Ordinary host/runtime callbacks should use `DockSurface::host_lifecycle()` for dock ops, window-created callbacks, and before-close merge; it owns runtime command cursoring and effect flushing.
+  - Driver-tier integrations that truly need explicit command ownership should construct `fret_docking::advanced::DockSurfaceDriver` instead of relying on the common app surface.
   - Manager/workspace/catalog access is intentionally explicit under `advanced`; free runtime helpers and service globals are crate-private/internal.
 - Feature flags and intent:
   - `imui` feature pulls in `fret-authoring` (optional) and should remain strictly opt-in.
