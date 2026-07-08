@@ -38,3 +38,38 @@ fn container_queries_docking_demo_keeps_fixed_panel_text_on_roles() {
         );
     }
 }
+
+#[test]
+fn container_queries_docking_demo_currently_uses_legacy_docking_assembly_until_surface_migration() {
+    let source = include_str!("../src/container_queries_docking_demo.rs");
+
+    for needle in [
+        "DockManager",
+        "DockPanelElementRegistryService",
+        "DockingRuntime::new",
+        "dock_space_element_from_registry",
+    ] {
+        assert!(
+            source.contains(needle),
+            "container queries docking demo legacy docking setup should be characterized until DockSurface migration; missing `{needle}`"
+        );
+    }
+
+    for forbidden in [
+        "DockPanelFactory",
+        "DockPanelFactoryCx",
+        "DockPanelRegistryBuilder",
+        "DockPanelRegistryService",
+        "DockSpace::new",
+        "create_dock_space_node",
+        "mount_dock_space",
+        "render_and_bind_dock_panels",
+        "dock_space_with(",
+        "DockSpaceImUiOptions",
+    ] {
+        assert!(
+            !source.contains(forbidden),
+            "container queries docking demo should not regress to retained docking entry point `{forbidden}`"
+        );
+    }
+}

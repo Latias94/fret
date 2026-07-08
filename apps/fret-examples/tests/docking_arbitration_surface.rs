@@ -125,3 +125,41 @@ fn docking_arbitration_demo_model_writes_stay_behind_controls_binding() {
         }
     }
 }
+
+#[test]
+fn docking_arbitration_demo_characterizes_legacy_docking_services_until_surface_migration() {
+    let source = include_str!("../src/docking_arbitration_demo.rs");
+
+    for needle in [
+        "DockManager",
+        "DockingPolicyService",
+        "DockViewportOverlayHooksService",
+        "DockPanelElementRegistryService",
+        "DockingRuntime::new",
+        "fret_docking::runtime::request_dock_invalidation",
+        "dock_space_element_from_registry",
+    ] {
+        assert!(
+            source.contains(needle),
+            "docking arbitration demo legacy docking setup should be characterized until DockSurface migration; missing `{needle}`"
+        );
+    }
+
+    for forbidden in [
+        "DockPanelFactory",
+        "DockPanelFactoryCx",
+        "DockPanelRegistryBuilder",
+        "DockPanelRegistryService",
+        "DockSpace::new",
+        "create_dock_space_node",
+        "mount_dock_space",
+        "render_and_bind_dock_panels",
+        "dock_space_with(",
+        "DockSpaceImUiOptions",
+    ] {
+        assert!(
+            !source.contains(forbidden),
+            "docking arbitration demo should not regress to retained docking entry point `{forbidden}`"
+        );
+    }
+}

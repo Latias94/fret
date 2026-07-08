@@ -47,3 +47,39 @@ fn docking_demo_keeps_panel_text_on_roles() {
         );
     }
 }
+
+#[test]
+fn docking_demo_currently_uses_legacy_docking_assembly_until_surface_migration() {
+    let source = include_str!("../src/docking_demo.rs");
+
+    for needle in [
+        "DockManager",
+        "DockPanelElementRegistryService",
+        "DockViewportOverlayHooksService",
+        "DockingRuntime::new",
+        "dock_space_element_from_registry",
+    ] {
+        assert!(
+            source.contains(needle),
+            "docking demo legacy docking setup should be characterized until DockSurface migration; missing `{needle}`"
+        );
+    }
+
+    for forbidden in [
+        "DockPanelFactory",
+        "DockPanelFactoryCx",
+        "DockPanelRegistryBuilder",
+        "DockPanelRegistryService",
+        "DockSpace::new",
+        "create_dock_space_node",
+        "mount_dock_space",
+        "render_and_bind_dock_panels",
+        "dock_space_with(",
+        "DockSpaceImUiOptions",
+    ] {
+        assert!(
+            !source.contains(forbidden),
+            "docking demo should not regress to retained docking entry point `{forbidden}`"
+        );
+    }
+}

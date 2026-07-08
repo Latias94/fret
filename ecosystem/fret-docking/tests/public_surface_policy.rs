@@ -63,7 +63,7 @@ fn retained_docking_entry_points_are_not_public() {
 }
 
 #[test]
-fn first_party_docking_examples_use_declarative_entry_points() {
+fn first_party_docking_examples_use_current_declarative_entry_points() {
     let examples = [
         (
             "docking_demo",
@@ -76,10 +76,6 @@ fn first_party_docking_examples_use_declarative_entry_points() {
         (
             "docking_arbitration_demo",
             include_str!("../../../apps/fret-examples/src/docking_arbitration_demo.rs"),
-        ),
-        (
-            "imui_editor_proof_demo",
-            include_str!("../../../apps/fret-examples/src/imui_editor_proof_demo.rs"),
         ),
         (
             "cookbook_docking_basics",
@@ -117,4 +113,92 @@ fn first_party_docking_examples_use_declarative_entry_points() {
             );
         }
     }
+
+    let imui_demo = include_str!("../../../apps/fret-examples/src/imui_editor_proof_demo.rs");
+    let imui_workbench =
+        include_str!("../../../apps/fret-examples/src/imui_editor_proof_demo/workbench_shell.rs");
+
+    for symbol in [
+        "workbench_shell::install_dock_panel_registry(app)",
+        "workbench_shell::ensure_dock_graph(cx.app, cx.window)",
+        "dock_space_declarative_with(",
+    ] {
+        assert!(
+            imui_demo.contains(symbol),
+            "`imui_editor_proof_demo` should route declarative docking setup through workbench shell symbol `{symbol}`"
+        );
+    }
+    for symbol in [
+        "DockPanelElementRegistryService",
+        "impl DockPanelElementRegistry",
+        "DockManager::default",
+    ] {
+        assert!(
+            imui_workbench.contains(symbol),
+            "`imui_editor_proof_demo/workbench_shell.rs` should own declarative docking setup symbol `{symbol}`"
+        );
+    }
+    for source in [
+        ("imui_editor_proof_demo", imui_demo),
+        ("imui_editor_proof_demo/workbench_shell", imui_workbench),
+    ] {
+        let (name, source) = source;
+        for forbidden in [
+            "DockPanelFactory",
+            "DockPanelFactoryCx",
+            "DockPanelRegistryBuilder",
+            "DockPanelRegistryService",
+            "DockSpace::new",
+            "create_dock_space_node",
+            "mount_dock_space",
+            "render_and_bind_dock_panels",
+            "dock_space_with(",
+            "DockSpaceImUiOptions",
+        ] {
+            assert!(
+                !source.contains(forbidden),
+                "`{name}` must not teach retained docking entry point `{forbidden}`"
+            );
+        }
+    }
+}
+
+#[test]
+fn public_root_legacy_low_level_surface_is_characterized_until_dock_surface_lands() {
+    let lib = include_str!("../src/lib.rs");
+    let dock_mod = include_str!("../src/dock/mod.rs");
+    let manager = include_str!("../src/dock/manager.rs");
+    let facade = include_str!("../src/facade.rs");
+
+    for symbol in [
+        "pub mod dock;",
+        "pub mod runtime;",
+        "DockManager",
+        "DockPanelElementRegistryService",
+        "DockViewportOverlayHooksService",
+        "DockingPolicyService",
+        "DockingRuntime",
+        "handle_dock_op",
+        "handle_dock_window_created",
+        "handle_dock_before_close_window",
+    ] {
+        assert!(
+            lib.contains(symbol),
+            "`lib.rs` currently exposes legacy low-level docking surface symbol `{symbol}`; U3/U8 should replace this characterization with facade policy"
+        );
+    }
+    assert!(
+        dock_mod.contains("DockPanelContentService"),
+        "`dock/mod.rs` currently exposes DockPanelContentService through the public dock module"
+    );
+    assert!(
+        manager.contains("pub graph: DockGraph") && manager.contains("pub panels: HashMap"),
+        "`DockManager` currently exposes graph and panel state directly"
+    );
+    assert!(
+        facade.contains("crate::runtime::handle_dock_op")
+            && facade.contains("crate::runtime::handle_dock_window_created")
+            && facade.contains("crate::runtime::handle_dock_before_close_window"),
+        "`DockingRuntime` is currently a thin adapter over free runtime handlers"
+    );
 }

@@ -78,6 +78,10 @@ impl TestHost {
         TimeHost::tick_id(self)
     }
 
+    pub(crate) fn advance_ticks(&mut self, ticks: u64) {
+        self.tick_id.0 = self.tick_id.0.saturating_add(ticks);
+    }
+
     pub(crate) fn frame_id(&self) -> FrameId {
         TimeHost::frame_id(self)
     }
