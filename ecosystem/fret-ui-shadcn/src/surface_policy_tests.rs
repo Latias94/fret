@@ -1339,6 +1339,7 @@ fn public_thin_constructors_or_wrappers_prefer_typed_conversion_outputs_when_no_
             "radio_group.rs",
             RADIO_GROUP_RS,
             &[
+                "pub use fret_ui_kit::primitives::radio_group::RadioGroupOrientation;",
                 "pub fn new(model: impl IntoOptionalTextValueModel) -> Self {",
                 "pub fn radio_group( model: impl IntoOptionalTextValueModel, items: Vec<RadioGroupItem>, ) -> RadioGroup {",
                 "pub fn radio_group_uncontrolled<T: Into<Arc<str>>>( default_value: Option<T>, items: Vec<RadioGroupItem>, ) -> RadioGroup {",
@@ -1487,6 +1488,17 @@ fn public_thin_constructors_or_wrappers_prefer_typed_conversion_outputs_when_no_
             );
         }
     }
+}
+
+#[test]
+fn radio_group_orientation_is_available_on_curated_facade() {
+    let lib_rs = normalize_ws(LIB_RS);
+    assert!(
+        lib_rs.contains(&normalize_ws(
+            "pub use crate::radio_group::{ RadioGroup, RadioGroupItem, RadioGroupItemVariant, RadioGroupOrientation, radio_group, radio_group_uncontrolled, };"
+        )),
+        "facade should expose RadioGroupOrientation so first-party resolvers do not reopen raw radio_group"
+    );
 }
 
 #[test]

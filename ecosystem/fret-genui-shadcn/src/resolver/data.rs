@@ -211,7 +211,7 @@ impl ShadcnResolver {
         if items.is_empty() {
             let msg = Arc::<str>::from(empty_message);
             return shadcn::Card::new([shadcn::CardContent::new([
-                shadcn::raw::typography::muted(msg).into_element(cx),
+                shadcn::typography::muted(msg).into_element(cx)
             ])
             .into_element(cx)])
             .into_element(cx);

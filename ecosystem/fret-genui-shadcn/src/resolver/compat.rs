@@ -21,11 +21,11 @@ impl ShadcnResolver {
             .and_then(|v| v.as_str())
             .unwrap_or("h2");
         match level {
-            "h1" => shadcn::raw::typography::h1(text).into_element(cx),
-            "h2" => shadcn::raw::typography::h2(text).into_element(cx),
-            "h3" => shadcn::raw::typography::h3(text).into_element(cx),
-            "h4" => shadcn::raw::typography::h4(text).into_element(cx),
-            _ => shadcn::raw::typography::h2(text).into_element(cx),
+            "h1" => shadcn::typography::h1(text).into_element(cx),
+            "h2" => shadcn::typography::h2(text).into_element(cx),
+            "h3" => shadcn::typography::h3(text).into_element(cx),
+            "h4" => shadcn::typography::h4(text).into_element(cx),
+            _ => shadcn::typography::h2(text).into_element(cx),
         }
     }
 

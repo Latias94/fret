@@ -505,7 +505,8 @@ pub mod facade {
     };
     pub use crate::progress::{Progress, progress};
     pub use crate::radio_group::{
-        RadioGroup, RadioGroupItem, RadioGroupItemVariant, radio_group, radio_group_uncontrolled,
+        RadioGroup, RadioGroupItem, RadioGroupItemVariant, RadioGroupOrientation, radio_group,
+        radio_group_uncontrolled,
     };
     pub use crate::resizable::{
         ResizableEntry, ResizableHandle, ResizablePanel, ResizablePanelGroup, resizable_panel_group,

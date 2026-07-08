@@ -105,16 +105,16 @@ impl ShadcnResolver {
             .unwrap_or(if muted { "muted" } else { "body" });
 
         match variant {
-            "body" => shadcn::raw::typography::p(text).into_element(cx),
-            "muted" => shadcn::raw::typography::muted(text).into_element(cx),
-            "small" => shadcn::raw::typography::small(text).into_element(cx),
-            "lead" => shadcn::raw::typography::lead(text).into_element(cx),
-            "large" => shadcn::raw::typography::large(text).into_element(cx),
-            "h1" => shadcn::raw::typography::h1(text).into_element(cx),
-            "h2" => shadcn::raw::typography::h2(text).into_element(cx),
-            "h3" => shadcn::raw::typography::h3(text).into_element(cx),
-            "h4" => shadcn::raw::typography::h4(text).into_element(cx),
-            "inlineCode" => shadcn::raw::typography::inline_code(text).into_element(cx),
+            "body" => shadcn::typography::p(text).into_element(cx),
+            "muted" => shadcn::typography::muted(text).into_element(cx),
+            "small" => shadcn::typography::small(text).into_element(cx),
+            "lead" => shadcn::typography::lead(text).into_element(cx),
+            "large" => shadcn::typography::large(text).into_element(cx),
+            "h1" => shadcn::typography::h1(text).into_element(cx),
+            "h2" => shadcn::typography::h2(text).into_element(cx),
+            "h3" => shadcn::typography::h3(text).into_element(cx),
+            "h4" => shadcn::typography::h4(text).into_element(cx),
+            "inlineCode" => shadcn::typography::inline_code(text).into_element(cx),
             _ => fret_ui_kit::ui::text(text).into_element(cx),
         }
     }

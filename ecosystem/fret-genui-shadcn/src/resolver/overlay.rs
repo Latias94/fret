@@ -164,10 +164,8 @@ impl ShadcnResolver {
 
                     let variant = obj.get("variant").and_then(|v| v.as_str());
                     let variant = match variant {
-                        Some("destructive") => {
-                            shadcn::raw::dropdown_menu::DropdownMenuItemVariant::Destructive
-                        }
-                        _ => shadcn::raw::dropdown_menu::DropdownMenuItemVariant::Default,
+                        Some("destructive") => shadcn::DropdownMenuItemVariant::Destructive,
+                        _ => shadcn::DropdownMenuItemVariant::Default,
                     };
 
                     let action = obj

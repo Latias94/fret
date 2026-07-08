@@ -212,7 +212,7 @@ impl ShadcnResolver {
                 continue;
             };
 
-            let trigger_label = shadcn::raw::typography::small(title.clone()).into_element(cx);
+            let trigger_label = shadcn::typography::small(title.clone()).into_element(cx);
             let trigger = shadcn::AccordionTrigger::new([trigger_label]);
             let content = shadcn::AccordionContent::new([child.rendered]);
             items.push(shadcn::AccordionItem::new(value, trigger, content));
