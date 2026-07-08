@@ -241,7 +241,7 @@ fn file_leaf<H: UiHost>(
         .size(shadcn::ButtonSize::Sm)
         .content_justify_start()
         .style(
-            shadcn::raw::button::ButtonStyle::default()
+            shadcn::ButtonStyle::default()
                 .foreground(fret_ui_kit::WidgetStateProperty::new(Some(foreground))),
         )
         .refine_layout(LayoutRefinement::default().w_full().min_w_0())
