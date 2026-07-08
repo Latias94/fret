@@ -53,6 +53,29 @@ fn queued_create_panel(command: &DockRuntimeCommand) -> Option<(AppWindowId, Pan
     Some((*source_window, panel.clone()))
 }
 
+fn queued_create_request(
+    commands: &[DockRuntimeCommand],
+    source_window: AppWindowId,
+    panel: &PanelKey,
+) -> fret_runtime::CreateWindowRequest {
+    commands
+        .iter()
+        .find_map(|command| {
+            let DockRuntimeCommand::CreateWindow(create) = command else {
+                return None;
+            };
+            let CreateWindowKind::DockFloating {
+                source_window: create_source,
+                panel: create_panel,
+            } = &create.kind
+            else {
+                return None;
+            };
+            (*create_source == source_window && create_panel == panel).then(|| create.clone())
+        })
+        .expect("expected queued dock-floating create request")
+}
+
 #[test]
 fn dock_surface_panel_commands_return_typed_outcomes() {
     let window = AppWindowId::from(KeyData::from_ffi(1));
@@ -849,6 +872,138 @@ fn dock_surface_semantic_open_removes_canceled_create_for_same_panel_only() {
         Some((window, other_panel)),
         "only the unrelated pending create should remain queued"
     );
+}
+
+#[test]
+fn dock_surface_semantic_open_removes_canceled_create_for_matching_source_window_only() {
+    let window_a = AppWindowId::from(KeyData::from_ffi(1));
+    let window_b = AppWindowId::from(KeyData::from_ffi(2));
+    let panel_a = PanelKey::new("test.a");
+    let panel_b = PanelKey::new("test.b");
+    let surface = DockSurface::new(window_a);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    app.set_global(DockManager::default());
+    surface.register_panel(&mut app, panel_a.clone(), test_panel("A"));
+    surface.register_panel(&mut app, panel_b.clone(), test_panel("B"));
+    surface
+        .open_panel_with_preferred_window(&mut app, window_a, &panel_a)
+        .expect("open panel a");
+    surface
+        .open_panel_with_preferred_window(&mut app, window_b, &panel_b)
+        .expect("open panel b");
+    assert!(
+        DockSurfaceDriver::new(surface).request_float_panel_to_new_window(
+            &mut app,
+            window_a,
+            panel_a.clone(),
+            None
+        )
+    );
+    assert!(
+        DockSurfaceDriver::new(surface).request_float_panel_to_new_window(
+            &mut app,
+            window_b,
+            panel_b.clone(),
+            None
+        )
+    );
+    app.take_effects();
+
+    surface
+        .open_panel_with_preferred_window(&mut app, window_a, &panel_a)
+        .expect("reopen panel a");
+
+    assert!(
+        app.take_effects()
+            .iter()
+            .all(|effect| !matches!(effect, Effect::Window(WindowRequest::Create(_)))),
+        "semantic panel commands must not emit a canceled cross-window create request"
+    );
+    let queued = DockSurfaceDriver::new(surface).take_runtime_commands(&mut app);
+    assert_eq!(queued.len(), 1);
+    assert_eq!(
+        queued_create_panel(&queued[0]),
+        Some((window_b, panel_b)),
+        "canceling a pending create for one source window must keep unrelated source-window requests"
+    );
+}
+
+#[test]
+fn dock_surface_canceled_window_created_keeps_unrelated_pending_completion_alive() {
+    let window_a = AppWindowId::from(KeyData::from_ffi(1));
+    let window_b = AppWindowId::from(KeyData::from_ffi(2));
+    let new_window_a = AppWindowId::from(KeyData::from_ffi(3));
+    let new_window_b = AppWindowId::from(KeyData::from_ffi(4));
+    let panel_a = PanelKey::new("test.a");
+    let panel_b = PanelKey::new("test.b");
+    let surface = DockSurface::new(window_a);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    app.set_global(DockManager::default());
+    surface.register_panel(&mut app, panel_a.clone(), test_panel("A"));
+    surface.register_panel(&mut app, panel_b.clone(), test_panel("B"));
+    surface
+        .open_panel_with_preferred_window(&mut app, window_a, &panel_a)
+        .expect("open panel a");
+    surface
+        .open_panel_with_preferred_window(&mut app, window_b, &panel_b)
+        .expect("open panel b");
+
+    assert!(
+        DockSurfaceDriver::new(surface).request_float_panel_to_new_window(
+            &mut app,
+            window_a,
+            panel_a.clone(),
+            None
+        )
+    );
+    assert!(
+        DockSurfaceDriver::new(surface).request_float_panel_to_new_window(
+            &mut app,
+            window_b,
+            panel_b.clone(),
+            None
+        )
+    );
+    let commands = DockSurfaceDriver::new(surface).take_runtime_commands(&mut app);
+    assert_eq!(
+        commands
+            .iter()
+            .filter(|command| matches!(command, DockRuntimeCommand::CreateWindow(_)))
+            .count(),
+        2
+    );
+    let create_a = queued_create_request(&commands, window_a, &panel_a);
+    let create_b = queued_create_request(&commands, window_b, &panel_b);
+
+    surface
+        .close_panel(&mut app, &panel_a)
+        .expect("close panel a");
+
+    assert!(DockSurfaceDriver::new(surface).on_window_created(&mut app, &create_a, new_window_a,));
+    assert_eq!(
+        DockSurfaceDriver::new(surface).take_runtime_commands(&mut app),
+        vec![DockRuntimeCommand::CloseWindow(new_window_a)],
+        "the canceled create should close only its newly created OS window"
+    );
+
+    assert!(DockSurfaceDriver::new(surface).on_window_created(&mut app, &create_b, new_window_b,));
+    assert!(
+        DockSurfaceDriver::new(surface)
+            .take_runtime_commands(&mut app)
+            .is_empty(),
+        "the unrelated pending create should still complete normally"
+    );
+    assert_eq!(
+        surface
+            .panel_location(&app, &panel_b)
+            .map(|location| location.window),
+        Some(new_window_b)
+    );
+    assert_eq!(surface.panel_location(&app, &panel_a), None);
 }
 
 #[test]
