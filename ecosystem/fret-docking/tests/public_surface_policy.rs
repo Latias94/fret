@@ -63,6 +63,34 @@ fn retained_docking_entry_points_are_not_public() {
 }
 
 #[test]
+fn dock_surface_root_entry_point_is_public_without_internal_command_queue() {
+    let lib = include_str!("../src/lib.rs");
+    let runtime = include_str!("../src/runtime.rs");
+    let commands = include_str!("../src/runtime/commands.rs");
+
+    for symbol in ["DockSurface", "DockHostOptions", "DockRuntimeCommand"] {
+        assert!(
+            lib.contains(symbol),
+            "`lib.rs` should expose app-facing docking facade symbol `{symbol}`"
+        );
+    }
+
+    assert!(
+        !lib.contains("DockRuntimeCommandQueue"),
+        "`DockRuntimeCommandQueue` is storage detail and must not be part of the crate root API"
+    );
+    assert!(
+        runtime.contains("pub use commands::DockRuntimeCommand;")
+            && !runtime.contains("DockRuntimeCommandQueue};"),
+        "`runtime.rs` should export the command result type without exporting queue storage"
+    );
+    assert!(
+        commands.contains("pub(super) struct DockRuntimeCommandQueue"),
+        "`DockRuntimeCommandQueue` should remain internal to the runtime implementation"
+    );
+}
+
+#[test]
 fn first_party_docking_examples_use_current_declarative_entry_points() {
     let examples = [
         (

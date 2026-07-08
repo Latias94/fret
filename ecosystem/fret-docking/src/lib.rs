@@ -21,8 +21,10 @@ pub use dock::{
     DockViewportOverlayHooks, DockViewportOverlayHooksService, DockingPolicy, DockingPolicyService,
     ViewportPanel, dock_panel_element, dock_space_element, dock_space_element_from_registry,
 };
-pub use facade::DockingRuntime;
-pub use runtime::{handle_dock_before_close_window, handle_dock_op, handle_dock_window_created};
+pub use facade::{DockHostOptions, DockSurface, DockingRuntime};
+pub use runtime::{
+    DockRuntimeCommand, handle_dock_before_close_window, handle_dock_op, handle_dock_window_created,
+};
 
 #[cfg(test)]
 mod test_host;

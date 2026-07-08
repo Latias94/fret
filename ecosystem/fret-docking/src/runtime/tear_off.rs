@@ -8,6 +8,8 @@ use fret_runtime::{
 
 use crate::DockManager;
 
+use super::commands::{self, DockRuntimeCommand};
+
 #[derive(Debug, Clone, Copy)]
 pub(super) enum DockTearOffCompletion {
     Proceed,
@@ -56,11 +58,31 @@ pub(super) fn push_dock_floating_window_create<H: UiHost>(
     panel: PanelKey,
     anchor: Option<WindowAnchor>,
 ) {
+    let request = dock_floating_window_create_request(app, source_window, panel, anchor);
+    app.push_effect(Effect::Window(WindowRequest::Create(request)));
+}
+
+pub(super) fn queue_dock_floating_window_create<H: UiHost>(
+    app: &mut H,
+    source_window: AppWindowId,
+    panel: PanelKey,
+    anchor: Option<WindowAnchor>,
+) {
+    let request = dock_floating_window_create_request(app, source_window, panel, anchor);
+    commands::push_runtime_command(app, DockRuntimeCommand::CreateWindow(request));
+}
+
+fn dock_floating_window_create_request<H: UiHost>(
+    app: &H,
+    source_window: AppWindowId,
+    panel: PanelKey,
+    anchor: Option<WindowAnchor>,
+) -> CreateWindowRequest {
     let caps = app
         .global::<PlatformCapabilities>()
         .cloned()
         .unwrap_or_default();
-    app.push_effect(Effect::Window(WindowRequest::Create(CreateWindowRequest {
+    CreateWindowRequest {
         kind: CreateWindowKind::DockFloating {
             source_window,
             panel,
@@ -68,7 +90,7 @@ pub(super) fn push_dock_floating_window_create<H: UiHost>(
         anchor,
         role: WindowRole::Auxiliary,
         style: fret_window_style_profiles::tool_window_profile_v1(&caps).style,
-    })));
+    }
 }
 
 #[derive(Debug, Clone)]

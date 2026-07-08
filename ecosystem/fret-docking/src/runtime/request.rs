@@ -7,9 +7,28 @@ use crate::dock::{DockPanelDragPayload, DockTabsDragPayload};
 use super::in_window::default_in_window_float_rect;
 use super::tear_off::{
     DockTearOffKind, DockTearOffMachine, dock_tear_off_supported, push_dock_floating_window_create,
+    queue_dock_floating_window_create,
 };
 
 pub(super) fn handle_request_float_to_new_window<H: UiHost>(app: &mut H, op: DockOp) -> bool {
+    handle_request_float_to_new_window_with_dispatch(app, op, CreateWindowDispatch::Effect)
+}
+
+pub(super) fn queue_request_float_to_new_window<H: UiHost>(app: &mut H, op: DockOp) -> bool {
+    handle_request_float_to_new_window_with_dispatch(app, op, CreateWindowDispatch::CommandQueue)
+}
+
+#[derive(Clone, Copy)]
+enum CreateWindowDispatch {
+    Effect,
+    CommandQueue,
+}
+
+fn handle_request_float_to_new_window_with_dispatch<H: UiHost>(
+    app: &mut H,
+    op: DockOp,
+    dispatch: CreateWindowDispatch,
+) -> bool {
     match op {
         DockOp::RequestFloatPanelToNewWindow {
             source_window,
@@ -58,7 +77,7 @@ pub(super) fn handle_request_float_to_new_window<H: UiHost>(app: &mut H, op: Doc
                 return true;
             }
 
-            push_dock_floating_window_create(app, source_window, panel, anchor);
+            dispatch_dock_floating_window_create(app, dispatch, source_window, panel, anchor);
             true
         }
         DockOp::RequestFloatTabsToNewWindow {
@@ -110,9 +129,26 @@ pub(super) fn handle_request_float_to_new_window<H: UiHost>(app: &mut H, op: Doc
                 return true;
             }
 
-            push_dock_floating_window_create(app, source_window, panel, anchor);
+            dispatch_dock_floating_window_create(app, dispatch, source_window, panel, anchor);
             true
         }
         _ => unreachable!("expected DockFloating request op"),
+    }
+}
+
+fn dispatch_dock_floating_window_create<H: UiHost>(
+    app: &mut H,
+    dispatch: CreateWindowDispatch,
+    source_window: fret_core::AppWindowId,
+    panel: fret_core::PanelKey,
+    anchor: Option<fret_core::WindowAnchor>,
+) {
+    match dispatch {
+        CreateWindowDispatch::Effect => {
+            push_dock_floating_window_create(app, source_window, panel, anchor);
+        }
+        CreateWindowDispatch::CommandQueue => {
+            queue_dock_floating_window_create(app, source_window, panel, anchor);
+        }
     }
 }

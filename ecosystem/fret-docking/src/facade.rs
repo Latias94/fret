@@ -1,5 +1,181 @@
-use fret_core::{AppWindowId, DockOp};
+use std::sync::Arc;
+
+use fret_core::{AppWindowId, DockNodeId, DockOp, PanelKey, WindowAnchor};
 use fret_runtime::{CreateWindowRequest, UiHost};
+use fret_ui::ElementContext;
+use fret_ui::element::AnyElement;
+
+use crate::dock::{
+    DockManager, DockPanel, DockPanelElementRegistry, DockPanelElementRegistryService,
+    DockSpaceElementOptions, DockViewportOverlayHooks, DockViewportOverlayHooksService,
+    DockingPolicy, DockingPolicyService, dock_space_element_from_registry,
+};
+use crate::runtime::DockRuntimeCommand;
+
+pub type DockHostOptions = DockSpaceElementOptions;
+
+/// App-facing docking surface.
+///
+/// `DockSurface` is the preferred ordinary entry point for applications. It keeps common app code
+/// on facade operations while lower-level manager/runtime helpers remain available only for
+/// advanced integrations and transition work.
+#[derive(Debug, Clone, Copy)]
+pub struct DockSurface {
+    runtime: DockingRuntime,
+}
+
+impl DockSurface {
+    pub fn new(main_window: AppWindowId) -> Self {
+        Self {
+            runtime: DockingRuntime::new(main_window),
+        }
+    }
+
+    pub fn main_window(&self) -> AppWindowId {
+        self.runtime.main_window()
+    }
+
+    pub fn runtime(&self) -> DockingRuntime {
+        self.runtime
+    }
+
+    pub fn register_panel<H: UiHost>(&self, app: &mut H, key: PanelKey, panel: DockPanel) {
+        app.with_global_mut(DockManager::default, |dock, _app| {
+            dock.insert_panel(key, panel);
+        });
+    }
+
+    pub fn ensure_panel<H: UiHost>(
+        &self,
+        app: &mut H,
+        key: &PanelKey,
+        make: impl FnOnce() -> DockPanel,
+    ) {
+        app.with_global_mut(DockManager::default, |dock, _app| {
+            dock.ensure_panel(key, make);
+        });
+    }
+
+    pub fn install_panel_registry<H: UiHost + 'static>(
+        &self,
+        app: &mut H,
+        registry: Arc<dyn DockPanelElementRegistry<H>>,
+    ) {
+        app.with_global_mut(
+            DockPanelElementRegistryService::<H>::default,
+            |service, _app| {
+                service.set(registry);
+            },
+        );
+    }
+
+    pub fn install_policy<H: UiHost>(&self, app: &mut H, policy: Arc<dyn DockingPolicy>) {
+        app.with_global_mut(DockingPolicyService::default, |service, _app| {
+            service.set(policy);
+        });
+    }
+
+    pub fn install_viewport_overlay_hooks<H: UiHost>(
+        &self,
+        app: &mut H,
+        hooks: Arc<dyn DockViewportOverlayHooks>,
+    ) {
+        app.with_global_mut(DockViewportOverlayHooksService::default, |service, _app| {
+            service.set(hooks);
+        });
+    }
+
+    pub fn host<H>(
+        &self,
+        cx: &mut ElementContext<'_, H>,
+        window: AppWindowId,
+        options: DockHostOptions,
+    ) -> AnyElement
+    where
+        H: UiHost + 'static,
+    {
+        dock_space_element_from_registry(cx, window, options)
+    }
+
+    pub fn dock_space_from_registry<H>(
+        &self,
+        cx: &mut ElementContext<'_, H>,
+        window: AppWindowId,
+        options: DockSpaceElementOptions,
+    ) -> AnyElement
+    where
+        H: UiHost + 'static,
+    {
+        self.host(cx, window, options)
+    }
+
+    pub fn request_float_panel_to_new_window<H: UiHost>(
+        &self,
+        app: &mut H,
+        source_window: AppWindowId,
+        panel: PanelKey,
+        anchor: Option<WindowAnchor>,
+    ) -> bool {
+        crate::runtime::request_float_panel_to_new_window(app, source_window, panel, anchor)
+    }
+
+    pub fn request_float_tabs_to_new_window<H: UiHost>(
+        &self,
+        app: &mut H,
+        source_window: AppWindowId,
+        source_tabs: DockNodeId,
+        panel: PanelKey,
+        anchor: Option<WindowAnchor>,
+    ) -> bool {
+        crate::runtime::request_float_tabs_to_new_window(
+            app,
+            source_window,
+            source_tabs,
+            panel,
+            anchor,
+        )
+    }
+
+    pub fn take_runtime_commands<H: UiHost>(&self, app: &mut H) -> Vec<DockRuntimeCommand> {
+        crate::runtime::take_runtime_commands(app)
+    }
+
+    pub fn on_dock_op<H: UiHost>(&self, app: &mut H, op: DockOp) -> bool {
+        match op {
+            DockOp::RequestFloatPanelToNewWindow {
+                source_window,
+                panel,
+                anchor,
+            } => self.request_float_panel_to_new_window(app, source_window, panel, anchor),
+            DockOp::RequestFloatTabsToNewWindow {
+                source_window,
+                source_tabs,
+                panel,
+                anchor,
+            } => self.request_float_tabs_to_new_window(
+                app,
+                source_window,
+                source_tabs,
+                panel,
+                anchor,
+            ),
+            op => self.runtime.on_dock_op(app, op),
+        }
+    }
+
+    pub fn on_window_created<H: UiHost>(
+        &self,
+        app: &mut H,
+        request: &CreateWindowRequest,
+        new_window: AppWindowId,
+    ) -> bool {
+        crate::runtime::complete_queued_window_created(app, request, new_window)
+    }
+
+    pub fn before_close_window<H: UiHost>(&self, app: &mut H, closing_window: AppWindowId) -> bool {
+        self.runtime.before_close_window(app, closing_window)
+    }
+}
 
 /// Driver-facing docking integration facade.
 ///
@@ -33,5 +209,208 @@ impl DockingRuntime {
 
     pub fn before_close_window<H: UiHost>(&self, app: &mut H, closing_window: AppWindowId) -> bool {
         crate::runtime::handle_dock_before_close_window(app, closing_window, self.main_window)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::test_host::TestHost;
+    use fret_core::{DockNode, PanelKey};
+    use fret_runtime::{CreateWindowKind, Effect, PlatformCapabilities, WindowRequest};
+    use slotmap::KeyData;
+
+    fn test_panel(title: &str) -> DockPanel {
+        DockPanel {
+            title: title.to_string(),
+            color: fret_core::Color::TRANSPARENT,
+            viewport: None,
+        }
+    }
+
+    #[test]
+    fn dock_surface_request_float_panel_uses_runtime_command_queue() {
+        let window_a = AppWindowId::from(KeyData::from_ffi(1));
+        let window_b = AppWindowId::from(KeyData::from_ffi(2));
+        let panel = PanelKey::new("test.panel");
+        let surface = DockSurface::new(window_a);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        app.set_global(DockManager::default());
+        surface.register_panel(&mut app, panel.clone(), test_panel("Panel"));
+        app.with_global_mut(DockManager::default, |dock, _app| {
+            let tabs = dock.graph.insert_node(DockNode::Tabs {
+                tabs: vec![panel.clone()],
+                active: 0,
+            });
+            dock.graph.set_window_root(window_a, tabs);
+        });
+
+        assert!(surface.request_float_panel_to_new_window(&mut app, window_a, panel.clone(), None));
+
+        assert!(
+            app.take_effects().is_empty(),
+            "DockSurface command path should not emit Effect::Dock or WindowRequest::Create"
+        );
+        let commands = surface.take_runtime_commands(&mut app);
+        assert_eq!(commands.len(), 1);
+        let DockRuntimeCommand::CreateWindow(create) = commands[0].clone() else {
+            panic!("expected create-window docking runtime command");
+        };
+        assert!(matches!(
+            create.kind,
+            CreateWindowKind::DockFloating {
+                source_window,
+                panel: ref requested,
+            }
+                if source_window == window_a && requested == &panel
+        ));
+
+        assert!(surface.on_window_created(&mut app, &create, window_b));
+        let dock = app.global::<DockManager>().expect("dock manager exists");
+        assert!(
+            dock.graph.find_panel_in_window(window_b, &panel).is_some(),
+            "expected panel to move after completing the queued create command"
+        );
+        assert!(
+            dock.graph.find_panel_in_window(window_a, &panel).is_none(),
+            "expected panel to leave the source window after queued create completion"
+        );
+    }
+
+    #[test]
+    fn dock_surface_runtime_command_queue_deduplicates_until_window_created() {
+        let window = AppWindowId::from(KeyData::from_ffi(1));
+        let panel = PanelKey::new("test.panel");
+        let surface = DockSurface::new(window);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        app.set_global(DockManager::default());
+        surface.register_panel(&mut app, panel.clone(), test_panel("Panel"));
+        app.with_global_mut(DockManager::default, |dock, _app| {
+            let tabs = dock.graph.insert_node(DockNode::Tabs {
+                tabs: vec![panel.clone()],
+                active: 0,
+            });
+            dock.graph.set_window_root(window, tabs);
+        });
+
+        assert!(surface.request_float_panel_to_new_window(&mut app, window, panel.clone(), None));
+        assert!(surface.request_float_panel_to_new_window(&mut app, window, panel, None));
+
+        let commands = surface.take_runtime_commands(&mut app);
+        assert_eq!(
+            commands
+                .iter()
+                .filter(|command| matches!(command, DockRuntimeCommand::CreateWindow(_)))
+                .count(),
+            1,
+            "DockSurface command queue should preserve runtime request idempotency"
+        );
+        assert!(
+            app.take_effects().iter().all(|effect| !matches!(
+                effect,
+                Effect::Dock(_) | Effect::Window(WindowRequest::Create(_))
+            )),
+            "DockSurface command queue should not mirror create requests through Effect::Dock"
+        );
+    }
+
+    #[test]
+    fn dock_surface_on_dock_op_request_uses_runtime_command_queue() {
+        let window = AppWindowId::from(KeyData::from_ffi(1));
+        let panel = PanelKey::new("test.panel");
+        let surface = DockSurface::new(window);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        app.set_global(DockManager::default());
+        surface.register_panel(&mut app, panel.clone(), test_panel("Panel"));
+        app.with_global_mut(DockManager::default, |dock, _app| {
+            let tabs = dock.graph.insert_node(DockNode::Tabs {
+                tabs: vec![panel.clone()],
+                active: 0,
+            });
+            dock.graph.set_window_root(window, tabs);
+        });
+
+        assert!(surface.on_dock_op(
+            &mut app,
+            DockOp::RequestFloatPanelToNewWindow {
+                source_window: window,
+                panel: panel.clone(),
+                anchor: None,
+            },
+        ));
+
+        assert!(
+            app.take_effects().iter().all(|effect| !matches!(
+                effect,
+                Effect::Dock(_) | Effect::Window(WindowRequest::Create(_))
+            )),
+            "DockSurface::on_dock_op should route float requests through docking runtime commands"
+        );
+        assert_eq!(
+            surface
+                .take_runtime_commands(&mut app)
+                .iter()
+                .filter(|command| matches!(command, DockRuntimeCommand::CreateWindow(_)))
+                .count(),
+            1
+        );
+    }
+
+    #[test]
+    fn dock_surface_window_created_for_stale_source_queues_close_command() {
+        let window_a = AppWindowId::from(KeyData::from_ffi(1));
+        let window_b = AppWindowId::from(KeyData::from_ffi(2));
+        let window_c = AppWindowId::from(KeyData::from_ffi(3));
+        let panel = PanelKey::new("test.panel");
+        let surface = DockSurface::new(window_a);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        app.set_global(DockManager::default());
+        surface.register_panel(&mut app, panel.clone(), test_panel("Panel"));
+        app.with_global_mut(DockManager::default, |dock, _app| {
+            let tabs = dock.graph.insert_node(DockNode::Tabs {
+                tabs: vec![panel.clone()],
+                active: 0,
+            });
+            dock.graph.set_window_root(window_a, tabs);
+        });
+
+        assert!(surface.request_float_panel_to_new_window(&mut app, window_a, panel.clone(), None));
+        let commands = surface.take_runtime_commands(&mut app);
+        let DockRuntimeCommand::CreateWindow(create) = commands[0].clone() else {
+            panic!("expected create-window docking runtime command");
+        };
+        assert!(surface.on_dock_op(
+            &mut app,
+            DockOp::MovePanelToEmptyDockSpace {
+                source_window: window_a,
+                panel: panel.clone(),
+                target_window: window_c,
+            },
+        ));
+
+        assert!(surface.on_window_created(&mut app, &create, window_b));
+        assert_eq!(
+            surface.take_runtime_commands(&mut app),
+            vec![DockRuntimeCommand::CloseWindow(window_b)]
+        );
+        assert!(
+            app.take_effects()
+                .iter()
+                .all(|effect| !matches!(effect, Effect::Window(WindowRequest::Close(_)))),
+            "DockSurface stale create cleanup should stay on the docking command queue"
+        );
+        let dock = app.global::<DockManager>().expect("dock manager exists");
+        assert!(
+            dock.graph.find_panel_in_window(window_c, &panel).is_some(),
+            "stale queued window completion must preserve the current graph owner"
+        );
     }
 }

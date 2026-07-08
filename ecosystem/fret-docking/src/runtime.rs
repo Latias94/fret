@@ -7,18 +7,20 @@
 //! - translate `RequestFloatTabsToNewWindow` into a `WindowRequest::Create`
 //! - complete the float by updating the graph once the OS window exists
 
-use fret_core::{AppWindowId, DockOp};
+use fret_core::{AppWindowId, DockNodeId, DockOp, PanelKey, WindowAnchor};
 use fret_runtime::{CreateWindowRequest, UiHost};
 
 mod apply;
 mod auto_close;
 mod before_close;
+mod commands;
 mod in_window;
 mod layout_invalidation;
 mod request;
 mod tear_off;
 mod window_created;
 
+pub use commands::DockRuntimeCommand;
 pub use in_window::recenter_in_window_floatings;
 pub(crate) use tear_off::is_dock_floating_os_window;
 
@@ -46,6 +48,63 @@ pub fn handle_dock_op<H: UiHost>(app: &mut H, op: DockOp) -> bool {
         }
         op => apply::handle_applied_dock_op(app, op),
     }
+}
+
+/// Queue a docking-owned OS-window tear-off command for a single panel.
+///
+/// This is the command-queue route used by [`crate::DockSurface`]. Unlike the legacy
+/// `Effect::Dock(DockOp::RequestFloatPanelToNewWindow)` path, this does not emit an OS-window
+/// request through the pure core graph operation channel.
+pub fn request_float_panel_to_new_window<H: UiHost>(
+    app: &mut H,
+    source_window: AppWindowId,
+    panel: PanelKey,
+    anchor: Option<WindowAnchor>,
+) -> bool {
+    request::queue_request_float_to_new_window(
+        app,
+        DockOp::RequestFloatPanelToNewWindow {
+            source_window,
+            panel,
+            anchor,
+        },
+    )
+}
+
+/// Queue a docking-owned OS-window tear-off command for a tab stack.
+pub fn request_float_tabs_to_new_window<H: UiHost>(
+    app: &mut H,
+    source_window: AppWindowId,
+    source_tabs: DockNodeId,
+    panel: PanelKey,
+    anchor: Option<WindowAnchor>,
+) -> bool {
+    request::queue_request_float_to_new_window(
+        app,
+        DockOp::RequestFloatTabsToNewWindow {
+            source_window,
+            source_tabs,
+            panel,
+            anchor,
+        },
+    )
+}
+
+/// Drain docking-owned runtime commands queued by [`crate::DockSurface`] or host adapters.
+pub fn take_runtime_commands<H: UiHost>(app: &mut H) -> Vec<DockRuntimeCommand> {
+    commands::take_runtime_commands(app)
+}
+
+/// Complete a dock floating window creation on the docking-owned command route.
+///
+/// Cancellation and missing-manager cleanup are queued as [`DockRuntimeCommand::CloseWindow`]
+/// instead of being pushed through the host effect queue.
+pub fn complete_queued_window_created<H: UiHost>(
+    app: &mut H,
+    request: &CreateWindowRequest,
+    new_window: AppWindowId,
+) -> bool {
+    window_created::queue_dock_window_created(app, request, new_window)
 }
 
 /// Complete a dock floating window creation by updating the dock graph.

@@ -3,6 +3,7 @@ use fret_runtime::{CreateWindowKind, CreateWindowRequest, Effect, UiHost, Window
 
 use crate::DockManager;
 
+use super::commands;
 use super::layout_invalidation::invalidate_windows;
 use super::tear_off::{
     DockFloatingOsWindowRegistry, DockTearOffCompletion, DockTearOffKind, DockTearOffMachine,
@@ -12,6 +13,39 @@ pub(super) fn handle_dock_window_created<H: UiHost>(
     app: &mut H,
     request: &CreateWindowRequest,
     new_window: AppWindowId,
+) -> bool {
+    handle_dock_window_created_with_close_dispatch(
+        app,
+        request,
+        new_window,
+        CloseWindowDispatch::Effect,
+    )
+}
+
+pub(super) fn queue_dock_window_created<H: UiHost>(
+    app: &mut H,
+    request: &CreateWindowRequest,
+    new_window: AppWindowId,
+) -> bool {
+    handle_dock_window_created_with_close_dispatch(
+        app,
+        request,
+        new_window,
+        CloseWindowDispatch::CommandQueue,
+    )
+}
+
+#[derive(Clone, Copy)]
+enum CloseWindowDispatch {
+    Effect,
+    CommandQueue,
+}
+
+fn handle_dock_window_created_with_close_dispatch<H: UiHost>(
+    app: &mut H,
+    request: &CreateWindowRequest,
+    new_window: AppWindowId,
+    close_dispatch: CloseWindowDispatch,
 ) -> bool {
     let now = app.tick_id();
     let (completion, pending) = app
@@ -26,7 +60,7 @@ pub(super) fn handle_dock_window_created<H: UiHost>(
                 "dock tear-off: cancel and close newly created window"
             );
         }
-        app.push_effect(Effect::Window(WindowRequest::Close(new_window)));
+        dispatch_close_window(app, close_dispatch, new_window);
         return true;
     }
 
@@ -46,7 +80,7 @@ pub(super) fn handle_dock_window_created<H: UiHost>(
                 "dock tear-off: missing DockManager; closing newly created window"
             );
         }
-        app.push_effect(Effect::Window(WindowRequest::Close(new_window)));
+        dispatch_close_window(app, close_dispatch, new_window);
         return true;
     }
 
@@ -98,4 +132,19 @@ pub(super) fn handle_dock_window_created<H: UiHost>(
     }
 
     handled
+}
+
+fn dispatch_close_window<H: UiHost>(
+    app: &mut H,
+    close_dispatch: CloseWindowDispatch,
+    window: AppWindowId,
+) {
+    match close_dispatch {
+        CloseWindowDispatch::Effect => {
+            app.push_effect(Effect::Window(WindowRequest::Close(window)));
+        }
+        CloseWindowDispatch::CommandQueue => {
+            commands::queue_close_window(app, window);
+        }
+    }
 }
