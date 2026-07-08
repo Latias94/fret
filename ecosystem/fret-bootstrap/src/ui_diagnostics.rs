@@ -2696,9 +2696,15 @@ mod tests {
             dock_bounds: window_bounds,
             source: fret_runtime::DockDropResolveSource::None,
             resolved: None,
+            denied: None,
             preview: Some(fret_runtime::DockDropPreviewDiagnostics {
                 kind: fret_runtime::DockDropPreviewKindDiagnostics::WrapBinary,
             }),
+            policy: fret_runtime::DockDropPolicyDecisionDiagnostics::NotApplicable,
+            command: fret_runtime::DockDropCommandKindDiagnostics::None,
+            commit_capable: false,
+            clears_hover: false,
+            invalidates_layout: false,
             candidates: Vec::new(),
         });
 
@@ -2773,7 +2779,13 @@ mod tests {
             dock_bounds: window_bounds,
             source: fret_runtime::DockDropResolveSource::OuterHintRect,
             resolved: None,
+            denied: None,
             preview: None,
+            policy: fret_runtime::DockDropPolicyDecisionDiagnostics::NotApplicable,
+            command: fret_runtime::DockDropCommandKindDiagnostics::None,
+            commit_capable: false,
+            clears_hover: false,
+            invalidates_layout: false,
             candidates: Vec::new(),
         });
 

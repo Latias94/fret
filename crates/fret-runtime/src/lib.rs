@@ -157,12 +157,13 @@ pub use input::{
 };
 pub use interaction_diagnostics::{
     DockDragDiagnostics, DockDropCandidateRectDiagnostics, DockDropCandidateRectKind,
-    DockDropPreviewDiagnostics, DockDropPreviewKindDiagnostics, DockDropResolveDiagnostics,
-    DockDropResolveSource, DockDropTargetDiagnostics, DockFloatingDragDiagnostics,
-    DockGraphSignatureDiagnostics, DockGraphStatsDiagnostics,
-    DockTabStripActiveVisibilityDiagnostics, DockTabStripActiveVisibilityStatusDiagnostics,
-    DockingInteractionDiagnostics, ViewportCaptureDiagnostics, WindowInteractionDiagnosticsStore,
-    WorkspaceInteractionDiagnostics, WorkspaceTabStripActiveVisibilityDiagnostics,
+    DockDropCommandKindDiagnostics, DockDropPolicyDecisionDiagnostics, DockDropPreviewDiagnostics,
+    DockDropPreviewKindDiagnostics, DockDropResolveDiagnostics, DockDropResolveSource,
+    DockDropTargetDiagnostics, DockFloatingDragDiagnostics, DockGraphSignatureDiagnostics,
+    DockGraphStatsDiagnostics, DockTabStripActiveVisibilityDiagnostics,
+    DockTabStripActiveVisibilityStatusDiagnostics, DockingInteractionDiagnostics,
+    ViewportCaptureDiagnostics, WindowInteractionDiagnosticsStore, WorkspaceInteractionDiagnostics,
+    WorkspaceTabStripActiveVisibilityDiagnostics,
     WorkspaceTabStripActiveVisibilityStatusDiagnostics, WorkspaceTabStripDragDiagnostics,
 };
 pub use keymap::{BindingV1, KeySpecV1, KeymapError, KeymapFileV1};

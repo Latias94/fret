@@ -9,7 +9,7 @@ use super::super::super::host_frame::DockSpaceLayoutSnapshot;
 use super::super::super::layout::dock_space_regions;
 use super::super::super::manager::DockManager;
 use super::super::super::services::DockingPolicyService;
-use super::super::super::types::{DockDropTarget, DockPanelDragPayload};
+use super::super::super::types::{DockDropTarget, DockDropTargetResolution, DockPanelDragPayload};
 use super::super::geometry::declarative_layout_snapshot_for_bounds;
 use super::super::tab_metrics::{
     declarative_tab_scroll_for_frame, declarative_tab_widths_for_layout,
@@ -23,8 +23,7 @@ pub(super) struct DeclarativeDragTargetResolution {
     pub(super) font_size: Px,
     pub(super) tab_widths: HashMap<DockNodeId, Arc<[Px]>>,
     pub(super) tab_scroll: HashMap<DockNodeId, Px>,
-    pub(super) target: Option<DockDropTarget>,
-    pub(super) source: fret_runtime::DockDropResolveSource,
+    pub(super) drop_target: DockDropTargetResolution,
     pub(super) candidates: Vec<fret_runtime::DockDropCandidateRectDiagnostics>,
 }
 
@@ -79,7 +78,7 @@ pub(super) fn resolve_declarative_drag_target<H: UiHost>(
         .expect("dock manager")
         .workspace
         .graph;
-    let (target, source) = resolve_dock_drop_target(
+    let drop_target = resolve_dock_drop_target(
         prev_hover,
         !dock_previews_enabled,
         true,
@@ -107,8 +106,7 @@ pub(super) fn resolve_declarative_drag_target<H: UiHost>(
         font_size,
         tab_widths,
         tab_scroll,
-        target,
-        source,
+        drop_target,
         candidates,
     })
 }

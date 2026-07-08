@@ -4,7 +4,8 @@ use fret_ui::UiHost;
 
 use super::super::diagnostics::{diagnostics_env_enabled, should_publish_docking_diagnostics};
 use super::super::drop_resolve::{
-    apply_dock_drop_intent, dock_drop_intent_debug_kind, dock_drop_target_diagnostics,
+    apply_resolved_dock_drop_transaction, dock_drop_target_diagnostics,
+    dock_drop_transaction_debug_kind, resolve_dock_drop_transaction,
 };
 use super::super::manager::DockManager;
 use super::super::services::DockingPolicyService;
@@ -87,10 +88,9 @@ pub(super) fn declarative_resolve_internal_drag_drop<H: UiHost>(
     };
 
     let mut effects = Vec::new();
-    let mut invalidate_layout = false;
     let intent = resolve_declarative_drag_drop_intent(
         app,
-        target_resolution.target.as_ref(),
+        target_resolution.drop_target.target_ref(),
         panel_payload.as_ref(),
         tabs_payload.as_ref(),
         source_window,
@@ -101,7 +101,9 @@ pub(super) fn declarative_resolve_internal_drag_drop<H: UiHost>(
         allow_multi_window_tear_off,
         &target_resolution.snapshot.paint_panel_bounds,
     );
-    apply_dock_drop_intent(app, intent.clone(), &mut effects, &mut invalidate_layout);
+    let transaction = resolve_dock_drop_transaction(target_resolution.drop_target.clone(), intent);
+    let applied = apply_resolved_dock_drop_transaction(app, &transaction, &mut effects);
+    let invalidate_layout = applied && transaction.invalidates_layout();
 
     let diagnostics = capture_drag_drop_diagnostics(
         app,
@@ -110,23 +112,23 @@ pub(super) fn declarative_resolve_internal_drag_drop<H: UiHost>(
         position,
         bounds,
         target_resolution.dock_bounds,
-        target_resolution.source,
         window,
-        target_resolution.target.as_ref(),
+        &transaction,
         target_resolution.candidates,
     );
     record_drag_resolve_diagnostics(app, window, diagnostics);
     if std::env::var_os("FRET_DOCK_DRAG_DEBUG").is_some_and(|v| !v.is_empty()) {
-        let drop_target_diag = dock_drop_target_diagnostics(target_resolution.target.as_ref());
+        let drop_target_diag = dock_drop_target_diagnostics(transaction.target.target_ref());
         tracing::info!(
             window = ?window,
             source_window = ?source_window,
             pointer_id = ?pointer_id,
             pos = ?position,
             invert_docking = !dock_previews_enabled,
-            resolve_source = ?target_resolution.source,
+            resolve_source = ?transaction.target.source,
             drop_target = ?drop_target_diag,
-            intent_kind = dock_drop_intent_debug_kind(&intent),
+            intent_kind = dock_drop_transaction_debug_kind(&transaction),
+            commit_capable = transaction.commit_capable(),
             "declarative dock drag drop"
         );
     }
@@ -166,7 +168,10 @@ pub(super) fn declarative_resolve_internal_drag_hover<H: UiHost>(
         });
         return (Vec::new(), hover_cleared, false);
     }
+    let source_window = drag.source_window;
     let dragged_tab_for_drop = declarative_dragged_tab_for_drop(app, drag);
+    let panel_payload = drag.payload::<DockPanelDragPayload>().cloned();
+    let tabs_payload = drag.payload::<DockTabsDragPayload>().cloned();
 
     let tear_off = declarative_resolve_tear_off_hover(
         app,
@@ -200,7 +205,7 @@ pub(super) fn declarative_resolve_internal_drag_hover<H: UiHost>(
     let auto_scrolled = apply_drag_hover_auto_scroll(
         app,
         window,
-        &mut target_resolution.target,
+        &mut target_resolution.drop_target.target,
         &target_resolution.snapshot.layout_all,
         theme.clone(),
         target_resolution.font_size,
@@ -209,16 +214,30 @@ pub(super) fn declarative_resolve_internal_drag_hover<H: UiHost>(
         &mut target_resolution.tab_scroll,
         dragged_tab_for_drop,
     );
+    let intent = resolve_declarative_drag_drop_intent(
+        app,
+        target_resolution.drop_target.target_ref(),
+        panel_payload.as_ref(),
+        tabs_payload.as_ref(),
+        source_window,
+        window,
+        bounds,
+        position,
+        allow_tear_off,
+        allow_multi_window_tear_off,
+        &target_resolution.snapshot.paint_panel_bounds,
+    );
+    let transaction = resolve_dock_drop_transaction(target_resolution.drop_target.clone(), intent);
+    let resolve_source = target_resolution.drop_target.source;
 
     let (changed, diagnostics) = update_hover_and_capture_diagnostics(
         app,
         diagnostics_enabled,
-        target_resolution.target,
+        &transaction,
         pointer_id,
         position,
         bounds,
         target_resolution.dock_bounds,
-        target_resolution.source,
         window,
         target_resolution.candidates,
     );
@@ -230,7 +249,7 @@ pub(super) fn declarative_resolve_internal_drag_hover<H: UiHost>(
         tracing::info!(
             window = ?window,
             invert_docking = !dock_previews_enabled,
-            source = ?target_resolution.source,
+            source = ?resolve_source,
             target = ?target,
             "declarative dock drag hover changed"
         );

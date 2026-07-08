@@ -1,11 +1,9 @@
 // This file is part of the docking UI implementation.
 //
-// It owns drop intent projection and effect emission for resolved dock drop targets.
+// It owns pure drop intent projection for resolved dock drop targets.
 
 use super::super::prelude_core::*;
-use super::super::prelude_runtime::*;
 use super::super::types::{DockDropIntent, DockDropTarget};
-use fret_ui::UiHost;
 
 #[derive(Clone, Copy)]
 pub(in crate::dock) struct DockPanelDropDrag<'a> {
@@ -173,146 +171,5 @@ where
             }
         }
         None => DockDropIntent::None,
-    }
-}
-
-pub(in crate::dock) fn apply_dock_drop_intent<H: UiHost>(
-    app: &mut H,
-    intent: DockDropIntent,
-    pending_effects: &mut Vec<Effect>,
-    invalidate_layout: &mut bool,
-) {
-    match intent {
-        DockDropIntent::None => {}
-        DockDropIntent::MovePanel {
-            source_window,
-            panel,
-            target_window,
-            target_tabs,
-            zone,
-            insert_index,
-        } => {
-            pending_effects.push(Effect::Dock(DockOp::MovePanel {
-                source_window,
-                panel,
-                target_window,
-                target_tabs,
-                zone,
-                insert_index,
-            }));
-            *invalidate_layout = true;
-        }
-        DockDropIntent::MovePanelToEmptyDockSpace {
-            source_window,
-            panel,
-            target_window,
-        } => {
-            pending_effects.push(Effect::Dock(DockOp::MovePanelToEmptyDockSpace {
-                source_window,
-                panel,
-                target_window,
-            }));
-            *invalidate_layout = true;
-        }
-        DockDropIntent::MoveTabs {
-            source_window,
-            source_tabs,
-            target_window,
-            target_tabs,
-            zone,
-            insert_index,
-        } => {
-            pending_effects.push(Effect::Dock(DockOp::MoveTabs {
-                source_window,
-                source_tabs,
-                target_window,
-                target_tabs,
-                zone,
-                insert_index,
-            }));
-            *invalidate_layout = true;
-        }
-        DockDropIntent::MoveTabsToEmptyDockSpace {
-            source_window,
-            source_tabs,
-            target_window,
-        } => {
-            pending_effects.push(Effect::Dock(DockOp::MoveTabsToEmptyDockSpace {
-                source_window,
-                source_tabs,
-                target_window,
-            }));
-            *invalidate_layout = true;
-        }
-        DockDropIntent::FloatPanelInWindow {
-            source_window,
-            panel,
-            target_window,
-            rect,
-        } => {
-            pending_effects.push(Effect::Dock(DockOp::FloatPanelInWindow {
-                source_window,
-                panel,
-                target_window,
-                rect,
-            }));
-            *invalidate_layout = true;
-        }
-        DockDropIntent::FloatTabsInWindow {
-            source_window,
-            source_tabs,
-            target_window,
-            rect,
-        } => {
-            pending_effects.push(Effect::Dock(DockOp::FloatTabsInWindow {
-                source_window,
-                source_tabs,
-                target_window,
-                rect,
-            }));
-            *invalidate_layout = true;
-        }
-        DockDropIntent::RequestFloatPanelToNewWindow {
-            source_window,
-            panel,
-            anchor,
-        } => {
-            *invalidate_layout |=
-                crate::runtime::request_float_panel_to_new_window_with_host_effects(
-                    app,
-                    source_window,
-                    panel,
-                    anchor,
-                );
-        }
-        DockDropIntent::RequestFloatTabsToNewWindow {
-            source_window,
-            source_tabs,
-            panel,
-            anchor,
-        } => {
-            *invalidate_layout |=
-                crate::runtime::request_float_tabs_to_new_window_with_host_effects(
-                    app,
-                    source_window,
-                    source_tabs,
-                    panel,
-                    anchor,
-                );
-        }
-    }
-}
-
-pub(in crate::dock) fn dock_drop_intent_debug_kind(intent: &DockDropIntent) -> &'static str {
-    match intent {
-        DockDropIntent::None => "none",
-        DockDropIntent::MovePanel { .. } => "move_panel",
-        DockDropIntent::MovePanelToEmptyDockSpace { .. } => "move_panel_to_empty_dock_space",
-        DockDropIntent::MoveTabs { .. } => "move_tabs",
-        DockDropIntent::MoveTabsToEmptyDockSpace { .. } => "move_tabs_to_empty_dock_space",
-        DockDropIntent::FloatPanelInWindow { .. } => "float_panel_in_window",
-        DockDropIntent::FloatTabsInWindow { .. } => "float_tabs_in_window",
-        DockDropIntent::RequestFloatPanelToNewWindow { .. } => "request_float_panel_to_new_window",
-        DockDropIntent::RequestFloatTabsToNewWindow { .. } => "request_float_tabs_to_new_window",
     }
 }

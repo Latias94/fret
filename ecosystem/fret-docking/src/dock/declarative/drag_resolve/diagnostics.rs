@@ -4,9 +4,9 @@ use fret_ui::UiHost;
 use super::super::super::diagnostics::{
     dock_graph_signature_for_window, dock_graph_stats_for_window,
 };
+use super::super::super::drop_resolve::ResolvedDockDropTransaction;
 use super::super::super::drop_resolve::compute_dock_drop_resolve_diagnostics;
 use super::super::super::manager::DockManager;
-use super::super::super::types::DockDropTarget;
 
 // This file owns declarative docking drag resolve diagnostics capture and publication.
 
@@ -24,9 +24,8 @@ pub(super) fn capture_drag_drop_diagnostics<H: UiHost>(
     position: Point,
     bounds: Rect,
     dock_bounds: Rect,
-    source: fret_runtime::DockDropResolveSource,
     window: AppWindowId,
-    target: Option<&DockDropTarget>,
+    transaction: &ResolvedDockDropTransaction,
     candidates: Vec<fret_runtime::DockDropCandidateRectDiagnostics>,
 ) -> DragResolveDiagnosticsCapture {
     app.with_global_mut(DockManager::default, |dock, _app| {
@@ -41,10 +40,9 @@ pub(super) fn capture_drag_drop_diagnostics<H: UiHost>(
                 position,
                 bounds,
                 dock_bounds,
-                source,
                 &dock.workspace.graph,
                 window,
-                target,
+                transaction,
                 candidates,
             )
         });
@@ -60,16 +58,16 @@ pub(super) fn capture_drag_drop_diagnostics<H: UiHost>(
 pub(super) fn update_hover_and_capture_diagnostics<H: UiHost>(
     app: &mut H,
     diagnostics_enabled: bool,
-    hover: Option<DockDropTarget>,
+    transaction: &ResolvedDockDropTransaction,
     pointer_id: PointerId,
     position: Point,
     bounds: Rect,
     dock_bounds: Rect,
-    source: fret_runtime::DockDropResolveSource,
     window: AppWindowId,
     candidates: Vec<fret_runtime::DockDropCandidateRectDiagnostics>,
 ) -> (bool, DragResolveDiagnosticsCapture) {
     app.with_global_mut(DockManager::default, |dock, _app| {
+        let hover = transaction.target.target.clone();
         let changed = dock.presentation.hover != hover;
         dock.presentation.hover = hover;
         let graph_stats =
@@ -82,10 +80,9 @@ pub(super) fn update_hover_and_capture_diagnostics<H: UiHost>(
                 position,
                 bounds,
                 dock_bounds,
-                source,
                 &dock.workspace.graph,
                 window,
-                dock.presentation.hover.as_ref(),
+                transaction,
                 candidates,
             )
         });

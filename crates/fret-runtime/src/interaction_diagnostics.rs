@@ -233,6 +233,26 @@ pub struct DockDropPreviewDiagnostics {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DockDropPolicyDecisionDiagnostics {
+    NotApplicable,
+    Allowed,
+    DeniedDockingPolicy,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DockDropCommandKindDiagnostics {
+    None,
+    MovePanel,
+    MovePanelToEmptyDockSpace,
+    MoveTabs,
+    MoveTabsToEmptyDockSpace,
+    FloatPanelInWindow,
+    FloatTabsInWindow,
+    RequestFloatPanelToNewWindow,
+    RequestFloatTabsToNewWindow,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DockDropResolveSource {
     /// Docking previews are disabled for this drag session (inversion policy / modifier gating).
     InvertDocking,
@@ -297,7 +317,13 @@ pub struct DockDropResolveDiagnostics {
     pub dock_bounds: Rect,
     pub source: DockDropResolveSource,
     pub resolved: Option<DockDropTargetDiagnostics>,
+    pub denied: Option<DockDropTargetDiagnostics>,
     pub preview: Option<DockDropPreviewDiagnostics>,
+    pub policy: DockDropPolicyDecisionDiagnostics,
+    pub command: DockDropCommandKindDiagnostics,
+    pub commit_capable: bool,
+    pub clears_hover: bool,
+    pub invalidates_layout: bool,
     pub candidates: Vec<DockDropCandidateRectDiagnostics>,
 }
 

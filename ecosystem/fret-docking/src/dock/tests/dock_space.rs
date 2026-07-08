@@ -5034,6 +5034,7 @@ fn public_declarative_dock_space_entry_point_resolves_internal_drag_over_outer_h
     let mut app = TestHost::new();
     app.set_global(PlatformCapabilities::default());
     app.set_global(DockManager::default());
+    app.set_global(fret_runtime::WindowInteractionDiagnosticsStore::default());
     app.with_global_mut(
         DockPanelElementRegistryService::<TestHost>::default,
         |svc, _app| {
@@ -5141,6 +5142,35 @@ fn public_declarative_dock_space_entry_point_resolves_internal_drag_over_outer_h
         ),
         "expected declarative internal-drag over to target the root split outer-left hint, got: {hover:?}"
     );
+
+    let docking = app
+        .global::<fret_runtime::WindowInteractionDiagnosticsStore>()
+        .and_then(|store| store.docking_latest_for_window(window))
+        .expect("expected resolved drop transaction diagnostics");
+    let drop_resolve = docking
+        .dock_drop_resolve
+        .as_ref()
+        .expect("expected dock drop resolve diagnostics");
+    assert_eq!(
+        drop_resolve.source,
+        fret_runtime::DockDropResolveSource::OuterHintRect
+    );
+    assert_eq!(
+        drop_resolve.command,
+        fret_runtime::DockDropCommandKindDiagnostics::MovePanel
+    );
+    assert_eq!(
+        drop_resolve.policy,
+        fret_runtime::DockDropPolicyDecisionDiagnostics::Allowed
+    );
+    assert!(drop_resolve.commit_capable);
+    assert!(drop_resolve.clears_hover);
+    assert!(drop_resolve.invalidates_layout);
+    assert_eq!(
+        drop_resolve.resolved.as_ref().map(|target| target.zone),
+        Some(DropZone::Left)
+    );
+    assert!(drop_resolve.denied.is_none());
 }
 
 #[test]

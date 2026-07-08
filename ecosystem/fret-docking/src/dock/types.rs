@@ -48,6 +48,26 @@ pub(super) enum DockDropTarget {
     },
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub(super) struct DockDropTargetResolution {
+    pub(super) target: Option<DockDropTarget>,
+    pub(super) source: fret_runtime::DockDropResolveSource,
+    pub(super) policy: DockDropPolicyDecision,
+}
+
+impl DockDropTargetResolution {
+    pub(super) fn target_ref(&self) -> Option<&DockDropTarget> {
+        self.target.as_ref()
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub(super) enum DockDropPolicyDecision {
+    NotApplicable,
+    Allowed,
+    Denied { target: HoverTarget },
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) struct DockDropHints {
     pub(super) root: DockNodeId,

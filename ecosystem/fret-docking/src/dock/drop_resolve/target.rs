@@ -9,7 +9,9 @@ use super::super::layout::{
 };
 use super::super::prelude_core::*;
 use super::super::tab_bar_drop_target::tab_bar_insert_index_for_drop;
-use super::super::types::{DockDropTarget, HoverTarget};
+use super::super::types::{
+    DockDropPolicyDecision, DockDropTarget, DockDropTargetResolution, HoverTarget,
+};
 use super::floating_hit::{FloatingHitKind, hit_test_floating, layout_context_for_position};
 
 #[allow(clippy::too_many_arguments)]
@@ -398,12 +400,13 @@ pub(in crate::dock) fn resolve_dock_drop_target(
     position: Point,
     dragged_tab_for_drop: Option<(DockNodeId, usize)>,
     candidates: Option<&mut Vec<fret_runtime::DockDropCandidateRectDiagnostics>>,
-) -> (Option<DockDropTarget>, fret_runtime::DockDropResolveSource) {
+) -> DockDropTargetResolution {
     if invert_docking {
-        return (
-            Some(DockDropTarget::Float { window }),
-            fret_runtime::DockDropResolveSource::InvertDocking,
-        );
+        return DockDropTargetResolution {
+            target: Some(DockDropTarget::Float { window }),
+            source: fret_runtime::DockDropResolveSource::InvertDocking,
+            policy: DockDropPolicyDecision::NotApplicable,
+        };
     }
     let (target, source) = if let Some(prev_hover) = prev_hover {
         (
@@ -434,8 +437,21 @@ pub(in crate::dock) fn resolve_dock_drop_target(
     if let (Some(DockDropTarget::Dock(t)), Some(policy)) = (target.as_ref(), docking_policy)
         && !policy.allow_dock_drop_target(window, t.root, t.tabs, t.zone, t.outer)
     {
-        return (None, source);
+        return DockDropTargetResolution {
+            target: None,
+            source,
+            policy: DockDropPolicyDecision::Denied { target: *t },
+        };
     }
 
-    (target, source)
+    let policy = match target.as_ref() {
+        Some(DockDropTarget::Dock(_)) => DockDropPolicyDecision::Allowed,
+        _ => DockDropPolicyDecision::NotApplicable,
+    };
+
+    DockDropTargetResolution {
+        target,
+        source,
+        policy,
+    }
 }
