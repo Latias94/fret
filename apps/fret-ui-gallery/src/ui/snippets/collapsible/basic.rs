@@ -101,7 +101,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                             |cx| {
                                 let body = ui::v_flex(|cx| {
                                     vec![
-                                        shadcn::raw::typography::p(
+                                        shadcn::typography::p(
                                             "This panel can be expanded or collapsed to reveal additional content.",
                                         )
                                         .into_element(cx),

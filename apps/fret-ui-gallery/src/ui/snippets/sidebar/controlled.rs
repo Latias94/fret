@@ -79,10 +79,8 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                     }))
                     .test_id("ui-gallery-sidebar-controlled-toggle")
                     .into_element(cx),
-                    shadcn::raw::typography::muted(
-                        "Controlled via SidebarProvider.open(Some(model)).",
-                    )
-                    .into_element(cx),
+                    shadcn::typography::muted("Controlled via SidebarProvider.open(Some(model)).")
+                        .into_element(cx),
                 ]
             })
             .gap(Space::N2)

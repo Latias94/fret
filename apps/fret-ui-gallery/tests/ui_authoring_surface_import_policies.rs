@@ -55,9 +55,6 @@ fn assert_curated_facade_root_only(relative_paths: &[&str]) {
 }
 
 fn documented_raw_shadcn_escape_hatch_reason(trimmed: &str) -> Option<&'static str> {
-    if trimmed.contains("shadcn::raw::typography::") {
-        return Some("raw typography prose helpers");
-    }
     if trimmed.contains("shadcn::raw::icon::") {
         return Some("low-level icon helper");
     }
@@ -84,10 +81,7 @@ fn assert_only_documented_raw_shadcn_modules(path: &std::path::Path, source: &st
 
 #[test]
 fn raw_shadcn_escape_hatch_gate_is_symbol_level_not_module_level() {
-    for allowed in [
-        "shadcn::raw::typography::muted(\"copy\")",
-        "shadcn::raw::icon::icon(cx, icon)",
-    ] {
+    for allowed in ["shadcn::raw::icon::icon(cx, icon)"] {
         assert!(
             documented_raw_shadcn_escape_hatch_reason(allowed).is_some(),
             "expected `{allowed}` to stay classified as an explicit raw escape hatch",
@@ -101,6 +95,7 @@ fn raw_shadcn_escape_hatch_gate_is_symbol_level_not_module_level() {
         "shadcn::raw::experimental::DataGridElement::new(rows)",
         "shadcn::raw::experimental::DataGridRowState::default()",
         "shadcn::raw::extras::Ticker::new(\"AAPL\")",
+        "shadcn::raw::typography::muted(\"copy\")",
         "shadcn::raw::button::UnclassifiedButtonPart::new()",
         "shadcn::raw::button::ButtonStyle::default()",
         "shadcn::raw::calendar::CalendarLocale::Es",
@@ -218,7 +213,7 @@ fn gallery_source_tree_rejects_legacy_shadcn_alias_patterns() {
                     && starts_with_lowercase
                     && !matches!(
                         segment,
-                        "raw" | "themes" | "app" | "experimental" | "extras"
+                        "raw" | "themes" | "app" | "experimental" | "extras" | "typography"
                     )
                 {
                     panic!(
@@ -349,6 +344,30 @@ fn gallery_shadcn_extras_batch_uses_explicit_extras_facade_module() {
             path.display()
         );
     }
+}
+
+#[test]
+fn gallery_typography_batch_uses_explicit_typography_facade_module() {
+    for path in gallery_rust_sources() {
+        let source = read_path(&path);
+        assert!(
+            !source.contains("shadcn::raw::typography::"),
+            "{} should not reopen the raw typography module",
+            path.display()
+        );
+    }
+
+    let mut explicit_typography_files = 0;
+    for path in support::rust_sources("src/ui/snippets/typography") {
+        let source = read_path(&path);
+        if source.contains("shadcn::typography::") {
+            explicit_typography_files += 1;
+        }
+    }
+    assert_eq!(
+        explicit_typography_files, 15,
+        "the typography snippet batch should use the explicit typography facade module"
+    );
 }
 
 #[test]

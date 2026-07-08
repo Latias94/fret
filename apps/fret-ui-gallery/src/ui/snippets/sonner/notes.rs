@@ -18,14 +18,14 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
 
     ui::v_flex(move |cx| {
             vec![
-                shadcn::raw::typography::muted( Arc::<str>::from(format!("Last action: {last}"))).into_element(cx),
-                shadcn::raw::typography::muted(
+                shadcn::typography::muted( Arc::<str>::from(format!("Last action: {last}"))).into_element(cx),
+                shadcn::typography::muted(
                     "Docs-aligned sections mirror shadcn's `Demo`, `Types`, `Description`, and `Position` previews.",
                 ).into_element(cx),
-                shadcn::raw::typography::muted(
+                shadcn::typography::muted(
                     "Fret-specific extras stay after the docs examples: action/cancel helpers and swipe-dismiss diagnostics coverage.",
                 ).into_element(cx),
-                shadcn::raw::typography::muted(
+                shadcn::typography::muted(
                     "Composable custom children are not exposed yet: the current Sonner surface is still the message-style API tracked in `ecosystem/fret-ui-shadcn/src/sonner.rs`.",
                 ).into_element(cx),
             ]

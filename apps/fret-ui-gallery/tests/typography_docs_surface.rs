@@ -121,8 +121,8 @@ fn typography_interactive_links_keep_runtime_action_state_anchors() {
     }
 
     for needle in [
-        "shadcn::raw::typography::p_rich([",
-        "shadcn::raw::typography::inline_link(\"a brilliant plan\", \"https://example.com/kings-plan\")",
+        "shadcn::typography::p_rich([",
+        "shadcn::typography::inline_link(\"a brilliant plan\", \"https://example.com/kings-plan\")",
         ".on_activate_link(Arc::new({",
         "activation.tag.clone()",
         ".test_id(\"ui-gallery-typography-interactive-links-paragraph\")",

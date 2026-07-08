@@ -41,11 +41,11 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
 
             let sidebar = shadcn::Sidebar::new([
                 shadcn::SidebarHeader::new([
-                    shadcn::raw::typography::small("Workspace").into_element(cx)
+                    shadcn::typography::small("Workspace").into_element(cx)
                 ])
                 .into_element(cx),
                 shadcn::SidebarContent::new([primary]).into_element(cx),
-                shadcn::SidebarFooter::new([shadcn::raw::typography::muted(
+                shadcn::SidebarFooter::new([shadcn::typography::muted(
                     "Sidebar width is owned by SidebarProvider.",
                 )
                 .into_element(cx)])

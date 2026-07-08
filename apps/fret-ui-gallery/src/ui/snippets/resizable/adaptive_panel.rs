@@ -36,7 +36,7 @@ fn proof_step<H: UiHost>(
             shadcn::Badge::new(step)
                 .variant(shadcn::BadgeVariant::Outline)
                 .into_element(cx),
-            shadcn::raw::typography::muted(copy).into_element(cx),
+            shadcn::typography::muted(copy).into_element(cx),
         ]
     })
     .gap(Space::N2)
@@ -135,7 +135,7 @@ fn adaptive_state_row<H: UiHost>(cx: &mut ElementContext<'_, H>, wide: bool) -> 
                 .variant(variant)
                 .test_id(badge_id)
                 .into_element(cx),
-            shadcn::raw::typography::muted(copy)
+            shadcn::typography::muted(copy)
                 .into_element(cx)
                 .test_id("ui-gallery-resizable-adaptive-panel-state-copy"),
         ]

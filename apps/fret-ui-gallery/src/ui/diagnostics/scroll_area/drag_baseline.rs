@@ -146,7 +146,7 @@ pub fn render<H: UiHost + 'static>(
                     .into_element(cx)
                     .test_id("ui-gallery-scroll-area-drag-baseline-controls");
 
-                let instructions = shadcn::raw::typography::muted(
+                let instructions = shadcn::typography::muted(
                     "Drag the thumb, then click “Arm content growth”. Content will grow after a short delay; the thumb should remain stable.",
                 )
                 .into_element(cx)

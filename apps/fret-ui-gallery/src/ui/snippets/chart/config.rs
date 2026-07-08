@@ -31,7 +31,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         ui::v_flex(|cx| {
             vec![
                 shadcn::ChartLegend::new(shadcn::ChartLegendContent::new()).into_element(cx),
-                shadcn::raw::typography::muted(
+                shadcn::typography::muted(
                     "When legend items are omitted, labels, icons, and colors can resolve from ChartConfig.",
                 )
                 .into_element(cx),

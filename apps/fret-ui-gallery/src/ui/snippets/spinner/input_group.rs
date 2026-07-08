@@ -20,7 +20,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let validating = ui::h_row(|cx| {
         vec![
             shadcn::Spinner::new().into_element(cx),
-            shadcn::raw::typography::muted("Validating...").into_element(cx),
+            shadcn::typography::muted("Validating...").into_element(cx),
         ]
     })
     .gap(Space::N2)

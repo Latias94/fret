@@ -9,8 +9,8 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     with_direction_provider(cx, LayoutDirection::Rtl, |cx| {
         let header = ui::v_stack(|cx| {
             vec![
-                shadcn::raw::typography::small("shadcn/ui").into_element(cx),
-                shadcn::raw::typography::muted("الأساس لنظام التصميم الخاص بك").into_element(cx),
+                shadcn::typography::small("shadcn/ui").into_element(cx),
+                shadcn::typography::muted("الأساس لنظام التصميم الخاص بك").into_element(cx),
             ]
         })
         .gap(Space::N1p5)
@@ -21,7 +21,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             .refine_layout(LayoutRefinement::default().w_full())
             .into_element(cx);
 
-        let description = shadcn::raw::typography::small(
+        let description = shadcn::typography::small(
             "مجموعة من المكونات المصممة بشكل جميل يمكنك تخصيصها وتوسيعها والبناء عليها.",
         )
         .into_element(cx);

@@ -13,7 +13,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             shadcn::AccordionTrigger::new(vec![decl_text::text_button_label(cx, "Disabled")]),
             shadcn::AccordionContent::new(ui::children![
                 cx;
-                shadcn::raw::typography::p("This item is disabled and should not be interactive.")
+                shadcn::typography::p("This item is disabled and should not be interactive.")
             ]),
         )
         .disabled(true)]

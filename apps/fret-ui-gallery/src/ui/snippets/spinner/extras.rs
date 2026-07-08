@@ -34,7 +34,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
 
     ui::v_flex(|cx| {
             vec![
-                shadcn::raw::typography::muted(
+                shadcn::typography::muted(
                     "Extras are Fret-specific demos and regression gates (not part of upstream shadcn SpinnerDemo).",
                 ).into_element(cx),
                 custom_icon_row,

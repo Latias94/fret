@@ -538,8 +538,8 @@ Direct crate usage rule for first-party recipe crates:
 - the full `fret_ui_shadcn` crate root is no longer a component-family or direction-utility
   discovery lane; remaining flat-root exposure is limited to doc-hidden compatibility/glue residue
   rather than peer first-contact API
-- first-party teaching surfaces may currently use only the documented raw lanes:
-  `shadcn::raw::typography::*`, `shadcn::raw::extras::*`,
+- first-party teaching surfaces may currently use only the documented explicit lanes:
+  `shadcn::typography::*`, `shadcn::raw::extras::*`,
   `shadcn::raw::breadcrumb::primitives`, `shadcn::raw::experimental::*` for the
   `DataGridElement` prototype, low-level `shadcn::raw::icon::*`, module-local advanced
   customization enums/styles such as `shadcn::raw::{button, calendar, context_menu,

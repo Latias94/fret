@@ -60,7 +60,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             .get_model_cloned(&selected_value, Invalidation::Paint)
             .unwrap_or_default()
             .unwrap_or_else(|| Arc::<str>::from("<none>"));
-        shadcn::raw::typography::muted(Arc::<str>::from(format!("Selected: {selected}")))
+        shadcn::typography::muted(Arc::<str>::from(format!("Selected: {selected}")))
             .into_element(cx)
             .test_id("ui-gallery-select-selected-label")
     });

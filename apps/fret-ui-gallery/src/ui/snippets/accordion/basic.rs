@@ -17,7 +17,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                 )]),
                 shadcn::AccordionContent::new(ui::children![
                     cx;
-                    shadcn::raw::typography::p("Yes. It adheres to the WAI-ARIA design pattern.")
+                    shadcn::typography::p("Yes. It adheres to the WAI-ARIA design pattern.")
                 ]),
             ),
             shadcn::AccordionItem::new(
@@ -28,7 +28,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                 )]),
                 shadcn::AccordionContent::new(ui::children![
                     cx;
-                    shadcn::raw::typography::p(
+                    shadcn::typography::p(
                         "Yes. It ships with shadcn-style trigger, chevron, spacing, and motion defaults.",
                     )
                 ]),

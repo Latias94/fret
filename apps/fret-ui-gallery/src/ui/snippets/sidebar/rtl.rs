@@ -102,14 +102,12 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         .into_element(cx);
 
         let sidebar = shadcn::Sidebar::new([
-            shadcn::SidebarHeader::new([
-                shadcn::raw::typography::small("مؤسسة مثال").into_element(cx)
-            ])
-            .into_element(cx),
+            shadcn::SidebarHeader::new([shadcn::typography::small("مؤسسة مثال").into_element(cx)])
+                .into_element(cx),
             shadcn::SidebarContent::new([platform])
                 .collapsed(false)
                 .into_element(cx),
-            shadcn::SidebarFooter::new([shadcn::raw::typography::small("الدعم").into_element(cx)])
+            shadcn::SidebarFooter::new([shadcn::typography::small("الدعم").into_element(cx)])
                 .into_element(cx),
         ])
         .collapsed(false)

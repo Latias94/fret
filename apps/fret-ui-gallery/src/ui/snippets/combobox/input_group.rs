@@ -22,7 +22,7 @@ fn state_row(
     });
     let label = text.clone();
     cx.container(props, move |cx| {
-        [shadcn::raw::typography::muted(text).into_element(cx)]
+        [shadcn::typography::muted(text).into_element(cx)]
     })
     .a11y_label(label)
     .test_id(test_id)

@@ -216,7 +216,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         let date_label = selected_now
             .map(format_date_month_dd_yyyy_en)
             .unwrap_or_else(|| String::from("—"));
-        shadcn::raw::typography::muted(Arc::from(format!(
+        shadcn::typography::muted(Arc::from(format!(
             "Your post will be published on {date_label}."
         )))
         .into_element(cx)

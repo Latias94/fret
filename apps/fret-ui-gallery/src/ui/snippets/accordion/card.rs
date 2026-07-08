@@ -17,7 +17,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                 )]),
                 shadcn::AccordionContent::new(ui::children![
                     cx;
-                    shadcn::raw::typography::p(
+                    shadcn::typography::p(
                         "We offer multiple tiers with increasing storage limits, API access, and priority support.",
                     )
                 ]),
@@ -30,7 +30,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                 )]),
                 shadcn::AccordionContent::new(ui::children![
                     cx;
-                    shadcn::raw::typography::p(
+                    shadcn::typography::p(
                         "Billing occurs automatically at the start of each billing cycle. You can update your payment method anytime.",
                     )
                 ]),

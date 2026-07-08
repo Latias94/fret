@@ -1677,7 +1677,7 @@ fn ai_confirmation_snippets_use_shared_content_text_roles() {
 
         for forbidden in [
             "cx.text(\"This tool wants to delete the file\")",
-            "shadcn::raw::typography::inline_code(\"/tmp/example.txt\").into_element(cx)",
+            "shadcn::typography::inline_code(\"/tmp/example.txt\").into_element(cx)",
             "cx.text(\". Do you approve this action?\")",
             "cx.text(\"You approved this tool execution\")",
             "cx.text(\"You rejected this tool execution\")",

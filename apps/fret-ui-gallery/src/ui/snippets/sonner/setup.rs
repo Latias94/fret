@@ -9,8 +9,8 @@ use fret_ui_shadcn::{facade as shadcn, prelude::*};
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let intro = ui::v_flex(|cx| {
         vec![
-            shadcn::raw::typography::muted("Mount a `Toaster` once per window.").into_element(cx),
-            shadcn::raw::typography::muted(
+            shadcn::typography::muted("Mount a `Toaster` once per window.").into_element(cx),
+            shadcn::typography::muted(
                 "This installs the toast overlay layer and drives default styling + icons.",
             )
             .into_element(cx),

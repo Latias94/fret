@@ -34,7 +34,7 @@ fn trending_footer(
             .gap(Space::N2)
             .items_center()
             .into_element(cx),
-            shadcn::raw::typography::muted(secondary).into_element(cx),
+            shadcn::typography::muted(secondary).into_element(cx),
         ]
     })
     .gap(Space::N2)

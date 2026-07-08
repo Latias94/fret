@@ -687,10 +687,9 @@ directly for pure state transitions.
   peer discovery lanes. For environment / `UiServices`-boundary hooks, stay explicit with
   `fret_ui_shadcn::advanced::{sync_theme_from_environment(...), install_with_ui_services(...)}`.
   `fret_ui_shadcn::advanced::*` is an implementation/debug lane, not a competing default import.
-  For first-party prose/demo helpers, `shadcn::raw::typography::*` remains an explicit escape
-  hatch. Only drop to `shadcn::raw::*` beyond these documented cases when you intentionally need
-  the full uncurated module surface; the flat crate root is now treated as a hidden compatibility
-  layer rather than a teaching lane.
+  For first-party prose/demo helpers, use the explicit `shadcn::typography::*` facade module.
+  Only drop to `shadcn::raw::*` when you intentionally need the full uncurated module surface; the
+  flat crate root is now treated as a hidden compatibility layer rather than a teaching lane.
 - Through `fret`: use `fret::shadcn::themes::apply_shadcn_new_york(...)` for explicit
   app-owned/fixed presets, use `fret::shadcn::app::install(...)` when you want the curated app
   integration plus environment-aware host-theme syncing, and only drop to `fret::shadcn::raw::*`
@@ -698,8 +697,8 @@ directly for pure state transitions.
   `fret::shadcn::{Button, Card, ...}` as the only first-contact component-family lane here too:
   `fret::shadcn::app::*` and `fret::shadcn::themes::*` are setup lanes, not peer discovery lanes.
   That same raw escape hatch also carries advanced service hooks at
-  `fret::shadcn::raw::advanced::*`; first-party prose/demo helpers may also use
-  `fret::shadcn::raw::typography::*`.
+  `fret::shadcn::raw::advanced::*`; first-party prose/demo helpers should use the explicit
+  `fret::shadcn::typography::*` facade module.
 
 **Tables vs grids (naming and intent):**
 

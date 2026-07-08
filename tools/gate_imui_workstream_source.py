@@ -3077,7 +3077,7 @@ def main() -> None:
             ],
             forbidden=[
                 "cx.text(\"This tool wants to delete the file\")",
-                "shadcn::raw::typography::inline_code(\"/tmp/example.txt\").into_element(cx)",
+                "shadcn::typography::inline_code(\"/tmp/example.txt\").into_element(cx)",
                 "cx.text(\". Do you approve this action?\")",
                 "cx.text(\"You approved this tool execution\")",
                 "cx.text(\"You rejected this tool execution\")",
@@ -3096,7 +3096,7 @@ def main() -> None:
             ],
             forbidden=[
                 "cx.text(\"This tool wants to delete the file\")",
-                "shadcn::raw::typography::inline_code(\"/tmp/example.txt\").into_element(cx)",
+                "shadcn::typography::inline_code(\"/tmp/example.txt\").into_element(cx)",
                 "cx.text(\". Do you approve this action?\")",
                 "cx.text(\"You approved this tool execution\")",
                 "cx.text(\"You rejected this tool execution\")",
@@ -3114,7 +3114,7 @@ def main() -> None:
             ],
             forbidden=[
                 "cx.text(\"This tool wants to delete the file\")",
-                "shadcn::raw::typography::inline_code(\"/tmp/example.txt\").into_element(cx)",
+                "shadcn::typography::inline_code(\"/tmp/example.txt\").into_element(cx)",
                 "cx.text(\". Do you approve this action?\")",
                 "cx.text(\"You approved this tool execution\")",
                 "cx.text(\"You rejected this tool execution\")",
@@ -20895,8 +20895,8 @@ def main() -> None:
                 "\"@peduarte starred 3 repositories\"",
             ],
             forbidden=[
-                "shadcn::raw::typography::small(name)",
-                "shadcn::raw::typography::small(\"@peduarte starred 3 repositories\")",
+                "shadcn::typography::small(name)",
+                "shadcn::typography::small(\"@peduarte starred 3 repositories\")",
             ],
         ),
         SourceCheck(
@@ -20907,7 +20907,7 @@ def main() -> None:
                 "decl_text::text_paragraph(",
             ],
             forbidden=[
-                "shadcn::raw::typography::muted(",
+                "shadcn::typography::muted(",
                 "cx.text(",
             ],
         ),
@@ -20945,11 +20945,11 @@ def main() -> None:
                 "decl_text::text_control_readout(cx, \"تم الشحن\")",
             ],
             forbidden=[
-                "shadcn::raw::typography::small(title)",
-                "shadcn::raw::typography::muted(detail)",
-                "shadcn::raw::typography::small(\"الطلب #4189\")",
-                "shadcn::raw::typography::muted(\"الحالة\")",
-                "shadcn::raw::typography::small(\"تم الشحن\")",
+                "shadcn::typography::small(title)",
+                "shadcn::typography::muted(detail)",
+                "shadcn::typography::small(\"الطلب #4189\")",
+                "shadcn::typography::muted(\"الحالة\")",
+                "shadcn::typography::small(\"تم الشحن\")",
             ],
         ),
         SourceCheck(
@@ -21336,7 +21336,7 @@ def main() -> None:
                 "decl_text::text_control_readout(cx, format!(\"Pressed: {pressed_now}\"))",
             ],
             forbidden=[
-                "shadcn::raw::typography::muted(format!(\"Pressed: {pressed_now}\"))",
+                "shadcn::typography::muted(format!(\"Pressed: {pressed_now}\"))",
             ],
         ),
         SourceCheck(
@@ -21556,7 +21556,7 @@ def main() -> None:
             forbidden=[
                 "fn page_number(label: &'static str)",
                 "ui::text(label).tabular_nums()",
-                "shadcn::raw::typography::muted(",
+                "shadcn::typography::muted(",
             ],
         ),
         SourceCheck(
@@ -21920,7 +21920,7 @@ def main() -> None:
                 "decl_text::text_control_readout(cx, format!(\"Photo by {artist}\"))",
             ],
             forbidden=[
-                "shadcn::raw::typography::muted(format!(\"Photo by {artist}\"))",
+                "shadcn::typography::muted(format!(\"Photo by {artist}\"))",
             ],
         ),
         SourceCheck(
@@ -21930,7 +21930,7 @@ def main() -> None:
                 "decl_text::text_control_readout(cx, format!(\"Item {i}\"))",
             ],
             forbidden=[
-                "shadcn::raw::typography::muted(format!(\"Item {i}\"))",
+                "shadcn::typography::muted(format!(\"Item {i}\"))",
             ],
         ),
         SourceCheck(

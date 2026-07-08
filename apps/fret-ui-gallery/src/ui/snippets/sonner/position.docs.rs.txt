@@ -74,7 +74,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     .layout(LayoutRefinement::default().w_full().min_w_0())
     .into_element(cx);
 
-    let current_label = shadcn::raw::typography::muted(format!(
+    let current_label = shadcn::typography::muted(format!(
         "Current toaster position: {}",
         toast_position_key(current)
     ))

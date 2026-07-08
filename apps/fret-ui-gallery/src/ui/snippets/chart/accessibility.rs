@@ -17,15 +17,15 @@ pub fn apply_chart_accessibility_defaults(
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     ui::v_flex(|cx| {
         vec![
-            shadcn::raw::typography::muted(
+            shadcn::typography::muted(
                 "Focus the chart canvas, then use arrow keys to move the active point.",
             )
             .into_element(cx),
-            shadcn::raw::typography::muted(
+            shadcn::typography::muted(
                 "Fret mirrors the high-level `accessibilityLayer` outcome through the declarative chart panel rather than DOM nodes.",
             )
             .into_element(cx),
-            shadcn::raw::typography::muted(
+            shadcn::typography::muted(
                 "A reusable helper keeps the accessibility layer and the default chart input map together.",
             )
             .into_element(cx),

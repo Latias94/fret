@@ -44,7 +44,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             .wrap()
             .items_start()
             .into_element(cx),
-            shadcn::raw::typography::muted(
+            shadcn::typography::muted(
                 "Map chart colors from theme tokens so light/dark palette changes stay stable across charts, legends, and tooltip recipes.",
             )
             .into_element(cx),

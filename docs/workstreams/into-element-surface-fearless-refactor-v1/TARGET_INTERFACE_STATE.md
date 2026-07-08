@@ -359,7 +359,7 @@ Current execution note on 2026-03-12:
   `fret_ui_kit::ui` / `imui` lands directly through `IntoUiElement<H>`.
 - direct-crate shadcn authoring now also gets the same landing ergonomics:
   `fret_ui_shadcn::prelude::*` re-exports `IntoUiElement`, so typed helpers such as
-  `shadcn::raw::typography::*` can land through `.into_element(cx)` without ad-hoc trait imports
+  `shadcn::typography::*` can land through `.into_element(cx)` without ad-hoc trait imports
   on first-party examples.
 - first-party ecosystem consumers and curated docs now also avoid the old name:
   `docs/first-hour.md` and the `fret-ui-ai` message/workflow builder smoke tests now spell

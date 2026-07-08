@@ -22,7 +22,7 @@ fn metric_card(
                 ]
             }),
             shadcn::card_content(move |cx| {
-                ui::children![cx; shadcn::raw::typography::muted(content)]
+                ui::children![cx; shadcn::typography::muted(content)]
             }),
         ]
     })

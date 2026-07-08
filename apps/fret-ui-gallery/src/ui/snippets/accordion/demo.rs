@@ -17,10 +17,10 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                 )]),
                 shadcn::AccordionContent::new(ui::children![
                     cx;
-                    shadcn::raw::typography::p(
+                    shadcn::typography::p(
                         "Our flagship product combines cutting-edge technology with sleek design. Built with premium materials, it offers unparalleled performance and reliability.",
                     ),
-                    shadcn::raw::typography::p(
+                    shadcn::typography::p(
                         "Key features include advanced processing capabilities, and an intuitive user interface designed for both beginners and experts.",
                     )
                 ])
@@ -35,10 +35,10 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                     .test_id("ui-gallery-accordion-demo-shipping-trigger"),
                 shadcn::AccordionContent::new(ui::children![
                     cx;
-                    shadcn::raw::typography::p(
+                    shadcn::typography::p(
                         "We offer worldwide shipping through trusted courier partners. Standard delivery takes 3-5 business days, while express shipping ensures delivery within 1-2 business days.",
                     ),
-                    shadcn::raw::typography::p(
+                    shadcn::typography::p(
                         "All orders are carefully packaged and fully insured. Track your shipment in real-time through our dedicated tracking portal.",
                     )
                 ])
@@ -55,10 +55,10 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                     .test_id("ui-gallery-accordion-demo-returns-trigger"),
                 shadcn::AccordionContent::new(ui::children![
                     cx;
-                    shadcn::raw::typography::p(
+                    shadcn::typography::p(
                         "We stand behind our products with a comprehensive 30-day return policy. If you're not completely satisfied, simply return the item in its original condition.",
                     ),
-                    shadcn::raw::typography::p(
+                    shadcn::typography::p(
                         "Our hassle-free return process includes free return shipping and full refunds processed within 48 hours of receiving the returned item.",
                     )
                 ])

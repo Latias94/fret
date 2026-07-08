@@ -26,7 +26,7 @@ fn panel<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     label: &'static str,
 ) -> impl IntoUiElement<H> + use<H> {
-    let body = ui::v_flex(move |cx| vec![shadcn::raw::typography::small(label).into_element(cx)])
+    let body = ui::v_flex(move |cx| vec![shadcn::typography::small(label).into_element(cx)])
         .layout(LayoutRefinement::default().w_full().h_full())
         .items_center()
         .justify_center()

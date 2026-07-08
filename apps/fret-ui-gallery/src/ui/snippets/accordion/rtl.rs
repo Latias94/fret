@@ -15,18 +15,18 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                     .test_id("ui-gallery-accordion-rtl-trigger"),
                 shadcn::AccordionContent::new(ui::children![
                     cx;
-                    shadcn::raw::typography::p("Ensure icons and spacing mirror correctly under RTL.")
+                    shadcn::typography::p("Ensure icons and spacing mirror correctly under RTL.")
                 ]),
             )]
         })
-            .collapsible(true)
-            .refine_layout(
-                LayoutRefinement::default()
-                    .w_full()
-                    .max_w(Px(640.0))
-                    .min_w_0(),
-            )
-            .into_element(cx)
+        .collapsible(true)
+        .refine_layout(
+            LayoutRefinement::default()
+                .w_full()
+                .max_w(Px(640.0))
+                .min_w_0(),
+        )
+        .into_element(cx)
     })
     .test_id("ui-gallery-accordion-rtl")
 }

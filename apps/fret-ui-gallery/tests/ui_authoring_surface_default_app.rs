@@ -1449,7 +1449,7 @@ fn direct_recipe_root_pages_mark_their_default_lane_without_inventing_compose() 
     let tooltip_page = read("src/ui/pages/tooltip.rs");
     assert!(
         tooltip_page.contains(
-            "No extra generic `children([...])` / `compose()` root API is currently warranted: tooltip root only needs trigger/content, and `Tooltip::new(...)` already models that contract without hidden collection or scope state."
+            "No extra generic `children([...])` / `compose()` / `asChild` root API is currently warranted: tooltip root only needs trigger/content, and `Tooltip::new(...)` already models that contract without hidden collection or scope state."
         ),
         "src/ui/pages/tooltip.rs should record why Tooltip stays on the direct recipe root lane"
     );
@@ -3900,7 +3900,7 @@ fn checkbox_radio_input_and_textarea_docs_keep_required_ownership_on_the_control
                 "shadcn::Input::new(value)",
                 ".control_id(required_id)",
                 ".required(true)",
-                "shadcn::raw::typography::muted(\"*\")",
+                "shadcn::typography::muted(\"*\")",
             ],
         ),
         (
@@ -3916,7 +3916,7 @@ fn checkbox_radio_input_and_textarea_docs_keep_required_ownership_on_the_control
                 "shadcn::Textarea::new(value)",
                 ".control_id(required_id)",
                 ".required(true)",
-                "shadcn::raw::typography::muted(\"*\")",
+                "shadcn::typography::muted(\"*\")",
             ],
         ),
         (
@@ -4511,8 +4511,8 @@ fn collapsible_snippet_text_uses_shared_roles() {
             "\"@peduarte starred 3 repositories\"",
         ],
         &[
-            "shadcn::raw::typography::small(name)",
-            "shadcn::raw::typography::small(\"@peduarte starred 3 repositories\")",
+            "shadcn::typography::small(name)",
+            "shadcn::typography::small(\"@peduarte starred 3 repositories\")",
         ],
     );
     assert_selected_generic_helpers_prefer_into_ui_element(
@@ -4522,7 +4522,7 @@ fn collapsible_snippet_text_uses_shared_roles() {
             "decl_text::text_control_readout(cx,",
             "decl_text::text_paragraph(",
         ],
-        &["shadcn::raw::typography::muted(", "cx.text("],
+        &["shadcn::typography::muted(", "cx.text("],
     );
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/collapsible/file_tree.rs",
@@ -4556,11 +4556,11 @@ fn collapsible_snippet_text_uses_shared_roles() {
             "decl_text::text_control_readout(cx, \"تم الشحن\")",
         ],
         &[
-            "shadcn::raw::typography::small(title)",
-            "shadcn::raw::typography::muted(detail)",
-            "shadcn::raw::typography::small(\"الطلب #4189\")",
-            "shadcn::raw::typography::muted(\"الحالة\")",
-            "shadcn::raw::typography::small(\"تم الشحن\")",
+            "shadcn::typography::small(title)",
+            "shadcn::typography::muted(detail)",
+            "shadcn::typography::small(\"الطلب #4189\")",
+            "shadcn::typography::muted(\"الحالة\")",
+            "shadcn::typography::small(\"تم الشحن\")",
         ],
     );
 }
@@ -5303,7 +5303,6 @@ fn command_snippet_chrome_text_uses_shared_roles() {
             "src/ui/snippets/command/action_first_view.rs",
             &[
                 "declarative::text as decl_text",
-                "IntoUiElementInExt as _",
                 "decl_text::text_control_readout(cx, format!(\"Count: {count_value}\"))",
                 "decl_text::text_control_readout(cx, format!(\"Last action: {last_action_value}\"))",
                 "decl_text::text_paragraph(cx, \"This demo is desktop-only in v1.\")",
@@ -7018,7 +7017,7 @@ fn tabs_rtl_snippet_keeps_a_fuller_upstream_card_shape() {
         "\"Settings\"",
         "shadcn::card_title(title)",
         "shadcn::card_description(description)",
-        "shadcn::raw::typography::muted(content)",
+        "shadcn::typography::muted(content)",
     ] {
         assert!(
             tabs_rtl.contains(marker),
@@ -9046,7 +9045,7 @@ fn selected_pagination_page_number_helpers_use_shared_button_label_role() {
             "decl_text::text_paragraph(cx, \"Extras are Fret-specific recipes and regression gates (not part of upstream shadcn PaginationDemo).\")",
         ],
         &[
-            "shadcn::raw::typography::muted(\"Extras are Fret-specific recipes and regression gates (not part of upstream shadcn PaginationDemo).\")",
+            "shadcn::typography::muted(\"Extras are Fret-specific recipes and regression gates (not part of upstream shadcn PaginationDemo).\")",
         ],
     );
 }
@@ -10754,7 +10753,7 @@ fn toggle_snippet_item_text_uses_button_label_role() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/toggle/label.rs",
         &["decl_text::text_control_readout(cx, format!(\"Pressed: {pressed_now}\"))"],
-        &["shadcn::raw::typography::muted(format!(\"Pressed: {pressed_now}\"))"],
+        &["shadcn::typography::muted(format!(\"Pressed: {pressed_now}\"))"],
     );
 }
 
@@ -11444,21 +11443,21 @@ fn typography_snippets_prefer_ui_cx_on_the_default_app_surface() {
     assert_normalized_markers_present(
         "src/ui/snippets/typography/demo.rs",
         &[
-            "shadcn::raw::typography::p_rich([",
-            "shadcn::raw::typography::inline_link(\"a brilliant plan\", \"#\")",
+            "shadcn::typography::p_rich([",
+            "shadcn::typography::inline_link(\"a brilliant plan\", \"#\")",
         ],
     );
     assert_normalized_markers_present(
         "src/ui/snippets/typography/rtl.rs",
         &[
-            "shadcn::raw::typography::p_rich([",
-            "shadcn::raw::typography::inline_link(\"خطة عبقرية\", \"#\")",
+            "shadcn::typography::p_rich([",
+            "shadcn::typography::inline_link(\"خطة عبقرية\", \"#\")",
         ],
     );
     assert_normalized_markers_present(
         "src/ui/snippets/typography/interactive_links.rs",
         &[
-            "shadcn::raw::typography::p_rich([",
+            "shadcn::typography::p_rich([",
             ".on_activate_link(Arc::new({",
             "activation.tag.clone()",
         ],

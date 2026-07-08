@@ -24,7 +24,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             shadcn::Label::new("Temperature")
                 .for_control(control_id.clone())
                 .into_element(cx),
-            shadcn::raw::typography::muted(values_text).into_element(cx),
+            shadcn::typography::muted(values_text).into_element(cx),
         ]
     })
     .layout(LayoutRefinement::default().w_full())

@@ -49,7 +49,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     );
     if !selected.is_empty() {
         children.push(
-            shadcn::raw::typography::muted(format!("Selected file: {selected}"))
+            shadcn::typography::muted(format!("Selected file: {selected}"))
                 .into_element(cx)
                 .test_id("ui-gallery-input-file-selected"),
         );

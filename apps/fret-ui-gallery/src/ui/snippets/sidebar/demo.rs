@@ -65,13 +65,13 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                     .size(shadcn::ButtonSize::Sm)
                     .test_id("ui-gallery-sidebar-demo-focus")
                     .into_element(cx),
-                shadcn::raw::typography::muted(if collapsed {
+                shadcn::typography::muted(if collapsed {
                     "Collapsed to icon rail"
                 } else {
                     "Expanded"
                 })
                 .into_element(cx),
-                shadcn::raw::typography::muted(format!("active={}", selected_value.as_ref()))
+                shadcn::typography::muted(format!("active={}", selected_value.as_ref()))
                     .into_element(cx),
             ]
         })
@@ -187,12 +187,10 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         .into_element(cx);
 
         let sidebar = shadcn::Sidebar::new([
-            shadcn::SidebarHeader::new([
-                shadcn::raw::typography::small("Acme Inc.").into_element(cx)
-            ])
-            .into_element(cx),
+            shadcn::SidebarHeader::new([shadcn::typography::small("Acme Inc.").into_element(cx)])
+                .into_element(cx),
             shadcn::SidebarContent::new([platform, projects]).into_element(cx),
-            shadcn::SidebarFooter::new([shadcn::raw::typography::small("shadcn").into_element(cx)])
+            shadcn::SidebarFooter::new([shadcn::typography::small("shadcn").into_element(cx)])
                 .into_element(cx),
         ])
         .collapsible(shadcn::SidebarCollapsible::Icon)

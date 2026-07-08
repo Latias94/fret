@@ -82,11 +82,11 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                             }))
                             .test_id("ui-gallery-sidebar-mobile-external-toggle")
                             .into_element(cx),
-                        shadcn::raw::typography::muted(
+                        shadcn::typography::muted(
                             "Forced mobile mode via SidebarProvider.device_shell_mode(DeviceShellMode::Mobile).",
                         ).into_element(cx),
-                        shadcn::raw::typography::muted( format!("open_mobile={open_mobile_now}")).into_element(cx),
-                        shadcn::raw::typography::muted( format!("selected={}", selected_value.as_ref())).into_element(cx),
+                        shadcn::typography::muted( format!("open_mobile={open_mobile_now}")).into_element(cx),
+                        shadcn::typography::muted( format!("selected={}", selected_value.as_ref())).into_element(cx),
                     ]
                 })
                     .gap(Space::N2)

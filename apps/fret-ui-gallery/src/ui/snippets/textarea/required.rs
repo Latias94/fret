@@ -15,7 +15,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             shadcn::FieldLabel::new("Required Message")
                 .for_control(required_id)
                 .into_element(cx),
-            shadcn::raw::typography::muted("*")
+            shadcn::typography::muted("*")
                 .into_element(cx)
                 .attach_semantics(SemanticsDecoration::default().label("required-star")),
         ]

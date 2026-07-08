@@ -414,7 +414,7 @@ fn nav_main(
                     .active(section_is_active)
                     .children([
                         sidebar_icon(cx, section.icon),
-                        shadcn::raw::typography::small(section.title).into_element(cx),
+                        shadcn::typography::small(section.title).into_element(cx),
                         sidebar_icon(cx, "lucide.chevron-right"),
                     ])
                     .test_id(format!(
@@ -492,7 +492,7 @@ fn project_groups(
             .active(selected_value.as_ref() == project.key)
             .children([
                 sidebar_icon(cx, project.icon),
-                shadcn::raw::typography::small(project.name).into_element(cx),
+                shadcn::typography::small(project.name).into_element(cx),
             ])
             .on_activate(set_selected_model(
                 selected.clone(),

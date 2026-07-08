@@ -42,7 +42,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                                 .into_element(cx),
                             ui_ai::EnvironmentVariableCopyButton::new()
                                 .copy_format(ui_ai::EnvironmentVariableCopyFormat::Export)
-                                .children([shadcn::raw::typography::muted("E").into_element(cx)])
+                                .children([shadcn::typography::muted("E").into_element(cx)])
                                 .into_element(cx),
                         ])
                         .into_element(cx),

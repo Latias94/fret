@@ -126,7 +126,7 @@ fn cached_combobox_source<H: UiHost>(
                     shadcn::Badge::new("Cached source")
                         .variant(shadcn::BadgeVariant::Secondary)
                         .into_element(cx),
-                    shadcn::raw::typography::muted(
+                    shadcn::typography::muted(
                         "The source element keeps one callsite identity while the parent panel changes.",
                     )
                     .into_element(cx),
@@ -206,16 +206,14 @@ fn source_panel<H: UiHost>(
 fn parking_panel<H: UiHost>(cx: &mut ElementContext<'_, H>, side: &'static str) -> AnyElement {
     let body = ui::v_flex(move |cx| {
         vec![
-            shadcn::raw::typography::small(if side == "left" {
+            shadcn::typography::small(if side == "left" {
                 "Left viewport root"
             } else {
                 "Right viewport root"
             })
             .into_element(cx),
-            shadcn::raw::typography::muted(
-                "The cached Combobox source is parked in the other panel.",
-            )
-            .into_element(cx),
+            shadcn::typography::muted("The cached Combobox source is parked in the other panel.")
+                .into_element(cx),
         ]
     })
     .gap(Space::N1)

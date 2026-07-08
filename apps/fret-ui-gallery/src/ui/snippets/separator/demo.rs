@@ -10,8 +10,8 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         vec![
             ui::v_stack(|cx| {
                 vec![
-                    shadcn::raw::typography::small("shadcn/ui").into_element(cx),
-                    shadcn::raw::typography::muted("The Foundation for your Design System")
+                    shadcn::typography::small("shadcn/ui").into_element(cx),
+                    shadcn::typography::muted("The Foundation for your Design System")
                         .into_element(cx),
                 ]
             })
@@ -19,7 +19,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             .items_start()
             .into_element(cx),
             shadcn::Separator::new().into_element(cx),
-            shadcn::raw::typography::small(
+            shadcn::typography::small(
                 "A set of beautifully designed components that you can customize, extend, and build on.",
             )
             .into_element(cx),

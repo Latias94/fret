@@ -18,7 +18,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                 .test_id("ui-gallery-accordion-multiple-trigger-notifications"),
                 shadcn::AccordionContent::new(ui::children![
                     cx;
-                    shadcn::raw::typography::p("Configure email, push, and in-app notifications.")
+                    shadcn::typography::p("Configure email, push, and in-app notifications.")
                 ])
                 .test_id("ui-gallery-accordion-multiple-content-notifications"),
             ),
@@ -28,7 +28,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                     .test_id("ui-gallery-accordion-multiple-trigger-security"),
                 shadcn::AccordionContent::new(ui::children![
                     cx;
-                    shadcn::raw::typography::p("Manage passwords, 2FA, and active sessions.")
+                    shadcn::typography::p("Manage passwords, 2FA, and active sessions.")
                 ]),
             ),
         ]

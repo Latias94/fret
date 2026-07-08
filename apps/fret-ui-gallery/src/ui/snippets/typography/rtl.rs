@@ -19,29 +19,29 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         ui::v_flex(|cx| {
             vec![
                 story_block(
-                    shadcn::raw::typography::h1("فرض الضرائب على الضحك: سجلات ضريبة النكتة"),
+                    shadcn::typography::h1("فرض الضرائب على الضحك: سجلات ضريبة النكتة"),
                     None,
                 )
                 .into_element(cx),
                 story_block(
-                    shadcn::raw::typography::lead(
+                    shadcn::typography::lead(
                         "في قديم الزمان، في أرض بعيدة، كان هناك ملك كسول جداً يقضي يومه كله مستلقياً على عرشه. في أحد الأيام، جاءه مستشاروه بمشكلة: المملكة كانت تنفد من المال.",
                     ),
                     Some(Px(24.0)),
                 )
                 .into_element(cx),
                 story_block(
-                    shadcn::raw::typography::h2("خطة الملك"),
+                    shadcn::typography::h2("خطة الملك"),
                     Some(Px(40.0)),
                 )
                 .into_element(cx),
             story_block(
-                shadcn::raw::typography::p_rich([
-                    shadcn::raw::typography::inline_text(
+                shadcn::typography::p_rich([
+                    shadcn::typography::inline_text(
                         "فكر الملك طويلاً وبجد، وأخيراً توصل إلى ",
                     ),
-                    shadcn::raw::typography::inline_link("خطة عبقرية", "#"),
-                    shadcn::raw::typography::inline_text(
+                    shadcn::typography::inline_link("خطة عبقرية", "#"),
+                    shadcn::typography::inline_text(
                         ": سيفرض ضريبة على النكات في المملكة.",
                     ),
                 ]),
@@ -49,26 +49,26 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             )
             .into_element(cx),
                 story_block(
-                    shadcn::raw::typography::blockquote(
+                    shadcn::typography::blockquote(
                         "\"في النهاية،\" قال، \"الجميع يستمتع بنكتة جيدة، لذا من العدل أن يدفعوا مقابل هذا الامتياز.\"",
                     ),
                     Some(Px(24.0)),
                 )
                 .into_element(cx),
                 story_block(
-                    shadcn::raw::typography::h3("ضريبة النكتة"),
+                    shadcn::typography::h3("ضريبة النكتة"),
                     Some(Px(32.0)),
                 )
                 .into_element(cx),
                 story_block(
-                    shadcn::raw::typography::p(
+                    shadcn::typography::p(
                         "لم يكن رعايا الملك سعداء. تذمروا واشتكوا، لكن الملك كان حازماً:",
                     ),
                     Some(Px(24.0)),
                 )
                 .into_element(cx),
                 story_block(
-                    shadcn::raw::typography::list([
+                    shadcn::typography::list([
                         "المستوى الأول من التورية: 5 قطع ذهبية",
                         "المستوى الثاني من النكات: 10 قطع ذهبية",
                         "المستوى الثالث من النكات القصيرة: 20 قطعة ذهبية",
@@ -77,38 +77,38 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                 )
                 .into_element(cx),
                 story_block(
-                    shadcn::raw::typography::p(
+                    shadcn::typography::p(
                         "نتيجة لذلك، توقف الناس عن رواية النكات، وغرقت المملكة في الكآبة. لكن كان هناك شخص واحد رفض أن تحبطه حماقة الملك: مهرج البلاط المسمى المازح.",
                     ),
                     Some(Px(24.0)),
                 )
                 .into_element(cx),
                 story_block(
-                    shadcn::raw::typography::h3("ثورة المازح"),
+                    shadcn::typography::h3("ثورة المازح"),
                     Some(Px(32.0)),
                 )
                 .into_element(cx),
                 story_block(
-                    shadcn::raw::typography::p(
+                    shadcn::typography::p(
                         "بدأ المازح يتسلل إلى القلعة في منتصف الليل ويترك النكات في كل مكان: تحت وسادة الملك، في حسائه، حتى في المرحاض الملكي. كان الملك غاضباً، لكنه لم يستطع إيقاف المازح.",
                     ),
                     Some(Px(24.0)),
                 )
                 .into_element(cx),
                 story_block(
-                    shadcn::raw::typography::p(
+                    shadcn::typography::p(
                         "وبعد ذلك، في يوم من الأيام، اكتشف سكان المملكة أن النكات التي تركها المازح كانت مضحكة جداً لدرجة أنهم لم يستطيعوا منع أنفسهم من الضحك. وبمجرد أن بدأوا بالضحك، لم يستطيعوا التوقف.",
                     ),
                     Some(Px(24.0)),
                 )
                 .into_element(cx),
                 story_block(
-                    shadcn::raw::typography::h3("ثورة الشعب"),
+                    shadcn::typography::h3("ثورة الشعب"),
                     Some(Px(32.0)),
                 )
                 .into_element(cx),
                 story_block(
-                    shadcn::raw::typography::p(
+                    shadcn::typography::p(
                         "شعر سكان المملكة بالبهجة من الضحك، وبدأوا في رواية النكات والتورية مرة أخرى، وسرعان ما أصبحت المملكة بأكملها جزءاً من النكتة.",
                     ),
                     Some(Px(24.0)),
@@ -166,14 +166,14 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                 )
                 .into_element(cx),
                 story_block(
-                    shadcn::raw::typography::p(
+                    shadcn::typography::p(
                         "الملك، عندما رأى مدى سعادة رعاياه، أدرك خطأ طرقه وألغى ضريبة النكتة. أُعلن المازح بطلاً، وعاشت المملكة في سعادة دائمة.",
                     ),
                     Some(Px(24.0)),
                 )
                 .into_element(cx),
                 story_block(
-                    shadcn::raw::typography::p(
+                    shadcn::typography::p(
                         "مغزى القصة هو: لا تستهن أبداً بقوة الضحك الجيد وكن دائماً حذراً من الأفكار السيئة.",
                     ),
                     Some(Px(24.0)),

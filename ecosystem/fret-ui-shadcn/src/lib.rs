@@ -36,10 +36,11 @@
 //! `pagination_link(...)` wrappers, along with `radio_group(...)` /
 //! `radio_group_uncontrolled(...)` returning a typed `RadioGroup` so fluent configuration stays
 //! open until the explicit landing seam).
-//! Remaining raw escape hatches are intentionally rare and explicitly documented where the
-//! underlying storage still owns a concrete landed child (for example `kbd_icon(...)`), while
-//! overlay/controller helpers keep their final landing seams explicit only where wrapper assembly
-//! truly requires it (for example `text_edit_context_menu(...)`).
+//! Explicit helper namespaces such as `facade::typography` cover Fret-owned surfaces that are not
+//! part of the upstream shadcn/ui component taxonomy, while remaining raw escape hatches are rare
+//! and documented where the underlying storage still owns a concrete landed child (for example
+//! `kbd_icon(...)`). Overlay/controller helpers keep their final landing seams explicit only where
+//! wrapper assembly truly requires it (for example `text_edit_context_menu(...)`).
 //!
 //! ## Feature flags
 //!
@@ -612,6 +613,14 @@ pub mod facade {
             RelativeTime, RelativeTimeClockZone, RelativeTimeTick, RelativeTimeZone,
             RelativeTimeZoneDate, RelativeTimeZoneDisplay, RelativeTimeZoneLabel, Tag, Tags,
             Ticker, TickerChangeKind,
+        };
+    }
+
+    /// Explicit prose helpers that mirror the shadcn/ui typography docs recipe.
+    pub mod typography {
+        pub use crate::typography::{
+            TypographyInlineSegment, TypographyRichParagraph, blockquote, h1, h2, h3, h4,
+            inline_code, inline_link, inline_text, large, lead, list, muted, p, p_rich, small,
         };
     }
 

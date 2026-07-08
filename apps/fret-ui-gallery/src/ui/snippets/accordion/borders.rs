@@ -15,7 +15,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             shadcn::AccordionTrigger::new(vec![decl_text::text_button_label(cx, "Borders")]),
             shadcn::AccordionContent::new(ui::children![
                 cx;
-                shadcn::raw::typography::p(
+                shadcn::typography::p(
                     "Use an outer chrome wrapper when you want a bordered surface.",
                 )
             ]),

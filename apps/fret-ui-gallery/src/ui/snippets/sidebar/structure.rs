@@ -79,8 +79,8 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                     .on_activate(set_text_model(selected.clone(), "reports"))
                     .children([
                         sidebar_icon(cx, "lucide.file-chart-column"),
-                        shadcn::raw::typography::small("Reports").into_element(cx),
-                        shadcn::raw::typography::muted("Beta").into_element(cx),
+                        shadcn::typography::small("Reports").into_element(cx),
+                        shadcn::typography::muted("Beta").into_element(cx),
                     ])
                     .into_element(cx),
             )
@@ -158,7 +158,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                 .into_element(cx, |cx| {
                     let label_row = ui::h_flex(|cx| {
                         vec![
-                            shadcn::raw::typography::small("Help").into_element(cx),
+                            shadcn::typography::small("Help").into_element(cx),
                             sidebar_icon(cx, "lucide.chevron-down"),
                         ]
                     })

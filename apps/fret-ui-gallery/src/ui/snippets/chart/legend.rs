@@ -14,8 +14,8 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         |cx: &mut AppComponentCx<'_>, title: &'static str, description: &'static str| {
             ui::v_flex(|cx| {
                 vec![
-                    shadcn::raw::typography::small(title).into_element(cx),
-                    shadcn::raw::typography::muted(description).into_element(cx),
+                    shadcn::typography::small(title).into_element(cx),
+                    shadcn::typography::muted(description).into_element(cx),
                 ]
             })
             .gap(Space::N1)
@@ -89,7 +89,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                     ])
                     .into_element(cx)
                     .test_id("ui-gallery-chart-legend-custom-keys"),
-                shadcn::raw::typography::muted(
+                shadcn::typography::muted(
                     "`name_key` remaps legend labels from item metadata into `ChartConfig` entries.",
                 )
                 .into_element(cx),

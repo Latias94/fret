@@ -17,7 +17,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                 .test_id("ui-gallery-accordion-focusable-disabled-trigger"),
             shadcn::AccordionContent::new(ui::children![
                 cx;
-                shadcn::raw::typography::p(
+                shadcn::typography::p(
                     "The open trigger is aria-disabled for assistive tech, but it should still keep its focus route while suppressing activation."
                 )
             ])

@@ -40,8 +40,8 @@ where
 fn overview_panel<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let body = ui::v_flex(|cx| {
         vec![
-            shadcn::raw::typography::small("Primary viewport").into_element(cx),
-            shadcn::raw::typography::muted("Panel A").into_element(cx),
+            shadcn::typography::small("Primary viewport").into_element(cx),
+            shadcn::typography::muted("Panel A").into_element(cx),
         ]
     })
     .gap(Space::N1)

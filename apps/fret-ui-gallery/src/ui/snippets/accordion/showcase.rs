@@ -33,7 +33,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                     .test_id("ui-gallery-accordion-showcase-multiple-trigger-notifications"),
                 shadcn::AccordionContent::new(ui::children![
                     cx;
-                    shadcn::raw::typography::p("Configure email, push, and in-app notifications.")
+                    shadcn::typography::p("Configure email, push, and in-app notifications.")
                 ])
                 .test_id("ui-gallery-accordion-showcase-multiple-content-notifications"),
             ),
@@ -43,7 +43,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                     .test_id("ui-gallery-accordion-showcase-multiple-trigger-security"),
                 shadcn::AccordionContent::new(ui::children![
                     cx;
-                    shadcn::raw::typography::p("Manage passwords, 2FA, and active sessions.")
+                    shadcn::typography::p("Manage passwords, 2FA, and active sessions.")
                 ]),
             ),
         ]
@@ -59,7 +59,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                 .disabled(true),
             shadcn::AccordionContent::new(ui::children![
                 cx;
-                shadcn::raw::typography::p("This item is disabled and should not be interactive.")
+                shadcn::typography::p("This item is disabled and should not be interactive.")
             ]),
         )]
     })
@@ -74,7 +74,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                 shadcn::AccordionTrigger::new(vec![decl_text::text_button_label(cx, "Borders")]),
                 shadcn::AccordionContent::new(ui::children![
                     cx;
-                    shadcn::raw::typography::p(
+                    shadcn::typography::p(
                         "Use an outer chrome wrapper when you want a bordered surface.",
                     )
                 ]),
@@ -109,7 +109,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                     )]),
                     shadcn::AccordionContent::new(ui::children![
                         cx;
-                        shadcn::raw::typography::p(
+                        shadcn::typography::p(
                             "We offer multiple tiers with increasing storage limits, API access, and priority support.",
                         )
                     ]),
@@ -122,7 +122,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                     )]),
                     shadcn::AccordionContent::new(ui::children![
                         cx;
-                        shadcn::raw::typography::p(
+                        shadcn::typography::p(
                             "Billing occurs automatically at the start of each billing cycle. You can update your payment method anytime.",
                         )
                     ]),
@@ -160,7 +160,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                     .test_id("ui-gallery-accordion-showcase-rtl-trigger"),
                 shadcn::AccordionContent::new(ui::children![
                     cx;
-                    shadcn::raw::typography::p(
+                    shadcn::typography::p(
                         "Ensure icons and spacing mirror correctly under RTL.",
                     )
                 ]),
@@ -173,7 +173,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
 
     let multiple_section = ui::v_flex(move |cx| {
         vec![
-            shadcn::raw::typography::h4("Multiple").into_element(cx),
+            shadcn::typography::h4("Multiple").into_element(cx),
             multiple,
         ]
     })
@@ -184,7 +184,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
 
     let disabled_section = ui::v_flex(move |cx| {
         vec![
-            shadcn::raw::typography::h4("Disabled").into_element(cx),
+            shadcn::typography::h4("Disabled").into_element(cx),
             disabled,
         ]
     })
@@ -195,7 +195,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
 
     let borders_section = ui::v_flex(move |cx| {
         vec![
-            shadcn::raw::typography::h4("Borders").into_element(cx),
+            shadcn::typography::h4("Borders").into_element(cx),
             borders,
         ]
     })
@@ -205,14 +205,14 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     .into_element(cx);
 
     let card_section =
-        ui::v_flex(move |cx| vec![shadcn::raw::typography::h4("Card").into_element(cx), card])
+        ui::v_flex(move |cx| vec![shadcn::typography::h4("Card").into_element(cx), card])
             .gap(Space::N3)
             .items_start()
             .layout(LayoutRefinement::default().w_full().min_w_0())
             .into_element(cx);
 
     let rtl_section =
-        ui::v_flex(move |cx| vec![shadcn::raw::typography::h4("RTL").into_element(cx), rtl])
+        ui::v_flex(move |cx| vec![shadcn::typography::h4("RTL").into_element(cx), rtl])
             .gap(Space::N3)
             .items_start()
             .layout(LayoutRefinement::default().w_full().min_w_0())

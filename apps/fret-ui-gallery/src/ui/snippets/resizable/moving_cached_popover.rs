@@ -86,7 +86,7 @@ fn cached_popover_source<H: UiHost>(
                     shadcn::Badge::new("Cached popover source")
                         .variant(shadcn::BadgeVariant::Secondary)
                         .into_element(cx),
-                    shadcn::raw::typography::muted(
+                    shadcn::typography::muted(
                         "Open in one root, close, move, then reopen before outside press.",
                     )
                     .into_element(cx),
@@ -198,13 +198,13 @@ fn parking_panel<H: UiHost>(
 
     let body = ui::v_flex(move |cx| {
         vec![
-            shadcn::raw::typography::small(if side == "left" {
+            shadcn::typography::small(if side == "left" {
                 "Left viewport root"
             } else {
                 "Right viewport root"
             })
             .into_element(cx),
-            shadcn::raw::typography::muted(
+            shadcn::typography::muted(
                 "This underlay button must still receive click-through outside press.",
             )
             .into_element(cx),

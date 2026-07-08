@@ -162,8 +162,8 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         |cx: &mut AppComponentCx<'_>, title: &'static str, description: &'static str| {
             ui::v_flex(|cx| {
                 vec![
-                    shadcn::raw::typography::small(title).into_element(cx),
-                    shadcn::raw::typography::muted(description).into_element(cx),
+                    shadcn::typography::small(title).into_element(cx),
+                    shadcn::typography::muted(description).into_element(cx),
                 ]
             })
             .gap(Space::N1)
@@ -222,7 +222,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                     "Attach `ChartTooltip` and share `ChartCanvasOutput` through `ChartContainer::output_model(...)` so the active payload auto-derives tooltip label, items, colors, and icons.",
                 ),
                 tooltip,
-                shadcn::raw::typography::muted(
+                shadcn::typography::muted(
                     "This assembled example is the Fret-native end state of shadcn's `Your First Chart`, `Add Tooltip`, and `Add Legend` steps.",
                 )
                 .into_element(cx),

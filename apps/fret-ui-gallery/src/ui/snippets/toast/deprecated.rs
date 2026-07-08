@@ -33,7 +33,7 @@ pub fn render(_cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             shadcn::card_content(|cx| {
                 ui::children![
                     cx;
-                    shadcn::raw::typography::muted(
+                    shadcn::typography::muted(
                         "This page intentionally keeps only the deprecation guidance to match upstream docs.",
                     ),
                 ]

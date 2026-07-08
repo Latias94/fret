@@ -127,7 +127,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     .layout(LayoutRefinement::default().w_full().min_w_0())
     .into_element(cx);
 
-    let status = shadcn::raw::typography::muted(if pending {
+    let status = shadcn::typography::muted(if pending {
         "Promise toast pending: click Promise again to resolve."
     } else {
         "Promise toast idle: click Promise to start loading state."

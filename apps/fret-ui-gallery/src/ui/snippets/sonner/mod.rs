@@ -113,7 +113,7 @@ pub(crate) fn preview_stack<H: UiHost>(
 
 pub(crate) fn preview_note(cx: &mut AppComponentCx<'_>, text: impl Into<Arc<str>>) -> AnyElement {
     let text = text.into();
-    ui::h_flex(move |cx| [shadcn::raw::typography::muted(text.clone()).into_element(cx)])
+    ui::h_flex(move |cx| [shadcn::typography::muted(text.clone()).into_element(cx)])
         .items_center()
         .justify_center()
         .layout(LayoutRefinement::default().w_full().min_w_0())

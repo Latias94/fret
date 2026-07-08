@@ -8,15 +8,15 @@ use fret_ui_shadcn::{facade as shadcn, prelude::*};
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     ui::h_flex(|cx| {
         vec![
-            shadcn::raw::typography::small("Blog").into_element(cx),
+            shadcn::typography::small("Blog").into_element(cx),
             shadcn::Separator::new()
                 .orientation(shadcn::SeparatorOrientation::Vertical)
                 .into_element(cx),
-            shadcn::raw::typography::small("Docs").into_element(cx),
+            shadcn::typography::small("Docs").into_element(cx),
             shadcn::Separator::new()
                 .orientation(shadcn::SeparatorOrientation::Vertical)
                 .into_element(cx),
-            shadcn::raw::typography::small("Source").into_element(cx),
+            shadcn::typography::small("Source").into_element(cx),
         ]
     })
     .gap(Space::N4)

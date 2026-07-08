@@ -890,7 +890,7 @@ Implementation note on 2026-03-13:
   `h1` / `h2` / `h3` / `h4` / `p` / `lead` / `large` / `small` / `muted` /
   `inline_code` / `blockquote` / `list` now expose
   `(text_or_items) -> impl IntoUiElement<H> + use<...>` rather than
-  `(cx, ...) -> AnyElement`, while intentionally keeping the `shadcn::raw::typography::*`
+  `(cx, ...) -> AnyElement`, while intentionally keeping the `shadcn::typography::*`
   namespace stable because typography is still a docs/helper surface rather than a promoted
   registry component contract.
 - the typography sweep is now migrated across first-party call sites:
@@ -1123,7 +1123,7 @@ Implementation note on 2026-03-13:
   drift back to `AnyElement`-typed authoring helpers.
 - `fret-ui-shadcn::prelude::*` now re-exports `IntoUiElement`, so direct-crate first-party
   shadcn examples do not need ad-hoc trait imports just to land typed helpers such as
-  `shadcn::raw::typography::*`.
+  `shadcn::typography::*`.
 - Verification update on 2026-03-13:
   the remaining thin helper family (`checkbox`, `progress`, `switch`) now also stays on typed
   `IntoUiElement<H>` outputs all the way through the current first-party teaching lane, with

@@ -14,8 +14,8 @@ fn row<H: UiHost>(
     let _ = cx;
     ui::h_flex(move |cx| {
         vec![
-            shadcn::raw::typography::small(label).into_element(cx),
-            shadcn::raw::typography::muted(value).into_element(cx),
+            shadcn::typography::small(label).into_element(cx),
+            shadcn::typography::muted(value).into_element(cx),
         ]
     })
     .justify_between()

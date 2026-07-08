@@ -14,8 +14,8 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         |cx: &mut AppComponentCx<'_>, title: &'static str, description: &'static str| {
             ui::v_flex(|cx| {
                 vec![
-                    shadcn::raw::typography::small(title).into_element(cx),
-                    shadcn::raw::typography::muted(description).into_element(cx),
+                    shadcn::typography::small(title).into_element(cx),
+                    shadcn::typography::muted(description).into_element(cx),
                 ]
             })
             .gap(Space::N1)
@@ -238,7 +238,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                     ])
                     .test_id_prefix("ui-gallery-chart-tooltip-custom-keys")
                     .into_element(cx),
-                shadcn::raw::typography::muted(
+                shadcn::typography::muted(
                     "Colors and labels are resolved from `ChartConfig`; `label_key` and `name_key` map the engine output into those config entries.",
                 )
                 .into_element(cx),

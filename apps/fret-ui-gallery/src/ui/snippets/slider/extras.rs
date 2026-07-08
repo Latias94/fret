@@ -31,7 +31,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         } else {
             format!("{last_commit_values:?}")
         };
-        let meta = shadcn::raw::typography::muted(format!("onValueCommit: {last_commit_text}"))
+        let meta = shadcn::typography::muted(format!("onValueCommit: {last_commit_text}"))
             .into_element(cx);
 
         ui::v_flex(|_cx| vec![slider, meta])
@@ -51,7 +51,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
 
     ui::v_flex(|cx| {
         vec![
-            shadcn::raw::typography::muted(
+            shadcn::typography::muted(
                 "Fret follow-ups: `on_value_commit(...)` for commit-only side effects and `inverted(true)` for mirrored value progression.",
             )
             .into_element(cx),

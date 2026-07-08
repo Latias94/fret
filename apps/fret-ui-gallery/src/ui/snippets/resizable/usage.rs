@@ -7,7 +7,7 @@ use fret_core::Px;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn panel(_cx: &mut AppComponentCx<'_>, label: &'static str) -> impl UiChild + use<> {
-    ui::v_flex(move |cx| vec![shadcn::raw::typography::small(label).into_element(cx)])
+    ui::v_flex(move |cx| vec![shadcn::typography::small(label).into_element(cx)])
         .layout(LayoutRefinement::default().w_full().h_full())
         .items_center()
         .justify_center()

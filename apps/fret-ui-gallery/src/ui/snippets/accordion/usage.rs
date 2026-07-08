@@ -27,7 +27,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             .content(
                 shadcn::AccordionContentPart::new(ui::children![
                     cx;
-                    shadcn::raw::typography::p("Yes. It adheres to the WAI-ARIA design pattern.")
+                    shadcn::typography::p("Yes. It adheres to the WAI-ARIA design pattern.")
                 ])
                 .test_id("ui-gallery-accordion-usage-panel"),
             )])

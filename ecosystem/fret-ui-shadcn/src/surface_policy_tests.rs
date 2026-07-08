@@ -2806,6 +2806,24 @@ fn extras_stay_under_explicit_facade_module() {
 }
 
 #[test]
+fn typography_helpers_stay_under_explicit_facade_module() {
+    let lib_rs = normalize_ws(LIB_RS);
+    assert!(
+        lib_rs.contains(&normalize_ws(
+            "pub mod typography { pub use crate::typography::{ TypographyInlineSegment, TypographyRichParagraph, blockquote, h1, h2, h3, h4, inline_code, inline_link, inline_text, large, lead, list, muted, p, p_rich, small, }; }"
+        )),
+        "facade should expose prose helpers only through an explicit typography module"
+    );
+    assert!(
+        lib_rs
+            .matches(&normalize_ws("pub use crate::typography::{"))
+            .count()
+            == 1,
+        "facade should not promote prose helpers to stable top-level names"
+    );
+}
+
+#[test]
 fn overlay_close_surfaces_keep_narrow_bool_bridges() {
     for (label, source, required_markers, forbidden_markers) in [
         (
@@ -2955,7 +2973,7 @@ fn input_families_expose_action_first_submit_cancel_aliases() {
 }
 
 #[test]
-fn typography_helpers_keep_raw_namespace_but_expose_typed_conversion_outputs() {
+fn typography_helpers_expose_typed_conversion_outputs() {
     let normalized = normalize_ws(TYPOGRAPHY_RS);
 
     let required_markers = [
@@ -2991,7 +3009,7 @@ fn typography_helpers_keep_raw_namespace_but_expose_typed_conversion_outputs() {
         let marker = normalize_ws(marker);
         assert!(
             normalized.contains(&marker),
-            "typography.rs should keep the raw namespace while exposing typed helper outputs"
+            "typography.rs should expose typed helper outputs for the facade typography module"
         );
     }
     for marker in forbidden_markers {

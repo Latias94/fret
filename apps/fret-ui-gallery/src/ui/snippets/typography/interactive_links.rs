@@ -12,12 +12,12 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         .get_model_cloned(&last_activated, Invalidation::Paint)
         .unwrap_or_default();
 
-    let paragraph = shadcn::raw::typography::p_rich([
-        shadcn::raw::typography::inline_text(
+    let paragraph = shadcn::typography::p_rich([
+        shadcn::typography::inline_text(
             "The king thought long and hard, and finally came up with ",
         ),
-        shadcn::raw::typography::inline_link("a brilliant plan", "https://example.com/kings-plan"),
-        shadcn::raw::typography::inline_text(
+        shadcn::typography::inline_link("a brilliant plan", "https://example.com/kings-plan"),
+        shadcn::typography::inline_text(
             ". Activate the link to capture the last href without dropping to low-level selectable-text hooks.",
         ),
     ])
@@ -39,7 +39,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             .variant(shadcn::BadgeVariant::Secondary)
             .into_element(cx)
             .test_id("ui-gallery-typography-interactive-links-status-active"),
-        None => shadcn::raw::typography::muted("Activate the inline link to record the last href.")
+        None => shadcn::typography::muted("Activate the inline link to record the last href.")
             .into_element(cx)
             .test_id("ui-gallery-typography-interactive-links-status-idle"),
     };

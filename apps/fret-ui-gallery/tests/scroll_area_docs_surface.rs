@@ -188,7 +188,7 @@ fn scroll_area_snippets_route_visible_text_through_shared_roles() {
                 "use fret_ui_kit::declarative::text as decl_text;",
                 "decl_text::text_control_readout(cx, format!(\"Photo by {artist}\"))",
             ][..],
-            &["shadcn::raw::typography::muted(format!(\"Photo by {artist}\"))"][..],
+            &["shadcn::typography::muted(format!(\"Photo by {artist}\"))"][..],
         ),
         (
             "nested_scroll_routing",
@@ -197,7 +197,7 @@ fn scroll_area_snippets_route_visible_text_through_shared_roles() {
                 "use fret_ui_kit::declarative::text as decl_text;",
                 "decl_text::text_control_readout(cx, format!(\"Item {i}\"))",
             ][..],
-            &["shadcn::raw::typography::muted(format!(\"Item {i}\"))"][..],
+            &["shadcn::typography::muted(format!(\"Item {i}\"))"][..],
         ),
     ];
 
