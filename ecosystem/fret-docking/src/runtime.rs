@@ -14,6 +14,7 @@ mod apply;
 mod auto_close;
 mod before_close;
 mod commands;
+mod coordinator;
 mod in_window;
 mod layout_invalidation;
 mod request;
@@ -21,6 +22,7 @@ mod tear_off;
 mod window_created;
 
 pub use commands::DockRuntimeCommand;
+use coordinator::DockRuntimeCoordinator;
 pub use in_window::recenter_in_window_floatings;
 pub(crate) use tear_off::is_dock_floating_os_window;
 
@@ -39,15 +41,7 @@ pub fn request_dock_invalidation<H: UiHost>(
 ///
 /// Call this from your runner/driver when consuming `Effect::Dock(op)`.
 pub fn handle_dock_op<H: UiHost>(app: &mut H, op: DockOp) -> bool {
-    match op {
-        op @ DockOp::RequestFloatPanelToNewWindow { .. } => {
-            request::handle_request_float_to_new_window(app, op)
-        }
-        op @ DockOp::RequestFloatTabsToNewWindow { .. } => {
-            request::handle_request_float_to_new_window(app, op)
-        }
-        op => apply::handle_applied_dock_op(app, op),
-    }
+    DockRuntimeCoordinator::host_effects().handle_dock_op(app, op)
 }
 
 /// Handle a docking transaction on the docking-owned runtime command route.
@@ -56,15 +50,7 @@ pub fn handle_dock_op<H: UiHost>(app: &mut H, op: DockOp) -> bool {
 /// core `DockOp` vocabulary, while docking-owned OS-window creates/closes are queued as
 /// [`DockRuntimeCommand`] instead of being pushed through the host effect queue.
 pub(crate) fn handle_dock_op_with_runtime_commands<H: UiHost>(app: &mut H, op: DockOp) -> bool {
-    match op {
-        op @ DockOp::RequestFloatPanelToNewWindow { .. } => {
-            request::queue_request_float_to_new_window(app, op)
-        }
-        op @ DockOp::RequestFloatTabsToNewWindow { .. } => {
-            request::queue_request_float_to_new_window(app, op)
-        }
-        op => apply::queue_applied_dock_op(app, op),
-    }
+    DockRuntimeCoordinator::docking_commands().handle_dock_op(app, op)
 }
 
 pub(crate) fn request_float_panel_to_new_window<H: UiHost>(
@@ -73,7 +59,7 @@ pub(crate) fn request_float_panel_to_new_window<H: UiHost>(
     panel: PanelKey,
     anchor: Option<WindowAnchor>,
 ) -> bool {
-    request::queue_request_float_to_new_window(
+    DockRuntimeCoordinator::docking_commands().handle_dock_op(
         app,
         DockOp::RequestFloatPanelToNewWindow {
             source_window,
@@ -91,7 +77,7 @@ pub(crate) fn request_float_tabs_to_new_window<H: UiHost>(
     panel: PanelKey,
     anchor: Option<WindowAnchor>,
 ) -> bool {
-    request::queue_request_float_to_new_window(
+    DockRuntimeCoordinator::docking_commands().handle_dock_op(
         app,
         DockOp::RequestFloatTabsToNewWindow {
             source_window,
@@ -116,7 +102,7 @@ pub(crate) fn complete_queued_window_created<H: UiHost>(
     request: &CreateWindowRequest,
     new_window: AppWindowId,
 ) -> bool {
-    window_created::queue_dock_window_created(app, request, new_window)
+    DockRuntimeCoordinator::docking_commands().window_created(app, request, new_window)
 }
 
 /// Complete a dock floating window creation by updating the dock graph.
@@ -127,7 +113,7 @@ pub fn handle_dock_window_created<H: UiHost>(
     request: &CreateWindowRequest,
     new_window: AppWindowId,
 ) -> bool {
-    window_created::handle_dock_window_created(app, request, new_window)
+    DockRuntimeCoordinator::host_effects().window_created(app, request, new_window)
 }
 
 /// Merge a closing floating dock window back into a target window.
@@ -141,7 +127,7 @@ pub fn handle_dock_before_close_window<H: UiHost>(
     closing_window: AppWindowId,
     target_window: AppWindowId,
 ) -> bool {
-    before_close::handle_dock_before_close_window(app, closing_window, target_window)
+    DockRuntimeCoordinator::host_effects().before_close_window(app, closing_window, target_window)
 }
 
 #[cfg(test)]
