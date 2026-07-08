@@ -16,6 +16,10 @@ pub(in crate::dock) struct ResolvedDockDropTransaction {
     pub(in crate::dock) intent: DockDropIntent,
     pub(in crate::dock) command: DockDropCommandKind,
     pub(in crate::dock) cleanup: DockDropCleanup,
+    pub(in crate::dock) payload_kind: Option<DockDropPayloadKind>,
+    pub(in crate::dock) source_window: Option<AppWindowId>,
+    pub(in crate::dock) target_window: Option<AppWindowId>,
+    pub(in crate::dock) rejection: DockDropRejectionReason,
 }
 
 impl ResolvedDockDropTransaction {
@@ -62,11 +66,30 @@ pub(in crate::dock) struct DockDropCleanup {
     pub(in crate::dock) invalidates_layout: bool,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(in crate::dock) enum DockDropPayloadKind {
+    Panel,
+    Tabs,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(in crate::dock) enum DockDropRejectionReason {
+    None,
+    NoResolvedTarget,
+    DeniedByPolicy,
+    NoCommitIntent,
+    InvalidCommitTarget,
+}
+
 pub(in crate::dock) fn resolve_dock_drop_transaction(
     target: DockDropTargetResolution,
     intent: DockDropIntent,
 ) -> ResolvedDockDropTransaction {
     let command = dock_drop_command_kind(&intent);
+    let payload_kind = dock_drop_payload_kind(&intent);
+    let source_window = dock_drop_source_window(&intent);
+    let target_window = dock_drop_target_window(&intent);
+    let rejection = dock_drop_initial_rejection(&target, command);
     ResolvedDockDropTransaction {
         target,
         intent,
@@ -75,6 +98,10 @@ pub(in crate::dock) fn resolve_dock_drop_transaction(
             clears_hover: true,
             invalidates_layout: command != DockDropCommandKind::None,
         },
+        payload_kind,
+        source_window,
+        target_window,
+        rejection,
     }
 }
 
@@ -86,11 +113,19 @@ pub(in crate::dock) fn validate_dock_drop_transaction_commit(
         return transaction;
     }
 
+    let ResolvedDockDropTransaction {
+        target,
+        payload_kind,
+        source_window,
+        target_window,
+        ..
+    } = transaction;
+
     ResolvedDockDropTransaction {
         target: DockDropTargetResolution {
             target: None,
-            source: transaction.target.source,
-            policy: transaction.target.policy,
+            source: target.source,
+            policy: target.policy,
         },
         intent: DockDropIntent::None,
         command: DockDropCommandKind::None,
@@ -98,6 +133,10 @@ pub(in crate::dock) fn validate_dock_drop_transaction_commit(
             clears_hover: true,
             invalidates_layout: false,
         },
+        payload_kind,
+        source_window,
+        target_window,
+        rejection: DockDropRejectionReason::InvalidCommitTarget,
     }
 }
 
@@ -127,6 +166,64 @@ fn dock_drop_command_kind(intent: &DockDropIntent) -> DockDropCommandKind {
             DockDropCommandKind::RequestFloatTabsToNewWindow
         }
     }
+}
+
+fn dock_drop_payload_kind(intent: &DockDropIntent) -> Option<DockDropPayloadKind> {
+    match intent {
+        DockDropIntent::MovePanel { .. }
+        | DockDropIntent::MovePanelToEmptyDockSpace { .. }
+        | DockDropIntent::FloatPanelInWindow { .. }
+        | DockDropIntent::RequestFloatPanelToNewWindow { .. } => Some(DockDropPayloadKind::Panel),
+        DockDropIntent::MoveTabs { .. }
+        | DockDropIntent::MoveTabsToEmptyDockSpace { .. }
+        | DockDropIntent::FloatTabsInWindow { .. }
+        | DockDropIntent::RequestFloatTabsToNewWindow { .. } => Some(DockDropPayloadKind::Tabs),
+        DockDropIntent::None => None,
+    }
+}
+
+fn dock_drop_source_window(intent: &DockDropIntent) -> Option<AppWindowId> {
+    match intent {
+        DockDropIntent::MovePanel { source_window, .. }
+        | DockDropIntent::MovePanelToEmptyDockSpace { source_window, .. }
+        | DockDropIntent::MoveTabs { source_window, .. }
+        | DockDropIntent::MoveTabsToEmptyDockSpace { source_window, .. }
+        | DockDropIntent::FloatPanelInWindow { source_window, .. }
+        | DockDropIntent::FloatTabsInWindow { source_window, .. }
+        | DockDropIntent::RequestFloatPanelToNewWindow { source_window, .. }
+        | DockDropIntent::RequestFloatTabsToNewWindow { source_window, .. } => Some(*source_window),
+        DockDropIntent::None => None,
+    }
+}
+
+fn dock_drop_target_window(intent: &DockDropIntent) -> Option<AppWindowId> {
+    match intent {
+        DockDropIntent::MovePanel { target_window, .. }
+        | DockDropIntent::MovePanelToEmptyDockSpace { target_window, .. }
+        | DockDropIntent::MoveTabs { target_window, .. }
+        | DockDropIntent::MoveTabsToEmptyDockSpace { target_window, .. }
+        | DockDropIntent::FloatPanelInWindow { target_window, .. }
+        | DockDropIntent::FloatTabsInWindow { target_window, .. } => Some(*target_window),
+        DockDropIntent::None
+        | DockDropIntent::RequestFloatPanelToNewWindow { .. }
+        | DockDropIntent::RequestFloatTabsToNewWindow { .. } => None,
+    }
+}
+
+fn dock_drop_initial_rejection(
+    target: &DockDropTargetResolution,
+    command: DockDropCommandKind,
+) -> DockDropRejectionReason {
+    if command != DockDropCommandKind::None {
+        return DockDropRejectionReason::None;
+    }
+    if matches!(target.policy, DockDropPolicyDecision::Denied { .. }) {
+        return DockDropRejectionReason::DeniedByPolicy;
+    }
+    if target.target_ref().is_none() {
+        return DockDropRejectionReason::NoResolvedTarget;
+    }
+    DockDropRejectionReason::NoCommitIntent
 }
 
 fn dock_drop_command_debug_kind(command: DockDropCommandKind) -> &'static str {
@@ -600,6 +697,20 @@ mod tests {
             diag.command,
             fret_runtime::DockDropCommandKindDiagnostics::MovePanel
         );
+        assert_eq!(
+            diag.payload_kind,
+            Some(fret_runtime::DockDropPayloadKindDiagnostics::Panel)
+        );
+        assert_eq!(diag.source_window, Some(window));
+        assert_eq!(diag.target_window, Some(window));
+        assert_eq!(
+            diag.rejection_reason,
+            fret_runtime::DockDropRejectionReasonDiagnostics::None
+        );
+        assert_eq!(
+            diag.cleanup_reason,
+            fret_runtime::DockDropCleanupReasonDiagnostics::ClearHoverAndInvalidateLayout
+        );
         assert!(diag.commit_capable);
         assert!(diag.clears_hover);
         assert!(diag.invalidates_layout);
@@ -650,6 +761,14 @@ mod tests {
             diag.command,
             fret_runtime::DockDropCommandKindDiagnostics::None
         );
+        assert_eq!(
+            diag.rejection_reason,
+            fret_runtime::DockDropRejectionReasonDiagnostics::DeniedByPolicy
+        );
+        assert_eq!(
+            diag.cleanup_reason,
+            fret_runtime::DockDropCleanupReasonDiagnostics::ClearHoverOnly
+        );
         assert!(!diag.commit_capable);
         assert!(diag.resolved.is_none());
         assert_eq!(diag.denied.map(|d| d.zone), Some(DropZone::Bottom));
@@ -698,6 +817,12 @@ mod tests {
         assert!(validated.clears_hover());
         assert!(!validated.invalidates_layout());
         assert!(validated.target.target_ref().is_none());
+        assert_eq!(validated.source_window, Some(window));
+        assert_eq!(validated.target_window, Some(window));
+        assert_eq!(
+            validated.rejection,
+            DockDropRejectionReason::InvalidCommitTarget
+        );
     }
 
     #[test]
@@ -738,5 +863,11 @@ mod tests {
         assert!(validated.clears_hover());
         assert!(!validated.invalidates_layout());
         assert!(validated.target.target_ref().is_none());
+        assert_eq!(validated.source_window, Some(window));
+        assert_eq!(validated.target_window, Some(window));
+        assert_eq!(
+            validated.rejection,
+            DockDropRejectionReason::InvalidCommitTarget
+        );
     }
 }

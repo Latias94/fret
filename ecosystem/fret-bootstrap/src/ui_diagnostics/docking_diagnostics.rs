@@ -242,6 +242,76 @@ impl UiDockDropCommandKindV1 {
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+pub enum UiDockDropPayloadKindV1 {
+    Panel,
+    Tabs,
+}
+
+impl UiDockDropPayloadKindV1 {
+    fn from_payload_kind(kind: fret_runtime::DockDropPayloadKindDiagnostics) -> Self {
+        match kind {
+            fret_runtime::DockDropPayloadKindDiagnostics::Panel => Self::Panel,
+            fret_runtime::DockDropPayloadKindDiagnostics::Tabs => Self::Tabs,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum UiDockDropRejectionReasonV1 {
+    #[default]
+    None,
+    NoResolvedTarget,
+    DeniedByPolicy,
+    NoCommitIntent,
+    InvalidCommitTarget,
+}
+
+impl UiDockDropRejectionReasonV1 {
+    fn from_rejection(reason: fret_runtime::DockDropRejectionReasonDiagnostics) -> Self {
+        match reason {
+            fret_runtime::DockDropRejectionReasonDiagnostics::None => Self::None,
+            fret_runtime::DockDropRejectionReasonDiagnostics::NoResolvedTarget => {
+                Self::NoResolvedTarget
+            }
+            fret_runtime::DockDropRejectionReasonDiagnostics::DeniedByPolicy => {
+                Self::DeniedByPolicy
+            }
+            fret_runtime::DockDropRejectionReasonDiagnostics::NoCommitIntent => {
+                Self::NoCommitIntent
+            }
+            fret_runtime::DockDropRejectionReasonDiagnostics::InvalidCommitTarget => {
+                Self::InvalidCommitTarget
+            }
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum UiDockDropCleanupReasonV1 {
+    #[default]
+    None,
+    ClearHoverOnly,
+    ClearHoverAndInvalidateLayout,
+}
+
+impl UiDockDropCleanupReasonV1 {
+    fn from_cleanup(reason: fret_runtime::DockDropCleanupReasonDiagnostics) -> Self {
+        match reason {
+            fret_runtime::DockDropCleanupReasonDiagnostics::None => Self::None,
+            fret_runtime::DockDropCleanupReasonDiagnostics::ClearHoverOnly => {
+                Self::ClearHoverOnly
+            }
+            fret_runtime::DockDropCleanupReasonDiagnostics::ClearHoverAndInvalidateLayout => {
+                Self::ClearHoverAndInvalidateLayout
+            }
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum UiDockDropCandidateRectKindV1 {
     WindowBounds,
     DockBounds,
@@ -383,6 +453,12 @@ pub struct UiDockDropResolveDiagnosticsV1 {
     pub position: PointV1,
     pub window_bounds: RectV1,
     pub dock_bounds: RectV1,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub payload_kind: Option<UiDockDropPayloadKindV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source_window: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub target_window: Option<u64>,
     pub source: UiDockDropResolveSourceV1,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub resolved: Option<UiDockDropTargetDiagnosticsV1>,
@@ -393,7 +469,11 @@ pub struct UiDockDropResolveDiagnosticsV1 {
     #[serde(default)]
     pub command: UiDockDropCommandKindV1,
     #[serde(default)]
+    pub rejection_reason: UiDockDropRejectionReasonV1,
+    #[serde(default)]
     pub commit_capable: bool,
+    #[serde(default)]
+    pub cleanup_reason: UiDockDropCleanupReasonV1,
     #[serde(default)]
     pub clears_hover: bool,
     #[serde(default)]
@@ -411,6 +491,11 @@ impl UiDockDropResolveDiagnosticsV1 {
             position: PointV1::from(snapshot.position),
             window_bounds: RectV1::from(snapshot.window_bounds),
             dock_bounds: RectV1::from(snapshot.dock_bounds),
+            payload_kind: snapshot
+                .payload_kind
+                .map(UiDockDropPayloadKindV1::from_payload_kind),
+            source_window: snapshot.source_window.map(|window| window.data().as_ffi()),
+            target_window: snapshot.target_window.map(|window| window.data().as_ffi()),
             source: UiDockDropResolveSourceV1::from_source(snapshot.source),
             resolved: snapshot
                 .resolved
@@ -420,7 +505,11 @@ impl UiDockDropResolveDiagnosticsV1 {
                 .map(UiDockDropTargetDiagnosticsV1::from_snapshot),
             policy: UiDockDropPolicyDecisionV1::from_policy(snapshot.policy),
             command: UiDockDropCommandKindV1::from_command(snapshot.command),
+            rejection_reason: UiDockDropRejectionReasonV1::from_rejection(
+                snapshot.rejection_reason,
+            ),
             commit_capable: snapshot.commit_capable,
+            cleanup_reason: UiDockDropCleanupReasonV1::from_cleanup(snapshot.cleanup_reason),
             clears_hover: snapshot.clears_hover,
             invalidates_layout: snapshot.invalidates_layout,
             preview: snapshot
@@ -475,13 +564,18 @@ mod dock_drop_resolve_diagnostics_tests {
             ),
             window_bounds: rect(0.0, 0.0, 800.0, 600.0),
             dock_bounds: rect(4.0, 8.0, 700.0, 500.0),
+            payload_kind: Some(fret_runtime::DockDropPayloadKindDiagnostics::Tabs),
+            source_window: None,
+            target_window: None,
             source: fret_runtime::DockDropResolveSource::InnerHintRect,
             resolved: None,
             denied: Some(target),
             preview: None,
             policy: fret_runtime::DockDropPolicyDecisionDiagnostics::DeniedDockingPolicy,
             command: fret_runtime::DockDropCommandKindDiagnostics::RequestFloatTabsToNewWindow,
+            rejection_reason: fret_runtime::DockDropRejectionReasonDiagnostics::DeniedByPolicy,
             commit_capable: false,
+            cleanup_reason: fret_runtime::DockDropCleanupReasonDiagnostics::ClearHoverAndInvalidateLayout,
             clears_hover: true,
             invalidates_layout: true,
             candidates: Vec::new(),
@@ -491,7 +585,16 @@ mod dock_drop_resolve_diagnostics_tests {
             .expect("serialize dock drop resolve diagnostics");
 
         assert_eq!(value["pointer_id"], serde_json::json!(7));
+        assert_eq!(value["payload_kind"], serde_json::json!("tabs"));
         assert_eq!(value["source"], serde_json::json!("inner_hint_rect"));
+        assert_eq!(
+            value["rejection_reason"],
+            serde_json::json!("denied_by_policy")
+        );
+        assert_eq!(
+            value["cleanup_reason"],
+            serde_json::json!("clear_hover_and_invalidate_layout")
+        );
         assert_eq!(
             value["denied"]["layout_root"],
             serde_json::json!(target.layout_root.data().as_ffi())

@@ -4,7 +4,10 @@
 
 use super::super::prelude_core::*;
 use super::super::types::{DockDropPolicyDecision, DockDropTarget, HoverTarget};
-use super::transaction::{DockDropCommandKind, ResolvedDockDropTransaction};
+use super::transaction::{
+    DockDropCleanup, DockDropCommandKind, DockDropPayloadKind, DockDropRejectionReason,
+    ResolvedDockDropTransaction,
+};
 
 pub(in crate::dock) fn dock_drop_target_diagnostics(
     target: Option<&DockDropTarget>,
@@ -70,16 +73,61 @@ pub(in crate::dock) fn compute_dock_drop_resolve_diagnostics(
         position,
         window_bounds,
         dock_bounds,
+        payload_kind: payload_kind_diagnostics(transaction.payload_kind),
+        source_window: transaction.source_window,
+        target_window: transaction.target_window,
         source: transaction.target.source,
         resolved: dock_drop_target_diagnostics(transaction.target.target_ref()),
         denied: transaction.denied_target().map(hover_target_diagnostics),
         preview,
         policy: policy_diagnostics(transaction.policy()),
         command: command_diagnostics(transaction.command),
+        rejection_reason: rejection_diagnostics(transaction.rejection),
         commit_capable: transaction.commit_capable(),
+        cleanup_reason: cleanup_diagnostics(transaction.cleanup),
         clears_hover: transaction.clears_hover(),
         invalidates_layout: transaction.invalidates_layout(),
         candidates,
+    }
+}
+
+fn payload_kind_diagnostics(
+    payload_kind: Option<DockDropPayloadKind>,
+) -> Option<fret_runtime::DockDropPayloadKindDiagnostics> {
+    match payload_kind {
+        Some(DockDropPayloadKind::Panel) => {
+            Some(fret_runtime::DockDropPayloadKindDiagnostics::Panel)
+        }
+        Some(DockDropPayloadKind::Tabs) => Some(fret_runtime::DockDropPayloadKindDiagnostics::Tabs),
+        None => None,
+    }
+}
+
+fn rejection_diagnostics(
+    rejection: DockDropRejectionReason,
+) -> fret_runtime::DockDropRejectionReasonDiagnostics {
+    match rejection {
+        DockDropRejectionReason::None => fret_runtime::DockDropRejectionReasonDiagnostics::None,
+        DockDropRejectionReason::NoResolvedTarget => {
+            fret_runtime::DockDropRejectionReasonDiagnostics::NoResolvedTarget
+        }
+        DockDropRejectionReason::DeniedByPolicy => {
+            fret_runtime::DockDropRejectionReasonDiagnostics::DeniedByPolicy
+        }
+        DockDropRejectionReason::NoCommitIntent => {
+            fret_runtime::DockDropRejectionReasonDiagnostics::NoCommitIntent
+        }
+        DockDropRejectionReason::InvalidCommitTarget => {
+            fret_runtime::DockDropRejectionReasonDiagnostics::InvalidCommitTarget
+        }
+    }
+}
+
+fn cleanup_diagnostics(cleanup: DockDropCleanup) -> fret_runtime::DockDropCleanupReasonDiagnostics {
+    match (cleanup.clears_hover, cleanup.invalidates_layout) {
+        (false, false) => fret_runtime::DockDropCleanupReasonDiagnostics::None,
+        (true, false) => fret_runtime::DockDropCleanupReasonDiagnostics::ClearHoverOnly,
+        (_, true) => fret_runtime::DockDropCleanupReasonDiagnostics::ClearHoverAndInvalidateLayout,
     }
 }
 

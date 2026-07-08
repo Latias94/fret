@@ -253,6 +253,28 @@ pub enum DockDropCommandKindDiagnostics {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DockDropPayloadKindDiagnostics {
+    Panel,
+    Tabs,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DockDropRejectionReasonDiagnostics {
+    None,
+    NoResolvedTarget,
+    DeniedByPolicy,
+    NoCommitIntent,
+    InvalidCommitTarget,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DockDropCleanupReasonDiagnostics {
+    None,
+    ClearHoverOnly,
+    ClearHoverAndInvalidateLayout,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DockDropResolveSource {
     /// Docking previews are disabled for this drag session (inversion policy / modifier gating).
     InvertDocking,
@@ -315,13 +337,18 @@ pub struct DockDropResolveDiagnostics {
     pub position: Point,
     pub window_bounds: Rect,
     pub dock_bounds: Rect,
+    pub payload_kind: Option<DockDropPayloadKindDiagnostics>,
+    pub source_window: Option<AppWindowId>,
+    pub target_window: Option<AppWindowId>,
     pub source: DockDropResolveSource,
     pub resolved: Option<DockDropTargetDiagnostics>,
     pub denied: Option<DockDropTargetDiagnostics>,
     pub preview: Option<DockDropPreviewDiagnostics>,
     pub policy: DockDropPolicyDecisionDiagnostics,
     pub command: DockDropCommandKindDiagnostics,
+    pub rejection_reason: DockDropRejectionReasonDiagnostics,
     pub commit_capable: bool,
+    pub cleanup_reason: DockDropCleanupReasonDiagnostics,
     pub clears_hover: bool,
     pub invalidates_layout: bool,
     pub candidates: Vec<DockDropCandidateRectDiagnostics>,
