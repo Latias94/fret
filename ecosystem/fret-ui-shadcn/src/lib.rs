@@ -557,8 +557,8 @@ pub mod facade {
         table_head, table_head_children, table_header, table_row,
     };
     pub use crate::tabs::{
-        Tabs, TabsContent, TabsItem, TabsList, TabsListVariant, TabsListVariants, TabsRoot,
-        TabsTrigger, tabs, tabs_list_variants, tabs_uncontrolled,
+        Tabs, TabsContent, TabsItem, TabsList, TabsListVariant, TabsListVariants, TabsOrientation,
+        TabsRoot, TabsTrigger, tabs, tabs_list_variants, tabs_uncontrolled,
     };
     pub use crate::text_edit_context_menu::{
         text_edit_context_menu, text_edit_context_menu_controllable,

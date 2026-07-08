@@ -644,6 +644,10 @@ fn authoring_critical_family_exports_live_on_curated_facade_only() {
             "pagination_link",
         ],
     );
+    assert_facade_only_reexports(
+        "tabs",
+        &["Tabs", "TabsItem", "TabsOrientation", "TabsListVariant"],
+    );
 }
 
 #[test]

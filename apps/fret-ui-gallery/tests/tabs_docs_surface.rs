@@ -144,7 +144,7 @@ fn tabs_snippets_stay_copyable_and_source_aligned() {
         "TabsItem::new(\"account\", \"Account\", Vec::<AnyElement>::new())",
         "TabsItem::new(\"password\", \"Password\", Vec::<AnyElement>::new())",
         "TabsItem::new(\"notifications\", \"Notifications\", Vec::<AnyElement>::new())",
-        ".orientation(shadcn::raw::tabs::TabsOrientation::Vertical)",
+        ".orientation(shadcn::TabsOrientation::Vertical)",
     ] {
         assert!(
             vertical.contains(needle),

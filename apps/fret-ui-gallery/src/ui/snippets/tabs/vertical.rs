@@ -16,7 +16,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                 .trigger_test_id("ui-gallery-tabs-vertical-trigger-notifications"),
         ]
     })
-    .orientation(shadcn::raw::tabs::TabsOrientation::Vertical)
+    .orientation(shadcn::TabsOrientation::Vertical)
     .refine_layout(LayoutRefinement::default().w_full().max_w(Px(460.0)))
     .test_id("ui-gallery-tabs-vertical")
     .into_element(cx)

@@ -106,10 +106,6 @@ fn documented_raw_shadcn_escape_hatch_reason(trimmed: &str) -> Option<&'static s
             "shadcn::raw::switch::SwitchStyle::",
             "switch style refinement seam",
         ),
-        (
-            "shadcn::raw::tabs::TabsOrientation::",
-            "tabs orientation enum seam",
-        ),
     ] {
         if trimmed.contains(needle) {
             return Some(reason);
@@ -159,6 +155,7 @@ fn raw_shadcn_escape_hatch_gate_is_symbol_level_not_module_level() {
         "shadcn::raw::experimental::UnclassifiedWidget::new()",
         "shadcn::raw::button::UnclassifiedButtonPart::new()",
         "shadcn::raw::select::SelectPosition::Popper",
+        "shadcn::raw::tabs::TabsOrientation::Vertical",
         "shadcn::raw::accordion::composable",
         "shadcn::raw::collapsible::primitives::*",
         "use shadcn::raw::breadcrumb::private as bc;",
