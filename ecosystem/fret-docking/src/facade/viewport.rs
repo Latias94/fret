@@ -48,12 +48,10 @@ impl DockSurfaceViewportSession {
 
         let supported =
             crate::runtime::dock_tear_off_supported(app.global::<PlatformCapabilities>());
-        let requested = self.surface.driver().request_float_panel_to_new_window(
-            app,
-            source_window,
-            panel.clone(),
-            anchor,
-        );
+        let driver = self.surface.driver();
+        let command_baseline = driver.runtime_command_count(app);
+        let requested =
+            driver.request_float_panel_to_new_window(app, source_window, panel.clone(), anchor);
         if !requested {
             return Err(DockSurfaceViewportError::OpenFailed {
                 source_window,
@@ -62,7 +60,7 @@ impl DockSurfaceViewportSession {
         }
 
         let window_requests = if supported {
-            self.surface.driver().flush_runtime_commands_to_effects(app)
+            driver.flush_runtime_commands_since_to_effects(app, command_baseline)
         } else {
             0
         };
@@ -101,11 +99,10 @@ impl DockSurfaceViewportSession {
             .global::<DockManager>()
             .map(|dock| dock.workspace.graph.collect_panels_in_window(window))
             .unwrap_or_default();
-        let window_requests = self.surface.driver().flush_runtime_commands_to_effects(app);
         Ok(DockSurfaceViewportCloseOutcome {
             window,
             change: DockSurfaceChange::from(before_panels != after_panels),
-            window_requests,
+            window_requests: 0,
         })
     }
 }

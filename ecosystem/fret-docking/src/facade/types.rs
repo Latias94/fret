@@ -1,4 +1,4 @@
-use fret_core::{AppWindowId, DockLayout, PanelKey};
+use fret_core::{AppWindowId, DockLayout, DockPanelLocation, DockPanelPlacement, PanelKey};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DockSurfaceChange {
@@ -28,6 +28,15 @@ pub enum DockSurfacePanelPlacement {
     Floating,
 }
 
+impl From<DockPanelPlacement> for DockSurfacePanelPlacement {
+    fn from(placement: DockPanelPlacement) -> Self {
+        match placement {
+            DockPanelPlacement::Docked => Self::Docked,
+            DockPanelPlacement::Floating => Self::Floating,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DockSurfacePanelLocation {
     pub window: AppWindowId,
@@ -35,6 +44,18 @@ pub struct DockSurfacePanelLocation {
     pub tab_index: usize,
     pub tab_count: usize,
     pub active: bool,
+}
+
+impl From<DockPanelLocation> for DockSurfacePanelLocation {
+    fn from(location: DockPanelLocation) -> Self {
+        Self {
+            window: location.window,
+            placement: location.placement.into(),
+            tab_index: location.tab_index,
+            tab_count: location.tab_count,
+            active: location.active,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

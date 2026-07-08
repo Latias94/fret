@@ -255,13 +255,13 @@ impl DockSurface {
         app: &mut H,
         panel: &PanelKey,
     ) -> Result<DockSurfacePanelOutcome, DockSurfacePanelError> {
-        self.open_panel_in_window(app, self.main_window, panel)
+        self.open_panel_with_preferred_window(app, self.main_window, panel)
     }
 
-    pub fn open_panel_in_window<H: UiHost>(
+    pub fn open_panel_with_preferred_window<H: UiHost>(
         &self,
         app: &mut H,
-        window: AppWindowId,
+        preferred_window: AppWindowId,
         panel: &PanelKey,
     ) -> Result<DockSurfacePanelOutcome, DockSurfacePanelError> {
         let Some(dock) = app.global::<DockManager>() else {
@@ -274,14 +274,16 @@ impl DockSurface {
         }
         let before = panel_location(dock, panel);
 
-        self.driver().on_dock_op(
+        let driver = self.driver();
+        let command_baseline = driver.runtime_command_count(app);
+        driver.on_dock_op(
             app,
-            DockOp::OpenPanel {
-                window,
+            DockOp::EnsurePanelVisible {
+                preferred_window,
                 panel: panel.clone(),
             },
         );
-        self.driver().flush_runtime_commands_to_effects(app);
+        driver.flush_runtime_commands_since_to_effects(app, command_baseline);
         Ok(self.panel_outcome_from_before(app, panel.clone(), before))
     }
 
@@ -303,8 +305,10 @@ impl DockSurface {
         };
 
         let before = self.panel_location(app, panel);
-        self.driver().on_dock_op(app, op);
-        self.driver().flush_runtime_commands_to_effects(app);
+        let driver = self.driver();
+        let command_baseline = driver.runtime_command_count(app);
+        driver.on_dock_op(app, op);
+        driver.flush_runtime_commands_since_to_effects(app, command_baseline);
         Ok(self.panel_outcome_from_before(app, panel.clone(), before))
     }
 
@@ -324,14 +328,16 @@ impl DockSurface {
 
         let close_window = location.window;
         let before = Some(location);
-        self.driver().on_dock_op(
+        let driver = self.driver();
+        let command_baseline = driver.runtime_command_count(app);
+        driver.on_dock_op(
             app,
             DockOp::ClosePanel {
                 window: close_window,
                 panel: panel.clone(),
             },
         );
-        self.driver().flush_runtime_commands_to_effects(app);
+        driver.flush_runtime_commands_since_to_effects(app, command_baseline);
         Ok(self.panel_outcome_from_before(app, panel.clone(), before))
     }
 

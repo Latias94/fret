@@ -23,8 +23,19 @@ impl DockRuntimeCommandQueue {
         self.commands.push(command);
     }
 
+    fn len(&self) -> usize {
+        self.commands.len()
+    }
+
     fn take(&mut self) -> Vec<DockRuntimeCommand> {
         std::mem::take(&mut self.commands)
+    }
+
+    fn take_since(&mut self, baseline: usize) -> Vec<DockRuntimeCommand> {
+        if baseline >= self.commands.len() {
+            return Vec::new();
+        }
+        self.commands.drain(baseline..).collect()
     }
 }
 
@@ -55,4 +66,17 @@ pub(super) fn dispatch_close_window<H: UiHost>(
 
 pub(super) fn take_runtime_commands<H: UiHost>(app: &mut H) -> Vec<DockRuntimeCommand> {
     app.with_global_mut(DockRuntimeCommandQueue::default, |queue, _app| queue.take())
+}
+
+pub(super) fn runtime_command_count<H: UiHost>(app: &mut H) -> usize {
+    app.with_global_mut(DockRuntimeCommandQueue::default, |queue, _app| queue.len())
+}
+
+pub(super) fn take_runtime_commands_since<H: UiHost>(
+    app: &mut H,
+    baseline: usize,
+) -> Vec<DockRuntimeCommand> {
+    app.with_global_mut(DockRuntimeCommandQueue::default, |queue, _app| {
+        queue.take_since(baseline)
+    })
 }

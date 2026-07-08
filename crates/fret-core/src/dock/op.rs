@@ -12,8 +12,12 @@ pub enum DockOp {
         active: usize,
     },
 
-    OpenPanel {
-        window: AppWindowId,
+    /// Ensure `panel` is visible and active in exactly one dock window.
+    ///
+    /// If the panel is already open anywhere, this selects the existing owner instead of duplicating
+    /// the panel. `preferred_window` is used only when the panel is not already present.
+    EnsurePanelVisible {
+        preferred_window: AppWindowId,
         panel: PanelKey,
     },
 

@@ -72,10 +72,24 @@ pub(super) fn invalidate_after_dock_op<H: UiHost>(
         DockOp::SetFloatingRect { window, .. }
         | DockOp::RaiseFloating { window, .. }
         | DockOp::MergeFloatingInto { window, .. }
-        | DockOp::OpenPanel { window, .. }
         | DockOp::ClosePanel { window, .. } => {
             dock.clear_viewport_layout_for_window(*window);
             invalidate_windows(app, [*window]);
+        }
+        DockOp::EnsurePanelVisible {
+            preferred_window,
+            panel,
+        } => {
+            let mut windows = vec![*preferred_window];
+            if let Some(location) = dock.workspace.graph.panel_location(panel)
+                && !windows.contains(&location.window)
+            {
+                windows.push(location.window);
+            }
+            for window in &windows {
+                dock.clear_viewport_layout_for_window(*window);
+            }
+            invalidate_windows(app, windows);
         }
         DockOp::SetActiveTab { .. }
         | DockOp::SetSplitFractions { .. }

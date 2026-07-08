@@ -48,7 +48,7 @@ pub use dock::layout::{
 pub use dock::op::{DockOp, SplitFractionsUpdate};
 pub use dock::{
     Axis, DockFloatingWindow, DockGraph, DockNode, DockOpApplyError, DockOpApplyErrorKind,
-    DropZone, EdgeDockDecision,
+    DockPanelLocation, DockPanelPlacement, DropZone, EdgeDockDecision,
 };
 pub use effects::{
     CustomEffectDescriptorV1, CustomEffectDescriptorV2, CustomEffectDescriptorV3,

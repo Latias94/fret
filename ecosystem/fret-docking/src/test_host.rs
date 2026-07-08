@@ -143,6 +143,10 @@ impl TestHost {
     pub(crate) fn take_effects(&mut self) -> Vec<Effect> {
         std::mem::take(&mut self.effects)
     }
+
+    pub(crate) fn take_redraws(&mut self) -> HashSet<AppWindowId> {
+        std::mem::take(&mut self.redraw)
+    }
 }
 
 impl GlobalsHost for TestHost {

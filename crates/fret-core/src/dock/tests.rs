@@ -910,7 +910,7 @@ fn run_dock_op_sequence_case(case: &DockOpSequenceCase) {
                 } else {
                     let kind: &'static str = match &op {
                         DockOp::SetActiveTab { .. } => "set_active_tab",
-                        DockOp::OpenPanel { .. } => "open_panel",
+                        DockOp::EnsurePanelVisible { .. } => "ensure_panel_visible",
                         DockOp::ClosePanel { .. } => "close_panel",
                         DockOp::MovePanel { .. } => "move_panel",
                         DockOp::MovePanelToEmptyDockSpace { .. } => {
@@ -1468,17 +1468,17 @@ fn import_layout_degrades_unmapped_windows_into_floating_containers() {
 }
 
 #[test]
-fn open_panel_creates_window_root_when_window_is_empty() {
+fn ensure_panel_visible_creates_window_root_when_preferred_window_is_empty() {
     let w = window(1);
     let panel = PanelKey::new("test.inspector");
     let mut g = DockGraph::new();
 
-    assert!(g.apply_op(&DockOp::OpenPanel {
-        window: w,
+    assert!(g.apply_op(&DockOp::EnsurePanelVisible {
+        preferred_window: w,
         panel: panel.clone(),
     }));
 
-    let root = g.window_root(w).expect("open panel should create a root");
+    let root = g.window_root(w).expect("ensure panel should create a root");
     let DockNode::Tabs { tabs, active } = g.node(root).expect("root tabs") else {
         panic!("expected root tabs");
     };
@@ -1487,7 +1487,7 @@ fn open_panel_creates_window_root_when_window_is_empty() {
 }
 
 #[test]
-fn open_panel_appends_to_existing_root_tabs_and_selects_new_panel() {
+fn ensure_panel_visible_appends_to_existing_root_tabs_and_selects_new_panel() {
     let w = window(1);
     let panel_a = PanelKey::new("test.a");
     let panel_b = PanelKey::new("test.b");
@@ -1499,8 +1499,8 @@ fn open_panel_appends_to_existing_root_tabs_and_selects_new_panel() {
     });
     g.set_window_root(w, tabs);
 
-    assert!(g.apply_op(&DockOp::OpenPanel {
-        window: w,
+    assert!(g.apply_op(&DockOp::EnsurePanelVisible {
+        preferred_window: w,
         panel: panel_b.clone(),
     }));
 
@@ -1512,7 +1512,7 @@ fn open_panel_appends_to_existing_root_tabs_and_selects_new_panel() {
 }
 
 #[test]
-fn open_panel_selects_existing_panel_instead_of_duplicating_it() {
+fn ensure_panel_visible_selects_existing_panel_instead_of_duplicating_it() {
     let w = window(1);
     let panel_a = PanelKey::new("test.a");
     let panel_b = PanelKey::new("test.b");
@@ -1524,8 +1524,8 @@ fn open_panel_selects_existing_panel_instead_of_duplicating_it() {
     });
     g.set_window_root(w, tabs);
 
-    assert!(g.apply_op(&DockOp::OpenPanel {
-        window: w,
+    assert!(g.apply_op(&DockOp::EnsurePanelVisible {
+        preferred_window: w,
         panel: panel_b.clone(),
     }));
 
@@ -1537,7 +1537,7 @@ fn open_panel_selects_existing_panel_instead_of_duplicating_it() {
 }
 
 #[test]
-fn open_panel_selects_existing_panel_in_another_window_instead_of_duplicating_it() {
+fn ensure_panel_visible_selects_existing_panel_in_another_window_instead_of_duplicating_it() {
     let window_a = window(1);
     let window_b = window(2);
     let panel_a = PanelKey::new("test.a");
@@ -1555,8 +1555,8 @@ fn open_panel_selects_existing_panel_in_another_window_instead_of_duplicating_it
     });
     g.set_window_root(window_b, tabs_b);
 
-    assert!(g.apply_op(&DockOp::OpenPanel {
-        window: window_b,
+    assert!(g.apply_op(&DockOp::EnsurePanelVisible {
+        preferred_window: window_b,
         panel: panel_b.clone(),
     }));
 
@@ -1572,7 +1572,125 @@ fn open_panel_selects_existing_panel_in_another_window_instead_of_duplicating_it
             .filter(|panel| **panel == panel_b)
             .count(),
         0,
-        "open panel must not duplicate a panel already owned by another window"
+        "ensure visible must not duplicate a panel already owned by another window"
+    );
+}
+
+#[test]
+fn ensure_panel_visible_dedupes_existing_panel_in_floating_only_window() {
+    let window_a = window(1);
+    let window_b = window(2);
+    let panel_a = PanelKey::new("test.a");
+    let panel_b = PanelKey::new("test.b");
+
+    let mut g = DockGraph::new();
+    let tabs_a = g.insert_node(DockNode::Tabs {
+        tabs: vec![panel_a.clone()],
+        active: 0,
+    });
+    g.set_window_root(window_a, tabs_a);
+    let tabs_b = g.insert_node(DockNode::Tabs {
+        tabs: vec![panel_b.clone()],
+        active: 0,
+    });
+    g.set_window_root(window_b, tabs_b);
+
+    assert!(g.apply_op(&DockOp::FloatPanelInWindow {
+        source_window: window_b,
+        panel: panel_b.clone(),
+        target_window: window_b,
+        rect: rect(12.0, 24.0, 320.0, 240.0),
+    }));
+    assert!(g.window_root(window_b).is_none());
+    assert_eq!(g.floating_windows(window_b).len(), 1);
+
+    assert!(g.apply_op(&DockOp::EnsurePanelVisible {
+        preferred_window: window_a,
+        panel: panel_b.clone(),
+    }));
+
+    let count_in_a = g
+        .collect_panels_in_window(window_a)
+        .iter()
+        .filter(|panel| **panel == panel_b)
+        .count();
+    let count_in_b = g
+        .collect_panels_in_window(window_b)
+        .iter()
+        .filter(|panel| **panel == panel_b)
+        .count();
+    assert_eq!(
+        count_in_a, 0,
+        "ensure visible must not copy a floating-only panel into the preferred window"
+    );
+    assert_eq!(count_in_b, 1);
+    assert_eq!(
+        g.panel_location(&panel_b),
+        Some(DockPanelLocation {
+            window: window_b,
+            placement: DockPanelPlacement::Floating,
+            tab_index: 0,
+            tab_count: 1,
+            active: true,
+        })
+    );
+}
+
+#[test]
+fn panel_location_and_selected_panel_report_docked_and_floating_tabs() {
+    let w = window(1);
+    let panel_a = PanelKey::new("test.a");
+    let panel_b = PanelKey::new("test.b");
+    let panel_c = PanelKey::new("test.c");
+
+    let mut g = DockGraph::new();
+    let root = g.insert_node(DockNode::Tabs {
+        tabs: vec![panel_a.clone(), panel_b.clone()],
+        active: 1,
+    });
+    g.set_window_root(w, root);
+    let floating_tabs = g.insert_node(DockNode::Tabs {
+        tabs: vec![panel_c.clone()],
+        active: 0,
+    });
+    let floating = g.insert_node(DockNode::Floating {
+        child: floating_tabs,
+    });
+    g.floating_windows_mut(w).push(DockFloatingWindow {
+        floating,
+        rect: rect(8.0, 16.0, 240.0, 180.0),
+    });
+
+    assert_eq!(g.selected_panel_in_window(w), Some(panel_b.clone()));
+    assert_eq!(
+        g.panel_location(&panel_a),
+        Some(DockPanelLocation {
+            window: w,
+            placement: DockPanelPlacement::Docked,
+            tab_index: 0,
+            tab_count: 2,
+            active: false,
+        })
+    );
+    assert_eq!(
+        g.panel_location(&panel_b),
+        Some(DockPanelLocation {
+            window: w,
+            placement: DockPanelPlacement::Docked,
+            tab_index: 1,
+            tab_count: 2,
+            active: true,
+        })
+    );
+    assert_eq!(
+        g.panel_location(&panel_c),
+        Some(DockPanelLocation {
+            window: w,
+            placement: DockPanelPlacement::Floating,
+            tab_index: 0,
+            tab_count: 1,
+            active: true,
+        })
     );
 }
 

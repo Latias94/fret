@@ -69,6 +69,21 @@ pub enum EdgeDockDecision {
     WrapNewSplit,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DockPanelPlacement {
+    Docked,
+    Floating,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DockPanelLocation {
+    pub window: AppWindowId,
+    pub placement: DockPanelPlacement,
+    pub tab_index: usize,
+    pub tab_count: usize,
+    pub active: bool,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct DockFloatingWindow {
     pub floating: DockNodeId,

@@ -106,6 +106,8 @@ fn dock_surface_root_entry_point_is_public_without_internal_command_queue() {
     let lib = include_str!("../src/lib.rs");
     let runtime = include_str!("../src/runtime.rs");
     let commands = include_str!("../src/runtime/commands.rs");
+    let advanced_block = impl_block(lib, "pub mod advanced");
+    let common_root = lib.replace(advanced_block, "");
 
     for symbol in [
         "DockSurface",
@@ -125,8 +127,17 @@ fn dock_surface_root_entry_point_is_public_without_internal_command_queue() {
         "`DockRuntimeCommand` is a driver-tier type and must not be re-exported from the common root"
     );
     assert!(
+        !common_root.contains("DockRuntimeCommand"),
+        "`DockRuntimeCommand` must appear only inside the explicit `advanced` module"
+    );
+    assert!(
         lib.contains("DockSurfaceDriver") && lib.contains("DockRuntimeCommand"),
         "`advanced` should name driver-tier surface and runtime command types explicitly"
+    );
+    assert!(
+        advanced_block.contains("DockSurfaceDriver")
+            && advanced_block.contains("DockRuntimeCommand"),
+        "`advanced` should contain the driver-tier exports"
     );
     assert!(
         !lib.contains("DockRuntimeCommandQueue"),

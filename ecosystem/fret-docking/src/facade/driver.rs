@@ -70,6 +70,27 @@ impl DockSurfaceDriver {
 
     pub fn flush_runtime_commands_to_effects<H: UiHost>(&self, app: &mut H) -> usize {
         let commands = self.take_runtime_commands(app);
+        self.push_runtime_commands_to_effects(app, commands)
+    }
+
+    pub(super) fn runtime_command_count<H: UiHost>(&self, app: &mut H) -> usize {
+        crate::runtime::runtime_command_count(app)
+    }
+
+    pub(super) fn flush_runtime_commands_since_to_effects<H: UiHost>(
+        &self,
+        app: &mut H,
+        baseline: usize,
+    ) -> usize {
+        let commands = crate::runtime::take_runtime_commands_since(app, baseline);
+        self.push_runtime_commands_to_effects(app, commands)
+    }
+
+    fn push_runtime_commands_to_effects<H: UiHost>(
+        &self,
+        app: &mut H,
+        commands: Vec<DockRuntimeCommand>,
+    ) -> usize {
         let count = commands.len();
         for command in commands {
             match command {

@@ -381,13 +381,13 @@ impl DockGraph {
         true
     }
 
-    pub fn open_panel_in_window(&mut self, window: AppWindowId, panel: PanelKey) -> bool {
-        if let Some((tabs, index)) = self.find_panel_in_window(window, &panel) {
+    pub fn ensure_panel_visible(&mut self, preferred_window: AppWindowId, panel: PanelKey) -> bool {
+        if let Some((tabs, index)) = self.find_panel_in_window(preferred_window, &panel) {
             return self.set_active_tab(tabs, index);
         }
 
         for candidate_window in self.windows() {
-            if candidate_window == window {
+            if candidate_window == preferred_window {
                 continue;
             }
             if let Some((tabs, index)) = self.find_panel_in_window(candidate_window, &panel) {
@@ -395,13 +395,13 @@ impl DockGraph {
             }
         }
 
-        if let Some(root) = self.window_root(window)
+        if let Some(root) = self.window_root(preferred_window)
             && let Some(tabs_node) = self.first_tabs_in_subtree(root)
             && let Some(DockNode::Tabs { tabs, active }) = self.nodes.get_mut(tabs_node)
         {
             tabs.push(panel);
             *active = tabs.len().saturating_sub(1);
-            self.simplify_window_forest(window);
+            self.simplify_window_forest(preferred_window);
             return true;
         }
 
@@ -409,7 +409,7 @@ impl DockGraph {
             tabs: vec![panel],
             active: 0,
         });
-        self.set_window_root(window, tabs);
+        self.set_window_root(preferred_window, tabs);
         true
     }
 

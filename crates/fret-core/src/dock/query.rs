@@ -237,6 +237,51 @@ impl DockGraph {
         })
     }
 
+    pub fn panel_location(&self, panel: &PanelKey) -> Option<DockPanelLocation> {
+        for window in self.windows() {
+            if let Some(location) = self.panel_location_in_window(window, panel) {
+                return Some(location);
+            }
+        }
+        None
+    }
+
+    pub fn panel_location_in_window(
+        &self,
+        window: AppWindowId,
+        panel: &PanelKey,
+    ) -> Option<DockPanelLocation> {
+        if let Some(root) = self.window_root(window)
+            && let Some(location) =
+                self.panel_location_in_node(window, DockPanelPlacement::Docked, root, panel)
+        {
+            return Some(location);
+        }
+
+        for floating in self.floating_windows(window) {
+            if let Some(location) = self.panel_location_in_node(
+                window,
+                DockPanelPlacement::Floating,
+                floating.floating,
+                panel,
+            ) {
+                return Some(location);
+            }
+        }
+        None
+    }
+
+    pub fn selected_panel_in_window(&self, window: AppWindowId) -> Option<PanelKey> {
+        if let Some(root) = self.window_root(window)
+            && let Some(panel) = self.selected_panel_in_node(root)
+        {
+            return Some(panel);
+        }
+        self.floating_windows(window)
+            .iter()
+            .find_map(|floating| self.selected_panel_in_node(floating.floating))
+    }
+
     pub fn windows(&self) -> Vec<AppWindowId> {
         let mut windows: Vec<AppWindowId> = self.window_roots.keys().copied().collect();
         for window in self.window_floatings.keys().copied() {
@@ -316,6 +361,45 @@ impl DockGraph {
                 .copied()
                 .find_map(|child| self.find_panel_in_subtree(child, panel)),
             DockNode::Floating { child } => self.find_panel_in_subtree(*child, panel),
+        }
+    }
+
+    fn panel_location_in_node(
+        &self,
+        window: AppWindowId,
+        placement: DockPanelPlacement,
+        node: DockNodeId,
+        panel: &PanelKey,
+    ) -> Option<DockPanelLocation> {
+        match self.node(node)? {
+            DockNode::Tabs { tabs, active } => tabs
+                .iter()
+                .position(|candidate| candidate == panel)
+                .map(|tab_index| DockPanelLocation {
+                    window,
+                    placement,
+                    tab_index,
+                    tab_count: tabs.len(),
+                    active: *active == tab_index,
+                }),
+            DockNode::Split { children, .. } => children
+                .iter()
+                .copied()
+                .find_map(|child| self.panel_location_in_node(window, placement, child, panel)),
+            DockNode::Floating { child } => {
+                self.panel_location_in_node(window, DockPanelPlacement::Floating, *child, panel)
+            }
+        }
+    }
+
+    fn selected_panel_in_node(&self, node: DockNodeId) -> Option<PanelKey> {
+        match self.node(node)? {
+            DockNode::Tabs { tabs, active } => tabs.get(*active).cloned(),
+            DockNode::Split { children, .. } => children
+                .iter()
+                .copied()
+                .find_map(|child| self.selected_panel_in_node(child)),
+            DockNode::Floating { child } => self.selected_panel_in_node(*child),
         }
     }
 }
