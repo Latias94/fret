@@ -2765,6 +2765,23 @@ fn data_grid_canvas_output_uses_narrow_output_bridge() {
 }
 
 #[test]
+fn data_grid_element_stays_under_explicit_experimental_facade_module() {
+    let lib_rs = normalize_ws(LIB_RS);
+    assert!(
+        lib_rs.contains(&normalize_ws(
+            "pub mod experimental { pub use crate::experimental::{DataGridElement, DataGridRowState}; }"
+        )),
+        "facade should expose element-grid prototypes only through an explicit experimental module"
+    );
+    assert!(
+        !lib_rs.contains(&normalize_ws(
+            "pub use crate::experimental::{ DataGridElement, DataGridRowState, };"
+        )),
+        "facade should not promote element-grid prototypes to stable top-level names"
+    );
+}
+
+#[test]
 fn overlay_close_surfaces_keep_narrow_bool_bridges() {
     for (label, source, required_markers, forbidden_markers) in [
         (

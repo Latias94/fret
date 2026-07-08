@@ -598,6 +598,11 @@ pub mod facade {
     /// For rich per-cell UI experiments, use [`experimental::DataGridElement`].
     pub type DataGrid = DataGridCanvas;
 
+    /// Explicit experimental surfaces that are not part of the stable default facade.
+    pub mod experimental {
+        pub use crate::experimental::{DataGridElement, DataGridRowState};
+    }
+
     /// Explicit app integration helpers for shadcn defaults.
     #[cfg(feature = "app-integration")]
     pub mod app {

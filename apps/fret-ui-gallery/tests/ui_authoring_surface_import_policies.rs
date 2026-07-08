@@ -65,21 +65,6 @@ fn documented_raw_shadcn_escape_hatch_reason(trimmed: &str) -> Option<&'static s
         return Some("explicit shadcn extras raw family");
     }
 
-    for (needle, reason) in [
-        (
-            "shadcn::raw::experimental::DataGridElement::",
-            "experimental DataGrid element family",
-        ),
-        (
-            "shadcn::raw::experimental::DataGridRowState",
-            "experimental DataGrid row-state family",
-        ),
-    ] {
-        if trimmed.contains(needle) {
-            return Some(reason);
-        }
-    }
-
     None
 }
 
@@ -106,7 +91,6 @@ fn raw_shadcn_escape_hatch_gate_is_symbol_level_not_module_level() {
         "shadcn::raw::typography::muted(\"copy\")",
         "shadcn::raw::icon::icon(cx, icon)",
         "shadcn::raw::extras::Ticker::new(\"AAPL\")",
-        "let grid = shadcn::raw::experimental::DataGridElement::new(rows)",
     ] {
         assert!(
             documented_raw_shadcn_escape_hatch_reason(allowed).is_some(),
@@ -118,6 +102,8 @@ fn raw_shadcn_escape_hatch_gate_is_symbol_level_not_module_level() {
         "shadcn::raw::kbd::KbdStyle::default()",
         "shadcn::raw::toggle_group::ToggleGroupStyle::default()",
         "shadcn::raw::experimental::UnclassifiedWidget::new()",
+        "shadcn::raw::experimental::DataGridElement::new(rows)",
+        "shadcn::raw::experimental::DataGridRowState::default()",
         "shadcn::raw::button::UnclassifiedButtonPart::new()",
         "shadcn::raw::button::ButtonStyle::default()",
         "shadcn::raw::calendar::CalendarLocale::Es",
@@ -138,6 +124,28 @@ fn raw_shadcn_escape_hatch_gate_is_symbol_level_not_module_level() {
             "`{forbidden}` should not pass the raw escape hatch gate by module name alone",
         );
     }
+}
+
+#[test]
+fn gallery_data_grid_preview_uses_explicit_experimental_facade_module() {
+    let path = manifest_path("src/ui/previews/gallery/data/data_grid.rs");
+    let source = read_path(&path);
+    assert!(
+        source.contains("use fret_ui_shadcn::facade as shadcn;"),
+        "{} should keep data grid preview on the curated shadcn facade",
+        path.display()
+    );
+    assert!(
+        source.contains("shadcn::experimental::DataGridElement::new(")
+            && source.contains("shadcn::experimental::DataGridRowState"),
+        "{} should use the explicit experimental facade module for data grid prototypes",
+        path.display()
+    );
+    assert!(
+        !source.contains("shadcn::raw::experimental"),
+        "{} should not reopen the raw experimental module for data grid prototypes",
+        path.display()
+    );
 }
 
 #[test]
@@ -211,7 +219,7 @@ fn gallery_source_tree_rejects_legacy_shadcn_alias_patterns() {
                     .is_some_and(|ch| ch.is_ascii_lowercase());
                 if is_module_path
                     && starts_with_lowercase
-                    && !matches!(segment, "raw" | "themes" | "app")
+                    && !matches!(segment, "raw" | "themes" | "app" | "experimental")
                 {
                     panic!(
                         "{}:{} reintroduced non-curated shadcn module path `shadcn::{}::`",
