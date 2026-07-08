@@ -3112,6 +3112,28 @@ mod tests {
         }
     }
 
+    fn assert_radix_icon_app_install_surface(label: &str, source: &str) {
+        assert!(
+            source.contains("fret_icons_radix::app::install(app);"),
+            "{label} should install Radix icons through the explicit app surface"
+        );
+        for forbidden in [
+            "fret_icons_radix::install(app);",
+            "fret_icons_radix::install_app(app);",
+            "fret_icons_radix::advanced::install_with_ui_services",
+            "fret_icons_lucide::",
+        ] {
+            assert!(
+                !source.contains(forbidden),
+                "{label} should not teach `{forbidden}`"
+            );
+        }
+        assert!(
+            !source.contains("icons::{icon, IconId},"),
+            "{label} should not import Lucide action-icon helpers for Radix"
+        );
+    }
+
     #[test]
     fn todo_template_uses_default_authoring_dialect() {
         let src = todo_template_main_rs("todo-app", opts());
@@ -3572,13 +3594,19 @@ mod tests {
         let mut options = opts();
         options.icon_pack = IconPack::Radix;
 
-        let todo = todo_template_main_rs("todo-app", options);
-        assert!(todo.contains("fret_icons_radix::app::install(app);"));
-        assert!(!todo.contains("fret_icons_radix::install_app(app);"));
-        assert!(!todo.contains("icons::{icon, IconId},"));
-
-        let simple = simple_todo_template_main_rs("simple-todo-app", options);
-        assert!(!simple.contains("icons::{icon, IconId},"));
+        for (label, render) in [
+            (
+                "todo",
+                todo_template_main_rs as fn(&str, ScaffoldOptions) -> String,
+            ),
+            ("simple_todo", simple_todo_template_main_rs),
+            ("hello", hello_template_main_rs),
+            ("workbench_lite", workbench_lite_template_main_rs),
+            ("mutation_workbench", mutation_workbench_template_main_rs),
+        ] {
+            let source = render(&format!("{label}-app"), options);
+            assert_radix_icon_app_install_surface(label, &source);
+        }
     }
 
     #[test]
