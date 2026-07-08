@@ -219,6 +219,13 @@ impl DockGraph {
         {
             return true;
         }
+        if source_window == target_window
+            && zone != DropZone::Center
+            && self.subtree_contains_node(target_tabs, source_tabs)
+            && self.tabs_len(source_tabs).is_some_and(|len| len <= 1)
+        {
+            return false;
+        }
 
         if !self.remove_panel_from_tabs(source_tabs, source_index) {
             return false;
@@ -299,6 +306,12 @@ impl DockGraph {
         if zone == DropZone::Center && source_window == target_window && source_tabs == target_tabs
         {
             return true;
+        }
+        if source_window == target_window
+            && zone != DropZone::Center
+            && self.subtree_contains_node(target_tabs, source_tabs)
+        {
+            return false;
         }
 
         if self
@@ -956,35 +969,43 @@ impl DockGraph {
         window: AppWindowId,
         target: DockNodeId,
     ) -> Option<DockNodeId> {
-        fn contains(graph: &DockGraph, root: DockNodeId, target: DockNodeId) -> bool {
-            if root == target {
-                return true;
-            }
-            let Some(n) = graph.nodes.get(root) else {
-                return false;
-            };
-            match n {
-                DockNode::Tabs { .. } => false,
-                DockNode::Split { children, .. } => {
-                    children.iter().copied().any(|c| contains(graph, c, target))
-                }
-                DockNode::Floating { child } => contains(graph, *child, target),
-            }
-        }
-
         if let Some(root) = self.window_root(window)
-            && contains(self, root, target)
+            && self.subtree_contains_node(root, target)
         {
             return Some(root);
         }
         if let Some(list) = self.window_floatings.get(&window) {
             for w in list {
-                if contains(self, w.floating, target) {
+                if self.subtree_contains_node(w.floating, target) {
                     return Some(w.floating);
                 }
             }
         }
         None
+    }
+
+    fn subtree_contains_node(&self, root: DockNodeId, target: DockNodeId) -> bool {
+        if root == target {
+            return true;
+        }
+        let Some(n) = self.nodes.get(root) else {
+            return false;
+        };
+        match n {
+            DockNode::Tabs { .. } => false,
+            DockNode::Split { children, .. } => children
+                .iter()
+                .copied()
+                .any(|child| self.subtree_contains_node(child, target)),
+            DockNode::Floating { child } => self.subtree_contains_node(*child, target),
+        }
+    }
+
+    fn tabs_len(&self, tabs_node: DockNodeId) -> Option<usize> {
+        match self.nodes.get(tabs_node)? {
+            DockNode::Tabs { tabs, .. } => Some(tabs.len()),
+            DockNode::Split { .. } | DockNode::Floating { .. } => None,
+        }
     }
 
     fn remove_empty_floating_windows(&mut self, window: AppWindowId) {

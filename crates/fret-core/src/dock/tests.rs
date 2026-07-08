@@ -638,6 +638,91 @@ fn move_panel_rejects_center_drop_on_non_tabs_target_without_removing_source() {
 }
 
 #[test]
+fn move_panel_rejects_same_window_edge_drop_onto_own_tabs_without_removing_panel() {
+    let w = window(1);
+    let panel = PanelKey::new("test.panel");
+
+    let mut g = DockGraph::new();
+    let tabs = g.insert_node(DockNode::Tabs {
+        tabs: vec![panel.clone()],
+        active: 0,
+    });
+    g.set_window_root(w, tabs);
+
+    assert!(!g.apply_op(&DockOp::MovePanel {
+        source_window: w,
+        panel: panel.clone(),
+        target_window: w,
+        target_tabs: tabs,
+        zone: DropZone::Right,
+        insert_index: None,
+    }));
+    assert_eq!(g.window_root(w), Some(tabs));
+    assert_eq!(g.collect_panels_in_window(w), vec![panel]);
+    assert_canonical_all_windows(&g);
+}
+
+#[test]
+fn move_tabs_rejects_same_window_edge_drop_onto_self_without_removing_source() {
+    let w = window(1);
+    let panel = PanelKey::new("test.panel");
+
+    let mut g = DockGraph::new();
+    let tabs = g.insert_node(DockNode::Tabs {
+        tabs: vec![panel.clone()],
+        active: 0,
+    });
+    g.set_window_root(w, tabs);
+
+    assert!(!g.apply_op(&DockOp::MoveTabs {
+        source_window: w,
+        source_tabs: tabs,
+        target_window: w,
+        target_tabs: tabs,
+        zone: DropZone::Right,
+        insert_index: None,
+    }));
+    assert_eq!(g.window_root(w), Some(tabs));
+    assert_eq!(g.collect_panels_in_window(w), vec![panel]);
+    assert_canonical_all_windows(&g);
+}
+
+#[test]
+fn move_tabs_rejects_same_window_edge_drop_onto_ancestor_without_orphaning_tabs() {
+    let w = window(1);
+    let panel_a = PanelKey::new("test.a");
+    let panel_b = PanelKey::new("test.b");
+
+    let mut g = DockGraph::new();
+    let tabs_a = g.insert_node(DockNode::Tabs {
+        tabs: vec![panel_a.clone()],
+        active: 0,
+    });
+    let tabs_b = g.insert_node(DockNode::Tabs {
+        tabs: vec![panel_b.clone()],
+        active: 0,
+    });
+    let root = g.insert_node(DockNode::Split {
+        axis: Axis::Horizontal,
+        children: vec![tabs_a, tabs_b],
+        fractions: vec![0.5, 0.5],
+    });
+    g.set_window_root(w, root);
+
+    assert!(!g.apply_op(&DockOp::MoveTabs {
+        source_window: w,
+        source_tabs: tabs_a,
+        target_window: w,
+        target_tabs: root,
+        zone: DropZone::Right,
+        insert_index: None,
+    }));
+    assert_eq!(g.window_root(w), Some(root));
+    assert_eq!(g.collect_panels_in_window(w), vec![panel_a, panel_b]);
+    assert_canonical_all_windows(&g);
+}
+
+#[test]
 fn move_tabs_merges_into_target_tabs_and_preserves_active() {
     let w = window(1);
     let panel_a = PanelKey::new("test.a");

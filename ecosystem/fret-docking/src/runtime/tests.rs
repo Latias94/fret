@@ -471,6 +471,127 @@ fn expired_pending_request_allows_later_float_request() {
 }
 
 #[test]
+fn expired_pending_window_created_closes_created_window_without_moving_panel() {
+    let window_a = AppWindowId::from(KeyData::from_ffi(1));
+    let window_b = AppWindowId::from(KeyData::from_ffi(2));
+    let panel = PanelKey::new("test.panel");
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    app.set_global(DockManager::default());
+
+    app.with_global_mut(DockManager::default, |dock, _app| {
+        dock.insert_panel(panel.clone(), test_panel("Panel"));
+        let tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
+            tabs: vec![panel.clone()],
+            active: 0,
+        });
+        dock.workspace.graph.set_window_root(window_a, tabs);
+    });
+
+    assert!(request_panel_host(&mut app, window_a, &panel));
+    let create = app
+        .take_effects()
+        .iter()
+        .find_map(|e| match e {
+            Effect::Window(WindowRequest::Create(req)) => Some(req.clone()),
+            _ => None,
+        })
+        .expect("expected WindowRequest::Create");
+
+    app.advance_ticks(601);
+
+    assert!(handle_dock_window_created(&mut app, &create, window_b));
+    let effects = app.take_effects();
+    assert!(
+        effects
+            .iter()
+            .any(|e| matches!(e, Effect::Window(WindowRequest::Close(w)) if *w == window_b)),
+        "expired unknown request should close the newly-created window"
+    );
+
+    let dock = app.global::<DockManager>().expect("dock manager exists");
+    assert!(
+        dock.workspace
+            .graph
+            .find_panel_in_window(window_a, &panel)
+            .is_some(),
+        "expired request must not move the panel"
+    );
+    assert!(
+        dock.workspace
+            .graph
+            .find_panel_in_window(window_b, &panel)
+            .is_none(),
+        "expired request must not create a new dock root"
+    );
+}
+
+#[test]
+fn canceled_pending_window_created_after_ttl_closes_created_window_without_moving_panel() {
+    let window_a = AppWindowId::from(KeyData::from_ffi(1));
+    let window_b = AppWindowId::from(KeyData::from_ffi(2));
+    let panel = PanelKey::new("test.panel");
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    app.set_global(DockManager::default());
+
+    app.with_global_mut(DockManager::default, |dock, _app| {
+        dock.insert_panel(panel.clone(), test_panel("Panel"));
+        let tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
+            tabs: vec![panel.clone()],
+            active: 0,
+        });
+        dock.workspace.graph.set_window_root(window_a, tabs);
+    });
+
+    assert!(request_panel_host(&mut app, window_a, &panel));
+    let create = app
+        .take_effects()
+        .iter()
+        .find_map(|e| match e {
+            Effect::Window(WindowRequest::Create(req)) => Some(req.clone()),
+            _ => None,
+        })
+        .expect("expected WindowRequest::Create");
+
+    assert!(handle_dock_op(
+        &mut app,
+        DockOp::EnsurePanelVisible {
+            preferred_window: window_a,
+            panel: panel.clone(),
+        },
+    ));
+    app.advance_ticks(601);
+
+    assert!(handle_dock_window_created(&mut app, &create, window_b));
+    let effects = app.take_effects();
+    assert!(
+        effects
+            .iter()
+            .any(|e| matches!(e, Effect::Window(WindowRequest::Close(w)) if *w == window_b)),
+        "canceled expired request should close the newly-created window"
+    );
+
+    let dock = app.global::<DockManager>().expect("dock manager exists");
+    assert!(
+        dock.workspace
+            .graph
+            .find_panel_in_window(window_a, &panel)
+            .is_some(),
+        "canceled expired request must not move the panel"
+    );
+    assert!(
+        dock.workspace
+            .graph
+            .find_panel_in_window(window_b, &panel)
+            .is_none(),
+        "canceled expired request must not create a new dock root"
+    );
+}
+
+#[test]
 fn window_created_updates_drag_source_window_for_active_dock_drag() {
     let window_a = AppWindowId::from(KeyData::from_ffi(1));
     let window_b = AppWindowId::from(KeyData::from_ffi(2));
@@ -660,6 +781,81 @@ fn window_created_prefers_pending_pointer_id_over_drag_source_window_match() {
     let drag = app.drag(pointer_id).expect("expected active drag session");
     assert_eq!(drag.source_window, window_b);
     assert_eq!(drag.current_window, window_b);
+}
+
+#[test]
+fn before_close_cancels_pending_create_for_panels_moved_out_of_closing_window() {
+    let main_window = AppWindowId::from(KeyData::from_ffi(1));
+    let closing_window = AppWindowId::from(KeyData::from_ffi(2));
+    let created_window = AppWindowId::from(KeyData::from_ffi(3));
+    let main_panel = PanelKey::new("test.main");
+    let panel = PanelKey::new("test.panel");
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    app.set_global(DockManager::default());
+
+    app.with_global_mut(DockManager::default, |dock, _app| {
+        dock.insert_panel(main_panel.clone(), test_panel("Main"));
+        dock.insert_panel(panel.clone(), test_panel("Panel"));
+        let main_tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
+            tabs: vec![main_panel.clone()],
+            active: 0,
+        });
+        let closing_tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
+            tabs: vec![panel.clone()],
+            active: 0,
+        });
+        dock.workspace.graph.set_window_root(main_window, main_tabs);
+        dock.workspace
+            .graph
+            .set_window_root(closing_window, closing_tabs);
+    });
+
+    assert!(request_panel_host(&mut app, closing_window, &panel));
+    let create = app
+        .take_effects()
+        .iter()
+        .find_map(|e| match e {
+            Effect::Window(WindowRequest::Create(req)) => Some(req.clone()),
+            _ => None,
+        })
+        .expect("expected WindowRequest::Create");
+
+    assert!(handle_dock_before_close_window(
+        &mut app,
+        closing_window,
+        main_window,
+    ));
+    assert!(handle_dock_window_created(
+        &mut app,
+        &create,
+        created_window,
+    ));
+
+    let effects = app.take_effects();
+    assert!(
+        effects
+            .iter()
+            .any(|e| matches!(e, Effect::Window(WindowRequest::Close(w)) if *w == created_window)),
+        "create callback for a panel moved during before_close should close the created window"
+    );
+
+    let dock = app.global::<DockManager>().expect("dock manager exists");
+    assert!(
+        dock.workspace
+            .graph
+            .find_panel_in_window(main_window, &panel)
+            .is_some(),
+        "before_close should merge the panel into the target window"
+    );
+    assert!(
+        dock.workspace
+            .graph
+            .find_panel_in_window(created_window, &panel)
+            .is_none(),
+        "canceled create callback must not move the panel again"
+    );
 }
 
 #[test]

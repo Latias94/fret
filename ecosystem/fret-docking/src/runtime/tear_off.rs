@@ -239,9 +239,7 @@ impl DockTearOffMachine {
         };
 
         let Some(pending) = self.pending_by_panel.remove(panel) else {
-            // If we can't correlate the request, default to proceeding; callers may still apply the
-            // graph update if the panel exists.
-            return (DockTearOffCompletion::Proceed, None);
+            return (DockTearOffCompletion::CancelAndCloseWindow, None);
         };
 
         if pending.canceled || pending.source_window != *source_window {

@@ -3,8 +3,9 @@ use fret_runtime::UiHost;
 
 use crate::dock::DockManager;
 
+use super::commands;
 use super::layout_invalidation::invalidate_windows;
-use super::tear_off::DockFloatingOsWindowRegistry;
+use super::tear_off::{DockFloatingOsWindowRegistry, DockTearOffMachine};
 
 pub(super) fn handle_dock_before_close_window<H: UiHost>(
     app: &mut H,
@@ -26,21 +27,26 @@ pub(super) fn handle_dock_before_close_window<H: UiHost>(
         if dock.workspace.graph.window_root(closing_window).is_none() {
             return true;
         }
-        let changed =
-            if let Some(target_tabs) = dock.workspace.graph.first_tabs_in_window(target_window) {
-                dock.workspace.graph.apply_op(&DockOp::MergeWindowInto {
-                    source_window: closing_window,
-                    target_window,
-                    target_tabs,
-                })
-            } else {
-                dock.workspace
-                    .graph
-                    .apply_op(&DockOp::MoveWindowToEmptyDockSpace {
-                        source_window: closing_window,
-                        target_window,
-                    })
-            };
+        let op = if let Some(target_tabs) = dock.workspace.graph.first_tabs_in_window(target_window)
+        {
+            DockOp::MergeWindowInto {
+                source_window: closing_window,
+                target_window,
+                target_tabs,
+            }
+        } else {
+            DockOp::MoveWindowToEmptyDockSpace {
+                source_window: closing_window,
+                target_window,
+            }
+        };
+        let now = app.tick_id();
+        app.with_global_mut(DockTearOffMachine::default, |machine, _app| {
+            let canceled_creates = machine.prune_and_cancel_for_op(now, dock, &op);
+            commands::remove_queued_create_windows(_app, &canceled_creates);
+        });
+
+        let changed = dock.workspace.graph.apply_op(&op);
         if !changed {
             return false;
         }
