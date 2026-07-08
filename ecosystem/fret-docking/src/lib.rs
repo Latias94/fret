@@ -19,7 +19,11 @@ pub use dock::{
     DockPanel, DockPanelElementRegistry, DockViewportLayout, DockViewportOverlayHooks,
     DockingPolicy, ViewportPanel,
 };
-pub use facade::{DockHostOptions, DockSurface};
+pub use facade::{
+    DockHostOptions, DockSurface, DockSurfaceChange, DockSurfacePanelError,
+    DockSurfacePanelLocation, DockSurfacePanelOutcome, DockSurfacePanelPlacement,
+    DockSurfacePanelSnapshot, DockSurfaceSnapshot,
+};
 
 /// Explicit low-level docking access for framework tests and advanced first-party integrations.
 ///

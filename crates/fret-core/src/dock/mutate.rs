@@ -381,6 +381,29 @@ impl DockGraph {
         true
     }
 
+    pub fn open_panel_in_window(&mut self, window: AppWindowId, panel: PanelKey) -> bool {
+        if let Some((tabs, index)) = self.find_panel_in_window(window, &panel) {
+            return self.set_active_tab(tabs, index);
+        }
+
+        if let Some(root) = self.window_root(window)
+            && let Some(tabs_node) = self.first_tabs_in_window_root(root)
+            && let Some(DockNode::Tabs { tabs, active }) = self.nodes.get_mut(tabs_node)
+        {
+            tabs.push(panel);
+            *active = tabs.len().saturating_sub(1);
+            self.simplify_window_forest(window);
+            return true;
+        }
+
+        let tabs = self.insert_node(DockNode::Tabs {
+            tabs: vec![panel],
+            active: 0,
+        });
+        self.set_window_root(window, tabs);
+        true
+    }
+
     pub fn float_panel_to_window(
         &mut self,
         source_window: AppWindowId,
@@ -633,6 +656,17 @@ impl DockGraph {
         }
         *cur = active.min(list.len() - 1);
         true
+    }
+
+    fn first_tabs_in_window_root(&self, node_id: DockNodeId) -> Option<DockNodeId> {
+        match self.nodes.get(node_id)? {
+            DockNode::Tabs { .. } => Some(node_id),
+            DockNode::Split { children, .. } => children
+                .iter()
+                .copied()
+                .find_map(|child| self.first_tabs_in_window_root(child)),
+            DockNode::Floating { child } => self.first_tabs_in_window_root(*child),
+        }
     }
 
     pub fn update_split_two(&mut self, split: DockNodeId, first_fraction: f32) -> bool {

@@ -910,6 +910,7 @@ fn run_dock_op_sequence_case(case: &DockOpSequenceCase) {
                 } else {
                     let kind: &'static str = match &op {
                         DockOp::SetActiveTab { .. } => "set_active_tab",
+                        DockOp::OpenPanel { .. } => "open_panel",
                         DockOp::ClosePanel { .. } => "close_panel",
                         DockOp::MovePanel { .. } => "move_panel",
                         DockOp::MovePanelToEmptyDockSpace { .. } => {
@@ -1464,6 +1465,75 @@ fn import_layout_degrades_unmapped_windows_into_floating_containers() {
     assert!(g.find_panel_in_window(window_a, &panel_a).is_some());
     assert!(g.find_panel_in_window(window_a, &panel_b).is_some());
     assert_eq!(g.floating_windows(window_a).len(), 1);
+}
+
+#[test]
+fn open_panel_creates_window_root_when_window_is_empty() {
+    let w = window(1);
+    let panel = PanelKey::new("test.inspector");
+    let mut g = DockGraph::new();
+
+    assert!(g.apply_op(&DockOp::OpenPanel {
+        window: w,
+        panel: panel.clone(),
+    }));
+
+    let root = g.window_root(w).expect("open panel should create a root");
+    let DockNode::Tabs { tabs, active } = g.node(root).expect("root tabs") else {
+        panic!("expected root tabs");
+    };
+    assert_eq!(tabs, &vec![panel]);
+    assert_eq!(*active, 0);
+}
+
+#[test]
+fn open_panel_appends_to_existing_root_tabs_and_selects_new_panel() {
+    let w = window(1);
+    let panel_a = PanelKey::new("test.a");
+    let panel_b = PanelKey::new("test.b");
+
+    let mut g = DockGraph::new();
+    let tabs = g.insert_node(DockNode::Tabs {
+        tabs: vec![panel_a.clone()],
+        active: 0,
+    });
+    g.set_window_root(w, tabs);
+
+    assert!(g.apply_op(&DockOp::OpenPanel {
+        window: w,
+        panel: panel_b.clone(),
+    }));
+
+    let DockNode::Tabs { tabs: list, active } = g.node(tabs).expect("tabs node must exist") else {
+        panic!("expected tabs");
+    };
+    assert_eq!(list, &vec![panel_a, panel_b]);
+    assert_eq!(*active, 1);
+}
+
+#[test]
+fn open_panel_selects_existing_panel_instead_of_duplicating_it() {
+    let w = window(1);
+    let panel_a = PanelKey::new("test.a");
+    let panel_b = PanelKey::new("test.b");
+
+    let mut g = DockGraph::new();
+    let tabs = g.insert_node(DockNode::Tabs {
+        tabs: vec![panel_a.clone(), panel_b.clone()],
+        active: 0,
+    });
+    g.set_window_root(w, tabs);
+
+    assert!(g.apply_op(&DockOp::OpenPanel {
+        window: w,
+        panel: panel_b.clone(),
+    }));
+
+    let DockNode::Tabs { tabs: list, active } = g.node(tabs).expect("tabs node must exist") else {
+        panic!("expected tabs");
+    };
+    assert_eq!(list, &vec![panel_a, panel_b]);
+    assert_eq!(*active, 1);
 }
 
 #[test]

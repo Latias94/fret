@@ -37,6 +37,9 @@ impl DockGraph {
                     })
                 }
             }
+            DockOp::OpenPanel { window, panel } => {
+                Ok(self.open_panel_in_window(*window, panel.clone()))
+            }
             _ => Ok(self.apply_op(op)),
         }
     }
@@ -44,6 +47,9 @@ impl DockGraph {
     pub fn apply_op(&mut self, op: &DockOp) -> bool {
         match op {
             DockOp::SetActiveTab { tabs, active } => self.set_active_tab(*tabs, *active),
+            DockOp::OpenPanel { window, panel } => {
+                self.open_panel_in_window(*window, panel.clone())
+            }
             DockOp::ClosePanel { window, panel } => self.close_panel(*window, panel.clone()),
             DockOp::MovePanel {
                 source_window,

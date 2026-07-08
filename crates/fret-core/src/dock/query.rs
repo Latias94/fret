@@ -239,6 +239,11 @@ impl DockGraph {
 
     pub fn windows(&self) -> Vec<AppWindowId> {
         let mut windows: Vec<AppWindowId> = self.window_roots.keys().copied().collect();
+        for window in self.window_floatings.keys().copied() {
+            if !windows.contains(&window) {
+                windows.push(window);
+            }
+        }
         windows.sort_by_key(|w| w.data().as_ffi());
         windows
     }

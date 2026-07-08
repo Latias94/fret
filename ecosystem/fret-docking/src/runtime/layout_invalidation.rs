@@ -72,6 +72,7 @@ pub(super) fn invalidate_after_dock_op<H: UiHost>(
         DockOp::SetFloatingRect { window, .. }
         | DockOp::RaiseFloating { window, .. }
         | DockOp::MergeFloatingInto { window, .. }
+        | DockOp::OpenPanel { window, .. }
         | DockOp::ClosePanel { window, .. } => {
             dock.clear_viewport_layout_for_window(*window);
             invalidate_windows(app, [*window]);

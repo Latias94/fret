@@ -7,6 +7,13 @@ fn public_docking_surface_prefers_dock_surface_entry_points() {
     for symbol in [
         "DockSurface",
         "DockHostOptions",
+        "DockSurfaceChange",
+        "DockSurfacePanelError",
+        "DockSurfacePanelLocation",
+        "DockSurfacePanelOutcome",
+        "DockSurfacePanelPlacement",
+        "DockSurfacePanelSnapshot",
+        "DockSurfaceSnapshot",
         "DockPanel",
         "DockPanelElementRegistry",
         "DockViewportLayout",
@@ -95,7 +102,12 @@ fn dock_surface_root_entry_point_is_public_without_internal_command_queue() {
     let runtime = include_str!("../src/runtime.rs");
     let commands = include_str!("../src/runtime/commands.rs");
 
-    for symbol in ["DockSurface", "DockHostOptions"] {
+    for symbol in [
+        "DockSurface",
+        "DockHostOptions",
+        "DockSurfacePanelOutcome",
+        "DockSurfaceSnapshot",
+    ] {
         assert!(
             lib.contains(symbol),
             "`lib.rs` should expose app-facing docking facade symbol `{symbol}`"

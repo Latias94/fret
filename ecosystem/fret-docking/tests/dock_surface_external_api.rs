@@ -1,6 +1,8 @@
 use fret_core::{AppWindowId, Color, PanelKey};
 use fret_docking::advanced::DockRuntimeCommand;
-use fret_docking::{DockHostOptions, DockPanel, DockSurface};
+use fret_docking::{
+    DockHostOptions, DockPanel, DockSurface, DockSurfacePanelOutcome, DockSurfaceSnapshot,
+};
 use slotmap::KeyData;
 
 #[test]
@@ -25,4 +27,10 @@ fn public_root_consumer_constructs_dock_surface_without_internal_runtime_helpers
 
     fn accepts_runtime_command_type(_: Option<DockRuntimeCommand>) {}
     accepts_runtime_command_type(None);
+
+    fn accepts_panel_outcome_type(_: Option<DockSurfacePanelOutcome>) {}
+    accepts_panel_outcome_type(None);
+
+    fn accepts_surface_snapshot_type(_: Option<DockSurfaceSnapshot>) {}
+    accepts_surface_snapshot_type(None);
 }

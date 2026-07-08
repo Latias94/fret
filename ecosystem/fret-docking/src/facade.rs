@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use fret_core::{
-    AppWindowId, DockGraph, DockLayout, DockLayoutValidationError, DockNodeId, DockOp,
+    AppWindowId, DockGraph, DockLayout, DockLayoutValidationError, DockNode, DockNodeId, DockOp,
     DockWindowPlacement, PanelKey, WindowAnchor,
 };
 use fret_runtime::{CreateWindowRequest, Effect, UiHost, WindowRequest};
@@ -16,6 +16,71 @@ use crate::dock::{
 use crate::runtime::DockRuntimeCommand;
 
 pub type DockHostOptions = DockSpaceElementOptions;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DockSurfaceChange {
+    Changed,
+    Unchanged,
+}
+
+impl DockSurfaceChange {
+    pub fn changed(self) -> bool {
+        matches!(self, Self::Changed)
+    }
+}
+
+impl From<bool> for DockSurfaceChange {
+    fn from(changed: bool) -> Self {
+        if changed {
+            Self::Changed
+        } else {
+            Self::Unchanged
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DockSurfacePanelPlacement {
+    Docked,
+    Floating,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DockSurfacePanelLocation {
+    pub window: AppWindowId,
+    pub placement: DockSurfacePanelPlacement,
+    pub tab_index: usize,
+    pub tab_count: usize,
+    pub active: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DockSurfacePanelSnapshot {
+    pub key: PanelKey,
+    pub title: String,
+    pub descriptor_only: bool,
+    pub location: Option<DockSurfacePanelLocation>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DockSurfacePanelOutcome {
+    pub panel: PanelKey,
+    pub change: DockSurfaceChange,
+    pub location: Option<DockSurfacePanelLocation>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum DockSurfacePanelError {
+    DockManagerUnavailable,
+    PanelNotRegistered { panel: PanelKey },
+    PanelNotOpen { panel: PanelKey },
+}
+
+#[derive(Debug, Clone)]
+pub struct DockSurfaceSnapshot {
+    pub layout: DockLayout,
+    pub panels: Vec<DockSurfacePanelSnapshot>,
+}
 
 /// App-facing docking surface.
 ///
@@ -134,6 +199,153 @@ impl DockSurface {
         })
     }
 
+    pub fn snapshot<H: UiHost>(
+        &self,
+        app: &H,
+        windows: &[(AppWindowId, String)],
+    ) -> Option<DockSurfaceSnapshot> {
+        self.snapshot_with_placement(app, windows, |_| None)
+    }
+
+    pub fn snapshot_with_placement<H: UiHost>(
+        &self,
+        app: &H,
+        windows: &[(AppWindowId, String)],
+        placement: impl FnMut(AppWindowId) -> Option<DockWindowPlacement>,
+    ) -> Option<DockSurfaceSnapshot> {
+        app.global::<DockManager>().map(|dock| DockSurfaceSnapshot {
+            layout: dock
+                .workspace
+                .graph
+                .export_layout_with_placement(windows, placement),
+            panels: registered_panel_snapshots(dock),
+        })
+    }
+
+    pub fn registered_panels<H: UiHost>(&self, app: &H) -> Vec<DockSurfacePanelSnapshot> {
+        app.global::<DockManager>()
+            .map(registered_panel_snapshots)
+            .unwrap_or_default()
+    }
+
+    pub fn panels_in_window<H: UiHost>(
+        &self,
+        app: &H,
+        window: AppWindowId,
+    ) -> Vec<DockSurfacePanelSnapshot> {
+        let Some(dock) = app.global::<DockManager>() else {
+            return Vec::new();
+        };
+        dock.workspace
+            .graph
+            .collect_panels_in_window(window)
+            .into_iter()
+            .map(|panel| panel_snapshot(dock, panel))
+            .collect()
+    }
+
+    pub fn selected_panel_in_window<H: UiHost>(
+        &self,
+        app: &H,
+        window: AppWindowId,
+    ) -> Option<PanelKey> {
+        let dock = app.global::<DockManager>()?;
+        selected_panel_in_window(&dock.workspace.graph, window)
+    }
+
+    pub fn panel_location<H: UiHost>(
+        &self,
+        app: &H,
+        panel: &PanelKey,
+    ) -> Option<DockSurfacePanelLocation> {
+        let dock = app.global::<DockManager>()?;
+        panel_location(dock, panel)
+    }
+
+    pub fn open_panel<H: UiHost>(
+        &self,
+        app: &mut H,
+        panel: &PanelKey,
+    ) -> Result<DockSurfacePanelOutcome, DockSurfacePanelError> {
+        self.open_panel_in_window(app, self.main_window, panel)
+    }
+
+    pub fn open_panel_in_window<H: UiHost>(
+        &self,
+        app: &mut H,
+        window: AppWindowId,
+        panel: &PanelKey,
+    ) -> Result<DockSurfacePanelOutcome, DockSurfacePanelError> {
+        let Some(dock) = app.global::<DockManager>() else {
+            return Err(DockSurfacePanelError::DockManagerUnavailable);
+        };
+        if dock.workspace.panel(panel).is_none() {
+            return Err(DockSurfacePanelError::PanelNotRegistered {
+                panel: panel.clone(),
+            });
+        }
+        if panel_location(dock, panel).is_some() {
+            return self.select_panel(app, panel);
+        }
+
+        let changed = self.driver().on_dock_op(
+            app,
+            DockOp::OpenPanel {
+                window,
+                panel: panel.clone(),
+            },
+        );
+        self.driver().flush_runtime_commands_to_effects(app);
+        Ok(self.panel_outcome(app, panel.clone(), changed))
+    }
+
+    pub fn select_panel<H: UiHost>(
+        &self,
+        app: &mut H,
+        panel: &PanelKey,
+    ) -> Result<DockSurfacePanelOutcome, DockSurfacePanelError> {
+        let Some((_, op)) = app
+            .global::<DockManager>()
+            .and_then(|dock| dock.activate_panel_tab_best_effort([self.main_window], panel))
+        else {
+            if app.global::<DockManager>().is_none() {
+                return Err(DockSurfacePanelError::DockManagerUnavailable);
+            }
+            return Err(DockSurfacePanelError::PanelNotOpen {
+                panel: panel.clone(),
+            });
+        };
+
+        let changed = self.driver().on_dock_op(app, op);
+        self.driver().flush_runtime_commands_to_effects(app);
+        Ok(self.panel_outcome(app, panel.clone(), changed))
+    }
+
+    pub fn close_panel<H: UiHost>(
+        &self,
+        app: &mut H,
+        panel: &PanelKey,
+    ) -> Result<DockSurfacePanelOutcome, DockSurfacePanelError> {
+        let Some(location) = self.panel_location(app, panel) else {
+            if app.global::<DockManager>().is_none() {
+                return Err(DockSurfacePanelError::DockManagerUnavailable);
+            }
+            return Err(DockSurfacePanelError::PanelNotOpen {
+                panel: panel.clone(),
+            });
+        };
+
+        let changed = self.driver().on_dock_op(
+            app,
+            DockOp::ClosePanel {
+                window: location.window,
+                panel: panel.clone(),
+            },
+        );
+        self.driver().flush_runtime_commands_to_effects(app);
+        Ok(self.panel_outcome(app, panel.clone(), changed))
+    }
+
     pub fn install_panel_registry<H: UiHost + 'static>(
         &self,
         app: &mut H,
@@ -178,6 +390,145 @@ impl DockSurface {
     /// Returns the explicit driver-tier API for runtime and host integration callbacks.
     pub fn driver(&self) -> DockSurfaceDriver {
         DockSurfaceDriver { surface: *self }
+    }
+
+    fn panel_outcome<H: UiHost>(
+        &self,
+        app: &H,
+        panel: PanelKey,
+        changed: bool,
+    ) -> DockSurfacePanelOutcome {
+        let location = self.panel_location(app, &panel);
+        DockSurfacePanelOutcome {
+            panel,
+            change: DockSurfaceChange::from(changed),
+            location,
+        }
+    }
+}
+
+fn registered_panel_snapshots(dock: &DockManager) -> Vec<DockSurfacePanelSnapshot> {
+    let mut panels: Vec<PanelKey> = dock.workspace.panels().keys().cloned().collect();
+    panels.sort_by(|a, b| {
+        a.kind
+            .0
+            .cmp(&b.kind.0)
+            .then_with(|| a.instance.cmp(&b.instance))
+    });
+    panels
+        .into_iter()
+        .map(|panel| panel_snapshot(dock, panel))
+        .collect()
+}
+
+fn panel_snapshot(dock: &DockManager, panel: PanelKey) -> DockSurfacePanelSnapshot {
+    let title = dock
+        .workspace
+        .panel(&panel)
+        .map(|panel| panel.title.clone())
+        .unwrap_or_else(|| panel.kind.0.clone());
+    let descriptor_only = dock.workspace.panel_catalog().is_descriptor_only(&panel);
+    let location = panel_location(dock, &panel);
+    DockSurfacePanelSnapshot {
+        key: panel,
+        title,
+        descriptor_only,
+        location,
+    }
+}
+
+fn panel_location(dock: &DockManager, panel: &PanelKey) -> Option<DockSurfacePanelLocation> {
+    for window in dock.workspace.graph.windows() {
+        if let Some(location) = panel_location_in_window(&dock.workspace.graph, window, panel) {
+            return Some(location);
+        }
+    }
+    None
+}
+
+fn panel_location_in_window(
+    graph: &DockGraph,
+    window: AppWindowId,
+    panel: &PanelKey,
+) -> Option<DockSurfacePanelLocation> {
+    if let Some(root) = graph.window_root(window)
+        && let Some(location) = panel_location_in_node(
+            graph,
+            window,
+            DockSurfacePanelPlacement::Docked,
+            root,
+            panel,
+        )
+    {
+        return Some(location);
+    }
+
+    for floating in graph.floating_windows(window) {
+        if let Some(location) = panel_location_in_node(
+            graph,
+            window,
+            DockSurfacePanelPlacement::Floating,
+            floating.floating,
+            panel,
+        ) {
+            return Some(location);
+        }
+    }
+    None
+}
+
+fn panel_location_in_node(
+    graph: &DockGraph,
+    window: AppWindowId,
+    placement: DockSurfacePanelPlacement,
+    node: DockNodeId,
+    panel: &PanelKey,
+) -> Option<DockSurfacePanelLocation> {
+    match graph.node(node)? {
+        DockNode::Tabs { tabs, active } => tabs
+            .iter()
+            .position(|candidate| candidate == panel)
+            .map(|tab_index| DockSurfacePanelLocation {
+                window,
+                placement,
+                tab_index,
+                tab_count: tabs.len(),
+                active: *active == tab_index,
+            }),
+        DockNode::Split { children, .. } => children
+            .iter()
+            .copied()
+            .find_map(|child| panel_location_in_node(graph, window, placement, child, panel)),
+        DockNode::Floating { child } => panel_location_in_node(
+            graph,
+            window,
+            DockSurfacePanelPlacement::Floating,
+            *child,
+            panel,
+        ),
+    }
+}
+
+fn selected_panel_in_window(graph: &DockGraph, window: AppWindowId) -> Option<PanelKey> {
+    if let Some(root) = graph.window_root(window)
+        && let Some(panel) = selected_panel_in_node(graph, root)
+    {
+        return Some(panel);
+    }
+    graph
+        .floating_windows(window)
+        .iter()
+        .find_map(|floating| selected_panel_in_node(graph, floating.floating))
+}
+
+fn selected_panel_in_node(graph: &DockGraph, node: DockNodeId) -> Option<PanelKey> {
+    match graph.node(node)? {
+        DockNode::Tabs { tabs, active } => tabs.get(*active).cloned(),
+        DockNode::Split { children, .. } => children
+            .iter()
+            .copied()
+            .find_map(|child| selected_panel_in_node(graph, child)),
+        DockNode::Floating { child } => selected_panel_in_node(graph, *child),
     }
 }
 
@@ -295,6 +646,134 @@ mod tests {
             color: fret_core::Color::TRANSPARENT,
             viewport: None,
         }
+    }
+
+    #[test]
+    fn dock_surface_panel_commands_return_typed_outcomes() {
+        let window = AppWindowId::from(KeyData::from_ffi(1));
+        let panel_a = PanelKey::new("test.a");
+        let panel_b = PanelKey::new("test.b");
+        let surface = DockSurface::new(window);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        app.set_global(DockManager::default());
+        surface.register_panel(&mut app, panel_a.clone(), test_panel("A"));
+        surface.register_panel(&mut app, panel_b.clone(), test_panel("B"));
+
+        let opened_a = surface
+            .open_panel(&mut app, &panel_a)
+            .expect("open panel a");
+        assert_eq!(opened_a.panel, panel_a);
+        assert_eq!(opened_a.change, DockSurfaceChange::Changed);
+        assert_eq!(
+            opened_a.location,
+            Some(DockSurfacePanelLocation {
+                window,
+                placement: DockSurfacePanelPlacement::Docked,
+                tab_index: 0,
+                tab_count: 1,
+                active: true,
+            })
+        );
+
+        let opened_b = surface
+            .open_panel(&mut app, &panel_b)
+            .expect("open panel b");
+        assert_eq!(opened_b.change, DockSurfaceChange::Changed);
+        assert_eq!(
+            surface.selected_panel_in_window(&app, window),
+            Some(panel_b.clone())
+        );
+
+        let selected_a = surface
+            .select_panel(&mut app, &panel_a)
+            .expect("select existing panel");
+        assert!(
+            selected_a
+                .location
+                .as_ref()
+                .is_some_and(|location| location.active && location.tab_index == 0)
+        );
+        assert_eq!(
+            surface.selected_panel_in_window(&app, window),
+            Some(panel_a.clone())
+        );
+
+        let closed_a = surface
+            .close_panel(&mut app, &panel_a)
+            .expect("close selected panel");
+        assert_eq!(closed_a.change, DockSurfaceChange::Changed);
+        assert_eq!(closed_a.location, None);
+        assert_eq!(
+            surface.close_panel(&mut app, &panel_a),
+            Err(DockSurfacePanelError::PanelNotOpen { panel: panel_a })
+        );
+    }
+
+    #[test]
+    fn dock_surface_registered_panels_include_locations_and_descriptor_flags() {
+        let window = AppWindowId::from(KeyData::from_ffi(1));
+        let panel_a = PanelKey::new("test.a");
+        let panel_b = PanelKey::new("test.b");
+        let surface = DockSurface::new(window);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        app.set_global(DockManager::default());
+        surface.register_panel(&mut app, panel_b.clone(), test_panel("B"));
+        surface.register_panel(&mut app, panel_a.clone(), test_panel("A"));
+        surface
+            .open_panel(&mut app, &panel_b)
+            .expect("open panel b");
+
+        let panels = surface.registered_panels(&app);
+        assert_eq!(
+            panels.iter().map(|panel| &panel.key).collect::<Vec<_>>(),
+            vec![&panel_a, &panel_b],
+            "registered panel snapshots should be stable-sorted by key"
+        );
+        assert_eq!(panels[0].title, "A");
+        assert!(!panels[0].descriptor_only);
+        assert_eq!(panels[0].location, None);
+        assert!(
+            panels[1]
+                .location
+                .as_ref()
+                .is_some_and(|location| location.window == window && location.active)
+        );
+    }
+
+    #[test]
+    fn dock_surface_snapshot_exports_layout_and_panel_facts() {
+        let window = AppWindowId::from(KeyData::from_ffi(1));
+        let panel = PanelKey::new("test.panel");
+        let surface = DockSurface::new(window);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        app.set_global(DockManager::default());
+        surface.register_panel(&mut app, panel.clone(), test_panel("Panel"));
+        surface.open_panel(&mut app, &panel).expect("open panel");
+
+        let snapshot = surface
+            .snapshot_with_placement(&app, &[(window, "main".to_string())], |candidate| {
+                (candidate == window).then_some(DockWindowPlacement {
+                    width: 1200,
+                    height: 800,
+                    x: Some(10),
+                    y: Some(20),
+                    monitor_hint: Some("primary".to_string()),
+                })
+            })
+            .expect("snapshot");
+
+        assert_eq!(snapshot.layout.windows.len(), 1);
+        assert_eq!(snapshot.layout.windows[0].logical_window_id, "main");
+        assert!(snapshot.layout.windows[0].placement.is_some());
+        assert_eq!(snapshot.panels.len(), 1);
+        assert_eq!(snapshot.panels[0].key, panel);
+        assert!(snapshot.panels[0].location.is_some());
     }
 
     #[test]

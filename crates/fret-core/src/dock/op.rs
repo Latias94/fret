@@ -11,6 +11,11 @@ pub enum DockOp {
         active: usize,
     },
 
+    OpenPanel {
+        window: AppWindowId,
+        panel: PanelKey,
+    },
+
     ClosePanel {
         window: AppWindowId,
         panel: PanelKey,

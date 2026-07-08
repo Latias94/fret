@@ -166,6 +166,7 @@ impl DockTearOffMachine {
         self.prune_expired(now);
         match op {
             DockOp::ClosePanel { panel, .. }
+            | DockOp::OpenPanel { panel, .. }
             | DockOp::MovePanel { panel, .. }
             | DockOp::MovePanelToEmptyDockSpace { panel, .. }
             | DockOp::FloatPanelToWindow { panel, .. }
