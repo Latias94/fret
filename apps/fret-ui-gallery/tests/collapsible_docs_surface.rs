@@ -48,6 +48,10 @@ fn collapsible_page_documents_source_axes_and_children_api_decision() {
         normalized.contains(&ordered_sections),
         "collapsible page should keep the docs-path sections before the notes follow-up"
     );
+    assert!(
+        !source.contains("shadcn::raw::collapsible::primitives::*"),
+        "collapsible page should not teach module-wide raw primitive wildcard imports",
+    );
 }
 
 #[test]

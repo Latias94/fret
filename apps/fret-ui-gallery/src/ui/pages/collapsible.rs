@@ -15,7 +15,7 @@ pub(super) fn preview_collapsible(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement
 
     let api_reference = doc_layout::notes_block([
         "`Collapsible::new(Model<bool>)` and `Collapsible::uncontrolled(default_open)` cover the documented controlled and uncontrolled authoring paths.",
-        "`shadcn::CollapsibleRoot`, `shadcn::CollapsibleTriggerPart`, and `shadcn::CollapsibleContentPart` provide the curated composable children lane; `shadcn::raw::collapsible::primitives::*` remains the explicit source-alignment escape hatch.",
+        "`shadcn::CollapsibleRoot`, `shadcn::CollapsibleTriggerPart`, and `shadcn::CollapsibleContentPart` provide the curated composable children lane; the raw primitive alias remains an explicit source-alignment escape hatch when a snippet intentionally leaves the curated facade.",
         "The top-level `shadcn::Collapsible` wrapper stays a compact Fret-first builder for dense editor UIs, while the parts aliases keep the official shadcn children composition copyable on the curated facade.",
         "`CollapsibleTriggerPart::as_child(true)` keeps the official trigger-as-child lane copyable on the curated facade, while the compact wrapper still exposes the dense editor-friendly trigger/content builder.",
         "The `Demo` section now mirrors the official shadcn `@peduarte starred 3 repositories` example instead of the previous base-style order-details card.",
@@ -27,7 +27,7 @@ pub(super) fn preview_collapsible(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement
         "Preview starts with the current shadcn Collapsible docs path after skipping `Installation`: `Demo` and `Usage`, then keeps `Controlled State`, `Basic`, `Settings Panel`, `File Tree`, `RTL`, and `API Reference` as explicit Fret follow-ups.",
         "`Demo` follows the current shadcn demo's repository-list surface, while `Basic`, `Settings Panel`, `File Tree`, and `RTL` remain registry-shaped Fret follow-ups.",
         "`shadcn::Collapsible` remains the compact Fret-first builder for the common trigger/content lane, while `shadcn::CollapsibleRoot`, `shadcn::CollapsibleTriggerPart`, and `shadcn::CollapsibleContentPart` cover the copyable composable children lane on the curated facade.",
-        "A broader generic `Collapsible::children([...])` / `compose()` root API is not currently warranted here: Collapsible only needs trigger/content, and the typed parts lane plus `shadcn::raw::collapsible::primitives::*` already cover the upstream nested composition / `asChild` story without widening the default recipe surface.",
+        "A broader generic `Collapsible::children([...])` / `compose()` root API is not currently warranted here: Collapsible only needs trigger/content, and the typed parts lane plus the explicitly named raw primitive alias already cover the upstream nested composition / `asChild` story without widening the default recipe surface.",
         "Radix Primitives owns the relevant semantics axis here: controllable/uncontrolled open state, trigger-expanded/controls relationships, and measured panel lifecycle. Those outcomes are already handled in `fret-ui-kit` / `fret-ui-shadcn`, so the remaining work here is docs/public-surface alignment rather than a `fret-ui` mechanism bug.",
         "Keep width, gap, and card layout caller-owned when the upstream example does; the recipe owns disclosure semantics, trigger/content wiring, and the measured open/close motion substrate.",
     ]);
