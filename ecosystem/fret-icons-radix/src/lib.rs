@@ -139,6 +139,23 @@ mod tests {
         LIB_RS.split("#[cfg(test)]").next().unwrap_or(LIB_RS)
     }
 
+    fn assert_readme_avoids_root_install_surface(crate_path: &str) {
+        let forbidden = [
+            format!("{crate_path}::install("),
+            format!("{crate_path}::install_app("),
+            format!("{crate_path}::install_with_ui_services("),
+            format!("`{crate_path}::install(...)`"),
+            format!("`{crate_path}::install_app(...)`"),
+            format!("`{crate_path}::install_with_ui_services(...)`"),
+        ];
+        for forbidden in forbidden {
+            assert!(
+                !README.contains(forbidden.as_str()),
+                "README should not teach root installer surface `{forbidden}`"
+            );
+        }
+    }
+
     #[test]
     fn pack_metadata_stays_explicit_and_stable() {
         assert_eq!(PACK_METADATA.pack_id, "fret-icons-radix");
@@ -172,6 +189,7 @@ mod tests {
         assert!(README.contains("`PACK_METADATA` / `PACK`"));
         assert!(README.contains("`fret_icons_radix::app::install(...)`"));
         assert!(README.contains("`fret_icons_radix::advanced::install_with_ui_services(...)`"));
+        assert_readme_avoids_root_install_surface("fret_icons_radix");
         assert!(README.contains("semantic `IconId` / `ui.*` ids"));
         assert!(README.contains("first-writer-wins (`alias_if_missing(...)`)"));
         assert!(README.contains("without mutating `radix.*` vendor ids"));
