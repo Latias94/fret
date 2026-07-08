@@ -107,6 +107,46 @@ fn publish_declarative_docking_diagnostics<H: UiHost>(app: &mut H, window: AppWi
     );
 }
 
+pub(crate) fn clear_declarative_dock_interactions_for_window<H: UiHost>(
+    app: &mut H,
+    window: AppWindowId,
+) -> bool {
+    app.with_global_mut(
+        DeclarativeDockInteractionService::default,
+        |service: &mut DeclarativeDockInteractionService, _app| service.clear_window(window),
+    )
+}
+
+#[cfg(test)]
+pub(crate) fn seed_declarative_dock_interaction_for_window<H: UiHost>(
+    app: &mut H,
+    window: AppWindowId,
+) {
+    let tabs = fret_core::DockNodeId::from(slotmap::KeyData::from_ffi(1));
+    app.with_global_mut(
+        DeclarativeDockInteractionService::default,
+        |service: &mut DeclarativeDockInteractionService, _app| {
+            service.set_tab_hover(
+                window,
+                interaction::DeclarativeTabHover {
+                    tab: Some((tabs, 0)),
+                    tab_close: false,
+                    overflow_button: None,
+                },
+            );
+        },
+    );
+}
+
+#[cfg(test)]
+pub(crate) fn declarative_dock_interaction_exists_for_window<H: UiHost>(
+    app: &H,
+    window: AppWindowId,
+) -> bool {
+    app.global::<DeclarativeDockInteractionService>()
+        .is_some_and(|service| service.has_window_state(window))
+}
+
 fn sync_declarative_viewport_layouts<H: UiHost>(
     app: &mut H,
     window: AppWindowId,

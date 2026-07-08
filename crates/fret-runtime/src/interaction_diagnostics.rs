@@ -418,6 +418,10 @@ impl WindowInteractionDiagnosticsStore {
     ) -> Option<&WorkspaceInteractionDiagnostics> {
         self.per_window.get(&window).map(|w| &w.latest_workspace)
     }
+
+    pub fn clear_window(&mut self, window: AppWindowId) -> bool {
+        self.per_window.remove(&window).is_some()
+    }
 }
 
 #[cfg(test)]
@@ -496,5 +500,46 @@ mod tests {
                 .is_some_and(|w| w.tab_strip_active_visibility.is_empty()),
             "frame-scoped snapshot should be cleared by begin_frame when not recorded"
         );
+    }
+
+    #[test]
+    fn clear_window_removes_frame_and_latest_snapshots() {
+        let mut store = WindowInteractionDiagnosticsStore::default();
+        let window = AppWindowId::default();
+
+        store.record_docking(
+            window,
+            FrameId(1),
+            DockingInteractionDiagnostics {
+                dock_graph_stats: Some(DockGraphStatsDiagnostics {
+                    node_count: 1,
+                    tabs_count: 1,
+                    split_count: 0,
+                    floating_count: 0,
+                    max_depth: 1,
+                    max_split_depth: 0,
+                    canonical_ok: true,
+                    has_nested_same_axis_splits: false,
+                }),
+                ..Default::default()
+            },
+        );
+        store.record_workspace_tab_strip_drag(
+            window,
+            FrameId(1),
+            WorkspaceTabStripDragDiagnostics {
+                pane_id: Some(std::sync::Arc::<str>::from("pane-a")),
+                pointer_id: Some(PointerId(1)),
+                dragging: true,
+                dragged_tab_id: Some(std::sync::Arc::<str>::from("tab-a")),
+            },
+        );
+
+        assert!(store.clear_window(window));
+        assert!(store.docking_for_window(window, FrameId(1)).is_none());
+        assert!(store.docking_latest_for_window(window).is_none());
+        assert!(store.workspace_for_window(window, FrameId(1)).is_none());
+        assert!(store.workspace_latest_for_window(window).is_none());
+        assert!(!store.clear_window(window));
     }
 }

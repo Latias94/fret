@@ -340,6 +340,26 @@ impl DockManager {
             .retain(|(w, _), _| *w != window);
     }
 
+    pub(crate) fn clear_transient_state_for_window_transfer(
+        &mut self,
+        source_window: fret_core::AppWindowId,
+        target_window: fret_core::AppWindowId,
+    ) {
+        self.presentation.hover = None;
+        self.clear_viewport_layout_for_window(source_window);
+        self.clear_viewport_layout_for_window(target_window);
+    }
+
+    #[cfg(test)]
+    pub(crate) fn set_test_drop_hover_for_window(&mut self, window: fret_core::AppWindowId) {
+        self.presentation.hover = Some(DockDropTarget::Float { window });
+    }
+
+    #[cfg(test)]
+    pub(crate) fn has_drop_hover(&self) -> bool {
+        self.presentation.hover.is_some()
+    }
+
     /// Reconciles the viewport layouts observed during a render pass for one window.
     ///
     /// This is intentionally idempotent for identical layout sets. Dock hosts call it from

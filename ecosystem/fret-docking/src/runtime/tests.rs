@@ -1,7 +1,10 @@
 use super::*;
 use crate::dock::DockManager;
 use crate::test_host::TestHost;
-use fret_core::{DockNode, DropZone, PanelKey};
+use fret_core::{
+    DockNode, DropZone, PanelKey, Point, Px, Rect, RenderTargetId, Size, ViewportFit,
+    ViewportMapping,
+};
 use fret_runtime::{
     CreateWindowKind, CreateWindowRequest, Effect, PlatformCapabilities, WindowRequest,
     WindowStyleRequest,
@@ -48,6 +51,27 @@ fn request_tabs_host(
         panel.clone(),
         None,
     )
+}
+
+fn render_target(raw: u64) -> RenderTargetId {
+    RenderTargetId::from(KeyData::from_ffi(raw))
+}
+
+fn rect(x: f32, y: f32, width: f32, height: f32) -> Rect {
+    Rect::new(Point::new(Px(x), Px(y)), Size::new(Px(width), Px(height)))
+}
+
+fn viewport_layout(rect: Rect) -> crate::dock::DockViewportLayout {
+    let mapping = ViewportMapping {
+        content_rect: rect,
+        target_px_size: (320, 240),
+        fit: ViewportFit::Stretch,
+    };
+    crate::dock::DockViewportLayout {
+        content_rect: rect,
+        mapping,
+        draw_rect: mapping.map().draw_rect,
+    }
 }
 
 #[test]
@@ -1113,6 +1137,97 @@ fn before_close_window_merges_dock_floating_panels_into_target_window() {
             .find_panel_in_window(window_a, &panel)
             .is_some(),
         "expected panel to be merged into target window"
+    );
+}
+
+#[test]
+fn before_close_window_clears_transient_state_for_closed_and_target_windows() {
+    let window_a = AppWindowId::from(KeyData::from_ffi(1));
+    let window_b = AppWindowId::from(KeyData::from_ffi(2));
+    let target_a = render_target(10);
+    let target_b = render_target(20);
+    let panel_a = PanelKey::new("test.main");
+    let panel_b = PanelKey::new("test.closing");
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    app.set_global(DockManager::default());
+    app.set_global(fret_runtime::WindowInteractionDiagnosticsStore::default());
+
+    app.with_global_mut(DockManager::default, |dock, _app| {
+        dock.insert_panel(panel_a.clone(), test_panel("Main"));
+        dock.insert_panel(panel_b.clone(), test_panel("Closing"));
+
+        let tabs_a = dock.workspace.graph.insert_node(DockNode::Tabs {
+            tabs: vec![panel_a.clone()],
+            active: 0,
+        });
+        dock.workspace.graph.set_window_root(window_a, tabs_a);
+
+        let tabs_b = dock.workspace.graph.insert_node(DockNode::Tabs {
+            tabs: vec![panel_b.clone()],
+            active: 0,
+        });
+        dock.workspace.graph.set_window_root(window_b, tabs_b);
+
+        dock.set_viewport_layout(
+            window_a,
+            target_a,
+            viewport_layout(rect(0.0, 0.0, 320.0, 240.0)),
+        );
+        dock.set_viewport_layout(
+            window_b,
+            target_b,
+            viewport_layout(rect(10.0, 10.0, 320.0, 240.0)),
+        );
+        dock.set_test_drop_hover_for_window(window_b);
+    });
+    crate::dock::seed_declarative_dock_interaction_for_window(&mut app, window_a);
+    crate::dock::seed_declarative_dock_interaction_for_window(&mut app, window_b);
+    app.with_global_mut(
+        fret_runtime::WindowInteractionDiagnosticsStore::default,
+        |store: &mut fret_runtime::WindowInteractionDiagnosticsStore, _app| {
+            store.record_docking(
+                window_b,
+                fret_runtime::FrameId(1),
+                fret_runtime::DockingInteractionDiagnostics::default(),
+            );
+        },
+    );
+
+    assert!(
+        app.global::<DockManager>()
+            .expect("dock manager")
+            .has_drop_hover()
+    );
+    assert!(crate::dock::declarative_dock_interaction_exists_for_window(
+        &app, window_a
+    ));
+    assert!(crate::dock::declarative_dock_interaction_exists_for_window(
+        &app, window_b
+    ));
+    assert!(
+        app.global::<fret_runtime::WindowInteractionDiagnosticsStore>()
+            .and_then(|store| store.docking_latest_for_window(window_b))
+            .is_some()
+    );
+
+    assert!(
+        handle_dock_before_close_window(&mut app, window_b, window_a),
+        "expected before_close hook to allow closing after merging"
+    );
+
+    let dock = app.global::<DockManager>().expect("dock manager");
+    assert!(!dock.has_drop_hover());
+    assert_eq!(dock.viewport_layout(window_a, target_a), None);
+    assert_eq!(dock.viewport_layout(window_b, target_b), None);
+    assert!(!crate::dock::declarative_dock_interaction_exists_for_window(&app, window_a));
+    assert!(!crate::dock::declarative_dock_interaction_exists_for_window(&app, window_b));
+    assert!(
+        app.global::<fret_runtime::WindowInteractionDiagnosticsStore>()
+            .and_then(|store| store.docking_latest_for_window(window_b))
+            .is_none(),
+        "closing-window diagnostics should be removed after before_close cleanup"
     );
 }
 

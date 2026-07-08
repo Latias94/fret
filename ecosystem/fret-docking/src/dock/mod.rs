@@ -26,10 +26,15 @@ mod viewport;
 mod manager;
 
 pub use declarative::DockPanelElementRegistry;
+pub(crate) use declarative::clear_declarative_dock_interactions_for_window;
 #[cfg(feature = "imui")]
 pub use declarative::imui_dock_space_element;
 pub(crate) use declarative::{
     DockPanelElementRegistryService, DockSpaceElementOptions, dock_space_element_from_registry,
+};
+#[cfg(test)]
+pub(crate) use declarative::{
+    declarative_dock_interaction_exists_for_window, seed_declarative_dock_interaction_for_window,
 };
 #[cfg(test)]
 pub(crate) use declarative::{dock_panel_element, dock_space_element};

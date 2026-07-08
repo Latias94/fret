@@ -40,6 +40,44 @@ pub(super) struct DeclarativeDockInteractionService {
 }
 
 impl DeclarativeDockInteractionService {
+    pub(in crate::dock::declarative) fn clear_window(&mut self, window: AppWindowId) -> bool {
+        let mut changed = false;
+        changed |= self.pressed_tab_close.remove(&window).is_some();
+        changed |= self.pressed_floating_close.remove(&window).is_some();
+        changed |= self.floating_drag.remove(&window).is_some();
+        changed |= self.divider_drag.remove(&window).is_some();
+        changed |= self.pending_dock_drags.remove(&window).is_some();
+        changed |= self.pending_dock_tabs_drags.remove(&window).is_some();
+        changed |= self.viewport_capture.remove(&window).is_some();
+        changed |= self.tab_overflow_menu.remove(&window).is_some();
+        changed |= self.tab_scroll.remove(&window).is_some();
+        changed |= self.tab_widths.remove(&window).is_some();
+        changed |= self
+            .tab_drag_auto_scroll_last_frame
+            .remove(&window)
+            .is_some();
+        changed |= self.tab_hover.remove(&window).is_some();
+        changed |= self.floating_hover.remove(&window).is_some();
+        changed
+    }
+
+    #[cfg(test)]
+    pub(in crate::dock::declarative) fn has_window_state(&self, window: AppWindowId) -> bool {
+        self.pressed_tab_close.contains_key(&window)
+            || self.pressed_floating_close.contains_key(&window)
+            || self.floating_drag.contains_key(&window)
+            || self.divider_drag.contains_key(&window)
+            || self.pending_dock_drags.contains_key(&window)
+            || self.pending_dock_tabs_drags.contains_key(&window)
+            || self.viewport_capture.contains_key(&window)
+            || self.tab_overflow_menu.contains_key(&window)
+            || self.tab_scroll.contains_key(&window)
+            || self.tab_widths.contains_key(&window)
+            || self.tab_drag_auto_scroll_last_frame.contains_key(&window)
+            || self.tab_hover.contains_key(&window)
+            || self.floating_hover.contains_key(&window)
+    }
+
     pub(in crate::dock::declarative) fn pointer_move_owner(
         &self,
         window: AppWindowId,
