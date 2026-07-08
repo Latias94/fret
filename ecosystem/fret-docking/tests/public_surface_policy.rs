@@ -14,6 +14,11 @@ fn public_docking_surface_prefers_dock_surface_entry_points() {
         "DockSurfacePanelPlacement",
         "DockSurfacePanelSnapshot",
         "DockSurfaceSnapshot",
+        "DockSurfaceViewportCloseOutcome",
+        "DockSurfaceViewportError",
+        "DockSurfaceViewportOpenOutcome",
+        "DockSurfaceViewportOpenStatus",
+        "DockSurfaceViewportSession",
         "DockPanel",
         "DockPanelElementRegistry",
         "DockViewportLayout",
@@ -107,6 +112,7 @@ fn dock_surface_root_entry_point_is_public_without_internal_command_queue() {
         "DockHostOptions",
         "DockSurfacePanelOutcome",
         "DockSurfaceSnapshot",
+        "DockSurfaceViewportSession",
     ] {
         assert!(
             lib.contains(symbol),
@@ -210,7 +216,7 @@ fn public_function_signatures(block: &str) -> Vec<String> {
 fn dock_surface_common_signatures_do_not_expose_driver_tier_types() {
     let facade = include_str!("../src/facade.rs");
     let dock_surface_signatures =
-        public_function_signatures(impl_block(facade, "impl DockSurface"));
+        public_function_signatures(impl_block(facade, "impl DockSurface {"));
 
     for forbidden in [
         "DockGraph",
@@ -240,6 +246,12 @@ fn dock_surface_common_signatures_do_not_expose_driver_tier_types() {
             .iter()
             .any(|signature| signature.contains("DockRuntimeCommand")),
         "`DockSurfaceDriver` should own runtime-command signatures"
+    );
+    assert!(
+        dock_surface_signatures
+            .iter()
+            .any(|signature| signature.contains("DockSurfaceViewportSession")),
+        "`DockSurface` should expose the typed viewport session facade without leaking runtime callback types"
     );
 }
 

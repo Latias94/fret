@@ -7,7 +7,7 @@
 //! surface instead of becoming public application protocol.
 
 use fret_core::{AppWindowId, DockNodeId, DockOp, PanelKey, WindowAnchor};
-use fret_runtime::{CreateWindowRequest, UiHost};
+use fret_runtime::{CreateWindowRequest, PlatformCapabilities, UiHost};
 
 mod apply;
 mod auto_close;
@@ -24,6 +24,10 @@ pub use commands::DockRuntimeCommand;
 use coordinator::DockRuntimeCoordinator;
 pub use in_window::recenter_in_window_floatings;
 pub(crate) use tear_off::is_dock_floating_os_window;
+
+pub(crate) fn dock_tear_off_supported(caps: Option<&PlatformCapabilities>) -> bool {
+    tear_off::dock_tear_off_supported(caps)
+}
 
 /// Request docking layout invalidation for the provided windows.
 ///

@@ -4,7 +4,7 @@ use fret_core::{
     AppWindowId, DockGraph, DockLayout, DockLayoutValidationError, DockNode, DockNodeId, DockOp,
     DockWindowPlacement, PanelKey, WindowAnchor,
 };
-use fret_runtime::{CreateWindowRequest, Effect, UiHost, WindowRequest};
+use fret_runtime::{CreateWindowRequest, Effect, PlatformCapabilities, UiHost, WindowRequest};
 use fret_ui::ElementContext;
 use fret_ui::element::AnyElement;
 
@@ -80,6 +80,42 @@ pub enum DockSurfacePanelError {
 pub struct DockSurfaceSnapshot {
     pub layout: DockLayout,
     pub panels: Vec<DockSurfacePanelSnapshot>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DockSurfaceViewportOpenStatus {
+    WindowCreateQueued,
+    InWindowFallback,
+    AlreadyPending,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct DockSurfaceViewportOpenOutcome {
+    pub panel: PanelKey,
+    pub source_window: AppWindowId,
+    pub status: DockSurfaceViewportOpenStatus,
+    pub change: DockSurfaceChange,
+    pub window_requests: usize,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DockSurfaceViewportCloseOutcome {
+    pub window: AppWindowId,
+    pub change: DockSurfaceChange,
+    pub window_requests: usize,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum DockSurfaceViewportError {
+    DockManagerUnavailable,
+    PanelNotOpen {
+        source_window: AppWindowId,
+        panel: PanelKey,
+    },
+    OpenFailed {
+        source_window: AppWindowId,
+        panel: PanelKey,
+    },
 }
 
 /// App-facing docking surface.
@@ -392,6 +428,10 @@ impl DockSurface {
         DockSurfaceDriver { surface: *self }
     }
 
+    pub fn viewports(&self) -> DockSurfaceViewportSession {
+        DockSurfaceViewportSession { surface: *self }
+    }
+
     fn panel_outcome<H: UiHost>(
         &self,
         app: &H,
@@ -529,6 +569,99 @@ fn selected_panel_in_node(graph: &DockGraph, node: DockNodeId) -> Option<PanelKe
             .copied()
             .find_map(|child| selected_panel_in_node(graph, child)),
         DockNode::Floating { child } => selected_panel_in_node(graph, *child),
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct DockSurfaceViewportSession {
+    surface: DockSurface,
+}
+
+impl DockSurfaceViewportSession {
+    pub fn open_panel<H: UiHost>(
+        &self,
+        app: &mut H,
+        panel: &PanelKey,
+        anchor: Option<WindowAnchor>,
+    ) -> Result<DockSurfaceViewportOpenOutcome, DockSurfaceViewportError> {
+        let source_window = self
+            .surface
+            .panel_location(app, panel)
+            .map(|location| location.window)
+            .unwrap_or(self.surface.main_window);
+        self.open_panel_from_window(app, source_window, panel, anchor)
+    }
+
+    pub fn open_panel_from_window<H: UiHost>(
+        &self,
+        app: &mut H,
+        source_window: AppWindowId,
+        panel: &PanelKey,
+        anchor: Option<WindowAnchor>,
+    ) -> Result<DockSurfaceViewportOpenOutcome, DockSurfaceViewportError> {
+        let Some(dock) = app.global::<DockManager>() else {
+            return Err(DockSurfaceViewportError::DockManagerUnavailable);
+        };
+        if panel_location_in_window(&dock.workspace.graph, source_window, panel).is_none() {
+            return Err(DockSurfaceViewportError::PanelNotOpen {
+                source_window,
+                panel: panel.clone(),
+            });
+        }
+
+        let supported =
+            crate::runtime::dock_tear_off_supported(app.global::<PlatformCapabilities>());
+        let requested = self.surface.driver().request_float_panel_to_new_window(
+            app,
+            source_window,
+            panel.clone(),
+            anchor,
+        );
+        if !requested {
+            return Err(DockSurfaceViewportError::OpenFailed {
+                source_window,
+                panel: panel.clone(),
+            });
+        }
+
+        let window_requests = if supported {
+            self.surface.driver().flush_runtime_commands_to_effects(app)
+        } else {
+            0
+        };
+        let status = if supported {
+            if window_requests > 0 {
+                DockSurfaceViewportOpenStatus::WindowCreateQueued
+            } else {
+                DockSurfaceViewportOpenStatus::AlreadyPending
+            }
+        } else {
+            DockSurfaceViewportOpenStatus::InWindowFallback
+        };
+        Ok(DockSurfaceViewportOpenOutcome {
+            panel: panel.clone(),
+            source_window,
+            status,
+            change: DockSurfaceChange::from(!supported),
+            window_requests,
+        })
+    }
+
+    pub fn before_close_window<H: UiHost>(
+        &self,
+        app: &mut H,
+        window: AppWindowId,
+    ) -> Result<DockSurfaceViewportCloseOutcome, DockSurfaceViewportError> {
+        if app.global::<DockManager>().is_none() {
+            return Err(DockSurfaceViewportError::DockManagerUnavailable);
+        }
+        let changed = self.surface.driver().before_close_window(app, window);
+        let window_requests = self.surface.driver().flush_runtime_commands_to_effects(app);
+        Ok(DockSurfaceViewportCloseOutcome {
+            window,
+            change: DockSurfaceChange::from(changed),
+            window_requests,
+        })
     }
 }
 
@@ -774,6 +907,116 @@ mod tests {
         assert_eq!(snapshot.panels.len(), 1);
         assert_eq!(snapshot.panels[0].key, panel);
         assert!(snapshot.panels[0].location.is_some());
+    }
+
+    #[test]
+    fn dock_surface_viewport_session_queues_create_with_typed_outcome() {
+        let window = AppWindowId::from(KeyData::from_ffi(1));
+        let panel = PanelKey::new("test.panel");
+        let surface = DockSurface::new(window);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        app.set_global(DockManager::default());
+        surface.register_panel(&mut app, panel.clone(), test_panel("Panel"));
+        surface.open_panel(&mut app, &panel).expect("open panel");
+        app.take_effects();
+
+        let outcome = surface
+            .viewports()
+            .open_panel(&mut app, &panel, None)
+            .expect("open viewport");
+
+        assert_eq!(outcome.panel, panel);
+        assert_eq!(
+            outcome.status,
+            DockSurfaceViewportOpenStatus::WindowCreateQueued
+        );
+        assert_eq!(outcome.change, DockSurfaceChange::Unchanged);
+        assert_eq!(outcome.window_requests, 1);
+        assert_eq!(
+            app.take_effects()
+                .iter()
+                .filter(|effect| matches!(effect, Effect::Window(WindowRequest::Create(_))))
+                .count(),
+            1
+        );
+    }
+
+    #[test]
+    fn dock_surface_viewport_session_reports_in_window_fallback() {
+        let window = AppWindowId::from(KeyData::from_ffi(1));
+        let panel = PanelKey::new("test.panel");
+        let surface = DockSurface::new(window);
+
+        let mut caps = PlatformCapabilities::default();
+        caps.ui.multi_window = false;
+
+        let mut app = TestHost::new();
+        app.set_global(caps);
+        app.set_global(DockManager::default());
+        surface.register_panel(&mut app, panel.clone(), test_panel("Panel"));
+        surface.open_panel(&mut app, &panel).expect("open panel");
+        app.take_effects();
+
+        let outcome = surface
+            .viewports()
+            .open_panel(&mut app, &panel, None)
+            .expect("open viewport fallback");
+
+        assert_eq!(
+            outcome.status,
+            DockSurfaceViewportOpenStatus::InWindowFallback
+        );
+        assert_eq!(outcome.change, DockSurfaceChange::Changed);
+        assert_eq!(outcome.window_requests, 0);
+        assert_eq!(
+            surface
+                .panel_location(&app, &panel)
+                .map(|location| location.placement),
+            Some(DockSurfacePanelPlacement::Floating)
+        );
+        assert!(
+            app.take_effects()
+                .iter()
+                .all(|effect| !matches!(effect, Effect::Window(WindowRequest::Create(_))))
+        );
+    }
+
+    #[test]
+    fn dock_surface_viewport_session_before_close_merges_panels() {
+        let main_window = AppWindowId::from(KeyData::from_ffi(1));
+        let closing_window = AppWindowId::from(KeyData::from_ffi(2));
+        let main_panel = PanelKey::new("test.main");
+        let floating_panel = PanelKey::new("test.floating");
+        let surface = DockSurface::new(main_window);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        app.set_global(DockManager::default());
+        surface.register_panel(&mut app, main_panel.clone(), test_panel("Main"));
+        surface.register_panel(&mut app, floating_panel.clone(), test_panel("Floating"));
+        surface
+            .open_panel_in_window(&mut app, main_window, &main_panel)
+            .expect("open main panel");
+        surface
+            .open_panel_in_window(&mut app, closing_window, &floating_panel)
+            .expect("open floating panel");
+
+        let outcome = surface
+            .viewports()
+            .before_close_window(&mut app, closing_window)
+            .expect("before close");
+
+        assert_eq!(outcome.window, closing_window);
+        assert_eq!(outcome.change, DockSurfaceChange::Changed);
+        assert_eq!(outcome.window_requests, 0);
+        assert_eq!(
+            surface
+                .panel_location(&app, &floating_panel)
+                .map(|location| location.window),
+            Some(main_window)
+        );
     }
 
     #[test]

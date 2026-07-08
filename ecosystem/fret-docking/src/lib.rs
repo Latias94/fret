@@ -22,7 +22,9 @@ pub use dock::{
 pub use facade::{
     DockHostOptions, DockSurface, DockSurfaceChange, DockSurfacePanelError,
     DockSurfacePanelLocation, DockSurfacePanelOutcome, DockSurfacePanelPlacement,
-    DockSurfacePanelSnapshot, DockSurfaceSnapshot,
+    DockSurfacePanelSnapshot, DockSurfaceSnapshot, DockSurfaceViewportCloseOutcome,
+    DockSurfaceViewportError, DockSurfaceViewportOpenOutcome, DockSurfaceViewportOpenStatus,
+    DockSurfaceViewportSession,
 };
 
 /// Explicit low-level docking access for framework tests and advanced first-party integrations.
