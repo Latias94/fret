@@ -2,11 +2,10 @@
 
 use std::sync::Arc;
 
-use fret::WindowId;
 use fret::component::prelude::{Model, Px, UiHost};
 use fret::imui::{
     UiWriter,
-    docking::{self, DockSpaceElementOptions, DockingRuntime},
+    docking::{self, DockSpaceElementOptions},
     editor::{
         self,
         composites::{PropertyRow, PropertyRowOptions},
@@ -64,6 +63,4 @@ fn root_imui_facade_exposes_editor_composites_and_kit_sugar() {
 
     let dock_options = DockSpaceElementOptions::default();
     assert!(dock_options.test_id.is_none());
-    let runtime = DockingRuntime::new(WindowId::default());
-    let _ = runtime.main_window();
 }

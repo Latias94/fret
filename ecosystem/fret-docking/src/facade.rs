@@ -8,9 +8,10 @@ use fret_ui::ElementContext;
 use fret_ui::element::AnyElement;
 
 use crate::dock::{
-    DockManager, DockPanel, DockPanelElementRegistry, DockPanelElementRegistryService,
-    DockSpaceElementOptions, DockViewportOverlayHooks, DockViewportOverlayHooksService,
-    DockingPolicy, DockingPolicyService, dock_space_element_from_registry,
+    DockManager, DockPanel, DockPanelCatalogError, DockPanelElementRegistry,
+    DockPanelElementRegistryService, DockSpaceElementOptions, DockViewportOverlayHooks,
+    DockViewportOverlayHooksService, DockingPolicy, DockingPolicyService,
+    dock_space_element_from_registry,
 };
 pub type DockHostOptions = DockSpaceElementOptions;
 
@@ -52,10 +53,20 @@ impl DockSurface {
         self.main_window
     }
 
-    pub fn register_panel<H: UiHost>(&self, app: &mut H, key: PanelKey, panel: DockPanel) {
+    pub fn register_panel<H: UiHost>(
+        &self,
+        app: &mut H,
+        key: PanelKey,
+        panel: DockPanel,
+    ) -> Result<(), DockSurfacePanelError> {
         app.with_global_mut(DockManager::default, |dock, _app| {
-            dock.insert_panel(key, panel);
-        });
+            dock.register_panel(key, panel)
+                .map_err(|error| match error {
+                    DockPanelCatalogError::DuplicatePanelKey { key } => {
+                        DockSurfacePanelError::DuplicatePanelKey { panel: key }
+                    }
+                })
+        })
     }
 
     pub fn ensure_panel<H: UiHost>(
@@ -74,16 +85,6 @@ impl DockSurface {
             .is_some_and(|dock| dock.workspace.graph.window_root(window).is_some())
     }
 
-    pub fn import_layout_for_windows<H: UiHost>(
-        &self,
-        app: &mut H,
-        layout: &DockLayout,
-        windows: &[(AppWindowId, String)],
-    ) -> bool {
-        self.try_import_layout_for_windows(app, layout, windows)
-            .unwrap_or(false)
-    }
-
     pub fn try_import_layout_for_windows<H: UiHost>(
         &self,
         app: &mut H,
@@ -94,22 +95,6 @@ impl DockSurface {
             dock.workspace
                 .import_layout_for_windows_checked(layout, windows)
         })
-    }
-
-    pub fn import_layout_for_windows_with_fallback_floatings<H: UiHost>(
-        &self,
-        app: &mut H,
-        layout: &DockLayout,
-        windows: &[(AppWindowId, String)],
-        fallback_window: AppWindowId,
-    ) -> bool {
-        self.try_import_layout_for_windows_with_fallback_floatings(
-            app,
-            layout,
-            windows,
-            fallback_window,
-        )
-        .unwrap_or(false)
     }
 
     pub fn try_import_layout_for_windows_with_fallback_floatings<H: UiHost>(

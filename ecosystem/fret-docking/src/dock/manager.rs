@@ -141,15 +141,6 @@ impl DockWorkspace {
             .import_layout_for_windows_checked(layout, windows)
     }
 
-    pub fn import_layout_for_windows(
-        &mut self,
-        layout: &fret_core::DockLayout,
-        windows: &[(fret_core::AppWindowId, String)],
-    ) -> bool {
-        self.import_layout_for_windows_checked(layout, windows)
-            .unwrap_or(false)
-    }
-
     pub fn import_layout_for_windows_with_fallback_floatings_checked(
         &mut self,
         layout: &fret_core::DockLayout,
@@ -164,20 +155,6 @@ impl DockWorkspace {
                 windows,
                 fallback_window,
             )
-    }
-
-    pub fn import_layout_for_windows_with_fallback_floatings(
-        &mut self,
-        layout: &fret_core::DockLayout,
-        windows: &[(fret_core::AppWindowId, String)],
-        fallback_window: fret_core::AppWindowId,
-    ) -> bool {
-        self.import_layout_for_windows_with_fallback_floatings_checked(
-            layout,
-            windows,
-            fallback_window,
-        )
-        .unwrap_or(false)
     }
 
     fn reconcile_panel_descriptors_from_layout(&mut self, layout: &fret_core::DockLayout) {

@@ -2601,7 +2601,8 @@ impl DockingArbitrationDriver {
             let changed = dock
                 .workspace
                 .graph
-                .import_layout_for_windows(&restore.layout, &windows);
+                .import_layout_for_windows_checked(&restore.layout, &windows)
+                .unwrap_or(false);
             if changed {
                 request_dock_invalidation(app, dock.workspace.graph.windows());
                 for w in dock.workspace.graph.windows() {
@@ -2647,11 +2648,12 @@ impl DockingArbitrationDriver {
                 let changed = dock
                     .workspace
                     .graph
-                    .import_layout_for_windows_with_fallback_floatings(
+                    .import_layout_for_windows_with_fallback_floatings_checked(
                         &layout,
                         &[(main_window, Self::MAIN_LOGICAL_WINDOW_ID.to_string())],
                         main_window,
-                    );
+                    )
+                    .unwrap_or(false);
                 if changed {
                     request_dock_invalidation(app, [main_window]);
                     app.request_redraw(main_window);

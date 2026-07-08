@@ -77,6 +77,25 @@ fn queued_create_request(
 }
 
 #[test]
+fn dock_surface_register_panel_reports_duplicate_keys() {
+    let window = AppWindowId::from(KeyData::from_ffi(1));
+    let panel = PanelKey::new("test.duplicate");
+    let surface = DockSurface::new(window);
+
+    let mut app = TestHost::new();
+    app.set_global(DockManager::default());
+    surface
+        .register_panel(&mut app, panel.clone(), test_panel("First"))
+        .expect("initial panel registers");
+
+    let error = surface
+        .register_panel(&mut app, panel.clone(), test_panel("Second"))
+        .expect_err("duplicate key should be reported");
+
+    assert_eq!(error, DockSurfacePanelError::DuplicatePanelKey { panel });
+}
+
+#[test]
 fn dock_surface_panel_commands_return_typed_outcomes() {
     let window = AppWindowId::from(KeyData::from_ffi(1));
     let panel_a = PanelKey::new("test.a");
@@ -86,8 +105,12 @@ fn dock_surface_panel_commands_return_typed_outcomes() {
     let mut app = TestHost::new();
     app.set_global(PlatformCapabilities::default());
     app.set_global(DockManager::default());
-    surface.register_panel(&mut app, panel_a.clone(), test_panel("A"));
-    surface.register_panel(&mut app, panel_b.clone(), test_panel("B"));
+    surface
+        .register_panel(&mut app, panel_a.clone(), test_panel("A"))
+        .expect("panel registers");
+    surface
+        .register_panel(&mut app, panel_b.clone(), test_panel("B"))
+        .expect("panel registers");
 
     let opened_a = surface
         .open_panel(&mut app, &panel_a)
@@ -148,7 +171,9 @@ fn dock_surface_panel_commands_report_unchanged_for_noops() {
     let mut app = TestHost::new();
     app.set_global(PlatformCapabilities::default());
     app.set_global(DockManager::default());
-    surface.register_panel(&mut app, panel.clone(), test_panel("Panel"));
+    surface
+        .register_panel(&mut app, panel.clone(), test_panel("Panel"))
+        .expect("panel registers");
 
     surface.open_panel(&mut app, &panel).expect("open panel");
 
@@ -183,8 +208,12 @@ fn dock_surface_panel_commands_select_existing_panel_across_windows() {
     let mut app = TestHost::new();
     app.set_global(PlatformCapabilities::default());
     app.set_global(DockManager::default());
-    surface.register_panel(&mut app, main_panel.clone(), test_panel("Main"));
-    surface.register_panel(&mut app, other_panel.clone(), test_panel("Other"));
+    surface
+        .register_panel(&mut app, main_panel.clone(), test_panel("Main"))
+        .expect("panel registers");
+    surface
+        .register_panel(&mut app, other_panel.clone(), test_panel("Other"))
+        .expect("panel registers");
     surface
         .open_panel_with_preferred_window(&mut app, main_window, &main_panel)
         .expect("open main panel");
@@ -231,8 +260,12 @@ fn dock_surface_preferred_open_invalidates_actual_owner_window() {
     let mut app = TestHost::new();
     app.set_global(PlatformCapabilities::default());
     app.set_global(DockManager::default());
-    surface.register_panel(&mut app, panel_a.clone(), test_panel("A"));
-    surface.register_panel(&mut app, panel_b.clone(), test_panel("B"));
+    surface
+        .register_panel(&mut app, panel_a.clone(), test_panel("A"))
+        .expect("panel registers");
+    surface
+        .register_panel(&mut app, panel_b.clone(), test_panel("B"))
+        .expect("panel registers");
     surface
         .open_panel_with_preferred_window(&mut app, other_window, &panel_a)
         .expect("open panel a in other window");
@@ -319,8 +352,12 @@ fn dock_surface_panel_commands_report_typed_errors() {
     let mut app = TestHost::new();
     app.set_global(PlatformCapabilities::default());
     app.set_global(DockManager::default());
-    surface.register_panel(&mut app, registered.clone(), test_panel("Registered"));
-    surface.register_panel(&mut app, unopened.clone(), test_panel("Unopened"));
+    surface
+        .register_panel(&mut app, registered.clone(), test_panel("Registered"))
+        .expect("panel registers");
+    surface
+        .register_panel(&mut app, unopened.clone(), test_panel("Unopened"))
+        .expect("panel registers");
     surface
         .open_panel(&mut app, &registered)
         .expect("open registered panel");
@@ -351,8 +388,12 @@ fn dock_surface_registered_panels_include_locations_and_descriptor_flags() {
     let mut app = TestHost::new();
     app.set_global(PlatformCapabilities::default());
     app.set_global(DockManager::default());
-    surface.register_panel(&mut app, panel_b.clone(), test_panel("B"));
-    surface.register_panel(&mut app, panel_a.clone(), test_panel("A"));
+    surface
+        .register_panel(&mut app, panel_b.clone(), test_panel("B"))
+        .expect("panel registers");
+    surface
+        .register_panel(&mut app, panel_a.clone(), test_panel("A"))
+        .expect("panel registers");
     surface
         .open_panel(&mut app, &panel_b)
         .expect("open panel b");
@@ -383,7 +424,9 @@ fn dock_surface_snapshot_exports_layout_and_panel_facts() {
     let mut app = TestHost::new();
     app.set_global(PlatformCapabilities::default());
     app.set_global(DockManager::default());
-    surface.register_panel(&mut app, panel.clone(), test_panel("Panel"));
+    surface
+        .register_panel(&mut app, panel.clone(), test_panel("Panel"))
+        .expect("panel registers");
     surface.open_panel(&mut app, &panel).expect("open panel");
 
     let snapshot = surface
@@ -416,7 +459,9 @@ fn dock_surface_snapshot_reports_descriptor_only_imported_panels() {
     let mut app = TestHost::new();
     app.set_global(PlatformCapabilities::default());
     app.set_global(DockManager::default());
-    surface.register_panel(&mut app, known.clone(), test_panel("Known"));
+    surface
+        .register_panel(&mut app, known.clone(), test_panel("Known"))
+        .expect("panel registers");
 
     let layout = DockLayout::new(
         vec![DockLayoutWindow {
@@ -432,7 +477,11 @@ fn dock_surface_snapshot_reports_descriptor_only_imported_panels() {
         }],
     );
 
-    assert!(surface.import_layout_for_windows(&mut app, &layout, &[(window, "main".to_string())]));
+    assert!(
+        surface
+            .try_import_layout_for_windows(&mut app, &layout, &[(window, "main".to_string())])
+            .expect("layout imports")
+    );
 
     let snapshot = surface
         .snapshot(&app, &[(window, "main".to_string())])
@@ -465,7 +514,9 @@ fn dock_surface_viewport_session_queues_create_with_typed_outcome() {
     let mut app = TestHost::new();
     app.set_global(PlatformCapabilities::default());
     app.set_global(DockManager::default());
-    surface.register_panel(&mut app, panel.clone(), test_panel("Panel"));
+    surface
+        .register_panel(&mut app, panel.clone(), test_panel("Panel"))
+        .expect("panel registers");
     surface.open_panel(&mut app, &panel).expect("open panel");
     app.take_effects();
 
@@ -500,7 +551,9 @@ fn dock_surface_viewport_session_uses_panel_owner_as_source_window() {
     let mut app = TestHost::new();
     app.set_global(PlatformCapabilities::default());
     app.set_global(DockManager::default());
-    surface.register_panel(&mut app, panel.clone(), test_panel("Panel"));
+    surface
+        .register_panel(&mut app, panel.clone(), test_panel("Panel"))
+        .expect("panel registers");
     surface
         .open_panel_with_preferred_window(&mut app, other_window, &panel)
         .expect("open panel in other window");
@@ -539,7 +592,9 @@ fn dock_surface_viewport_session_reports_already_pending() {
     let mut app = TestHost::new();
     app.set_global(PlatformCapabilities::default());
     app.set_global(DockManager::default());
-    surface.register_panel(&mut app, panel.clone(), test_panel("Panel"));
+    surface
+        .register_panel(&mut app, panel.clone(), test_panel("Panel"))
+        .expect("panel registers");
     surface.open_panel(&mut app, &panel).expect("open panel");
     app.take_effects();
 
@@ -581,7 +636,9 @@ fn dock_surface_viewport_session_reports_in_window_fallback() {
     let mut app = TestHost::new();
     app.set_global(caps);
     app.set_global(DockManager::default());
-    surface.register_panel(&mut app, panel.clone(), test_panel("Panel"));
+    surface
+        .register_panel(&mut app, panel.clone(), test_panel("Panel"))
+        .expect("panel registers");
     surface.open_panel(&mut app, &panel).expect("open panel");
     app.take_effects();
 
@@ -619,7 +676,9 @@ fn dock_surface_viewport_session_reports_panel_not_open() {
     let mut app = TestHost::new();
     app.set_global(PlatformCapabilities::default());
     app.set_global(DockManager::default());
-    surface.register_panel(&mut app, panel.clone(), test_panel("Panel"));
+    surface
+        .register_panel(&mut app, panel.clone(), test_panel("Panel"))
+        .expect("panel registers");
     surface.open_panel(&mut app, &panel).expect("open panel");
 
     assert_eq!(
@@ -669,8 +728,12 @@ fn dock_surface_viewport_session_before_close_merges_panels() {
     let mut app = TestHost::new();
     app.set_global(PlatformCapabilities::default());
     app.set_global(DockManager::default());
-    surface.register_panel(&mut app, main_panel.clone(), test_panel("Main"));
-    surface.register_panel(&mut app, floating_panel.clone(), test_panel("Floating"));
+    surface
+        .register_panel(&mut app, main_panel.clone(), test_panel("Main"))
+        .expect("panel registers");
+    surface
+        .register_panel(&mut app, floating_panel.clone(), test_panel("Floating"))
+        .expect("panel registers");
     surface
         .open_panel_with_preferred_window(&mut app, main_window, &main_panel)
         .expect("open main panel");
@@ -704,7 +767,9 @@ fn dock_surface_viewport_session_before_close_reports_noop_for_main_or_empty_win
     let mut app = TestHost::new();
     app.set_global(PlatformCapabilities::default());
     app.set_global(DockManager::default());
-    surface.register_panel(&mut app, panel.clone(), test_panel("Panel"));
+    surface
+        .register_panel(&mut app, panel.clone(), test_panel("Panel"))
+        .expect("panel registers");
     surface.open_panel(&mut app, &panel).expect("open panel");
 
     let main_outcome = surface
@@ -732,7 +797,9 @@ fn dock_surface_open_panel_invalidates_layout_and_cancels_pending_tearoff() {
     let mut app = TestHost::new();
     app.set_global(PlatformCapabilities::default());
     app.set_global(DockManager::default());
-    surface.register_panel(&mut app, panel.clone(), test_panel("Panel"));
+    surface
+        .register_panel(&mut app, panel.clone(), test_panel("Panel"))
+        .expect("panel registers");
     surface.open_panel(&mut app, &panel).expect("open panel");
     let changed_after_open = app.take_changed_models();
     assert!(
@@ -784,8 +851,12 @@ fn dock_surface_semantic_open_does_not_flush_existing_runtime_commands() {
     let mut app = TestHost::new();
     app.set_global(PlatformCapabilities::default());
     app.set_global(DockManager::default());
-    surface.register_panel(&mut app, panel.clone(), test_panel("Panel"));
-    surface.register_panel(&mut app, queued_panel.clone(), test_panel("Queued"));
+    surface
+        .register_panel(&mut app, panel.clone(), test_panel("Panel"))
+        .expect("panel registers");
+    surface
+        .register_panel(&mut app, queued_panel.clone(), test_panel("Queued"))
+        .expect("panel registers");
     surface.open_panel(&mut app, &panel).expect("open panel");
     surface
         .open_panel(&mut app, &queued_panel)
@@ -833,8 +904,12 @@ fn dock_surface_semantic_open_removes_canceled_create_for_same_panel_only() {
     let mut app = TestHost::new();
     app.set_global(PlatformCapabilities::default());
     app.set_global(DockManager::default());
-    surface.register_panel(&mut app, panel.clone(), test_panel("Panel"));
-    surface.register_panel(&mut app, other_panel.clone(), test_panel("Other"));
+    surface
+        .register_panel(&mut app, panel.clone(), test_panel("Panel"))
+        .expect("panel registers");
+    surface
+        .register_panel(&mut app, other_panel.clone(), test_panel("Other"))
+        .expect("panel registers");
     surface.open_panel(&mut app, &panel).expect("open panel");
     surface
         .open_panel(&mut app, &other_panel)
@@ -885,8 +960,12 @@ fn dock_surface_semantic_open_removes_canceled_create_for_matching_source_window
     let mut app = TestHost::new();
     app.set_global(PlatformCapabilities::default());
     app.set_global(DockManager::default());
-    surface.register_panel(&mut app, panel_a.clone(), test_panel("A"));
-    surface.register_panel(&mut app, panel_b.clone(), test_panel("B"));
+    surface
+        .register_panel(&mut app, panel_a.clone(), test_panel("A"))
+        .expect("panel registers");
+    surface
+        .register_panel(&mut app, panel_b.clone(), test_panel("B"))
+        .expect("panel registers");
     surface
         .open_panel_with_preferred_window(&mut app, window_a, &panel_a)
         .expect("open panel a");
@@ -943,8 +1022,12 @@ fn dock_surface_canceled_window_created_keeps_unrelated_pending_completion_alive
     let mut app = TestHost::new();
     app.set_global(PlatformCapabilities::default());
     app.set_global(DockManager::default());
-    surface.register_panel(&mut app, panel_a.clone(), test_panel("A"));
-    surface.register_panel(&mut app, panel_b.clone(), test_panel("B"));
+    surface
+        .register_panel(&mut app, panel_a.clone(), test_panel("A"))
+        .expect("panel registers");
+    surface
+        .register_panel(&mut app, panel_b.clone(), test_panel("B"))
+        .expect("panel registers");
     surface
         .open_panel_with_preferred_window(&mut app, window_a, &panel_a)
         .expect("open panel a");
@@ -1016,7 +1099,9 @@ fn dock_surface_close_flushes_auto_close_after_canceled_create_removal() {
     let mut app = TestHost::new();
     app.set_global(PlatformCapabilities::default());
     app.set_global(DockManager::default());
-    surface.register_panel(&mut app, panel.clone(), test_panel("Panel"));
+    surface
+        .register_panel(&mut app, panel.clone(), test_panel("Panel"))
+        .expect("panel registers");
     surface.open_panel(&mut app, &panel).expect("open panel");
     assert!(
         DockSurfaceDriver::new(surface).request_float_panel_to_new_window(
@@ -1080,8 +1165,12 @@ fn dock_surface_viewport_open_flushes_only_new_runtime_commands() {
     let mut app = TestHost::new();
     app.set_global(PlatformCapabilities::default());
     app.set_global(DockManager::default());
-    surface.register_panel(&mut app, old_panel.clone(), test_panel("Old"));
-    surface.register_panel(&mut app, new_panel.clone(), test_panel("New"));
+    surface
+        .register_panel(&mut app, old_panel.clone(), test_panel("Old"))
+        .expect("panel registers");
+    surface
+        .register_panel(&mut app, new_panel.clone(), test_panel("New"))
+        .expect("panel registers");
     surface.open_panel(&mut app, &old_panel).expect("open old");
     surface.open_panel(&mut app, &new_panel).expect("open new");
     assert!(
@@ -1126,7 +1215,9 @@ fn dock_surface_viewport_before_close_does_not_flush_existing_runtime_commands()
     let mut app = TestHost::new();
     app.set_global(PlatformCapabilities::default());
     app.set_global(DockManager::default());
-    surface.register_panel(&mut app, panel.clone(), test_panel("Panel"));
+    surface
+        .register_panel(&mut app, panel.clone(), test_panel("Panel"))
+        .expect("panel registers");
     surface.open_panel(&mut app, &panel).expect("open panel");
     assert!(
         DockSurfaceDriver::new(surface).request_float_panel_to_new_window(
@@ -1170,7 +1261,9 @@ fn dock_surface_request_float_panel_uses_runtime_command_queue() {
     let mut app = TestHost::new();
     app.set_global(PlatformCapabilities::default());
     app.set_global(DockManager::default());
-    surface.register_panel(&mut app, panel.clone(), test_panel("Panel"));
+    surface
+        .register_panel(&mut app, panel.clone(), test_panel("Panel"))
+        .expect("panel registers");
     app.with_global_mut(DockManager::default, |dock, _app| {
         let tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: vec![panel.clone()],
@@ -1233,7 +1326,9 @@ fn dock_surface_runtime_command_queue_deduplicates_until_window_created() {
     let mut app = TestHost::new();
     app.set_global(PlatformCapabilities::default());
     app.set_global(DockManager::default());
-    surface.register_panel(&mut app, panel.clone(), test_panel("Panel"));
+    surface
+        .register_panel(&mut app, panel.clone(), test_panel("Panel"))
+        .expect("panel registers");
     app.with_global_mut(DockManager::default, |dock, _app| {
         let tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: vec![panel.clone()],
@@ -1282,7 +1377,9 @@ fn dock_surface_request_float_panel_does_not_emit_host_effects_before_flush() {
     let mut app = TestHost::new();
     app.set_global(PlatformCapabilities::default());
     app.set_global(DockManager::default());
-    surface.register_panel(&mut app, panel.clone(), test_panel("Panel"));
+    surface
+        .register_panel(&mut app, panel.clone(), test_panel("Panel"))
+        .expect("panel registers");
     app.with_global_mut(DockManager::default, |dock, _app| {
         let tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: vec![panel.clone()],
@@ -1326,7 +1423,9 @@ fn dock_surface_flushes_runtime_commands_to_host_effects() {
     let mut app = TestHost::new();
     app.set_global(PlatformCapabilities::default());
     app.set_global(DockManager::default());
-    surface.register_panel(&mut app, panel.clone(), test_panel("Panel"));
+    surface
+        .register_panel(&mut app, panel.clone(), test_panel("Panel"))
+        .expect("panel registers");
     app.with_global_mut(DockManager::default, |dock, _app| {
         let tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: vec![panel.clone()],
@@ -1391,7 +1490,9 @@ fn dock_surface_flushes_close_runtime_commands_to_host_effects() {
     let mut app = TestHost::new();
     app.set_global(PlatformCapabilities::default());
     app.set_global(DockManager::default());
-    surface.register_panel(&mut app, panel.clone(), test_panel("Panel"));
+    surface
+        .register_panel(&mut app, panel.clone(), test_panel("Panel"))
+        .expect("panel registers");
     app.with_global_mut(DockManager::default, |dock, _app| {
         let tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: vec![panel.clone()],
@@ -1451,7 +1552,9 @@ fn dock_surface_window_created_for_stale_source_queues_close_command() {
     let mut app = TestHost::new();
     app.set_global(PlatformCapabilities::default());
     app.set_global(DockManager::default());
-    surface.register_panel(&mut app, panel.clone(), test_panel("Panel"));
+    surface
+        .register_panel(&mut app, panel.clone(), test_panel("Panel"))
+        .expect("panel registers");
     app.with_global_mut(DockManager::default, |dock, _app| {
         let tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: vec![panel.clone()],
@@ -1512,7 +1615,9 @@ fn dock_surface_window_created_graph_commit_failure_queues_close_command() {
     let mut app = TestHost::new();
     app.set_global(PlatformCapabilities::default());
     app.set_global(DockManager::default());
-    surface.register_panel(&mut app, panel.clone(), test_panel("Panel"));
+    surface
+        .register_panel(&mut app, panel.clone(), test_panel("Panel"))
+        .expect("panel registers");
     app.with_global_mut(DockManager::default, |dock, _app| {
         let tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: vec![panel.clone()],
@@ -1572,8 +1677,12 @@ fn dock_surface_redock_auto_close_uses_runtime_command_queue() {
     let mut app = TestHost::new();
     app.set_global(PlatformCapabilities::default());
     app.set_global(DockManager::default());
-    surface.register_panel(&mut app, panel.clone(), test_panel("Panel"));
-    surface.register_panel(&mut app, placeholder.clone(), test_panel("Placeholder"));
+    surface
+        .register_panel(&mut app, panel.clone(), test_panel("Panel"))
+        .expect("panel registers");
+    surface
+        .register_panel(&mut app, placeholder.clone(), test_panel("Placeholder"))
+        .expect("panel registers");
     app.with_global_mut(DockManager::default, |dock, _app| {
         let tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: vec![placeholder.clone(), panel.clone()],

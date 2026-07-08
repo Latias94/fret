@@ -291,7 +291,7 @@ impl ContainerQueriesDockingDemoDriver {
             ],
         );
         let windows = [(window, "main".to_string())];
-        let _ = surface.import_layout_for_windows(app, &layout, &windows);
+        let _ = surface.try_import_layout_for_windows(app, &layout, &windows);
     }
 
     fn render_dock(

@@ -76,6 +76,7 @@ pub struct DockSurfacePanelOutcome {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DockSurfacePanelError {
     DockManagerUnavailable,
+    DuplicatePanelKey { panel: PanelKey },
     PanelNotRegistered { panel: PanelKey },
     PanelNotOpen { panel: PanelKey },
 }

@@ -294,7 +294,10 @@ impl DockingDemoDriver {
 
         if let Some(layout) = incoming_layout.as_ref() {
             let windows = [(window, "main".to_string())];
-            if surface.import_layout_for_windows(app, layout, &windows) {
+            if matches!(
+                surface.try_import_layout_for_windows(app, layout, &windows),
+                Ok(true)
+            ) {
                 return;
             }
         }
@@ -326,7 +329,7 @@ impl DockingDemoDriver {
             ],
         );
         let windows = [(window, "main".to_string())];
-        let _ = surface.import_layout_for_windows(app, &layout, &windows);
+        let _ = surface.try_import_layout_for_windows(app, &layout, &windows);
     }
 
     fn render_dock(

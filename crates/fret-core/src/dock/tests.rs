@@ -803,7 +803,10 @@ fn layout_roundtrips_floatings_with_rect_and_order() {
     let layout = g.export_layout(&windows);
 
     let mut g2 = DockGraph::new();
-    assert!(g2.import_layout_for_windows(&layout, &windows));
+    assert!(
+        g2.import_layout_for_windows_checked(&layout, &windows)
+            .expect("floating layout imports")
+    );
     assert_eq!(
         g2.collect_panels_in_window(w),
         vec![panel_a, panel_b, panel_c]
@@ -848,7 +851,10 @@ fn dock_layout_json_roundtrips_and_validates() {
     roundtripped.validate().expect("DockLayout validates");
 
     let mut g2 = DockGraph::new();
-    assert!(g2.import_layout_for_windows(&roundtripped, &windows));
+    assert!(
+        g2.import_layout_for_windows_checked(&roundtripped, &windows)
+            .expect("roundtripped layout imports")
+    );
     assert_eq!(g2.collect_panels_in_window(w), vec![panel_a, panel_b]);
 }
 
@@ -1520,7 +1526,10 @@ fn import_layout_simplifies_nested_same_axis_splits() {
     );
 
     let mut g = DockGraph::new();
-    assert!(g.import_layout_for_windows(&layout, &[(w, "main".to_string())]));
+    assert!(
+        g.import_layout_for_windows_checked(&layout, &[(w, "main".to_string())])
+            .expect("same-axis split layout imports")
+    );
 
     let root = g.window_root(w).expect("expected window root");
     let Some(DockNode::Split {
@@ -1603,11 +1612,14 @@ fn import_layout_degrades_unmapped_windows_into_floating_containers() {
     );
 
     let mut g = DockGraph::new();
-    assert!(g.import_layout_for_windows_with_fallback_floatings(
-        &layout,
-        &[(window_a, "main".to_string())],
-        window_a
-    ));
+    assert!(
+        g.import_layout_for_windows_with_fallback_floatings_checked(
+            &layout,
+            &[(window_a, "main".to_string())],
+            window_a
+        )
+        .expect("unmapped windows degrade into fallback floatings")
+    );
 
     assert!(g.find_panel_in_window(window_a, &panel_a).is_some());
     assert!(g.find_panel_in_window(window_a, &panel_b).is_some());
