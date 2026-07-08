@@ -797,6 +797,52 @@ fn dock_surface_viewport_session_before_close_merges_panels() {
 }
 
 #[test]
+fn dock_surface_viewport_before_close_can_merge_into_explicit_target() {
+    let main_window = AppWindowId::from(KeyData::from_ffi(1));
+    let closing_window = AppWindowId::from(KeyData::from_ffi(2));
+    let target_window = AppWindowId::from(KeyData::from_ffi(3));
+    let target_panel = PanelKey::new("test.target");
+    let closing_panel = PanelKey::new("test.closing");
+    let surface = DockSurface::new(main_window);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    app.set_global(DockManager::default());
+    surface
+        .register_panel(&mut app, target_panel.clone(), test_panel("Target"))
+        .expect("panel registers");
+    surface
+        .register_panel(&mut app, closing_panel.clone(), test_panel("Closing"))
+        .expect("panel registers");
+    surface
+        .open_panel_with_preferred_window(&mut app, target_window, &target_panel)
+        .expect("open target panel");
+    surface
+        .open_panel_with_preferred_window(&mut app, closing_window, &closing_panel)
+        .expect("open closing panel");
+
+    let outcome = surface
+        .viewports()
+        .before_close_window_into(&mut app, closing_window, target_window)
+        .expect("before close into explicit target");
+
+    assert_eq!(outcome.window, closing_window);
+    assert_eq!(outcome.change, DockSurfaceChange::Changed);
+    assert_eq!(
+        surface
+            .panel_location(&app, &closing_panel)
+            .map(|location| location.window),
+        Some(target_window)
+    );
+    assert!(
+        surface
+            .panel_location(&app, &closing_panel)
+            .is_none_or(|location| { location.window != main_window }),
+        "explicit target close must not merge into surface.main_window"
+    );
+}
+
+#[test]
 fn dock_surface_viewport_session_before_close_reports_noop_for_main_or_empty_window() {
     let main_window = AppWindowId::from(KeyData::from_ffi(1));
     let empty_window = AppWindowId::from(KeyData::from_ffi(2));

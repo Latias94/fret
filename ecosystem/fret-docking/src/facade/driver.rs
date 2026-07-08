@@ -123,10 +123,15 @@ impl DockSurfaceDriver {
     }
 
     pub fn before_close_window<H: UiHost>(&self, app: &mut H, closing_window: AppWindowId) -> bool {
-        crate::runtime::handle_dock_before_close_window(
-            app,
-            closing_window,
-            self.surface.main_window,
-        )
+        self.before_close_window_into(app, closing_window, self.surface.main_window)
+    }
+
+    pub fn before_close_window_into<H: UiHost>(
+        &self,
+        app: &mut H,
+        closing_window: AppWindowId,
+        target_window: AppWindowId,
+    ) -> bool {
+        crate::runtime::handle_dock_before_close_window(app, closing_window, target_window)
     }
 }

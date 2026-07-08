@@ -35,9 +35,18 @@ impl DockSurfaceHostSession {
     }
 
     pub fn before_close_window<H: UiHost>(&self, app: &mut H, closing_window: AppWindowId) -> bool {
+        self.before_close_window_into(app, closing_window, self.surface.main_window)
+    }
+
+    pub fn before_close_window_into<H: UiHost>(
+        &self,
+        app: &mut H,
+        closing_window: AppWindowId,
+        target_window: AppWindowId,
+    ) -> bool {
         let driver = DockSurfaceDriver::new(self.surface);
         let command_cursor = driver.runtime_command_cursor(app);
-        let changed = driver.before_close_window(app, closing_window);
+        let changed = driver.before_close_window_into(app, closing_window, target_window);
         driver.flush_runtime_commands_since_to_effects(app, command_cursor);
         changed
     }

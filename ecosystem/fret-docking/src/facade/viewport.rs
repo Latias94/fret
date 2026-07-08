@@ -87,6 +87,15 @@ impl DockSurfaceViewportSession {
         app: &mut H,
         window: AppWindowId,
     ) -> Result<DockSurfaceViewportCloseOutcome, DockSurfaceViewportError> {
+        self.before_close_window_into(app, window, self.surface.main_window)
+    }
+
+    pub fn before_close_window_into<H: UiHost>(
+        &self,
+        app: &mut H,
+        window: AppWindowId,
+        target_window: AppWindowId,
+    ) -> Result<DockSurfaceViewportCloseOutcome, DockSurfaceViewportError> {
         if app.global::<DockManager>().is_none() {
             return Err(DockSurfaceViewportError::DockManagerUnavailable);
         }
@@ -96,7 +105,7 @@ impl DockSurfaceViewportSession {
             .unwrap_or_default();
         self.surface
             .host_lifecycle()
-            .before_close_window(app, window);
+            .before_close_window_into(app, window, target_window);
         let after_panels = app
             .global::<DockManager>()
             .map(|dock| dock.workspace.graph.collect_panels_in_window(window))
