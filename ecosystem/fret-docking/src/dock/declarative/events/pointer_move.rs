@@ -24,65 +24,66 @@ pub(super) fn handle_pointer_move_event<H: UiHost + 'static>(
         return;
     };
 
-    if viewport_capture::handle_pointer_move_viewport_capture(
-        cx,
-        window,
-        *position,
-        *buttons,
-        *modifiers,
-        *pointer_id,
-        *pointer_type,
-    ) {
-        return;
-    }
-
-    let divider_drag_handled = divider_drag::handle_pointer_move_divider_drag(
-        cx,
-        window,
-        *position,
-        *buttons,
-        *pointer_id,
+    let owner = cx.app().with_global_mut(
+        DeclarativeDockInteractionService::default,
+        |service: &mut DeclarativeDockInteractionService, _app| {
+            service.pointer_move_owner(window, *pointer_id)
+        },
     );
-    if divider_drag_handled {
-        return;
+    match owner {
+        DeclarativePointerMoveOwner::ViewportCapture => {
+            viewport_capture::handle_pointer_move_viewport_capture(
+                cx,
+                window,
+                *position,
+                *buttons,
+                *modifiers,
+                *pointer_id,
+                *pointer_type,
+            );
+        }
+        DeclarativePointerMoveOwner::BlockedByViewportCapture => {}
+        DeclarativePointerMoveOwner::DividerDrag => {
+            divider_drag::handle_pointer_move_divider_drag(
+                cx,
+                window,
+                *position,
+                *buttons,
+                *pointer_id,
+            );
+        }
+        DeclarativePointerMoveOwner::FloatingDrag => {
+            floating_drag::handle_pointer_move_floating_drag(
+                cx,
+                window,
+                *position,
+                *buttons,
+                *modifiers,
+                *pointer_id,
+            );
+        }
+        DeclarativePointerMoveOwner::PendingPanelDrag => {
+            pending_panel_drag::handle_pointer_move_pending_panel_drag(
+                cx,
+                window,
+                *position,
+                *buttons,
+                *modifiers,
+                *pointer_id,
+            );
+        }
+        DeclarativePointerMoveOwner::PendingTabsGroupDrag => {
+            pending_tabs_group_drag::handle_pointer_move_pending_tabs_group_drag(
+                cx,
+                window,
+                *position,
+                *buttons,
+                *modifiers,
+                *pointer_id,
+            );
+        }
+        DeclarativePointerMoveOwner::Hover => {
+            hover::update_pointer_move_hover(cx, window, *position);
+        }
     }
-
-    let floating_drag_handled = floating_drag::handle_pointer_move_floating_drag(
-        cx,
-        window,
-        *position,
-        *buttons,
-        *modifiers,
-        *pointer_id,
-    );
-    if floating_drag_handled {
-        return;
-    }
-
-    let pending_panel_drag_handled = pending_panel_drag::handle_pointer_move_pending_panel_drag(
-        cx,
-        window,
-        *position,
-        *buttons,
-        *modifiers,
-        *pointer_id,
-    );
-    if pending_panel_drag_handled {
-        return;
-    }
-
-    let pending_tabs_group_drag_handled =
-        pending_tabs_group_drag::handle_pointer_move_pending_tabs_group_drag(
-            cx,
-            window,
-            *position,
-            *buttons,
-            *modifiers,
-            *pointer_id,
-        );
-    if pending_tabs_group_drag_handled {
-        return;
-    }
-
-    hover::update_pointer_move_hover(cx, window, *position);
 }

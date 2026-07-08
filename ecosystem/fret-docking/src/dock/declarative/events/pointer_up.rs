@@ -19,13 +19,21 @@ pub(super) fn handle_pointer_up_event<H: UiHost + 'static>(
         return;
     };
 
-    let viewport_capture = cx.app().with_global_mut(
+    let owner = cx.app().with_global_mut(
         DeclarativeDockInteractionService::default,
         |service: &mut DeclarativeDockInteractionService, _app| {
-            service.take_viewport_capture(window, *pointer_id)
+            service.pointer_up_owner(window, *pointer_id)
         },
     );
-    if let Some(capture) = viewport_capture {
+    if matches!(owner, DeclarativePointerUpOwner::ViewportCapture) {
+        let Some(capture) = cx.app().with_global_mut(
+            DeclarativeDockInteractionService::default,
+            |service: &mut DeclarativeDockInteractionService, _app| {
+                service.take_viewport_capture(window, *pointer_id)
+            },
+        ) else {
+            return;
+        };
         if capture.button != *button {
             cx.app().with_global_mut(
                 DeclarativeDockInteractionService::default,
@@ -75,7 +83,9 @@ pub(super) fn handle_pointer_up_event<H: UiHost + 'static>(
         return;
     }
 
-    if *button == fret_core::MouseButton::Left {
+    if *button == fret_core::MouseButton::Left
+        && matches!(owner, DeclarativePointerUpOwner::FloatingClose)
+    {
         let pressed_floating = cx.app().with_global_mut(
             DeclarativeDockInteractionService::default,
             |service: &mut DeclarativeDockInteractionService, _app| {
@@ -106,7 +116,9 @@ pub(super) fn handle_pointer_up_event<H: UiHost + 'static>(
         }
     }
 
-    if *button == fret_core::MouseButton::Left {
+    if *button == fret_core::MouseButton::Left
+        && matches!(owner, DeclarativePointerUpOwner::FloatingDrag)
+    {
         let floating_drag = cx.app().with_global_mut(
             DeclarativeDockInteractionService::default,
             |service: &mut DeclarativeDockInteractionService, _app| {
@@ -146,7 +158,9 @@ pub(super) fn handle_pointer_up_event<H: UiHost + 'static>(
         }
     }
 
-    if *button == fret_core::MouseButton::Left {
+    if *button == fret_core::MouseButton::Left
+        && matches!(owner, DeclarativePointerUpOwner::DividerDrag)
+    {
         let divider_drag = cx.app().with_global_mut(
             DeclarativeDockInteractionService::default,
             |service: &mut DeclarativeDockInteractionService, _app| {
@@ -188,7 +202,9 @@ pub(super) fn handle_pointer_up_event<H: UiHost + 'static>(
         }
     }
 
-    if *button == fret_core::MouseButton::Left {
+    if *button == fret_core::MouseButton::Left
+        && matches!(owner, DeclarativePointerUpOwner::PendingPanelDrag)
+    {
         let pending_drag = cx.app().with_global_mut(
             DeclarativeDockInteractionService::default,
             |service: &mut DeclarativeDockInteractionService, _app| {
@@ -203,7 +219,9 @@ pub(super) fn handle_pointer_up_event<H: UiHost + 'static>(
         }
     }
 
-    if *button == fret_core::MouseButton::Left {
+    if *button == fret_core::MouseButton::Left
+        && matches!(owner, DeclarativePointerUpOwner::PendingTabsGroupDrag)
+    {
         let pending_tabs_drag = cx.app().with_global_mut(
             DeclarativeDockInteractionService::default,
             |service: &mut DeclarativeDockInteractionService, _app| {
@@ -216,6 +234,10 @@ pub(super) fn handle_pointer_up_event<H: UiHost + 'static>(
             cx.stop_propagation();
             return;
         }
+    }
+
+    if !matches!(owner, DeclarativePointerUpOwner::TabClose) {
+        return;
     }
 
     let pressed = if *button == fret_core::MouseButton::Left {

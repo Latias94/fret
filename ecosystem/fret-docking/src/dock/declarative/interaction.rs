@@ -6,9 +6,13 @@ use fret_core::AppWindowId;
 use super::super::tab_overflow::TabOverflowMenuState;
 use super::super::viewport::ViewportCaptureState;
 
+mod arbitration;
 mod drag_sessions;
 mod types;
 
+pub(super) use arbitration::{
+    DeclarativePointerCancelOwner, DeclarativePointerMoveOwner, DeclarativePointerUpOwner,
+};
 pub(super) use types::{
     DeclarativeDividerDrag, DeclarativeFloatingDrag, DeclarativeFloatingHover,
     DeclarativePendingDockDrag, DeclarativePendingDockTabsDrag, DeclarativePressedFloatingClose,
@@ -36,6 +40,71 @@ pub(super) struct DeclarativeDockInteractionService {
 }
 
 impl DeclarativeDockInteractionService {
+    pub(in crate::dock::declarative) fn pointer_move_owner(
+        &self,
+        window: AppWindowId,
+        pointer_id: fret_core::PointerId,
+    ) -> DeclarativePointerMoveOwner {
+        arbitration::arbitrate_pointer_move(self.interaction_snapshot(window, pointer_id))
+    }
+
+    pub(in crate::dock::declarative) fn pointer_up_owner(
+        &self,
+        window: AppWindowId,
+        pointer_id: fret_core::PointerId,
+    ) -> DeclarativePointerUpOwner {
+        arbitration::arbitrate_pointer_up(self.interaction_snapshot(window, pointer_id))
+    }
+
+    pub(in crate::dock::declarative) fn pointer_cancel_owner(
+        &self,
+        window: AppWindowId,
+        pointer_id: fret_core::PointerId,
+    ) -> DeclarativePointerCancelOwner {
+        arbitration::arbitrate_pointer_cancel(self.interaction_snapshot(window, pointer_id))
+    }
+
+    fn interaction_snapshot(
+        &self,
+        window: AppWindowId,
+        pointer_id: fret_core::PointerId,
+    ) -> arbitration::DeclarativeInteractionSnapshot {
+        arbitration::DeclarativeInteractionSnapshot {
+            viewport_capture_for_pointer: self
+                .viewport_capture
+                .get(&window)
+                .is_some_and(|captures| captures.contains_key(&pointer_id)),
+            viewport_capture_in_window: self
+                .viewport_capture
+                .get(&window)
+                .is_some_and(|captures| !captures.is_empty()),
+            divider_drag_for_pointer: self
+                .divider_drag
+                .get(&window)
+                .is_some_and(|drags| drags.contains_key(&pointer_id)),
+            floating_close_for_pointer: self
+                .pressed_floating_close
+                .get(&window)
+                .is_some_and(|pressed| pressed.pointer_id == pointer_id),
+            floating_drag_for_pointer: self
+                .floating_drag
+                .get(&window)
+                .is_some_and(|drag| drag.pointer_id == pointer_id),
+            pending_panel_drag_for_pointer: self
+                .pending_dock_drags
+                .get(&window)
+                .is_some_and(|pending| pending.contains_key(&pointer_id)),
+            pending_tabs_drag_for_pointer: self
+                .pending_dock_tabs_drags
+                .get(&window)
+                .is_some_and(|pending| pending.contains_key(&pointer_id)),
+            tab_close_for_pointer: self
+                .pressed_tab_close
+                .get(&window)
+                .is_some_and(|pressed| pressed.pointer_id == pointer_id),
+        }
+    }
+
     pub(super) fn begin_tab_close(
         &mut self,
         window: AppWindowId,

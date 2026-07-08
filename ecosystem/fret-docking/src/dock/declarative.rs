@@ -66,6 +66,7 @@ use geometry::{
 use interaction::{
     DeclarativeDividerDrag, DeclarativeDockInteractionService, DeclarativeFloatingDrag,
     DeclarativeFloatingHover, DeclarativePendingDockDrag, DeclarativePendingDockTabsDrag,
+    DeclarativePointerCancelOwner, DeclarativePointerMoveOwner, DeclarativePointerUpOwner,
     DeclarativePressedFloatingClose, DeclarativePressedTabClose,
 };
 use overflow::{
