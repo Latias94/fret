@@ -215,6 +215,7 @@ fn public_function_signatures(block: &str) -> Vec<String> {
 #[test]
 fn dock_surface_common_signatures_do_not_expose_driver_tier_types() {
     let facade = include_str!("../src/facade.rs");
+    let driver = include_str!("../src/facade/driver.rs");
     let dock_surface_signatures =
         public_function_signatures(impl_block(facade, "impl DockSurface {"));
 
@@ -234,7 +235,7 @@ fn dock_surface_common_signatures_do_not_expose_driver_tier_types() {
     }
 
     let driver_signatures =
-        public_function_signatures(impl_block(facade, "impl DockSurfaceDriver"));
+        public_function_signatures(impl_block(driver, "impl DockSurfaceDriver"));
     assert!(
         driver_signatures
             .iter()

@@ -302,7 +302,7 @@ flowchart LR
 
 **Code entry points**
 
-- `ecosystem/fret-docking/src/facade.rs` (DockSurface app-facing facade)
+- `ecosystem/fret-docking/src/facade.rs` + `src/facade/{types,query,viewport,driver}.rs` (DockSurface app-facing facade, DTO/query helpers, typed viewport lifecycle, driver-tier callbacks)
 - `ecosystem/fret-docking/src/dock/declarative.rs` (declarative docking host)
 - `ecosystem/fret-docking/src/dock/manager.rs` (DockManager + ops integration)
 - `ecosystem/fret-docking/src/dock/viewport.rs` (viewport hit mapping → `ViewportInputEvent`)

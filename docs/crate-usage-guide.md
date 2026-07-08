@@ -1056,7 +1056,8 @@ Notes:
   root feature proxy.
 - Use `fret_core::{DockNode, DockOp, PanelKey, ...}` / `fret_core::dock::*` for dock
   graph/contracts and `fret_docking::{DockSurface, DockPanel, DockPanelElementRegistry, ...}` for
-  the ordinary UI + runtime adoption path.
+  the ordinary UI + runtime adoption path. `DockOp` is non-exhaustive; driver/runtime code that
+  matches it directly must keep a wildcard arm.
 - Keep docking explicit at the app boundary: construct a `DockSurface`, register panel descriptors
   and declarative panel roots, install policy/overlay hooks, mount `DockSurface::host(...)`, and
   route window lifecycle callbacks through the surface. Use `fret_docking::advanced` only for

@@ -87,6 +87,7 @@ Docking UI + hit testing + previews:
 
 - App-facing surface and host adapter:
   - `ecosystem/fret-docking/src/facade.rs` (`DockSurface`, `DockHostOptions`)
+  - `ecosystem/fret-docking/src/facade/{types,query,viewport,driver}.rs` (surface DTOs, panel snapshots, typed viewport lifecycle, driver-tier callbacks)
   - `ecosystem/fret-docking/src/dock/declarative.rs` (managed-surface-backed host)
 - Dock drag payloads (cross-window internal drags):
   - `ecosystem/fret-docking/src/dock/types.rs` (`DockPanelDragPayload`, `DockTabsDragPayload`)
@@ -117,6 +118,9 @@ Docking runtime integration (durable ops + docking-owned window commands):
   - `DockSurface::{open_panel,select_panel,close_panel,snapshot,viewports,driver}`
   - `DockSurface::viewports().{open_panel,before_close_window}` for typed app-facing OS-window lifecycle
   - `DockSurface::driver().{request_float_panel_to_new_window,request_float_tabs_to_new_window,take_runtime_commands,flush_runtime_commands_to_effects,on_window_created,before_close_window}` for low-level host/runtime handoff
+- `ecosystem/fret-docking/src/facade/{viewport,driver}.rs`:
+  - split typed app lifecycle outcomes from driver-tier graph/runtime callback vocabulary
+  - keep `DockOp` matching behind `DockSurface::driver()`; downstream matches must include a wildcard because `DockOp` is non-exhaustive
 
 Runner integration (multi-window routing, internal drags, window positioning/follow):
 
@@ -698,6 +702,7 @@ The rule of thumb:
       - `DockSurface::driver().on_window_created(...)`
       - `DockSurface::driver().before_close_window(...)`
       - `DockSurface::driver().take_runtime_commands(...)` / `DockSurface::driver().flush_runtime_commands_to_effects(...)`
+    - `ecosystem/fret-docking/src/facade/{types,query,viewport,driver}.rs`
     - `ecosystem/fret-docking/src/runtime/{request,window_created,before_close,commands}.rs`
   - Why this must be crate-owned:
     - Prevents every app/demo from reinventing idempotency and close-on-empty.
@@ -712,6 +717,8 @@ The rule of thumb:
       - `before_close_window(app, closing_window)` (merges into the configured main window)
   - Evidence anchors:
     - `ecosystem/fret-docking/src/facade.rs` (`DockSurface`)
+    - `ecosystem/fret-docking/src/facade/driver.rs` (`DockSurfaceDriver`)
+    - `ecosystem/fret-docking/src/facade/viewport.rs` (`DockSurfaceViewportSession`)
     - `apps/fret-examples/src/docking_demo.rs` (uses `DockSurface`)
     - `apps/fret-examples/src/docking_arbitration_demo.rs` (uses `DockSurface`)
 
