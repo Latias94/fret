@@ -375,7 +375,6 @@ fn gallery_shadcn_extras_batch_uses_explicit_raw_escape_hatch() {
 #[test]
 fn gallery_breadcrumb_primitive_batch_uses_explicit_raw_escape_hatch() {
     let relative_paths = [
-        "src/ui/snippets/breadcrumb/demo.rs",
         "src/ui/snippets/breadcrumb/dropdown.rs",
         "src/ui/snippets/breadcrumb/link_component.rs",
         "src/ui/snippets/breadcrumb/responsive.rs",
@@ -417,6 +416,7 @@ fn gallery_breadcrumb_primitive_batch_uses_explicit_raw_escape_hatch() {
 #[test]
 fn gallery_breadcrumb_docs_examples_prefer_curated_parts_aliases() {
     let relative_paths = [
+        "src/ui/snippets/breadcrumb/demo.rs",
         "src/ui/snippets/breadcrumb/basic.rs",
         "src/ui/snippets/breadcrumb/collapsed.rs",
         "src/ui/snippets/breadcrumb/custom_separator.rs",

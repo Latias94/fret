@@ -4,7 +4,6 @@ pub const SOURCE: &str = include_str!("demo.rs");
 use fret::{AppComponentCx, UiChild};
 #[allow(unused_imports)]
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
-use shadcn::raw::breadcrumb::primitives as bc;
 use std::sync::Arc;
 
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
@@ -13,19 +12,19 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         .align(shadcn::DropdownMenuAlign::Start)
         .test_id_prefix("ui-gallery-breadcrumb-demo-menu");
 
-    let crumb = bc::Breadcrumb::new().into_element(cx, |cx| {
-        vec![bc::BreadcrumbList::new().into_element(cx, |cx| {
+    let crumb = shadcn::BreadcrumbRoot::new().into_element(cx, |cx| {
+        vec![shadcn::BreadcrumbList::new().into_element(cx, |cx| {
             vec![
-                bc::BreadcrumbItem::new().into_element(cx, |cx| {
+                shadcn::BreadcrumbItemPart::new().into_element(cx, |cx| {
                     vec![
-                        bc::BreadcrumbLink::new("Home")
+                        shadcn::BreadcrumbLink::new("Home")
                             .href("/")
                             .on_activate(Arc::new(|_host, _acx, _reason| {}))
                             .into_element(cx),
                     ]
                 }),
-                bc::BreadcrumbSeparator::new().into_element(cx),
-                bc::BreadcrumbItem::new().into_element(cx, |cx| {
+                shadcn::BreadcrumbSeparatorPart::new().into_element(cx),
+                shadcn::BreadcrumbItemPart::new().into_element(cx, |cx| {
                     vec![dropdown.into_element(
                         cx,
                         |cx| {
@@ -37,7 +36,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
 
                             cx.pressable(props, move |cx, _st| {
                                 vec![
-                                    bc::BreadcrumbEllipsis::new()
+                                    shadcn::BreadcrumbEllipsis::new()
                                         .size(fret_core::Px(16.0))
                                         .into_element(cx),
                                 ]
@@ -64,18 +63,18 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                         },
                     )]
                 }),
-                bc::BreadcrumbSeparator::new().into_element(cx),
-                bc::BreadcrumbItem::new().into_element(cx, |cx| {
+                shadcn::BreadcrumbSeparatorPart::new().into_element(cx),
+                shadcn::BreadcrumbItemPart::new().into_element(cx, |cx| {
                     vec![
-                        bc::BreadcrumbLink::new("Components")
+                        shadcn::BreadcrumbLink::new("Components")
                             .href("/docs/components")
                             .on_activate(Arc::new(|_host, _acx, _reason| {}))
                             .into_element(cx),
                     ]
                 }),
-                bc::BreadcrumbSeparator::new().into_element(cx),
-                bc::BreadcrumbItem::new().into_element(cx, |cx| {
-                    vec![bc::BreadcrumbPage::new("Breadcrumb").into_element(cx)]
+                shadcn::BreadcrumbSeparatorPart::new().into_element(cx),
+                shadcn::BreadcrumbItemPart::new().into_element(cx, |cx| {
+                    vec![shadcn::BreadcrumbPage::new("Breadcrumb").into_element(cx)]
                 }),
             ]
         })]
