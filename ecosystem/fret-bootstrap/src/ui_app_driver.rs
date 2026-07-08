@@ -2583,11 +2583,9 @@ fn ui_app_render<S>(
             );
             let defer_dump_until_renderer_perf =
                 std::env::var_os("FRET_DIAG_RENDERER_PERF").is_some_and(|v| !v.is_empty());
-            if !defer_dump_until_renderer_perf {
-                if let Some(dir) = svc.maybe_dump_if_triggered() {
-                    #[cfg(feature = "tracing")]
-                    tracing::info!(window = ?window, out_dir = %dir.display(), "ui diagnostics dumped");
-                }
+            if !defer_dump_until_renderer_perf && let Some(dir) = svc.maybe_dump_if_triggered() {
+                #[cfg(feature = "tracing")]
+                tracing::info!(window = ?window, out_dir = %dir.display(), "ui diagnostics dumped");
             }
             if svc.poll_exit_trigger() {
                 app.push_effect(Effect::QuitApp);

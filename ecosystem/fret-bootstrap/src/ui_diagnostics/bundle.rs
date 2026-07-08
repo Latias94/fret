@@ -487,10 +487,11 @@ impl UiDiagnosticsBundleV2 {
                 })
                 .collect(),
         });
-        let text_paint = (!text_paint_entries.is_empty()).then(|| UiBundleTextPaintFactsTableV1 {
-            schema_version: 1,
-            entries: text_paint_entries,
-        });
+        let text_paint =
+            (!text_paint_entries.is_empty()).then_some(UiBundleTextPaintFactsTableV1 {
+                schema_version: 1,
+                entries: text_paint_entries,
+            });
 
         Self {
             schema_version: 2,

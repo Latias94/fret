@@ -1042,6 +1042,17 @@ Cross-window docking note (pointer sessions):
   - Example: `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-chained-tearoff-two-tabs-merge.json`
   - Example: `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-title-bar-drag-docks-to-main.json`
 
+Docking drop diagnostics now publish the resolved transaction facts that preview and commit consume:
+
+- `dock_drop_resolve.resolved`: committed/previewed dock target facts (`layout_root`, `tabs`, `zone`, `insert_index`, `outer`).
+- `dock_drop_resolve.denied`: policy-denied dock target facts when a target was found but docking policy rejected it.
+- `dock_drop_resolve.policy`: `not_applicable`, `allowed`, or `denied_docking_policy`.
+- `dock_drop_resolve.command`: resolved command/no-op class (`move_panel`, `move_tabs`, `float_panel_in_window`, `request_float_panel_to_new_window`, etc.).
+- `dock_drop_resolve.commit_capable`, `clears_hover`, and `invalidates_layout`: transaction outcome flags.
+
+Current script predicates expose the stable source/resolved/zone/insert-index subset below. Use the full bundle fields
+when triaging preview/commit mismatches; add a new predicate only when a scenario needs a durable scripted gate.
+
 Additional predicate kinds are occasionally added to unblock new regression gates (for example menu a11y checks).
 When authoring scripts, prefer stable `test_id` selectors and stick to predicates documented here; see
 `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` for the authoritative list.
@@ -1309,6 +1320,9 @@ Docking predicates (require a `WindowInteractionDiagnosticsStore` publisher, typ
 - `{"kind":"dock_drop_resolved_is_some","some":true}`
 - `{"kind":"dock_drop_resolved_zone_is","zone":"right"}`
 - `{"kind":"dock_drop_resolved_insert_index_is","index":0}`
+- Full bundle field examples: `dock_drop_resolve.policy`, `dock_drop_resolve.command`,
+  `dock_drop_resolve.commit_capable`, `dock_drop_resolve.denied`, `dock_drop_resolve.clears_hover`,
+  `dock_drop_resolve.invalidates_layout`.
 - `{"kind":"dock_graph_canonical_is","canonical":true}`
 - `{"kind":"dock_graph_has_nested_same_axis_splits_is","has_nested":false}`
 - `{"kind":"known_window_count_ge","n":2}`

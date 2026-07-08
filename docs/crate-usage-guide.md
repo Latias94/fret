@@ -1048,17 +1048,19 @@ Notes:
 `fret-core` dock graph/contracts.
 
 **Use it when:** you need editor-grade tab/split/tear-off workflows and are willing to opt into the
-advanced retained/manual-assembly seams they require.
+explicit docking facade plus any advanced model access your app genuinely needs.
 
 Notes:
 
 - Prefer depending on `fret-docking` directly for docking adoption instead of expecting a `fret`
   root feature proxy.
 - Use `fret_core::{DockNode, DockOp, PanelKey, ...}` / `fret_core::dock::*` for dock
-  graph/contracts and `fret_docking::{DockManager, DockPanelRegistry, handle_dock_op, ...}` for
-  the UI + runtime adoption helpers.
-- Keep docking explicit at the app boundary: panel registry, docking policy, and `dock_op` driver
-  wiring stay app-owned/advanced instead of becoming part of `fret::app::prelude::*`.
+  graph/contracts and `fret_docking::{DockSurface, DockPanel, DockPanelElementRegistry, ...}` for
+  the ordinary UI + runtime adoption path.
+- Keep docking explicit at the app boundary: construct a `DockSurface`, register panel descriptors
+  and declarative panel roots, install policy/overlay hooks, mount `DockSurface::host(...)`, and
+  route window lifecycle callbacks through the surface. Use `fret_docking::advanced` only for
+  framework tests or integrations that need direct workspace/catalog access.
 - Prefer teaching docking as an opt-in editor-grade capability, not as part of the small-app
   golden path.
 

@@ -254,24 +254,28 @@ to gate), but does not move docking policy into `imui`.
 M2 touchpoints (normative for v3 work):
 
 - **Embed the dock host (imui authoring)**:
-  - Use `fret_docking::imui::dock_space_with(...)` to embed a dock space inside an immediate tree
-    without re-implementing retained-bridge wiring in every app.
+  - Use `fret_docking::imui::dock_space_declarative_with(...)` or the normal
+    `DockSurface::host(...)` path to embed a dock host without re-implementing docking host wiring
+    in every app.
   - The dock host must be submitted every frame for every participating window (do not conditionally
     omit it when panels are hidden). See: `docs/docking-arbitration-checklist.md` (Driver integration checklist).
   - The `configure(app, window)` callback is the app seam to:
     - ensure panels exist (`DockManager::ensure_panel`),
     - ensure graph window roots are set,
     - update `ViewportPanel` targets/sizes for embedded engine viewports (ADR 0007 / ADR 0132).
-  - Evidence: `ecosystem/fret-docking/src/imui.rs` (`dock_space_with`, `DockSpaceImUiOptions`).
+  - Evidence: `ecosystem/fret-docking/src/imui.rs` (`dock_space_declarative_with`),
+    `ecosystem/fret-docking/src/facade.rs` (`DockSurface`).
 - **Consume docking effects (runner/driver integration)**:
-  - Docking UI emits `Effect::Dock(DockOp)` (ADR 0013). The runner/driver must consume it and apply
-    mutations / translate tear-off requests into `WindowRequest::Create`.
-  - Recommended driver façade: `fret_docking::DockingRuntime`:
-    - `on_dock_op(...)` for `Effect::Dock(op)`,
+  - Docking UI emits `Effect::Dock(DockOp)` for durable graph mutations. OS-window tear-off requests
+    are queued as docking-owned runtime commands through `DockSurface`.
+  - Recommended driver façade: `fret_docking::DockSurface`:
+    - `on_dock_op(...)` for durable `Effect::Dock(op)`,
+    - `take_runtime_commands(...)` / `flush_runtime_commands_to_effects(...)` for create/close
+      window commands,
     - `on_window_created(...)` for `CreateWindowKind::DockFloating` completion,
     - `before_close_window(...)` to merge/clean up when an OS window is closed.
-  - Evidence: `ecosystem/fret-docking/src/facade.rs` (`DockingRuntime`),
-    `ecosystem/fret-docking/src/runtime.rs` (`handle_dock_op`, tear-off fallback to in-window float),
+  - Evidence: `ecosystem/fret-docking/src/facade.rs` (`DockSurface`),
+    `ecosystem/fret-docking/src/runtime/{request,window_created,before_close,commands}.rs`,
     `crates/fret-runtime/src/effect.rs` (`Effect::Dock`).
 - **Diagnostics + scripted regressions (hand-feel lock-in)**:
   - When triaging “why did it pick this drop target?”, capture a diagnostics bundle and inspect

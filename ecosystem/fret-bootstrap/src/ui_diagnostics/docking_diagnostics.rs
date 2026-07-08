@@ -176,6 +176,70 @@ impl UiDockDropResolveSourceV1 {
     }
 }
 
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum UiDockDropPolicyDecisionV1 {
+    #[default]
+    NotApplicable,
+    Allowed,
+    DeniedDockingPolicy,
+}
+
+impl UiDockDropPolicyDecisionV1 {
+    fn from_policy(policy: fret_runtime::DockDropPolicyDecisionDiagnostics) -> Self {
+        match policy {
+            fret_runtime::DockDropPolicyDecisionDiagnostics::NotApplicable => Self::NotApplicable,
+            fret_runtime::DockDropPolicyDecisionDiagnostics::Allowed => Self::Allowed,
+            fret_runtime::DockDropPolicyDecisionDiagnostics::DeniedDockingPolicy => {
+                Self::DeniedDockingPolicy
+            }
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum UiDockDropCommandKindV1 {
+    #[default]
+    None,
+    MovePanel,
+    MovePanelToEmptyDockSpace,
+    MoveTabs,
+    MoveTabsToEmptyDockSpace,
+    FloatPanelInWindow,
+    FloatTabsInWindow,
+    RequestFloatPanelToNewWindow,
+    RequestFloatTabsToNewWindow,
+}
+
+impl UiDockDropCommandKindV1 {
+    fn from_command(command: fret_runtime::DockDropCommandKindDiagnostics) -> Self {
+        match command {
+            fret_runtime::DockDropCommandKindDiagnostics::None => Self::None,
+            fret_runtime::DockDropCommandKindDiagnostics::MovePanel => Self::MovePanel,
+            fret_runtime::DockDropCommandKindDiagnostics::MovePanelToEmptyDockSpace => {
+                Self::MovePanelToEmptyDockSpace
+            }
+            fret_runtime::DockDropCommandKindDiagnostics::MoveTabs => Self::MoveTabs,
+            fret_runtime::DockDropCommandKindDiagnostics::MoveTabsToEmptyDockSpace => {
+                Self::MoveTabsToEmptyDockSpace
+            }
+            fret_runtime::DockDropCommandKindDiagnostics::FloatPanelInWindow => {
+                Self::FloatPanelInWindow
+            }
+            fret_runtime::DockDropCommandKindDiagnostics::FloatTabsInWindow => {
+                Self::FloatTabsInWindow
+            }
+            fret_runtime::DockDropCommandKindDiagnostics::RequestFloatPanelToNewWindow => {
+                Self::RequestFloatPanelToNewWindow
+            }
+            fret_runtime::DockDropCommandKindDiagnostics::RequestFloatTabsToNewWindow => {
+                Self::RequestFloatTabsToNewWindow
+            }
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum UiDockDropCandidateRectKindV1 {
@@ -323,6 +387,18 @@ pub struct UiDockDropResolveDiagnosticsV1 {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub resolved: Option<UiDockDropTargetDiagnosticsV1>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub denied: Option<UiDockDropTargetDiagnosticsV1>,
+    #[serde(default)]
+    pub policy: UiDockDropPolicyDecisionV1,
+    #[serde(default)]
+    pub command: UiDockDropCommandKindV1,
+    #[serde(default)]
+    pub commit_capable: bool,
+    #[serde(default)]
+    pub clears_hover: bool,
+    #[serde(default)]
+    pub invalidates_layout: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub preview: Option<UiDockDropPreviewDiagnosticsV1>,
     #[serde(default)]
     pub candidates: Vec<UiDockDropCandidateRectDiagnosticsV1>,
@@ -339,6 +415,14 @@ impl UiDockDropResolveDiagnosticsV1 {
             resolved: snapshot
                 .resolved
                 .map(UiDockDropTargetDiagnosticsV1::from_snapshot),
+            denied: snapshot
+                .denied
+                .map(UiDockDropTargetDiagnosticsV1::from_snapshot),
+            policy: UiDockDropPolicyDecisionV1::from_policy(snapshot.policy),
+            command: UiDockDropCommandKindV1::from_command(snapshot.command),
+            commit_capable: snapshot.commit_capable,
+            clears_hover: snapshot.clears_hover,
+            invalidates_layout: snapshot.invalidates_layout,
             preview: snapshot
                 .preview
                 .map(UiDockDropPreviewDiagnosticsV1::from_snapshot),
@@ -349,6 +433,88 @@ impl UiDockDropResolveDiagnosticsV1 {
                 .map(UiDockDropCandidateRectDiagnosticsV1::from_snapshot)
                 .collect(),
         }
+    }
+}
+
+#[cfg(test)]
+mod dock_drop_resolve_diagnostics_tests {
+    use super::*;
+    use slotmap::KeyData;
+
+    fn dock_node_id(id: u64) -> fret_core::DockNodeId {
+        fret_core::DockNodeId::from(KeyData::from_ffi(id))
+    }
+
+    fn rect(x: f32, y: f32, width: f32, height: f32) -> fret_core::geometry::Rect {
+        fret_core::geometry::Rect::new(
+            fret_core::geometry::Point::new(
+                fret_core::geometry::Px(x),
+                fret_core::geometry::Px(y),
+            ),
+            fret_core::geometry::Size::new(
+                fret_core::geometry::Px(width),
+                fret_core::geometry::Px(height),
+            ),
+        )
+    }
+
+    #[test]
+    fn drop_resolve_diagnostics_serializes_resolved_transaction_fields() {
+        let target = fret_runtime::DockDropTargetDiagnostics {
+            layout_root: dock_node_id(11),
+            tabs: dock_node_id(12),
+            zone: fret_core::DropZone::Left,
+            insert_index: Some(2),
+            outer: true,
+        };
+        let snapshot = fret_runtime::DockDropResolveDiagnostics {
+            pointer_id: fret_core::PointerId(7),
+            position: fret_core::geometry::Point::new(
+                fret_core::geometry::Px(10.0),
+                fret_core::geometry::Px(20.0),
+            ),
+            window_bounds: rect(0.0, 0.0, 800.0, 600.0),
+            dock_bounds: rect(4.0, 8.0, 700.0, 500.0),
+            source: fret_runtime::DockDropResolveSource::InnerHintRect,
+            resolved: None,
+            denied: Some(target),
+            preview: None,
+            policy: fret_runtime::DockDropPolicyDecisionDiagnostics::DeniedDockingPolicy,
+            command: fret_runtime::DockDropCommandKindDiagnostics::RequestFloatTabsToNewWindow,
+            commit_capable: false,
+            clears_hover: true,
+            invalidates_layout: true,
+            candidates: Vec::new(),
+        };
+
+        let value = serde_json::to_value(UiDockDropResolveDiagnosticsV1::from_snapshot(&snapshot))
+            .expect("serialize dock drop resolve diagnostics");
+
+        assert_eq!(value["pointer_id"], serde_json::json!(7));
+        assert_eq!(value["source"], serde_json::json!("inner_hint_rect"));
+        assert_eq!(
+            value["denied"]["layout_root"],
+            serde_json::json!(target.layout_root.data().as_ffi())
+        );
+        assert_eq!(
+            value["denied"]["tabs"],
+            serde_json::json!(target.tabs.data().as_ffi())
+        );
+        assert_eq!(value["denied"]["zone"], serde_json::json!("left"));
+        assert_eq!(value["denied"]["insert_index"], serde_json::json!(2));
+        assert_eq!(value["denied"]["outer"], serde_json::json!(true));
+        assert_eq!(
+            value["policy"],
+            serde_json::json!("denied_docking_policy")
+        );
+        assert_eq!(
+            value["command"],
+            serde_json::json!("request_float_tabs_to_new_window")
+        );
+        assert_eq!(value["commit_capable"], serde_json::json!(false));
+        assert_eq!(value["clears_hover"], serde_json::json!(true));
+        assert_eq!(value["invalidates_layout"], serde_json::json!(true));
+        assert!(value.get("resolved").is_none());
     }
 }
 

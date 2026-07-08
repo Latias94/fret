@@ -8,10 +8,10 @@ pub(super) fn eval_debug_snapshot_predicate_from_recent_snapshot(
 ) -> Option<bool> {
     let ring = svc.per_window.get(&window)?;
     let snapshot = ring.snapshots.back()?;
-    if predicate_uses_debug_snapshot_history(predicate) {
-        if let Some(ok) = eval_debug_snapshot_predicate_from_ring(ring, predicate) {
-            return Some(ok);
-        }
+    if predicate_uses_debug_snapshot_history(predicate)
+        && let Some(ok) = eval_debug_snapshot_predicate_from_ring(ring, predicate)
+    {
+        return Some(ok);
     }
     let age_ms = unix_ms_now().saturating_sub(snapshot.timestamp_unix_ms);
     if age_ms > max_age_ms {

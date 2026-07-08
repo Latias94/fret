@@ -302,7 +302,8 @@ flowchart LR
 
 **Code entry points**
 
-- `ecosystem/fret-docking/src/dock/space.rs` (DockSpace UI)
+- `ecosystem/fret-docking/src/facade.rs` (DockSurface app-facing facade)
+- `ecosystem/fret-docking/src/dock/declarative.rs` (declarative docking host)
 - `ecosystem/fret-docking/src/dock/manager.rs` (DockManager + ops integration)
 - `ecosystem/fret-docking/src/dock/viewport.rs` (viewport hit mapping → `ViewportInputEvent`)
 - `ecosystem/fret-docking/src/dock/mod.rs` (`DockViewportOverlayHooks`)

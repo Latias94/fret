@@ -472,6 +472,7 @@ mod cache_root_boundary_tests {
             id: node,
             parent: None,
             element: None,
+            topology_epoch: 13,
             kind: "view_cache_root",
             source: "view_cache",
             prepaint_owner: "view_boundary_prepaint_state",

@@ -319,7 +319,7 @@ now taught as `LocalState` + view runtime + typed actions.
 - Desktop runner (integrated example; winit window lifecycle + scheduling): [crates/fret-launch/src/runner/mod.rs](../crates/fret-launch/src/runner/mod.rs)
   - Crate boundaries (ADR 0092): [docs/adr/0092-crate-structure-core-backends-apps.md](./adr/0092-crate-structure-core-backends-apps.md)
 - UI runtime substrate (UiTree + declarative bridge): [crates/fret-ui/src/tree/mod.rs](../crates/fret-ui/src/tree/mod.rs) and [crates/fret-ui/src/declarative/](../crates/fret-ui/src/declarative/)
-- Docking UI (`DockSpace`, policy-heavy): [ecosystem/fret-docking/src/dock/space.rs](../ecosystem/fret-docking/src/dock/space.rs)
+- Docking surface and policy-heavy host: [ecosystem/fret-docking/src/facade.rs](../ecosystem/fret-docking/src/facade.rs), [ecosystem/fret-docking/src/dock/declarative.rs](../ecosystem/fret-docking/src/dock/declarative.rs)
 - Renderer (display list → wgpu pipelines; SDF AA lives here): [crates/fret-render-wgpu/src/renderer/mod.rs](../crates/fret-render-wgpu/src/renderer/mod.rs)
 
 ## Repository references

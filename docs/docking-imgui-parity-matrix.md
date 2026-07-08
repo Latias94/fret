@@ -85,12 +85,14 @@ Docking model and ops:
 
 Docking UI + hit testing + previews:
 
-- Dock host widget (interaction core):
-  - `ecosystem/fret-docking/src/dock/space.rs` (`DockSpace`)
+- App-facing surface and host adapter:
+  - `ecosystem/fret-docking/src/facade.rs` (`DockSurface`, `DockHostOptions`)
+  - `ecosystem/fret-docking/src/dock/declarative.rs` (managed-surface-backed host)
 - Dock drag payloads (cross-window internal drags):
   - `ecosystem/fret-docking/src/dock/types.rs` (`DockPanelDragPayload`, `DockTabsDragPayload`)
 - Drop target resolution:
-  - `ecosystem/fret-docking/src/dock/hit_test.rs`
+  - `ecosystem/fret-docking/src/dock/drop_resolve.rs`
+  - `ecosystem/fret-docking/src/dock/drop_resolve/{target,intent,transaction,diagnostics}.rs`
   - `ecosystem/fret-docking/src/dock/layout.rs` (`dock_hint_rects_with_font`, `dock_hint_pick_zone`, `drop_zone_rect`, `float_zone`)
 - Paint and preview overlays:
   - `ecosystem/fret-docking/src/dock/paint.rs`
@@ -99,17 +101,21 @@ Docking UI + hit testing + previews:
 - Tab overflow affordances:
   - `ecosystem/fret-docking/src/dock/tab_overflow.rs`
 - Split sizing / drag semantics:
-  - `ecosystem/fret-docking/src/dock/space.rs` (adjacent-only drag updates)
+  - `ecosystem/fret-docking/src/dock/declarative/events/pointer_move/divider_drag.rs` (adjacent-only drag updates)
   - `crates/fret-core/src/dock/mutate.rs` (canonicalization rules; keep same-axis splits flat)
+- Interaction arbitration:
+  - `ecosystem/fret-docking/src/dock/declarative/interaction/arbitration.rs`
 - Interaction settings:
   - `crates/fret-runtime/src/docking_settings.rs` (`DockingInteractionSettings`)
 
-Docking runtime integration (ops → window requests, close/merge policies):
+Docking runtime integration (durable ops + docking-owned window commands):
 
 - `ecosystem/fret-docking/src/runtime.rs`:
-  - `handle_dock_op` (including `RequestFloatPanelToNewWindow` → `WindowRequest::Create`)
-  - `handle_dock_window_created`
-  - `handle_dock_before_close_window`
+  - durable `DockOp` application and invalidation
+  - tear-off request queueing, duplicate suppression, cancellation, completion, and close/merge policies
+- `ecosystem/fret-docking/src/facade.rs`:
+  - `DockSurface::{request_float_panel_to_new_window, request_float_tabs_to_new_window}`
+  - `DockSurface::{take_runtime_commands, flush_runtime_commands_to_effects, on_window_created, before_close_window}`
 
 Runner integration (multi-window routing, internal drags, window positioning/follow):
 
@@ -130,10 +136,10 @@ Runner integration (multi-window routing, internal drags, window positioning/fol
 
 | Concept | ImGui docking branch | Fret |
 |---|---|---|
-| “Dock host” surface | DockSpace / DockNode host window | `DockSpace` widget (`ecosystem/fret-docking/src/dock/space.rs`) |
+| “Dock host” surface | DockSpace / DockNode host window | `DockSurface` facade + declarative host (`ecosystem/fret-docking/src/facade.rs`, `ecosystem/fret-docking/src/dock/declarative.rs`) |
 | Dock node tree | `ImGuiDockNode` | `DockNode` + `DockGraph` (`crates/fret-core/src/dock/mod.rs`) |
-| Dock ops / transactions | `ImGuiDockRequest` queue + node mutations | `DockOp` emitted via `Effect::Dock(...)` (ADR 0013) |
-| Dock preview targeting | `DockNodePreviewDockSetup` + `DockNodeCalcDropRectsAndTestMousePos` | `dock_drop_target_via_dnd` + `dock_hint_rects`/`drop_zone_rect` |
+| Dock ops / transactions | `ImGuiDockRequest` queue + node mutations | Durable `DockOp` via `Effect::Dock(...)`; OS-window tear-off via `DockSurface` runtime commands |
+| Dock preview targeting | `DockNodePreviewDockSetup` + `DockNodeCalcDropRectsAndTestMousePos` | resolved drop transaction + `dock_hint_rects`/`drop_zone_rect` |
 | “Shift to dock” policy | `ImGuiIO::ConfigDockingWithShift` | `DockDragInversionSettings` (`crates/fret-runtime/src/docking_settings.rs`) |
 | Drag payload | DragDrop payload `IMGUI_PAYLOAD_TYPE_WINDOW` | Internal drag session payloads: `DockPanelDragPayload` (single panel) + `DockTabsDragPayload` (tab stack) |
 | Hovered viewport/window under moving window | backend sets `MouseHoveredViewport` or fallback heuristics | runner tracks `cursor_screen_pos` + `window_under_cursor(...)` |
@@ -147,13 +153,15 @@ This section exists to keep reviews grounded: “which file owns which part of t
 
 ## Fret docking modules
 
-- `ecosystem/fret-docking/src/dock/space.rs` — **interaction core**
+- `ecosystem/fret-docking/src/dock/declarative.rs` and `dock/declarative/events/*` — **declarative interaction adapter**
   - Pointer down/move/up handling for:
     - tab activation, close button press, tab drag initiation
     - split handle drag
     - floating panel chrome drag/close
     - viewport input capture and forwarding
   - Internal drag handling (`Event::InternalDrag`) for cross-window dock drags.
+  - Uses `dock/declarative/interaction/arbitration.rs` for explicit owner selection.
+  - Uses `dock/drop_resolve/transaction.rs` for preview/commit/diagnostics consistency.
   - Upstream analog:
     - `BeginDockableDragDropSource` / `BeginDockableDragDropTarget`
     - “moving window” paths in docking (multi-viewport)
@@ -179,9 +187,9 @@ This section exists to keep reviews grounded: “which file owns which part of t
     - `DockNodePreviewDockRender`
     - docking title/tab bar rendering paths.
 
-- `ecosystem/fret-docking/src/runtime.rs` — **app/runner integration policy**
+- `ecosystem/fret-docking/src/runtime.rs` and `ecosystem/fret-docking/src/facade.rs` — **app/runner integration policy**
   - Applies `DockOp` to the graph.
-  - Translates `RequestFloatPanelToNewWindow` into `WindowRequest::Create(DockFloating { .. })`.
+  - Queues docking-owned runtime commands for OS-window tear-off through `DockSurface`.
   - Closes empty docking-owned OS windows and merges floating-window content on close.
   - Upstream analog:
     - `DockContextQueueDock` + `DockContextProcessDock`
@@ -282,7 +290,7 @@ inability to hit a specific docking direction are often coordinate-space bugs.
     - Runner must convert **screen-space** cursor to **window-local logical** for `Event::InternalDrag` routing.
   - Evidence anchors:
     - Fret conversion helpers: `crates/fret-launch/src/runner/desktop/runner/window.rs` (`local_pos_for_window`, `screen_pos_in_window`).
-    - Dock UI assumes window-local input: `ecosystem/fret-docking/src/dock/space.rs` (uses `WindowMetricsService::inner_bounds` + event positions).
+    - Dock UI assumes window-local input: `ecosystem/fret-docking/src/dock/declarative/events/internal_drag.rs` and `ecosystem/fret-docking/src/dock/declarative/geometry.rs`.
     - Fret unit tests (client origin + scale): `crates/fret-launch/src/runner/desktop/runner/window.rs` (`client_origin_screen_adds_decoration_offset`, `local_pos_for_screen_pos_respects_scale_factor`).
   - Notes:
     - Keep this item `[~]` until we have a dedicated conformance test covering mixed-DPI multi-monitor + overlap.
@@ -315,7 +323,7 @@ inability to hit a specific docking direction are often coordinate-space bugs.
     - used by `IsMouseDragging(0)` / drag/drop initiation.
   - Fret:
     - default `DockingInteractionSettings::tab_drag_threshold = Px(6.0)` (`crates/fret-runtime/src/docking_settings.rs`)
-    - activation constraint used in `DockSpace` (`ecosystem/fret-docking/src/dock/space.rs`).
+    - activation constraint used by the declarative dock host (`ecosystem/fret-docking/src/dock/declarative/events/pointer_move/{pending_panel_drag,pending_tabs_group_drag}.rs`).
 
 - [x] **“Dock drag mode” is explicit and stable**
   - ImGui:
@@ -342,8 +350,8 @@ inability to hit a specific docking direction are often coordinate-space bugs.
   - Evidence anchors:
     - Group drag payload: `ecosystem/fret-docking/src/dock/types.rs`
     - Group move op: `crates/fret-core/src/dock/op.rs`
-    - Group tear-off request: `crates/fret-core/src/dock/op.rs` (`RequestFloatTabsToNewWindow`)
-    - Tear-off integration: `ecosystem/fret-docking/src/runtime.rs` (`handle_dock_op`, `handle_dock_window_created`)
+    - Group tear-off request: `ecosystem/fret-docking/src/runtime/request.rs` via `DockSurface::request_float_tabs_to_new_window`
+    - Tear-off integration: `ecosystem/fret-docking/src/runtime.rs` and `ecosystem/fret-docking/src/runtime/{request,window_created,before_close,commands}.rs`
     - Cross-window group tear-off tests:
       - `ecosystem/fret-docking/src/runtime.rs` (`window_created_updates_drag_source_window_for_active_dock_tabs_drag`)
 
@@ -375,7 +383,7 @@ inability to hit a specific docking direction are often coordinate-space bugs.
       for non-tab-window chrome.
   - Evidence anchors:
     - Fret inversion: `crates/fret-runtime/src/docking_settings.rs`
-    - Fret gating: `ecosystem/fret-docking/src/dock/space.rs` (`dock_drop_target(...)`)
+    - Fret gating: `ecosystem/fret-docking/src/dock/drop_resolve/target.rs`
     - Fret conformance: `ecosystem/fret-docking/src/dock/tests.rs` (`dock_drag_requires_explicit_target_or_hint_rects`)
     - ImGui gating: `repo-ref/imgui/imgui.cpp` (`BeginDockableDragDropSource`, `DockNodePreviewDockSetup`)
 
@@ -414,7 +422,7 @@ This section is where “I can’t dock left” / “it docks the wrong side” 
   - Evidence anchors:
     - ImGui: `repo-ref/imgui/imgui.cpp` (`DockNodeCalcDropRectsAndTestMousePos`)
     - Fret: `ecosystem/fret-docking/src/dock/layout.rs` (`dock_hint_rects_with_font`, `dock_hint_pick_zone`)
-    - Fret: `ecosystem/fret-docking/src/dock/space.rs` (hint font scaling + paint/hit-test wiring)
+    - Fret: `ecosystem/fret-docking/src/dock/drop_resolve/target.rs` (hit-test wiring) and `ecosystem/fret-docking/src/dock/paint/drop_hints.rs` (paint)
     - Fret conformance: `ecosystem/fret-docking/src/dock/tests.rs` (`dock_drop_hint_rects_can_select_zone`)
 
 Known semantic deltas to track:
@@ -446,7 +454,7 @@ Known semantic deltas to track:
       - otherwise, the last-matched direction-pad rect wins (aligned with ImGui's loop structure)
       - outer docking rects take precedence when the cursor is within the outer hint set
   - Evidence anchors:
-    - `ecosystem/fret-docking/src/dock/space.rs` (`dock_drop_target(...)`)
+    - `ecosystem/fret-docking/src/dock/drop_resolve/target.rs`
   - Parity risk:
     - If the outer/inner rect sizing diverges across DPI scales, the “easiest to hit” target may feel different.
 
@@ -469,7 +477,7 @@ Known semantic deltas to track:
   - Fret:
     - Same-axis nested splits are flattened into a single N-ary split (canonical form), so the legacy “touching splitter” lock pass is no longer required.
   - Evidence anchors:
-    - Fret: `crates/fret-core/src/dock/mutate.rs`, `crates/fret-core/src/dock/persistence.rs`, `ecosystem/fret-docking/src/dock/space.rs`
+    - Fret: `crates/fret-core/src/dock/mutate.rs`, `crates/fret-core/src/dock/persistence.rs`, `ecosystem/fret-docking/src/dock/declarative/events/pointer_move/divider_drag.rs`
 
 ---
 
@@ -480,9 +488,9 @@ behavior from its TabBar implementation, whereas Fret implements a dedicated doc
 
 - [x] **Click selects active tab**
   - ImGui: handled by TabBar inside `DockNodeUpdateTabBar`.
-  - Fret: `hit_test_tab` + `DockOp::SetActiveTab` in `DockSpace`.
+  - Fret: tab hit-testing + `DockOp::SetActiveTab` in the declarative dock host.
   - Evidence:
-    - Fret: `ecosystem/fret-docking/src/dock/space.rs`, `ecosystem/fret-docking/src/dock/hit_test.rs`
+    - Fret: `ecosystem/fret-docking/src/dock/declarative/events/pointer_down.rs`, `ecosystem/fret-docking/src/dock/hit_test.rs`
     - ImGui: `repo-ref/imgui/imgui.cpp` (`DockNodeUpdateTabBar`)
 
 - [~] **Drag reorders tabs within the same tab bar**
@@ -502,7 +510,7 @@ behavior from its TabBar implementation, whereas Fret implements a dedicated doc
   - Still evolving:
     - scroll feel knobs (speed/easing), scroll buttons
   - Evidence:
-    - Fret: `ecosystem/fret-docking/src/dock/space.rs` (`tab_scroll`, `apply_tab_bar_drag_auto_scroll(...)`)
+    - Fret: `ecosystem/fret-docking/src/dock/declarative/tab_metrics.rs`, `ecosystem/fret-docking/src/dock/declarative/drag_resolve/hover_autoscroll.rs`
     - Fret: `ecosystem/fret-docking/src/dock/tab_overflow.rs` (overflow button/menu geometry + row math)
     - Fret conformance: `ecosystem/fret-docking/src/dock/tests.rs` (`dock_drag_auto_scrolls_tab_bar_near_edges`)
 
@@ -510,7 +518,7 @@ behavior from its TabBar implementation, whereas Fret implements a dedicated doc
   - ImGui: per-tab close buttons, plus node “close all” and host close button interactions.
   - Fret: tab close glyph hit-test + `DockOp::ClosePanel` emission.
   - Evidence:
-    - Fret: `ecosystem/fret-docking/src/dock/hit_test.rs`, `ecosystem/fret-docking/src/dock/space.rs`
+    - Fret: `ecosystem/fret-docking/src/dock/hit_test.rs`, `ecosystem/fret-docking/src/dock/declarative/events/{pointer_down,pointer_up}.rs`
     - ImGui: `repo-ref/imgui/imgui.cpp` (`DockNodeUpdateTabBar`, close button paths)
 
 ---
@@ -528,11 +536,12 @@ behavior from its TabBar implementation, whereas Fret implements a dedicated doc
         - `DockOp::FloatPanelInWindow` / `DockOp::FloatTabsInWindow`
         - `DockOp::SetFloatingRect`
       - New OS window (tear-off):
-        - `DockOp::RequestFloatPanelToNewWindow` / `DockOp::RequestFloatTabsToNewWindow`
-        - runner: `WindowRequest::Create(CreateWindowKind::DockFloating { .. })`
+        - `DockSurface::request_float_panel_to_new_window(...)` / `DockSurface::request_float_tabs_to_new_window(...)`
+        - `DockSurface::take_runtime_commands(...)` yields `DockRuntimeCommand::CreateWindow(CreateWindowKind::DockFloating { .. })`
   - Evidence anchors:
-    - Dock UI emits request: `ecosystem/fret-docking/src/dock/space.rs`
-    - Runtime translates to window create: `ecosystem/fret-docking/src/runtime.rs`
+    - Dock UI resolves request intent: `ecosystem/fret-docking/src/dock/drop_resolve/transaction.rs`
+    - Runtime queues window create: `ecosystem/fret-docking/src/runtime/request.rs`
+    - Facade exposes driver handoff: `ecosystem/fret-docking/src/facade.rs`
     - Core model (in-window float container + metadata):
       - `crates/fret-core/src/dock/mod.rs` (`DockNode::Floating`, `DockGraph::floating_windows`)
       - `crates/fret-core/src/dock/layout.rs` (`DockLayoutWindow.floatings`, `DockLayoutFloatingWindow.rect`)
@@ -567,8 +576,8 @@ Open parity question:
     - Note:
       - `float_zone(...)` is a Fret-specific affordance to force **in-window** floating; it should not request a new OS window.
   - Evidence anchors:
-    - `ecosystem/fret-docking/src/dock/space.rs` (tear-off request logic)
-    - `ecosystem/fret-docking/src/runtime.rs` (`DockTearOffMachine` idempotency)
+    - `ecosystem/fret-docking/src/dock/declarative/tear_off.rs` (tear-off request logic)
+    - `ecosystem/fret-docking/src/runtime/request.rs` (pending request idempotency)
     - `ecosystem/fret-docking/src/dock/tests.rs` (`dock_drag_only_requests_tear_off_after_stable_oob_frame`)
 
 ## 6.3 Cross-window hover and drop routing
@@ -628,13 +637,13 @@ Open parity question:
   - Evidence anchors:
     - Dock ops: `crates/fret-core/src/dock/op.rs`
     - Apply semantics: `crates/fret-core/src/dock/apply.rs`
-    - UI resolution: `ecosystem/fret-docking/src/dock/space.rs` (`resolve_dock_drop_target(...)`)
+    - UI resolution: `ecosystem/fret-docking/src/dock/drop_resolve/{target,intent,transaction}.rs`
 
 - [x] **Closing a floating OS window merges its content back**
   - This matches editor-grade UX and is tracked as a P0 in:
     - `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`
   - Evidence anchors:
-    - `ecosystem/fret-docking/src/runtime.rs` (`handle_dock_before_close_window`)
+    - `ecosystem/fret-docking/src/runtime/before_close.rs`
 
 ---
 
@@ -654,7 +663,7 @@ Open parity question:
       - candidate rect sets (float zone + direction pads + tab bar, etc.)
   - Evidence anchors:
     - `crates/fret-runtime/src/interaction_diagnostics.rs` (`DockDropResolveDiagnostics`)
-    - `ecosystem/fret-docking/src/dock/space.rs` (writes diagnostics during internal drag hover)
+    - `ecosystem/fret-docking/src/dock/declarative/drag_resolve/diagnostics.rs` and `ecosystem/fret-docking/src/dock/drop_resolve/diagnostics.rs`
     - `ecosystem/fret-docking/src/dock/tests.rs` (`dock_drag_records_drop_target_diagnostics_for_inner_left_hint_rect`)
 
 ---
@@ -679,32 +688,36 @@ The rule of thumb:
   - Already in `fret-core`:
     - `crates/fret-core/src/dock.rs`, `crates/fret-core/src/dock_op.rs`
 
-- [x] **Runtime integration helpers (ops → window requests)**
+- [x] **Runtime integration helpers (durable ops + docking-owned window commands)**
   - Already in `fret-docking`:
-    - `ecosystem/fret-docking/src/runtime.rs`:
-      - `handle_dock_op(...)`
-      - `handle_dock_window_created(...)`
-      - `handle_dock_before_close_window(...)`
+    - `ecosystem/fret-docking/src/facade.rs`:
+      - `DockSurface::on_dock_op(...)`
+      - `DockSurface::on_window_created(...)`
+      - `DockSurface::before_close_window(...)`
+      - `DockSurface::take_runtime_commands(...)` / `DockSurface::flush_runtime_commands_to_effects(...)`
+    - `ecosystem/fret-docking/src/runtime/{request,window_created,before_close,commands}.rs`
   - Why this must be crate-owned:
     - Prevents every app/demo from reinventing idempotency and close-on-empty.
 
 - [x] **A single “driver-facing” integration surface**
-  - Implemented (v1) facade API:
-    - `fret_docking::DockingRuntime` (pure helper object, no platform code):
-      - `on_dock_op(app, DockOp)` (wraps `handle_dock_op`)
+  - Implemented facade API:
+    - `fret_docking::DockSurface`:
+      - `on_dock_op(app, DockOp)` for durable graph operations
+      - `request_float_panel_to_new_window(...)` / `request_float_tabs_to_new_window(...)`
+      - `take_runtime_commands(...)` / `flush_runtime_commands_to_effects(...)`
       - `on_window_created(app, &CreateWindowRequest, new_window)`
       - `before_close_window(app, closing_window)` (merges into the configured main window)
   - Evidence anchors:
-    - `ecosystem/fret-docking/src/facade.rs` (`DockingRuntime`)
-    - `apps/fret-examples/src/docking_demo.rs` (uses `DockingRuntime`)
-    - `apps/fret-examples/src/docking_arbitration_demo.rs` (uses `DockingRuntime`)
+    - `ecosystem/fret-docking/src/facade.rs` (`DockSurface`)
+    - `apps/fret-examples/src/docking_demo.rs` (uses `DockSurface`)
+    - `apps/fret-examples/src/docking_arbitration_demo.rs` (uses `DockSurface`)
 
 - [x] **A declarative mount contract for dock spaces**
   - Requirement (ADR 0072):
     - Create one dock-space host per window and keep it alive.
     - Ensure it is attached into the declarative tree so hit-testing can descend.
-  - Implemented (current) helper:
-    - `fret_docking::dock_space_element_from_registry(cx, window, options)`
+  - Implemented app-facing helper:
+    - `fret_docking::DockSurface::host(cx, window, options)`
       - creates a managed-surface-backed dock-space element and binds registered declarative panel roots
     - `fret_docking::imui::dock_space_declarative_with(...)`
   - Why crate-owned:
@@ -749,7 +762,8 @@ These are the concrete places we should refactor out of demos into crate-owned h
 - “Keep DockSpace alive + wired into tree” boilerplate:
   - demos create a harness root and call `ui.set_children(...)`.
 - Repeated effect wiring:
-  - demos call `handle_dock_op`, `handle_dock_window_created`, `handle_dock_before_close_window` directly.
+  - normal demos use `DockSurface::{on_dock_op,on_window_created,before_close_window,take_runtime_commands}`.
+  - free runtime helpers are crate-private; advanced callers should still prefer `DockSurface` before reaching into `fret_docking::advanced`.
 - Repeated “ensure dock graph” initialization patterns:
   - demos build a starter layout; this is fine as demo-owned, but we should provide a tiny helper for common patterns
     (e.g. a two-pane split + default fractions) to avoid copy/paste drift.
@@ -767,7 +781,7 @@ This is an opinionated sequencing plan for “mechanics first, then hand feel”
    - Rationale: avoids mid-drag mode flips from modifier jitter and keeps target resolution deterministic.
    - Evidence:
      - `ecosystem/fret-docking/src/dock/types.rs` (`DockPanelDragPayload`)
-     - `ecosystem/fret-docking/src/dock/space.rs` (drag activation writes the flag; internal drag reads it)
+     - `ecosystem/fret-docking/src/dock/declarative/drag_resolve/begin_drag.rs` (drag activation writes the flag; internal drag reads it)
      - `ecosystem/fret-docking/src/dock/tests.rs` (`dock_drag_latches_dock_preview_policy_on_activation`)
 
 2) **Unify drop target selection into a single, explicit algorithm**
@@ -804,7 +818,7 @@ This is an opinionated sequencing plan for “mechanics first, then hand feel”
    - [~] Implemented in core mechanics:
      - Geometry formulas: `dock_hint_rects_with_font(...)`
      - Inner hit testing (anti-flicker quadrant logic): `dock_hint_pick_zone(...)`
-     - Outer docking selection: `HoverTarget.outer` + `DockSpace` targets `layout_root` for edge docking
+     - Outer docking selection: `HoverTarget.outer` + `drop_resolve/target.rs` targets `layout_root` for edge docking
    - Remaining polish:
      - verify hint render ordering and overlap parity (ImGui renders inner then outer)
      - align overlay visuals (alpha/rounding/placement) with ImGui’s `DockNodePreviewDockRender`
@@ -860,7 +874,7 @@ These numbers are the fastest way to explain why something “feels off”.
   - Implemented to match the ImGui formulas (inner/outer switch supported in geometry helper):
     - `ecosystem/fret-docking/src/dock/layout.rs`: `dock_hint_rects_with_font(rect, font_size, outer_docking)`
   - Uses `font.size` from the theme as the `FontSize` equivalent:
-    - `ecosystem/fret-docking/src/dock/space.rs`, `ecosystem/fret-docking/src/dock/paint.rs`
+    - `ecosystem/fret-docking/src/dock/declarative/drag_resolve/target.rs`, `ecosystem/fret-docking/src/dock/paint.rs`
   - Inner hit testing matches ImGui’s “anti-flicker” behavior:
     - `ecosystem/fret-docking/src/dock/layout.rs`: `dock_hint_pick_zone(...)`
 

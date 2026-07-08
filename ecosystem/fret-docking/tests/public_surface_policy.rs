@@ -46,23 +46,23 @@ fn public_docking_surface_prefers_dock_surface_entry_points() {
     assert!(
         dock_mod.contains("DockPanelElementRegistryService")
             && dock_mod.contains("dock_space_element_from_registry"),
-        "legacy host machinery may remain internal while the common root is DockSurface"
+        "low-level host machinery may remain internal while the common root is DockSurface"
     );
     assert!(
         declarative.contains("cx.managed_surface(")
             || declarative.contains("cx.managed_surface_with_prepaint("),
-        "public declarative dock-space entry point should be backed by ManagedSurface"
+        "low-level declarative dock-space host should be backed by ManagedSurface"
     );
     assert!(
         !declarative.contains("RetainedSubtreeProps")
             && !declarative.contains("UiTreeRetainedExt")
             && !declarative.contains("create_node_retained"),
-        "public declarative dock-space entry point must not grow retained bridge dependencies"
+        "declarative dock-space host must not grow retained bridge dependencies"
     );
 }
 
 #[test]
-fn retained_docking_entry_points_are_not_public() {
+fn legacy_docking_entry_points_are_not_public() {
     let dock_mod = include_str!("../src/dock/mod.rs");
     let lib = include_str!("../src/lib.rs");
 
@@ -78,11 +78,11 @@ fn retained_docking_entry_points_are_not_public() {
     ] {
         assert!(
             !dock_mod.contains(symbol),
-            "`dock/mod.rs` must not expose retained docking symbol `{symbol}`"
+            "`dock/mod.rs` must not expose legacy docking symbol `{symbol}`"
         );
         assert!(
             !lib.contains(symbol),
-            "`lib.rs` must not expose retained docking symbol `{symbol}`"
+            "`lib.rs` must not expose legacy docking symbol `{symbol}`"
         );
     }
 }
@@ -189,7 +189,7 @@ fn first_party_docking_examples_use_current_declarative_entry_points() {
         ] {
             assert!(
                 !source.contains(forbidden),
-                "`{name}` must not teach retained docking entry point `{forbidden}`"
+                "`{name}` must not teach legacy low-level docking entry point `{forbidden}`"
             );
         }
     }
@@ -243,7 +243,7 @@ fn first_party_docking_examples_use_current_declarative_entry_points() {
         ] {
             assert!(
                 !source.contains(forbidden),
-                "`{name}` must not teach retained docking entry point `{forbidden}`"
+                "`{name}` must not teach legacy low-level docking entry point `{forbidden}`"
             );
         }
     }

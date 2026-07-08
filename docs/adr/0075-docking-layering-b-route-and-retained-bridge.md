@@ -1,6 +1,6 @@
 # ADR 0075: Docking Layering (B Route) and Retained Bridge
 
-Status: Accepted (foundation + migration plan)
+Status: Accepted (foundation + migration plan; retained bridge exited)
 
 ## Context
 
@@ -44,11 +44,11 @@ We choose the **B route**:
 
 **New: `ecosystem/fret-docking` (Policy-heavy docking UI)**
 
-- DockSpace UI composition (tabs/splits/tear-off interactions).
+- Docking surface composition (tabs/splits/tear-off interactions).
 - Dock-specific drag preview visuals and policy.
 - Depends on `fret-core` dock contracts + `fret-ui` mechanism substrate.
-- May use a feature-gated retained-widget bridge during migration (see below), but must not leak
-  retained authoring into shadcn/tailwind components.
+- Current ordinary app entry point is `DockSurface`; low-level manager/workspace access is explicit
+  under `fret_docking::advanced`.
 
 **`apps/fret-editor` / app layer (Editor-specific viewport policy)**
 
@@ -66,10 +66,10 @@ hit-testing fails (e.g. docking tear-off).
 
 This avoids hard-coding dock-specific concepts into the runtime.
 
-### 3) Retained bridge (transitional; feature-gated; explicitly unstable)
+### 3) Retained bridge (historical migration step; now exited)
 
-Docking UI is currently implemented as a retained widget. To migrate it out of `fret-ui` without a
-large rewrite, `fret-ui` provides a **feature-gated retained bridge**:
+Docking UI was originally implemented as a retained widget. During the migration out of `fret-ui`,
+`fret-ui` temporarily provided a **feature-gated retained bridge**:
 
 - Feature: `fret-ui/unstable-retained-bridge`
 - Module: `fret_ui::retained_bridge`
@@ -83,6 +83,13 @@ The goal is to enable a staged migration:
 3. Later, decide whether docking UI should remain retained (in docking crate) or be re-authored as
    declarative elements once the required declarative primitives exist.
 
+Current status:
+
+- `fret-ui/unstable-retained-bridge` and `fret_ui::retained_bridge` have been deleted.
+- `fret-docking` now uses a managed-surface/declarative host path behind `DockSurface`.
+- `fret-core::DockOp` remains durable graph-only; OS-window tear-off uses docking-owned runtime
+  commands exposed by `DockSurface`.
+
 ## Migration Plan
 
 ### Stage 0 (this ADR)
@@ -95,7 +102,9 @@ The goal is to enable a staged migration:
 ### Stage 1 (move docking UI out)
 
 - Create `ecosystem/fret-docking`.
-- Move `DockSpace` and related UI/policy code out of `crates/fret-ui` (done; now in `ecosystem/fret-docking/src/dock/space.rs`).
+- Move docking UI/policy code out of `crates/fret-ui` (done; app-facing facade in
+  `ecosystem/fret-docking/src/facade.rs`, declarative host in
+  `ecosystem/fret-docking/src/dock/declarative.rs`).
 - Register internal drag routing via `fret_ui::internal_drag::set_route(...)`.
 
 ### Stage 2 (thin the runtime further)
@@ -117,7 +126,7 @@ The goal is to enable a staged migration:
 - `crates/fret-ui` contains no docking UI widgets.
 - `crates/fret-ui` contains no viewport overlay policy/shape enums.
 - Docking UI is implementable without runtime-owned policy shortcuts (ADR 0074).
-- shadcn/tailwind component crates do not enable `unstable-retained-bridge`.
+- shadcn/tailwind component crates do not enable `unstable-retained-bridge` (feature deleted).
 
 ## Consequences
 
@@ -129,8 +138,10 @@ Pros:
 
 Cons / Risks:
 
-- The retained bridge is a sharp tool: it must remain feature-gated and treated as unstable.
-- Docking migration will temporarily duplicate patterns between retained and declarative layers.
+- Historical workstream notes may still mention the retained bridge; current implementation evidence
+  should be checked against `docs/adr/IMPLEMENTATION_ALIGNMENT.md`.
+- Docking remains a policy-heavy ecosystem crate and must not leak editor-specific behavior back into
+  `crates/fret-ui`.
 
 ## References
 

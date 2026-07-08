@@ -557,7 +557,18 @@ pub(super) fn build_dock_routing_json(
                 "dock_drop_resolve": dock_drop.map(|d| json!({
                     "pointer_id": d.pointer_id,
                     "source": d.source,
+                    "policy": d.policy,
+                    "command": d.command,
+                    "commit_capable": d.commit_capable,
+                    "clears_hover": d.clears_hover,
+                    "invalidates_layout": d.invalidates_layout,
                     "resolved": d.resolved.as_ref().map(|r| json!({
+                        "layout_root": r.layout_root,
+                        "tabs": r.tabs,
+                        "zone": r.zone,
+                        "outer": r.outer,
+                    })),
+                    "denied": d.denied.as_ref().map(|r| json!({
                         "layout_root": r.layout_root,
                         "tabs": r.tabs,
                         "zone": r.zone,

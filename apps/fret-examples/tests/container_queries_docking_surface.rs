@@ -79,7 +79,7 @@ fn container_queries_docking_demo_uses_dock_surface_for_common_docking_assembly(
     ] {
         assert!(
             !source.contains(forbidden),
-            "container queries docking demo should not regress to retained docking entry point `{forbidden}`"
+            "container queries docking demo should not regress to legacy low-level docking entry point `{forbidden}`"
         );
     }
 }

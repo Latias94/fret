@@ -121,8 +121,8 @@ fn sync_declarative_viewport_layouts<H: UiHost>(
 /// Build a declarative dock-space host from explicit panel roots.
 ///
 /// The host consumes the dock graph and places active panel roots with
-/// `DockSpaceLayoutSnapshot`. This is the primary public dock-space entry point when the caller can
-/// author panel roots declaratively.
+/// `DockSpaceLayoutSnapshot`. `DockSurface::host` is the ordinary app-facing wrapper; this lower
+/// level helper remains available inside the docking crate for direct declarative composition.
 pub fn dock_space_element<H>(
     cx: &mut ElementContext<'_, H>,
     window: AppWindowId,
@@ -523,7 +523,7 @@ where
 /// Build a declarative dock-space host from the installed declarative panel registry.
 ///
 /// Non-viewport panels without a registered declarative element receive the same generic missing-UI
-/// placeholder as the retained registry path. Pure viewport panels may omit an element root.
+/// placeholder as the explicit panel-root path. Pure viewport panels may omit an element root.
 pub fn dock_space_element_from_registry<H>(
     cx: &mut ElementContext<'_, H>,
     window: AppWindowId,

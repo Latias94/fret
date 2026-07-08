@@ -169,7 +169,7 @@ fn docking_arbitration_demo_uses_dock_surface_for_common_docking_assembly() {
     ] {
         assert!(
             !source.contains(forbidden),
-            "docking arbitration demo should not regress to retained docking entry point `{forbidden}`"
+            "docking arbitration demo should not regress to legacy low-level docking entry point `{forbidden}`"
         );
     }
 }

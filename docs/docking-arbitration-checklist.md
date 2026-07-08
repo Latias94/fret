@@ -71,7 +71,7 @@ These are the most common integration failure modes that cause late rewrites in 
 
 ### Keep the declarative dock host alive
 
-- Always submit a `dock_space_element_from_registry(...)` host for every window that participates in docking.
+- Keep a `DockSurface` for the main docking workspace and submit `DockSurface::host(cx, window, options)` for every window that participates in docking.
 - Do not conditionally omit the dock host when a window is "collapsed" or when panels are not currently visible.
 
 ### Submit docking early in the per-frame build
@@ -81,8 +81,8 @@ These are the most common integration failure modes that cause late rewrites in 
 
 ### Register panel UI roots before host build
 
-- Install `DockPanelElementRegistryService` before building the dock host.
-- Prefer `dock_space_element_from_registry(...)` over direct `DockPanelContentService` mutation; the declarative host owns panel-root binding.
+- Install panel roots through `DockSurface::install_panel_registry(...)` before building the dock host.
+- Prefer `DockSurface::host(...)` over direct low-level service mutation; the declarative host owns panel-root binding.
 
 ---
 
