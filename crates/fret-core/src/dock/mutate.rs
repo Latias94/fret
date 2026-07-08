@@ -200,6 +200,17 @@ impl DockGraph {
         else {
             return false;
         };
+        if self
+            .root_for_node_in_window_forest(target_window, target_tabs)
+            .is_none()
+        {
+            return false;
+        }
+        if zone == DropZone::Center
+            && !matches!(self.nodes.get(target_tabs), Some(DockNode::Tabs { .. }))
+        {
+            return false;
+        }
 
         if zone == DropZone::Center
             && source_window == target_window

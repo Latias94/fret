@@ -575,6 +575,69 @@ fn move_window_to_empty_dock_space_rejects_non_empty_target() {
 }
 
 #[test]
+fn move_panel_rejects_unreachable_edge_target_without_removing_source() {
+    let w = window(1);
+    let panel_a = PanelKey::new("test.a");
+    let panel_b = PanelKey::new("test.b");
+
+    let mut g = DockGraph::new();
+    let source_tabs = g.insert_node(DockNode::Tabs {
+        tabs: vec![panel_a.clone()],
+        active: 0,
+    });
+    g.set_window_root(w, source_tabs);
+    let stale_tabs = g.insert_node(DockNode::Tabs {
+        tabs: vec![panel_b],
+        active: 0,
+    });
+
+    assert!(!g.apply_op(&DockOp::MovePanel {
+        source_window: w,
+        panel: panel_a.clone(),
+        target_window: w,
+        target_tabs: stale_tabs,
+        zone: DropZone::Left,
+        insert_index: None,
+    }));
+    assert_eq!(g.collect_panels_in_window(w), vec![panel_a]);
+    assert_canonical_all_windows(&g);
+}
+
+#[test]
+fn move_panel_rejects_center_drop_on_non_tabs_target_without_removing_source() {
+    let w = window(1);
+    let panel_a = PanelKey::new("test.a");
+    let panel_b = PanelKey::new("test.b");
+
+    let mut g = DockGraph::new();
+    let source_tabs = g.insert_node(DockNode::Tabs {
+        tabs: vec![panel_a.clone()],
+        active: 0,
+    });
+    let target_tabs = g.insert_node(DockNode::Tabs {
+        tabs: vec![panel_b.clone()],
+        active: 0,
+    });
+    let split = g.insert_node(DockNode::Split {
+        axis: Axis::Horizontal,
+        children: vec![source_tabs, target_tabs],
+        fractions: vec![0.5, 0.5],
+    });
+    g.set_window_root(w, split);
+
+    assert!(!g.apply_op(&DockOp::MovePanel {
+        source_window: w,
+        panel: panel_a.clone(),
+        target_window: w,
+        target_tabs: split,
+        zone: DropZone::Center,
+        insert_index: None,
+    }));
+    assert_eq!(g.collect_panels_in_window(w), vec![panel_a, panel_b]);
+    assert_canonical_all_windows(&g);
+}
+
+#[test]
 fn move_tabs_merges_into_target_tabs_and_preserves_active() {
     let w = window(1);
     let panel_a = PanelKey::new("test.a");

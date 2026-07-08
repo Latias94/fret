@@ -6,6 +6,7 @@ use super::super::diagnostics::{diagnostics_env_enabled, should_publish_docking_
 use super::super::drop_resolve::{
     apply_resolved_dock_drop_transaction, dock_drop_target_diagnostics,
     dock_drop_transaction_debug_kind, resolve_dock_drop_transaction,
+    validate_dock_drop_transaction_commit,
 };
 use super::super::manager::DockManager;
 use super::super::services::DockingPolicyService;
@@ -67,9 +68,9 @@ pub(super) fn declarative_resolve_internal_drag_drop<H: UiHost>(
     let tabs_payload = drag.payload::<DockTabsDragPayload>().cloned();
 
     let diagnostics_enabled = should_publish_docking_diagnostics(app, diagnostics_env_enabled());
-    let prev_hover = app
-        .global::<DockManager>()
-        .and_then(|dock| dock.presentation.hover.clone());
+    // Release is the commit boundary: the painted hover is only a preview cache. Re-resolve from
+    // fresh graph, policy, and pointer facts so a stale hover cannot become the drop authority.
+    let prev_hover = None;
     let Some(target_resolution) = resolve_declarative_drag_target(
         app,
         window,
@@ -102,6 +103,12 @@ pub(super) fn declarative_resolve_internal_drag_drop<H: UiHost>(
         &target_resolution.snapshot.paint_panel_bounds,
     );
     let transaction = resolve_dock_drop_transaction(target_resolution.drop_target.clone(), intent);
+    let transaction = app
+        .global::<DockManager>()
+        .map(|dock| {
+            validate_dock_drop_transaction_commit(&dock.workspace.graph, transaction.clone())
+        })
+        .unwrap_or(transaction);
     let applied = apply_resolved_dock_drop_transaction(app, &transaction, &mut effects);
     let invalidate_layout = applied && transaction.invalidates_layout();
 

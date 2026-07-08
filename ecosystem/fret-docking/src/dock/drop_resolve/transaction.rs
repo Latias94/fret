@@ -7,6 +7,7 @@ use super::super::prelude_runtime::*;
 use super::super::types::{
     DockDropIntent, DockDropPolicyDecision, DockDropTargetResolution, HoverTarget,
 };
+use fret_core::AppWindowId;
 use fret_ui::UiHost;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -77,6 +78,29 @@ pub(in crate::dock) fn resolve_dock_drop_transaction(
     }
 }
 
+pub(in crate::dock) fn validate_dock_drop_transaction_commit(
+    graph: &DockGraph,
+    transaction: ResolvedDockDropTransaction,
+) -> ResolvedDockDropTransaction {
+    if dock_drop_intent_commit_valid(graph, &transaction.intent) {
+        return transaction;
+    }
+
+    ResolvedDockDropTransaction {
+        target: DockDropTargetResolution {
+            target: None,
+            source: transaction.target.source,
+            policy: transaction.target.policy,
+        },
+        intent: DockDropIntent::None,
+        command: DockDropCommandKind::None,
+        cleanup: DockDropCleanup {
+            clears_hover: true,
+            invalidates_layout: false,
+        },
+    }
+}
+
 pub(in crate::dock) fn dock_drop_transaction_debug_kind(
     transaction: &ResolvedDockDropTransaction,
 ) -> &'static str {
@@ -116,6 +140,109 @@ fn dock_drop_command_debug_kind(command: DockDropCommandKind) -> &'static str {
         DockDropCommandKind::FloatTabsInWindow => "float_tabs_in_window",
         DockDropCommandKind::RequestFloatPanelToNewWindow => "request_float_panel_to_new_window",
         DockDropCommandKind::RequestFloatTabsToNewWindow => "request_float_tabs_to_new_window",
+    }
+}
+
+fn dock_drop_intent_commit_valid(graph: &DockGraph, intent: &DockDropIntent) -> bool {
+    match intent {
+        DockDropIntent::None => true,
+        DockDropIntent::MovePanel {
+            source_window,
+            panel,
+            target_window,
+            target_tabs,
+            zone,
+            ..
+        } => {
+            graph.find_panel_in_window(*source_window, panel).is_some()
+                && dock_node_in_window_forest(graph, *target_window, *target_tabs)
+                && dock_target_accepts_zone(graph, *target_tabs, *zone)
+        }
+        DockDropIntent::MovePanelToEmptyDockSpace {
+            source_window,
+            panel,
+            target_window,
+        } => {
+            graph.find_panel_in_window(*source_window, panel).is_some()
+                && graph.window_root(*target_window).is_none()
+        }
+        DockDropIntent::MoveTabs {
+            source_window,
+            source_tabs,
+            target_window,
+            target_tabs,
+            zone,
+            ..
+        } => {
+            dock_node_in_window_forest(graph, *source_window, *source_tabs)
+                && dock_tabs_node_nonempty(graph, *source_tabs)
+                && dock_node_in_window_forest(graph, *target_window, *target_tabs)
+                && dock_target_accepts_zone(graph, *target_tabs, *zone)
+        }
+        DockDropIntent::MoveTabsToEmptyDockSpace {
+            source_window,
+            source_tabs,
+            target_window,
+        } => {
+            dock_node_in_window_forest(graph, *source_window, *source_tabs)
+                && dock_tabs_node_nonempty(graph, *source_tabs)
+                && graph.window_root(*target_window).is_none()
+        }
+        DockDropIntent::FloatPanelInWindow {
+            source_window,
+            panel,
+            ..
+        }
+        | DockDropIntent::RequestFloatPanelToNewWindow {
+            source_window,
+            panel,
+            ..
+        } => graph.find_panel_in_window(*source_window, panel).is_some(),
+        DockDropIntent::FloatTabsInWindow {
+            source_window,
+            source_tabs,
+            ..
+        }
+        | DockDropIntent::RequestFloatTabsToNewWindow {
+            source_window,
+            source_tabs,
+            ..
+        } => {
+            dock_node_in_window_forest(graph, *source_window, *source_tabs)
+                && dock_tabs_node_nonempty(graph, *source_tabs)
+        }
+    }
+}
+
+fn dock_target_accepts_zone(graph: &DockGraph, target: DockNodeId, zone: DropZone) -> bool {
+    zone != DropZone::Center || matches!(graph.node(target), Some(DockNode::Tabs { .. }))
+}
+
+fn dock_tabs_node_nonempty(graph: &DockGraph, tabs: DockNodeId) -> bool {
+    matches!(graph.node(tabs), Some(DockNode::Tabs { tabs, .. }) if !tabs.is_empty())
+}
+
+fn dock_node_in_window_forest(graph: &DockGraph, window: AppWindowId, target: DockNodeId) -> bool {
+    graph
+        .window_root(window)
+        .is_some_and(|root| dock_node_contains(graph, root, target))
+        || graph
+            .floating_windows(window)
+            .iter()
+            .any(|floating| dock_node_contains(graph, floating.floating, target))
+}
+
+fn dock_node_contains(graph: &DockGraph, node: DockNodeId, target: DockNodeId) -> bool {
+    if node == target {
+        return true;
+    }
+    match graph.node(node) {
+        Some(DockNode::Tabs { .. }) => false,
+        Some(DockNode::Split { children, .. }) => children
+            .iter()
+            .any(|child| dock_node_contains(graph, *child, target)),
+        Some(DockNode::Floating { child }) => dock_node_contains(graph, *child, target),
+        None => false,
     }
 }
 
@@ -526,5 +653,90 @@ mod tests {
         assert!(!diag.commit_capable);
         assert!(diag.resolved.is_none());
         assert_eq!(diag.denied.map(|d| d.zone), Some(DropZone::Bottom));
+    }
+
+    #[test]
+    fn transaction_commit_validation_rejects_unreachable_target_tabs() {
+        let window = window(1);
+        let source_panel = panel("demo.source");
+        let stale_target_panel = panel("demo.stale-target");
+        let (mut graph, source_tabs) = graph_with_tabs(window, source_panel.clone());
+        let stale_tabs = graph.insert_node(DockNode::Tabs {
+            tabs: vec![stale_target_panel],
+            active: 0,
+        });
+        assert_ne!(source_tabs, stale_tabs);
+
+        let tx = resolve_dock_drop_transaction(
+            DockDropTargetResolution {
+                target: Some(DockDropTarget::Dock(HoverTarget {
+                    tabs: stale_tabs,
+                    root: stale_tabs,
+                    leaf_tabs: stale_tabs,
+                    zone: DropZone::Left,
+                    insert_index: None,
+                    outer: true,
+                    explicit: true,
+                })),
+                source: fret_runtime::DockDropResolveSource::OuterHintRect,
+                policy: DockDropPolicyDecision::Allowed,
+            },
+            DockDropIntent::MovePanel {
+                source_window: window,
+                panel: source_panel,
+                target_window: window,
+                target_tabs: stale_tabs,
+                zone: DropZone::Left,
+                insert_index: None,
+            },
+        );
+
+        let validated = validate_dock_drop_transaction_commit(&graph, tx);
+
+        assert_eq!(validated.command, DockDropCommandKind::None);
+        assert!(!validated.commit_capable());
+        assert!(validated.clears_hover());
+        assert!(!validated.invalidates_layout());
+        assert!(validated.target.target_ref().is_none());
+    }
+
+    #[test]
+    fn transaction_commit_validation_rejects_missing_source_panel() {
+        let window = window(1);
+        let target_panel = panel("demo.target");
+        let missing_panel = panel("demo.missing-source");
+        let (graph, target_tabs) = graph_with_tabs(window, target_panel);
+
+        let tx = resolve_dock_drop_transaction(
+            DockDropTargetResolution {
+                target: Some(DockDropTarget::Dock(HoverTarget {
+                    tabs: target_tabs,
+                    root: target_tabs,
+                    leaf_tabs: target_tabs,
+                    zone: DropZone::Right,
+                    insert_index: None,
+                    outer: true,
+                    explicit: true,
+                })),
+                source: fret_runtime::DockDropResolveSource::OuterHintRect,
+                policy: DockDropPolicyDecision::Allowed,
+            },
+            DockDropIntent::MovePanel {
+                source_window: window,
+                panel: missing_panel,
+                target_window: window,
+                target_tabs,
+                zone: DropZone::Right,
+                insert_index: None,
+            },
+        );
+
+        let validated = validate_dock_drop_transaction_commit(&graph, tx);
+
+        assert_eq!(validated.command, DockDropCommandKind::None);
+        assert!(!validated.commit_capable());
+        assert!(validated.clears_hover());
+        assert!(!validated.invalidates_layout());
+        assert!(validated.target.target_ref().is_none());
     }
 }

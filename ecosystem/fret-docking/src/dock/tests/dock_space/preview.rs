@@ -1232,6 +1232,394 @@ fn public_declarative_dock_space_entry_point_resolves_internal_drag_over_outer_h
 }
 
 #[test]
+fn public_declarative_dock_space_entry_point_revalidates_drop_target_after_hover_moves() {
+    struct DeclarativePanelRegistry;
+
+    impl DockPanelElementRegistry<TestHost> for DeclarativePanelRegistry {
+        fn render_panel(
+            &self,
+            cx: &mut fret_ui::ElementContext<'_, TestHost>,
+            _window: AppWindowId,
+            _panel: &PanelKey,
+        ) -> Option<fret_ui::element::AnyElement> {
+            Some(
+                cx.container(fret_ui::element::ContainerProps::default(), |_cx| {
+                    Vec::new()
+                }),
+            )
+        }
+    }
+
+    let window = AppWindowId::default();
+    let left_panel = PanelKey::new("demo.public.declarative.release-route.left");
+    let right_panel = PanelKey::new("demo.public.declarative.release-route.right");
+    let drag_panel = left_panel.clone();
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    app.set_global(DockManager::default());
+    app.set_global(fret_runtime::WindowInteractionDiagnosticsStore::default());
+    app.with_global_mut(
+        DockPanelElementRegistryService::<TestHost>::default,
+        |svc, _app| {
+            svc.set(Arc::new(DeclarativePanelRegistry));
+        },
+    );
+    let root_split = app.with_global_mut(DockManager::default, |dock, _app| {
+        for (panel, title) in [(&left_panel, "Left"), (&right_panel, "Right")] {
+            dock.ensure_panel(panel, || crate::DockPanel {
+                title: title.to_string(),
+                color: fret_core::Color::TRANSPARENT,
+                viewport: None,
+            });
+        }
+        let left = dock.workspace.graph.insert_node(DockNode::Tabs {
+            tabs: vec![left_panel.clone()],
+            active: 0,
+        });
+        let right = dock.workspace.graph.insert_node(DockNode::Tabs {
+            tabs: vec![right_panel.clone()],
+            active: 0,
+        });
+        let split = dock.workspace.graph.insert_node(DockNode::Split {
+            axis: fret_core::Axis::Horizontal,
+            children: vec![left, right],
+            fractions: vec![0.5, 0.5],
+        });
+        dock.workspace.graph.set_window_root(window, split);
+        split
+    });
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(800.0), Px(600.0)),
+    );
+    let mut services = FakeTextService;
+    let root = declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "public-declarative-dock-host-release-route",
+        move |cx| {
+            vec![dock_space_element_from_registry(
+                cx,
+                window,
+                DockSpaceElementOptions::default(),
+            )]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    app.begin_cross_window_drag_with_kind(
+        fret_core::PointerId(0),
+        DRAG_KIND_DOCK_PANEL,
+        window,
+        Point::new(Px(12.0), Px(12.0)),
+        DockPanelDragPayload {
+            panel: drag_panel.clone(),
+            grab_offset: Point::new(Px(0.0), Px(0.0)),
+            tear_off_requested: false,
+            tear_off_requested_at_tick: None,
+            tear_off_oob_start_frame: None,
+            dock_previews_enabled: true,
+        },
+    );
+    if let Some(drag) = app.drag_mut(fret_core::PointerId(0)) {
+        drag.dragging = true;
+        drag.current_window = window;
+    }
+
+    let left_hint = dock_hint_rects_with_font(bounds, Px(13.0), true)
+        .into_iter()
+        .find_map(|(zone, rect)| (zone == DropZone::Left).then_some(rect))
+        .expect("expected outer left hint rect");
+    let right_hint = dock_hint_rects_with_font(bounds, Px(13.0), true)
+        .into_iter()
+        .find_map(|(zone, rect)| (zone == DropZone::Right).then_some(rect))
+        .expect("expected outer right hint rect");
+    let left_position = Point::new(
+        Px(left_hint.origin.x.0 + left_hint.size.width.0 * 0.5),
+        Px(left_hint.origin.y.0 + left_hint.size.height.0 * 0.5),
+    );
+    let right_position = Point::new(
+        Px(right_hint.origin.x.0 + right_hint.size.width.0 * 0.5),
+        Px(right_hint.origin.y.0 + right_hint.size.height.0 * 0.5),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::InternalDrag(InternalDragEvent {
+            position: left_position,
+            kind: InternalDragKind::Over,
+            modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+        }),
+    );
+    let hover = app
+        .global::<DockManager>()
+        .and_then(|dock| dock.presentation.hover.clone());
+    assert!(
+        matches!(
+            hover,
+            Some(DockDropTarget::Dock(HoverTarget {
+                tabs,
+                zone: DropZone::Left,
+                outer: true,
+                ..
+            })) if tabs == root_split
+        ),
+        "test setup should latch a left hover before release, got: {hover:?}"
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::InternalDrag(InternalDragEvent {
+            position: right_position,
+            kind: InternalDragKind::Drop,
+            modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+        }),
+    );
+
+    let effects = app.take_effects();
+    let op = effects.iter().find_map(|effect| match effect {
+        Effect::Dock(op) => Some(op.clone()),
+        _ => None,
+    });
+    let Some(DockOp::MovePanel {
+        target_tabs, zone, ..
+    }) = op
+    else {
+        panic!("expected declarative dock host to emit MovePanel, got: {effects:?}");
+    };
+    assert_eq!(target_tabs, root_split);
+    assert_eq!(
+        zone,
+        DropZone::Right,
+        "drop release must re-resolve from the release position instead of committing stale hover"
+    );
+
+    let docking = app
+        .global::<fret_runtime::WindowInteractionDiagnosticsStore>()
+        .and_then(|store| store.docking_latest_for_window(window))
+        .expect("expected release diagnostics");
+    let drop_resolve = docking
+        .dock_drop_resolve
+        .as_ref()
+        .expect("expected dock drop resolve diagnostics");
+    assert_eq!(
+        drop_resolve.source,
+        fret_runtime::DockDropResolveSource::OuterHintRect
+    );
+    assert_eq!(
+        drop_resolve.resolved.as_ref().map(|target| target.zone),
+        Some(DropZone::Right)
+    );
+}
+
+#[test]
+fn public_declarative_dock_space_entry_point_rejects_drop_when_source_panel_vacates_before_release()
+{
+    struct DeclarativePanelRegistry;
+
+    impl DockPanelElementRegistry<TestHost> for DeclarativePanelRegistry {
+        fn render_panel(
+            &self,
+            cx: &mut fret_ui::ElementContext<'_, TestHost>,
+            _window: AppWindowId,
+            _panel: &PanelKey,
+        ) -> Option<fret_ui::element::AnyElement> {
+            Some(
+                cx.container(fret_ui::element::ContainerProps::default(), |_cx| {
+                    Vec::new()
+                }),
+            )
+        }
+    }
+
+    let window = AppWindowId::default();
+    let left_panel = PanelKey::new("demo.public.declarative.release-source.left");
+    let right_panel = PanelKey::new("demo.public.declarative.release-source.right");
+    let drag_panel = left_panel.clone();
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    app.set_global(DockManager::default());
+    app.set_global(fret_runtime::WindowInteractionDiagnosticsStore::default());
+    app.with_global_mut(
+        DockPanelElementRegistryService::<TestHost>::default,
+        |svc, _app| {
+            svc.set(Arc::new(DeclarativePanelRegistry));
+        },
+    );
+    let root_split = app.with_global_mut(DockManager::default, |dock, _app| {
+        for (panel, title) in [(&left_panel, "Left"), (&right_panel, "Right")] {
+            dock.ensure_panel(panel, || crate::DockPanel {
+                title: title.to_string(),
+                color: fret_core::Color::TRANSPARENT,
+                viewport: None,
+            });
+        }
+        let left = dock.workspace.graph.insert_node(DockNode::Tabs {
+            tabs: vec![left_panel.clone()],
+            active: 0,
+        });
+        let right = dock.workspace.graph.insert_node(DockNode::Tabs {
+            tabs: vec![right_panel.clone()],
+            active: 0,
+        });
+        let split = dock.workspace.graph.insert_node(DockNode::Split {
+            axis: fret_core::Axis::Horizontal,
+            children: vec![left, right],
+            fractions: vec![0.5, 0.5],
+        });
+        dock.workspace.graph.set_window_root(window, split);
+        split
+    });
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(800.0), Px(600.0)),
+    );
+    let mut services = FakeTextService;
+    let root = declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "public-declarative-dock-host-release-source",
+        move |cx| {
+            vec![dock_space_element_from_registry(
+                cx,
+                window,
+                DockSpaceElementOptions::default(),
+            )]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    let _ = app.take_effects();
+
+    app.begin_cross_window_drag_with_kind(
+        fret_core::PointerId(0),
+        DRAG_KIND_DOCK_PANEL,
+        window,
+        Point::new(Px(12.0), Px(12.0)),
+        DockPanelDragPayload {
+            panel: drag_panel.clone(),
+            grab_offset: Point::new(Px(0.0), Px(0.0)),
+            tear_off_requested: false,
+            tear_off_requested_at_tick: None,
+            tear_off_oob_start_frame: None,
+            dock_previews_enabled: true,
+        },
+    );
+    if let Some(drag) = app.drag_mut(fret_core::PointerId(0)) {
+        drag.dragging = true;
+        drag.current_window = window;
+    }
+
+    let right_hint = dock_hint_rects_with_font(bounds, Px(13.0), true)
+        .into_iter()
+        .find_map(|(zone, rect)| (zone == DropZone::Right).then_some(rect))
+        .expect("expected outer right hint rect");
+    let right_position = Point::new(
+        Px(right_hint.origin.x.0 + right_hint.size.width.0 * 0.5),
+        Px(right_hint.origin.y.0 + right_hint.size.height.0 * 0.5),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::InternalDrag(InternalDragEvent {
+            position: right_position,
+            kind: InternalDragKind::Over,
+            modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+        }),
+    );
+    let hover = app
+        .global::<DockManager>()
+        .and_then(|dock| dock.presentation.hover.clone());
+    assert!(
+        matches!(
+            hover,
+            Some(DockDropTarget::Dock(HoverTarget {
+                tabs,
+                zone: DropZone::Right,
+                outer: true,
+                ..
+            })) if tabs == root_split
+        ),
+        "test setup should latch a right hover before source vacates, got: {hover:?}"
+    );
+
+    app.with_global_mut(DockManager::default, |dock, _app| {
+        assert!(
+            dock.workspace.graph.close_panel(window, drag_panel.clone()),
+            "test setup should remove the source panel before release"
+        );
+    });
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::InternalDrag(InternalDragEvent {
+            position: right_position,
+            kind: InternalDragKind::Drop,
+            modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+        }),
+    );
+
+    assert!(
+        app.drag(fret_core::PointerId(0)).is_none(),
+        "drop should still end the drag session after rejecting the stale source"
+    );
+    let effects = app.take_effects();
+    assert!(
+        effects
+            .iter()
+            .all(|effect| !matches!(effect, Effect::Dock(_))),
+        "source-vacated drop must not emit a stale dock op, got: {effects:?}"
+    );
+    assert!(
+        app.global::<DockManager>()
+            .and_then(|dock| dock.presentation.hover.clone())
+            .is_none(),
+        "source-vacated drop should clear the preview hover"
+    );
+
+    let docking = app
+        .global::<fret_runtime::WindowInteractionDiagnosticsStore>()
+        .and_then(|store| store.docking_latest_for_window(window))
+        .expect("expected release diagnostics");
+    let drop_resolve = docking
+        .dock_drop_resolve
+        .as_ref()
+        .expect("expected dock drop resolve diagnostics");
+    assert_eq!(
+        drop_resolve.command,
+        fret_runtime::DockDropCommandKindDiagnostics::None
+    );
+    assert!(!drop_resolve.commit_capable);
+    assert!(drop_resolve.clears_hover);
+    assert!(!drop_resolve.invalidates_layout);
+}
+
+#[test]
 fn public_declarative_dock_space_entry_point_drops_panel_on_inner_left_hint_rect() {
     struct DeclarativePanelRegistry;
 

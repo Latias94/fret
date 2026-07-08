@@ -17,4 +17,5 @@ pub(super) use target::resolve_dock_drop_target;
 pub(super) use transaction::{
     ResolvedDockDropTransaction, apply_resolved_dock_drop_transaction,
     dock_drop_transaction_debug_kind, resolve_dock_drop_transaction,
+    validate_dock_drop_transaction_commit,
 };
