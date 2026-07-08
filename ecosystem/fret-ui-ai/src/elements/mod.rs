@@ -53,11 +53,23 @@ mod voice_selector;
 mod web_preview;
 mod workflow;
 
-use fret_ui::element::{AnyElement, SpacerProps};
+use fret_core::Px;
+use fret_ui::element::{AnyElement, ElementKind, Length, SpacerProps};
 use fret_ui::{ElementContext, UiHost};
 
 pub(crate) fn empty_placeholder<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     cx.spacer(SpacerProps::default())
+}
+
+pub(crate) fn chrome_title_flex_text(mut element: AnyElement) -> AnyElement {
+    if let ElementKind::Text(props) = &mut element.kind {
+        props.layout.size.width = Length::Fill;
+        props.layout.size.min_width = Some(Length::Px(Px(0.0)));
+        props.layout.flex.grow = 1.0;
+        props.layout.flex.shrink = 1.0;
+        props.layout.flex.basis = Length::Px(Px(0.0));
+    }
+    element
 }
 
 pub use agent::*;

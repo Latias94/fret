@@ -27,10 +27,10 @@ use fret_ui_kit::{
 };
 use fret_ui_shadcn::facade::ScrollArea;
 
-use super::Shimmer;
 use super::clipboard_copy::{
     ClipboardCopyFeedbackRef, begin_request, finish_request, handle_reset_timer,
 };
+use super::{Shimmer, chrome_title_flex_text};
 pub type OnTerminalClear = Arc<dyn Fn(&mut dyn UiActionHost, ActionCx) + 'static>;
 
 fn token(key: &'static str, fallback: Color) -> ColorRef {
@@ -424,7 +424,10 @@ impl TerminalTitle {
         let icon = decl_icon::icon_with(cx, self.icon, Some(Px(16.0)), Some(ColorRef::Color(fg)));
         let content = match self.content {
             TerminalTitleContent::Label(label) => {
-                vec![icon, decl_text::text_chrome_title(cx, label)]
+                vec![
+                    icon,
+                    chrome_title_flex_text(decl_text::text_chrome_title(cx, label)),
+                ]
             }
             TerminalTitleContent::Children(children) => {
                 let mut row = Vec::with_capacity(children.len() + 1);

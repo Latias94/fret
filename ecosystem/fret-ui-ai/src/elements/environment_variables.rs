@@ -26,6 +26,7 @@ use fret_ui_kit::{
 };
 use fret_ui_shadcn::facade::{Badge, BadgeVariant, Switch};
 
+use super::chrome_title_flex_text;
 use super::clipboard_copy::{
     ClipboardCopyFeedbackRef, begin_request, finish_request, handle_reset_timer,
 };
@@ -379,12 +380,12 @@ impl EnvironmentVariablesTitle {
         let refinement = environment_variables_title_refinement(&theme);
 
         let mut el = match self.content {
-            EnvironmentVariablesTitleContent::Default => {
-                decl_text::text_chrome_title(cx, "Environment Variables").inherit_foreground(fg)
-            }
-            EnvironmentVariablesTitleContent::Text(text) => {
-                decl_text::text_chrome_title(cx, text).inherit_foreground(fg)
-            }
+            EnvironmentVariablesTitleContent::Default => chrome_title_flex_text(
+                decl_text::text_chrome_title(cx, "Environment Variables").inherit_foreground(fg),
+            ),
+            EnvironmentVariablesTitleContent::Text(text) => chrome_title_flex_text(
+                decl_text::text_chrome_title(cx, text).inherit_foreground(fg),
+            ),
             EnvironmentVariablesTitleContent::Children(children) => cx
                 .foreground_scope(fg, move |cx| vec![inline_children(cx, children)])
                 .inherit_foreground(fg)

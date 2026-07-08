@@ -15,7 +15,7 @@ use fret_ui_shadcn::facade::{
     Accordion, AccordionContent, AccordionItem, AccordionTrigger, Badge, BadgeVariant,
 };
 
-use crate::elements::CodeBlock;
+use crate::elements::{CodeBlock, chrome_title_flex_text};
 
 fn token_color_with_alpha(
     theme: &Theme,
@@ -201,8 +201,10 @@ impl AgentHeader {
             Some(ColorRef::Color(muted)),
         );
 
-        let name_text = decl_text::text_chrome_title(cx, name)
-            .inherit_foreground(theme.color_required("foreground"));
+        let name_text = chrome_title_flex_text(
+            decl_text::text_chrome_title(cx, name)
+                .inherit_foreground(theme.color_required("foreground")),
+        );
 
         let model_badge = model.map(|m| {
             Badge::new(m)

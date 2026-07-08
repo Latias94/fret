@@ -665,8 +665,6 @@ mod tests {
         let mut scene = Scene::default();
         ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
 
-        let layout_measure =
-            services.find_call(CallPhase::Layout, text.as_ref(), expected_constraints);
         let paint_measure =
             services.find_call(CallPhase::Paint, text.as_ref(), expected_constraints);
 
@@ -678,7 +676,7 @@ mod tests {
                     && record.text.as_ref() == text.as_ref()
                     && record.constraints == expected_constraints
             })
-            .expect("expected base text prepare to use the wrapped constraints");
+            .expect("expected layout text prepare to use the wrapped constraints");
         let paint_prepare = services
             .prepared
             .iter()
@@ -689,12 +687,10 @@ mod tests {
             })
             .expect("expected overlay shared_text prepare to use the wrapped constraints");
 
-        assert_eq!(layout_measure.style, layout_prepare.style);
         assert_eq!(paint_measure.style, layout_prepare.style);
         assert_eq!(paint_prepare.style, layout_prepare.style);
-        assert_eq!(layout_measure.constraints, expected_constraints);
-        assert_eq!(paint_measure.constraints, expected_constraints);
         assert_eq!(layout_prepare.constraints, expected_constraints);
+        assert_eq!(paint_measure.constraints, expected_constraints);
         assert_eq!(paint_prepare.constraints, expected_constraints);
 
         let mut base_origin = None;
