@@ -75,10 +75,6 @@ fn documented_raw_shadcn_escape_hatch_reason(trimmed: &str) -> Option<&'static s
             "collapsible primitive source-alignment alias",
         ),
         (
-            "shadcn::raw::accordion::composable",
-            "retired accordion raw-seam documentation",
-        ),
-        (
             "shadcn::raw::collapsible::primitives::*",
             "collapsible raw-seam documentation",
         ),
@@ -171,6 +167,7 @@ fn raw_shadcn_escape_hatch_gate_is_symbol_level_not_module_level() {
         "shadcn::raw::toggle_group::ToggleGroupStyle::default()",
         "shadcn::raw::experimental::UnclassifiedWidget::new()",
         "shadcn::raw::button::UnclassifiedButtonPart::new()",
+        "shadcn::raw::accordion::composable",
         "use shadcn::raw::breadcrumb::private as bc;",
     ] {
         assert!(

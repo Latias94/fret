@@ -22,7 +22,7 @@ pub(super) fn preview_accordion(
 
     let api_reference = doc_layout::notes_block([
         "`accordion_single_uncontrolled(cx, default, |cx| ..)` and `accordion_multiple_uncontrolled(cx, default, |cx| ..)` stay the terse builder helpers for the upstream Demo/Basic/Multiple lanes.",
-        "`AccordionRoot::children([...])` plus `AccordionItemPart`, `AccordionTriggerPart`, and `AccordionContentPart` now provide the curated typed children lane on the facade, so the copyable `Usage` section no longer needs the raw `shadcn::raw::accordion::composable` escape hatch.",
+        "`AccordionRoot::children([...])` plus `AccordionItemPart`, `AccordionTriggerPart`, and `AccordionContentPart` now provide the curated typed children lane on the facade, so the copyable `Usage` section no longer needs the legacy raw composable escape hatch.",
         "Measured-height motion, roving focus, and the trigger/content accessibility relationships remain primitive-owned; caller-owned width, card shells, and bordered wrappers stay explicit page-level composition.",
         "Radix and Base UI remain the semantics truth for trigger-expanded state, region labelling, and roving navigation; the remaining accordion drift here is first-party docs/public-surface alignment rather than a `fret-ui` mechanism bug.",
         "A broader untyped JSX-style heterogeneous children API is not currently warranted beyond the typed root lane: accordion still only needs explicit item/trigger/content ownership, and widening further would add more naming ambiguity than capability.",

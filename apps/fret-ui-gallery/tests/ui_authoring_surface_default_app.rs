@@ -11206,7 +11206,7 @@ fn selected_accordion_snippets_prefer_builder_preserving_helpers() {
 }
 
 #[test]
-fn accordion_usage_snippet_keeps_the_composable_advanced_seam() {
+fn accordion_usage_snippet_keeps_curated_typed_children_seam() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/accordion/usage.rs",
         &["shadcn::AccordionRoot::single_uncontrolled("],
