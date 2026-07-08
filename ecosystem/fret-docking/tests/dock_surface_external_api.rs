@@ -1,0 +1,27 @@
+use fret_core::{AppWindowId, Color, PanelKey};
+use fret_docking::{DockHostOptions, DockPanel, DockRuntimeCommand, DockSurface};
+use slotmap::KeyData;
+
+#[test]
+fn public_root_consumer_constructs_dock_surface_without_internal_runtime_helpers() {
+    let main_window = AppWindowId::from(KeyData::from_ffi(1));
+    let surface = DockSurface::new(main_window);
+
+    assert_eq!(surface.main_window(), main_window);
+
+    let options = DockHostOptions::default();
+    assert!(!options.allow_multi_window_tear_off);
+
+    let panel = DockPanel {
+        title: "Inspector".to_string(),
+        color: Color::TRANSPARENT,
+        viewport: None,
+    };
+    assert_eq!(panel.title, "Inspector");
+
+    let panel_key = PanelKey::new("external.inspector");
+    assert_eq!(panel_key.kind.0.as_str(), "external.inspector");
+
+    fn accepts_runtime_command_type(_: Option<DockRuntimeCommand>) {}
+    accepts_runtime_command_type(None);
+}
