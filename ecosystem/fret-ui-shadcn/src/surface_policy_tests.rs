@@ -649,6 +649,7 @@ fn authoring_critical_family_exports_live_on_curated_facade_only() {
         &["Tabs", "TabsItem", "TabsOrientation", "TabsListVariant"],
     );
     assert_facade_only_reexports("calendar", &["Calendar", "CalendarLocale"]);
+    assert_facade_only_reexports("switch", &["Switch", "SwitchStyle"]);
 }
 
 #[test]
@@ -2065,7 +2066,7 @@ fn selector_and_query_helpers_stay_isolated_to_opt_in_state_module() {
     );
     assert!(
         normalized_lib.contains(
-            "pubusecrate::spinner::Spinner;#[cfg(feature=\"state-selector\")]pubusecrate::state::use_selector_badge;#[cfg(feature=\"state-query\")]pubusecrate::state::{query_error_alert,query_status_badge,query_status_badge_for};pubusecrate::switch::{Switch,SwitchSize,switch};"
+            "pubusecrate::spinner::Spinner;#[cfg(feature=\"state-selector\")]pubusecrate::state::use_selector_badge;#[cfg(feature=\"state-query\")]pubusecrate::state::{query_error_alert,query_status_badge,query_status_badge_for};pubusecrate::switch::{Switch,SwitchSize,SwitchStyle,switch};"
         ),
         "facade should keep app-facing query helper discovery behind the query feature gate"
     );

@@ -94,10 +94,6 @@ fn documented_raw_shadcn_escape_hatch_reason(trimmed: &str) -> Option<&'static s
             "shadcn::raw::menubar::MenubarItemVariant::",
             "menubar item variant seam",
         ),
-        (
-            "shadcn::raw::switch::SwitchStyle::",
-            "switch style refinement seam",
-        ),
     ] {
         if trimmed.contains(needle) {
             return Some(reason);
@@ -150,6 +146,7 @@ fn raw_shadcn_escape_hatch_gate_is_symbol_level_not_module_level() {
         "shadcn::raw::calendar::CalendarLocale::Es",
         "shadcn::raw::select::SelectPosition::Popper",
         "shadcn::raw::tabs::TabsOrientation::Vertical",
+        "shadcn::raw::switch::SwitchStyle::default()",
         "shadcn::raw::accordion::composable",
         "shadcn::raw::collapsible::primitives::*",
         "use shadcn::raw::breadcrumb::private as bc;",

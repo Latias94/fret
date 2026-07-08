@@ -550,7 +550,7 @@ pub mod facade {
     pub use crate::state::use_selector_badge;
     #[cfg(feature = "state-query")]
     pub use crate::state::{query_error_alert, query_status_badge, query_status_badge_for};
-    pub use crate::switch::{Switch, SwitchSize, switch};
+    pub use crate::switch::{Switch, SwitchSize, SwitchStyle, switch};
     pub use crate::table::{
         Table, TableBody, TableCaption, TableCell, TableFooter, TableHead, TableHeader, TableRow,
         table, table_body, table_caption, table_caption_children, table_cell, table_footer,
