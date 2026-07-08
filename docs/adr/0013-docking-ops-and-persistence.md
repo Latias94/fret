@@ -212,8 +212,8 @@ app-owned dock graph and multi-root overlay model (ADR 0011):
 - Persistence: implemented as `DockLayout` in `crates/fret-core/src/dock/layout.rs` and `crates/fret-core/src/dock/persistence.rs`.
 - Durable transaction vocabulary: `DockOp` exists in `crates/fret-core/src/dock/op.rs`.
   - The demo applies `DockOp` via the runner’s effect drain path (`Effect::Dock`), which is the intended integration point.
-  - `Effect::Dock` carries only durable graph mutations. OS-window tear-off is requested through `fret_docking::DockSurface::request_float_*_to_new_window(...)`, which queues docking-owned runtime commands; window creation remains app/runner-owned.
-  - Closing a floating OS window merges its panels back into the main window through the docking runtime before-close path (`DockSurface::before_close_window(...)`).
+  - `Effect::Dock` carries only durable graph mutations. App-facing OS-window tear-off uses `fret_docking::DockSurface::viewports().open_panel(...)` for typed lifecycle outcomes, while host/runtime integration can opt into `DockSurface::driver().request_float_*_to_new_window(...)`; window creation remains app/runner-owned.
+  - Closing a floating OS window merges its panels back into the main window through the docking runtime before-close path (`DockSurface::viewports().before_close_window(...)` for typed app usage, `DockSurface::driver().before_close_window(...)` for low-level host callbacks).
   - Split sizing is updated via `DockOp::SetSplitFractionsMany` (atomic batch; each vector length matches `children.len()`).
     `SetSplitFractions` remains for single-split updates, and `SetSplitFractionTwo` remains as a legacy convenience for binary splits.
   - **Layout invalidation is part of the integration contract**: after applying any `DockOp` that changes geometry

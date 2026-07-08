@@ -21,13 +21,15 @@ Evidence anchors:
 ## 2) Public contract surface
 
 - Key exports / stable types:
-  - App surface: `DockSurface`, `DockHostOptions`
+  - App surface: `DockSurface`, `DockHostOptions`, `DockSurfacePanel*`, `DockSurfaceSnapshot`
+  - Viewport/window lifecycle facade: `DockSurfaceViewportSession`, `DockSurfaceViewport*`
   - Panels: `DockPanel`, `DockPanelElementRegistry`, `ViewportPanel`
   - Viewport integration: `DockViewportLayout`, `DockViewportOverlayHooks`
   - Policy: `DockingPolicy`
   - Advanced low-level access: `fret_docking::advanced::{DockSurfaceDriver, DockRuntimeCommand, DockManager, DockWorkspace, DockPanelCatalog, ...}`
 - Public-surface rule:
-  - Ordinary apps should use `DockSurface` for panel registration, host mounting, layout import/export, and policy installation.
+  - Ordinary apps should use `DockSurface` for panel registration, host mounting, semantic panel commands, layout import/export, snapshots, and policy installation.
+  - App-facing OS-window tear-off/close lifecycle should use `DockSurface::viewports()` for typed outcomes.
   - Host/runtime integrations should opt into `DockSurface::driver()` for graph root construction, runtime command handoff, window-created callbacks, and before-close merge.
   - Manager/workspace/catalog access is intentionally explicit under `advanced`; free runtime helpers and service globals are crate-private/internal.
 - Feature flags and intent:

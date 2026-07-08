@@ -114,8 +114,9 @@ Docking runtime integration (durable ops + docking-owned window commands):
   - durable `DockOp` application and invalidation
   - tear-off request queueing, duplicate suppression, cancellation, completion, and close/merge policies
 - `ecosystem/fret-docking/src/facade.rs`:
-  - `DockSurface::{request_float_panel_to_new_window, request_float_tabs_to_new_window}`
-  - `DockSurface::{take_runtime_commands, flush_runtime_commands_to_effects, on_window_created, before_close_window}`
+  - `DockSurface::{open_panel,select_panel,close_panel,snapshot,viewports,driver}`
+  - `DockSurface::viewports().{open_panel,before_close_window}` for typed app-facing OS-window lifecycle
+  - `DockSurface::driver().{request_float_panel_to_new_window,request_float_tabs_to_new_window,take_runtime_commands,flush_runtime_commands_to_effects,on_window_created,before_close_window}` for low-level host/runtime handoff
 
 Runner integration (multi-window routing, internal drags, window positioning/follow):
 
@@ -350,7 +351,7 @@ inability to hit a specific docking direction are often coordinate-space bugs.
   - Evidence anchors:
     - Group drag payload: `ecosystem/fret-docking/src/dock/types.rs`
     - Group move op: `crates/fret-core/src/dock/op.rs`
-    - Group tear-off request: `ecosystem/fret-docking/src/runtime/request.rs` via `DockSurface::request_float_tabs_to_new_window`
+    - Group tear-off request: `ecosystem/fret-docking/src/runtime/request.rs` via `DockSurface::driver().request_float_tabs_to_new_window`
     - Tear-off integration: `ecosystem/fret-docking/src/runtime.rs` and `ecosystem/fret-docking/src/runtime/{request,window_created,before_close,commands}.rs`
     - Cross-window group tear-off tests:
       - `ecosystem/fret-docking/src/runtime.rs` (`window_created_updates_drag_source_window_for_active_dock_tabs_drag`)
@@ -691,17 +692,19 @@ The rule of thumb:
 - [x] **Runtime integration helpers (durable ops + docking-owned window commands)**
   - Already in `fret-docking`:
     - `ecosystem/fret-docking/src/facade.rs`:
-      - `DockSurface::on_dock_op(...)`
-      - `DockSurface::on_window_created(...)`
-      - `DockSurface::before_close_window(...)`
-      - `DockSurface::take_runtime_commands(...)` / `DockSurface::flush_runtime_commands_to_effects(...)`
+      - `DockSurface::{open_panel,select_panel,close_panel,snapshot,...}` for ordinary semantic panel/layout usage
+      - `DockSurface::viewports().open_panel(...)` / `DockSurface::viewports().before_close_window(...)` for typed OS-window lifecycle usage
+      - `DockSurface::driver().on_dock_op(...)`
+      - `DockSurface::driver().on_window_created(...)`
+      - `DockSurface::driver().before_close_window(...)`
+      - `DockSurface::driver().take_runtime_commands(...)` / `DockSurface::driver().flush_runtime_commands_to_effects(...)`
     - `ecosystem/fret-docking/src/runtime/{request,window_created,before_close,commands}.rs`
   - Why this must be crate-owned:
     - Prevents every app/demo from reinventing idempotency and close-on-empty.
 
 - [x] **A single “driver-facing” integration surface**
   - Implemented facade API:
-    - `fret_docking::DockSurface`:
+    - `fret_docking::DockSurface::driver()`:
       - `on_dock_op(app, DockOp)` for durable graph operations
       - `request_float_panel_to_new_window(...)` / `request_float_tabs_to_new_window(...)`
       - `take_runtime_commands(...)` / `flush_runtime_commands_to_effects(...)`
@@ -762,8 +765,8 @@ These are the concrete places we should refactor out of demos into crate-owned h
 - “Keep DockSpace alive + wired into tree” boilerplate:
   - demos create a harness root and call `ui.set_children(...)`.
 - Repeated effect wiring:
-  - normal demos use `DockSurface::{on_dock_op,on_window_created,before_close_window,take_runtime_commands}`.
-  - free runtime helpers are crate-private; advanced callers should still prefer `DockSurface` before reaching into `fret_docking::advanced`.
+  - normal demos route host callbacks through `DockSurface::driver()` and app-facing tear-off/close commands through `DockSurface::viewports()`.
+  - free runtime helpers are crate-private; advanced callers should still prefer `DockSurface::{viewports,driver}` before reaching into `fret_docking::advanced`.
 - Repeated “ensure dock graph” initialization patterns:
   - demos build a starter layout; this is fine as demo-owned, but we should provide a tiny helper for common patterns
     (e.g. a two-pane split + default fractions) to avoid copy/paste drift.
