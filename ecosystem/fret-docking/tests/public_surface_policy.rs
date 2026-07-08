@@ -1,28 +1,53 @@
 #[test]
-fn public_docking_surface_prefers_declarative_entry_points() {
+fn public_docking_surface_prefers_dock_surface_entry_points() {
     let dock_mod = include_str!("../src/dock/mod.rs");
     let declarative = include_str!("../src/dock/declarative.rs");
     let lib = include_str!("../src/lib.rs");
 
     for symbol in [
-        "DockPanelElement",
+        "DockSurface",
+        "DockHostOptions",
+        "DockRuntimeCommand",
+        "DockPanel",
         "DockPanelElementRegistry",
-        "DockPanelElementRegistryService",
-        "DockSpaceElementOptions",
-        "dock_panel_element",
-        "dock_space_element",
-        "dock_space_element_from_registry",
+        "DockViewportLayout",
+        "DockViewportOverlayHooks",
+        "DockingPolicy",
+        "ViewportPanel",
     ] {
         assert!(
-            dock_mod.contains(symbol),
-            "`dock/mod.rs` should re-export public declarative docking symbol `{symbol}`"
-        );
-        assert!(
             lib.contains(symbol),
-            "`lib.rs` should expose public declarative docking symbol `{symbol}`"
+            "`lib.rs` should expose app-facing docking symbol `{symbol}`"
         );
     }
 
+    for legacy in [
+        "pub mod dock;",
+        "pub mod runtime;",
+        "DockPanelElementRegistryService",
+        "DockViewportOverlayHooksService",
+        "DockingPolicyService",
+        "DockingRuntime",
+        "dock_panel_element",
+        "dock_space_element_from_registry",
+        "handle_dock_op",
+        "handle_dock_window_created",
+        "handle_dock_before_close_window",
+    ] {
+        assert!(
+            !lib.contains(legacy),
+            "`lib.rs` must not expose legacy low-level docking surface `{legacy}`"
+        );
+    }
+    assert!(
+        lib.contains("pub mod advanced") && lib.contains("DockManager"),
+        "advanced-only low-level manager access should be explicit"
+    );
+    assert!(
+        dock_mod.contains("DockPanelElementRegistryService")
+            && dock_mod.contains("dock_space_element_from_registry"),
+        "legacy host machinery may remain internal while the common root is DockSurface"
+    );
     assert!(
         declarative.contains("cx.managed_surface(")
             || declarative.contains("cx.managed_surface_with_prepaint("),
@@ -94,6 +119,9 @@ fn dock_surface_root_entry_point_is_public_without_internal_command_queue() {
         "take_runtime_commands",
         "complete_queued_window_created",
         "handle_dock_op_with_runtime_commands",
+        "handle_dock_op",
+        "handle_dock_window_created",
+        "handle_dock_before_close_window",
     ] {
         assert!(
             runtime.contains(&format!("pub(crate) fn {helper}")),
@@ -129,17 +157,25 @@ fn first_party_docking_examples_use_current_declarative_entry_points() {
 
     for (name, source) in examples {
         assert!(
-            source.contains("DockPanelElementRegistry")
-                || source.contains("DockPanelElementRegistryService"),
-            "`{name}` should register declarative dock panel roots"
+            source.contains("DockSurface"),
+            "`{name}` should route common docking setup through DockSurface"
         );
         assert!(
-            source.contains("dock_space_element_from_registry(")
-                || source.contains("dock_space_declarative_with("),
+            source.contains("DockPanelElementRegistry"),
+            "`{name}` should provide declarative dock panel roots"
+        );
+        assert!(
+            source.contains("dock_space_declarative_with(") || source.contains(".host("),
             "`{name}` should mount the declarative dock-space host"
         );
 
         for forbidden in [
+            "DockPanelElementRegistryService",
+            "DockViewportOverlayHooksService",
+            "DockingPolicyService",
+            "DockingRuntime::new",
+            "dock_space_element_from_registry",
+            "fret_docking::runtime",
             "DockPanelFactory",
             "DockPanelFactoryCx",
             "DockPanelRegistryBuilder",
@@ -173,9 +209,10 @@ fn first_party_docking_examples_use_current_declarative_entry_points() {
         );
     }
     for symbol in [
-        "DockPanelElementRegistryService",
+        "DockSurface",
         "impl DockPanelElementRegistry",
         "DockManager::default",
+        "request_dock_invalidation",
     ] {
         assert!(
             imui_workbench.contains(symbol),
@@ -188,6 +225,11 @@ fn first_party_docking_examples_use_current_declarative_entry_points() {
     ] {
         let (name, source) = source;
         for forbidden in [
+            "DockPanelElementRegistryService",
+            "DockingRuntime::new",
+            "dock_runtime::handle_dock_op",
+            "dock_runtime::handle_dock_window_created",
+            "dock_runtime::handle_dock_before_close_window",
             "DockPanelFactory",
             "DockPanelFactoryCx",
             "DockPanelRegistryBuilder",
@@ -208,16 +250,14 @@ fn first_party_docking_examples_use_current_declarative_entry_points() {
 }
 
 #[test]
-fn public_root_legacy_low_level_surface_is_characterized_until_dock_surface_lands() {
+fn public_root_legacy_low_level_surface_is_removed_after_dock_surface_lands() {
     let lib = include_str!("../src/lib.rs");
-    let dock_mod = include_str!("../src/dock/mod.rs");
     let manager = include_str!("../src/dock/manager.rs");
     let facade = include_str!("../src/facade.rs");
 
     for symbol in [
         "pub mod dock;",
         "pub mod runtime;",
-        "DockManager",
         "DockPanelElementRegistryService",
         "DockViewportOverlayHooksService",
         "DockingPolicyService",
@@ -227,22 +267,20 @@ fn public_root_legacy_low_level_surface_is_characterized_until_dock_surface_land
         "handle_dock_before_close_window",
     ] {
         assert!(
-            lib.contains(symbol),
-            "`lib.rs` currently exposes legacy low-level docking surface symbol `{symbol}`; U3/U8 should replace this characterization with facade policy"
+            !lib.contains(symbol),
+            "`lib.rs` must not expose legacy low-level docking surface symbol `{symbol}`"
         );
     }
     assert!(
-        dock_mod.contains("DockPanelContentService"),
-        "`dock/mod.rs` currently exposes DockPanelContentService through the public dock module"
+        lib.contains("pub mod advanced") && lib.contains("DockManager"),
+        "low-level graph access should be explicit under `advanced`, not taught as the common root"
     );
     assert!(
         manager.contains("pub graph: DockGraph") && manager.contains("pub panels: HashMap"),
-        "`DockManager` currently exposes graph and panel state directly"
+        "`DockManager` still exposes mixed state until U4 moves it behind a workspace authority"
     );
     assert!(
-        facade.contains("crate::runtime::handle_dock_op")
-            && facade.contains("crate::runtime::handle_dock_window_created")
-            && facade.contains("crate::runtime::handle_dock_before_close_window"),
-        "`DockingRuntime` is currently a thin adapter over free runtime handlers"
+        !facade.contains("pub struct DockingRuntime") && !facade.contains("impl DockingRuntime"),
+        "`DockingRuntime` thin adapter should be deleted once DockSurface owns callbacks"
     );
 }

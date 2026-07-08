@@ -25,18 +25,18 @@ mod viewport;
 
 mod manager;
 
+pub use declarative::DockPanelElementRegistry;
 #[cfg(feature = "imui")]
 pub use declarative::imui_dock_space_element;
-pub use declarative::{
-    DockPanelElement, DockPanelElementRegistry, DockPanelElementRegistryService,
-    DockSpaceElementOptions, dock_panel_element, dock_space_element,
-    dock_space_element_from_registry,
+pub(crate) use declarative::{
+    DockPanelElementRegistryService, DockSpaceElementOptions, dock_space_element_from_registry,
 };
-pub use diagnostics::{dock_graph_signature_for_window, dock_graph_stats_for_window};
+#[cfg(test)]
+pub(crate) use declarative::{dock_panel_element, dock_space_element};
 pub use manager::{ActivatePanelOptions, DockManager};
-pub use services::{
-    DockPanelContentService, DockViewportOverlayHooksService, DockingPolicyService,
-};
+#[cfg(test)]
+pub(crate) use services::DockPanelContentService;
+pub(crate) use services::{DockViewportOverlayHooksService, DockingPolicyService};
 pub(crate) use types::{DockPanelDragPayload, DockTabsDragPayload};
 
 pub struct DockPanel {

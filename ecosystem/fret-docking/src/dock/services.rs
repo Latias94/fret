@@ -14,10 +14,6 @@ impl DockViewportOverlayHooksService {
         self.hooks = Some(hooks);
     }
 
-    pub fn clear(&mut self) {
-        self.hooks = None;
-    }
-
     pub fn hooks(&self) -> Option<Arc<dyn DockViewportOverlayHooks>> {
         self.hooks.clone()
     }
@@ -34,10 +30,6 @@ impl DockingPolicyService {
         self.policy = Some(policy);
     }
 
-    pub fn clear(&mut self) {
-        self.policy = None;
-    }
-
     pub fn policy(&self) -> Option<Arc<dyn DockingPolicy>> {
         self.policy.clone()
     }
@@ -49,13 +41,7 @@ pub struct DockPanelContentService {
 }
 
 impl DockPanelContentService {
-    pub fn set(&mut self, window: AppWindowId, panel: PanelKey, node: NodeId) {
-        self.per_window
-            .entry(window)
-            .or_default()
-            .insert(panel, node);
-    }
-
+    #[cfg(test)]
     pub fn get(&self, window: AppWindowId, panel: &PanelKey) -> Option<NodeId> {
         self.per_window
             .get(&window)
@@ -68,10 +54,6 @@ impl DockPanelContentService {
             .get(&window)
             .map(|m| m.iter().map(|(k, v)| (k.clone(), *v)).collect())
             .unwrap_or_default()
-    }
-
-    pub fn clear_window(&mut self, window: AppWindowId) {
-        self.per_window.remove(&window);
     }
 
     pub fn replace_window(

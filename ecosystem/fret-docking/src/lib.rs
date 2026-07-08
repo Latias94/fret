@@ -5,10 +5,10 @@
 //! - `fret-ui` stays mechanism-only
 //! - docking UI and policy live here
 
-pub mod dock;
+mod dock;
 mod facade;
 mod invalidation;
-pub mod runtime;
+mod runtime;
 
 #[cfg(feature = "imui")]
 pub mod imui;
@@ -16,15 +16,21 @@ pub mod imui;
 #[cfg(feature = "imui")]
 pub use dock::imui_dock_space_element;
 pub use dock::{
-    ActivatePanelOptions, DockManager, DockPanel, DockPanelElement, DockPanelElementRegistry,
-    DockPanelElementRegistryService, DockSpaceElementOptions, DockViewportLayout,
-    DockViewportOverlayHooks, DockViewportOverlayHooksService, DockingPolicy, DockingPolicyService,
-    ViewportPanel, dock_panel_element, dock_space_element, dock_space_element_from_registry,
+    DockPanel, DockPanelElementRegistry, DockViewportLayout, DockViewportOverlayHooks,
+    DockingPolicy, ViewportPanel,
 };
-pub use facade::{DockHostOptions, DockSurface, DockingRuntime};
-pub use runtime::{
-    DockRuntimeCommand, handle_dock_before_close_window, handle_dock_op, handle_dock_window_created,
-};
+pub use facade::{DockHostOptions, DockSurface};
+pub use runtime::DockRuntimeCommand;
+
+/// Explicit low-level docking access for framework tests and advanced first-party integrations.
+///
+/// Ordinary apps should use [`DockSurface`]. This module is intentionally narrower than the old
+/// crate root: service globals, free runtime handlers, and direct host constructors are not part of
+/// the common public surface.
+pub mod advanced {
+    pub use crate::dock::{ActivatePanelOptions, DockManager};
+    pub use crate::runtime::{recenter_in_window_floatings, request_dock_invalidation};
+}
 
 #[cfg(test)]
 mod test_host;

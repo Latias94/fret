@@ -49,23 +49,35 @@ fn docking_demo_keeps_panel_text_on_roles() {
 }
 
 #[test]
-fn docking_demo_currently_uses_legacy_docking_assembly_until_surface_migration() {
+fn docking_demo_uses_dock_surface_for_common_docking_assembly() {
     let source = include_str!("../src/docking_demo.rs");
 
     for needle in [
-        "DockManager",
-        "DockPanelElementRegistryService",
-        "DockViewportOverlayHooksService",
-        "DockingRuntime::new",
-        "dock_space_element_from_registry",
+        "DockSurface",
+        "DockSurface::new",
+        "surface.install_panel_registry",
+        "surface.install_viewport_overlay_hooks",
+        "surface.ensure_panel",
+        "surface.ensure_window_root",
+        "surface.import_layout_for_windows",
+        "surface.export_layout",
+        "surface.host",
+        "surface.on_dock_op",
+        "surface.on_window_created",
+        "surface.before_close_window",
+        "surface.flush_runtime_commands_to_effects",
     ] {
         assert!(
             source.contains(needle),
-            "docking demo legacy docking setup should be characterized until DockSurface migration; missing `{needle}`"
+            "docking demo should route common docking setup through DockSurface; missing `{needle}`"
         );
     }
 
     for forbidden in [
+        "DockPanelElementRegistryService",
+        "DockViewportOverlayHooksService",
+        "DockingRuntime::new",
+        "dock_space_element_from_registry",
         "DockPanelFactory",
         "DockPanelFactoryCx",
         "DockPanelRegistryBuilder",

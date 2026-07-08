@@ -1,11 +1,10 @@
 //! App/runner integration helpers for docking.
 //!
-//! The docking UI emits high-level `DockOp` transactions via `Effect::Dock(...)` (ADR 0013).
-//! These ops must be applied by the app/runner layer:
-//! - apply graph mutations (`DockGraph::apply_op`)
-//! - translate `RequestFloatPanelToNewWindow` into a `WindowRequest::Create`
-//! - translate `RequestFloatTabsToNewWindow` into a `WindowRequest::Create`
-//! - complete the float by updating the graph once the OS window exists
+//! Internal app/runner integration helpers for docking.
+//!
+//! Ordinary app code uses [`crate::DockSurface`]. This module remains crate-private so runtime
+//! ordering, pending-window correlation, fallback, and close handling stay inside the docking
+//! surface instead of becoming public application protocol.
 
 use fret_core::{AppWindowId, DockNodeId, DockOp, PanelKey, WindowAnchor};
 use fret_runtime::{CreateWindowRequest, UiHost};
@@ -37,10 +36,7 @@ pub fn request_dock_invalidation<H: UiHost>(
     layout_invalidation::invalidate_windows(app, windows);
 }
 
-/// Handle a docking transaction emitted by the UI layer.
-///
-/// Call this from your runner/driver when consuming `Effect::Dock(op)`.
-pub fn handle_dock_op<H: UiHost>(app: &mut H, op: DockOp) -> bool {
+pub(crate) fn handle_dock_op<H: UiHost>(app: &mut H, op: DockOp) -> bool {
     DockRuntimeCoordinator::host_effects().handle_dock_op(app, op)
 }
 
@@ -105,10 +101,8 @@ pub(crate) fn complete_queued_window_created<H: UiHost>(
     DockRuntimeCoordinator::docking_commands().window_created(app, request, new_window)
 }
 
-/// Complete a dock floating window creation by updating the dock graph.
-///
-/// Call this from your runner/driver `window_created(...)` callback.
-pub fn handle_dock_window_created<H: UiHost>(
+#[cfg(test)]
+pub(crate) fn handle_dock_window_created<H: UiHost>(
     app: &mut H,
     request: &CreateWindowRequest,
     new_window: AppWindowId,
@@ -116,13 +110,7 @@ pub fn handle_dock_window_created<H: UiHost>(
     DockRuntimeCoordinator::host_effects().window_created(app, request, new_window)
 }
 
-/// Merge a closing floating dock window back into a target window.
-///
-/// This matches the common editor UX expectation that closing a floating dock window keeps its
-/// panels alive by merging them into a stable target (usually the main window).
-///
-/// Call this from your runner/driver `before_close_window(...)` hook.
-pub fn handle_dock_before_close_window<H: UiHost>(
+pub(crate) fn handle_dock_before_close_window<H: UiHost>(
     app: &mut H,
     closing_window: AppWindowId,
     target_window: AppWindowId,

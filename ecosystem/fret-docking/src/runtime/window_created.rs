@@ -1,7 +1,7 @@
 use fret_core::AppWindowId;
 use fret_runtime::{CreateWindowKind, CreateWindowRequest, UiHost};
 
-use crate::DockManager;
+use crate::dock::DockManager;
 
 use super::commands::{self, CloseWindowDispatch};
 use super::layout_invalidation::invalidate_windows;

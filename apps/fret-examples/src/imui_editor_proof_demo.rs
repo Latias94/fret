@@ -18,7 +18,7 @@ use fret::{AppUi, Defaults, FretApp, Ui, shadcn};
 use fret_core::{
     AppWindowId, Color, KeyCode, Modifiers, PanelKind, Point, PointerId, Px, Rect, Size,
 };
-use fret_docking::{DockSpaceElementOptions, runtime as dock_runtime};
+use fret_docking::{DockHostOptions, advanced as dock_advanced};
 use fret_render::{RenderTargetColorSpace, Renderer, WgpuContext};
 use fret_runtime::{
     FrameId, Model, PlatformCapabilities, TickId, TimerToken, WindowHoverDetectionQuality,
@@ -268,7 +268,10 @@ where
                             );
                             if reset.clicked() {
                                 workbench_shell::reset_dock_graph(ui.cx_mut().app, window);
-                                dock_runtime::request_dock_invalidation(ui.cx_mut().app, [window]);
+                                dock_advanced::request_dock_invalidation(
+                                    ui.cx_mut().app,
+                                    [window],
+                                );
                             }
                             let recenter = ui.button("Center floatings");
                             let _ = ui.tooltip_text_with_options(
@@ -285,7 +288,10 @@ where
                                 },
                             );
                             if recenter.clicked() {
-                                dock_runtime::recenter_in_window_floatings(ui.cx_mut().app, window);
+                                dock_advanced::recenter_in_window_floatings(
+                                    ui.cx_mut().app,
+                                    window,
+                                );
                             }
                         });
                     })
@@ -343,7 +349,7 @@ where
                     });
                     fret_docking::imui::dock_space_declarative_with(
                         ui,
-                        DockSpaceElementOptions {
+                        DockHostOptions {
                             test_id: dock_test_id,
                             ..Default::default()
                         },

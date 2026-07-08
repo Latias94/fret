@@ -1,7 +1,7 @@
 use fret_core::{AppWindowId, Point, Px, Rect, Size, WindowAnchor, WindowMetricsService};
 use fret_runtime::UiHost;
 
-use crate::DockManager;
+use crate::dock::DockManager;
 
 /// Recenter in-window floating containers back into the visible bounds of a window.
 ///

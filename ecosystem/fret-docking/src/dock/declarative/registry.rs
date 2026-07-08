@@ -54,6 +54,7 @@ impl DockPanelElement {
 }
 
 /// Convenience constructor for [`DockPanelElement`].
+#[cfg(test)]
 pub fn dock_panel_element(panel: PanelKey, element: AnyElement) -> DockPanelElement {
     DockPanelElement::new(panel, element)
 }
@@ -85,10 +86,6 @@ impl<H: UiHost> Default for DockPanelElementRegistryService<H> {
 impl<H: UiHost> DockPanelElementRegistryService<H> {
     pub fn set(&mut self, registry: Arc<dyn DockPanelElementRegistry<H>>) {
         self.registry = Some(registry);
-    }
-
-    pub fn clear(&mut self) {
-        self.registry = None;
     }
 
     pub fn registry(&self) -> Option<Arc<dyn DockPanelElementRegistry<H>>> {

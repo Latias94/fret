@@ -2,7 +2,7 @@
 
 use fret_authoring::UiWriter;
 use fret_core::AppWindowId;
-use fret_docking::DockingRuntime;
+use fret_docking::DockSurface;
 use fret_docking::imui::{DockSpaceElementOptions, dock_space_declarative_with};
 use fret_ui::UiHost;
 
@@ -10,8 +10,8 @@ use fret_ui::UiHost;
 fn docking_imui_handshake_compiles<H: UiHost + 'static>(ui: &mut impl UiWriter<H>) {
     dock_space_declarative_with(ui, DockSpaceElementOptions::default());
 
-    let runtime = DockingRuntime::new(AppWindowId::default());
-    let _ = runtime.main_window();
+    let surface = DockSurface::new(AppWindowId::default());
+    let _ = surface.main_window();
 }
 
 #[test]

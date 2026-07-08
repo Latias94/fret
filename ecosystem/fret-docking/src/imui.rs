@@ -4,19 +4,18 @@
 //!
 //! Notes:
 //! - Docking remains policy-heavy and stateful; this module only provides embedding helpers.
-//! - Window creation and dock ops must still be handled by the runner/driver (see
-//!   `DockingRuntime` and `runtime::{handle_dock_op, handle_dock_window_created, handle_dock_before_close_window}`).
+//! - Window creation and dock ops are handled through `DockSurface` by the runner/driver.
 
 use fret_authoring::UiWriter;
 use fret_ui::UiHost;
 
-pub use crate::DockSpaceElementOptions;
+pub use crate::DockHostOptions as DockSpaceElementOptions;
 use crate::imui_dock_space_element;
 
 /// Embed a declarative docking host into an imui output list.
 ///
-/// Panel content is read from `DockPanelElementRegistryService`; configure dock graph state before
-/// calling this helper in the same immediate render pass.
+/// Panel content is read from the registry installed through `DockSurface`; configure dock graph
+/// state before calling this helper in the same immediate render pass.
 #[track_caller]
 pub fn dock_space_declarative_with<H: UiHost + 'static>(
     ui: &mut impl UiWriter<H>,

@@ -1,7 +1,7 @@
 use fret_core::DockOp;
 use fret_runtime::{PlatformCapabilities, UiHost};
 
-use crate::DockManager;
+use crate::dock::DockManager;
 use crate::dock::{DockPanelDragPayload, DockTabsDragPayload};
 
 use super::in_window::default_in_window_float_rect;

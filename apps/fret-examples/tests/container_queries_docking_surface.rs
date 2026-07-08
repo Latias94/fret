@@ -40,22 +40,32 @@ fn container_queries_docking_demo_keeps_fixed_panel_text_on_roles() {
 }
 
 #[test]
-fn container_queries_docking_demo_currently_uses_legacy_docking_assembly_until_surface_migration() {
+fn container_queries_docking_demo_uses_dock_surface_for_common_docking_assembly() {
     let source = include_str!("../src/container_queries_docking_demo.rs");
 
     for needle in [
-        "DockManager",
-        "DockPanelElementRegistryService",
-        "DockingRuntime::new",
-        "dock_space_element_from_registry",
+        "DockSurface",
+        "DockSurface::new",
+        "surface.install_panel_registry",
+        "surface.ensure_panel",
+        "surface.ensure_window_root",
+        "surface.host",
+        "surface.on_dock_op",
+        "surface.on_window_created",
+        "surface.before_close_window",
+        "surface.flush_runtime_commands_to_effects",
     ] {
         assert!(
             source.contains(needle),
-            "container queries docking demo legacy docking setup should be characterized until DockSurface migration; missing `{needle}`"
+            "container queries docking demo should route common docking setup through DockSurface; missing `{needle}`"
         );
     }
 
     for forbidden in [
+        "DockManager",
+        "DockPanelElementRegistryService",
+        "DockingRuntime::new",
+        "dock_space_element_from_registry",
         "DockPanelFactory",
         "DockPanelFactoryCx",
         "DockPanelRegistryBuilder",

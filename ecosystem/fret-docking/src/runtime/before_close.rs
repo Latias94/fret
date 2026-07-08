@@ -1,7 +1,7 @@
 use fret_core::{AppWindowId, DockOp};
 use fret_runtime::UiHost;
 
-use crate::DockManager;
+use crate::dock::DockManager;
 
 use super::layout_invalidation::invalidate_windows;
 use super::tear_off::DockFloatingOsWindowRegistry;

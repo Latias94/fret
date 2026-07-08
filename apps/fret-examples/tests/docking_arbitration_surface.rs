@@ -127,25 +127,35 @@ fn docking_arbitration_demo_model_writes_stay_behind_controls_binding() {
 }
 
 #[test]
-fn docking_arbitration_demo_characterizes_legacy_docking_services_until_surface_migration() {
+fn docking_arbitration_demo_uses_dock_surface_for_common_docking_assembly() {
     let source = include_str!("../src/docking_arbitration_demo.rs");
 
     for needle in [
+        "DockSurface",
+        "DockSurface::new",
+        "surface.install_policy",
+        "surface.install_panel_registry",
+        "surface.install_viewport_overlay_hooks",
+        "surface.host",
+        "surface.on_dock_op",
+        "surface.on_window_created",
+        "surface.before_close_window",
+        "surface.flush_runtime_commands_to_effects",
         "DockManager",
-        "DockingPolicyService",
-        "DockViewportOverlayHooksService",
-        "DockPanelElementRegistryService",
-        "DockingRuntime::new",
-        "fret_docking::runtime::request_dock_invalidation",
-        "dock_space_element_from_registry",
+        "advanced::{DockManager, request_dock_invalidation}",
     ] {
         assert!(
             source.contains(needle),
-            "docking arbitration demo legacy docking setup should be characterized until DockSurface migration; missing `{needle}`"
+            "docking arbitration demo should route common docking setup through DockSurface while retaining diagnostic graph access; missing `{needle}`"
         );
     }
 
     for forbidden in [
+        "DockingPolicyService",
+        "DockViewportOverlayHooksService",
+        "DockPanelElementRegistryService",
+        "DockingRuntime::new",
+        "dock_space_element_from_registry",
         "DockPanelFactory",
         "DockPanelFactoryCx",
         "DockPanelRegistryBuilder",

@@ -1,5 +1,5 @@
 use super::*;
-use crate::DockManager;
+use crate::dock::DockManager;
 use crate::test_host::TestHost;
 use fret_core::{DockNode, DropZone, PanelKey};
 use fret_runtime::{

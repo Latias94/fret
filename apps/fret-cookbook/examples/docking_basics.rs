@@ -4,10 +4,9 @@ use fret::advanced::raw::UiTree;
 use fret::{advanced::prelude::*, component::prelude::*, integration::InstallIntoApp, shadcn};
 use fret_app::{CommandMeta, CommandScope};
 use fret_core::{Axis, Color, DockNode, DockNodeId, DockOp, PanelKey, Px};
-use fret_docking::runtime::request_dock_invalidation;
 use fret_docking::{
-    DockManager, DockPanel, DockPanelElementRegistry, DockPanelElementRegistryService,
-    DockSpaceElementOptions, DockingPolicy, DockingPolicyService, handle_dock_op,
+    DockHostOptions, DockPanel, DockPanelElementRegistry, DockSurface, DockingPolicy,
+    advanced::{DockManager, request_dock_invalidation},
 };
 use fret_runtime::CommandId;
 use fret_ui::ElementContext;
@@ -231,16 +230,9 @@ struct DockingBasicsWindowState {
 }
 
 fn install_docking_services(app: &mut KernelApp) {
-    app.with_global_mut(
-        DockPanelElementRegistryService::<KernelApp>::default,
-        |svc, _app| {
-            svc.set(Arc::new(DockingBasicsPanelRegistry));
-        },
-    );
-
-    app.with_global_mut(DockingPolicyService::default, |svc, _app| {
-        svc.set(Arc::new(DockingBasicsPolicy));
-    });
+    let surface = DockSurface::new(AppWindowId::default());
+    surface.install_panel_registry(app, Arc::new(DockingBasicsPanelRegistry));
+    surface.install_policy(app, Arc::new(DockingBasicsPolicy));
 }
 
 fn init_window(app: &mut KernelApp, window: AppWindowId) -> DockingBasicsWindowState {
@@ -336,10 +328,10 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut DockingBasicsWindowStat
         CachedSubtreeProps::default().contain_layout_when_bounds_known(true),
         |cx| {
             let window = st.window;
-            vec![fret_docking::dock_space_element_from_registry(
+            vec![DockSurface::new(window).host(
                 cx,
                 window,
-                DockSpaceElementOptions {
+                DockHostOptions {
                     test_id: Some(TEST_ID_DOCK_SPACE),
                     ..Default::default()
                 },
@@ -428,18 +420,17 @@ fn on_command(
     };
 
     // Apply directly (not via Effect) to keep this example self-contained.
-    let _ = handle_dock_op(app, op);
+    let surface = DockSurface::new(window);
+    let _ = surface.on_dock_op(app, op);
+    surface.flush_runtime_commands_to_effects(app);
     request_dock_invalidation(app, [window]);
 }
 
 fn on_dock_op(app: &mut KernelApp, op: DockOp) {
     // DockSpace emits Effect::Dock(op); the runner routes it here.
-    //
-    // Notes:
-    // - `handle_dock_op` applies pure graph ops and translates tear-off requests into window
-    //   create requests.
-    // - This cookbook example installs a policy that disables tear-off.
-    let _ = handle_dock_op(app, op);
+    let surface = DockSurface::new(AppWindowId::default());
+    let _ = surface.on_dock_op(app, op);
+    surface.flush_runtime_commands_to_effects(app);
 }
 
 fn configure_driver(

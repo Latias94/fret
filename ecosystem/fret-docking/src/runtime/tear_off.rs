@@ -6,7 +6,7 @@ use fret_runtime::{
     WindowRequest, WindowRole,
 };
 
-use crate::DockManager;
+use crate::dock::DockManager;
 
 use super::commands::{self, DockRuntimeCommand};
 

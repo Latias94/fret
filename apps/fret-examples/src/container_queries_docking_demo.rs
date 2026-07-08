@@ -3,10 +3,7 @@ use fret::app::{AppRenderContext, text};
 use fret_app::{App, CommandId, Effect, WindowRequest};
 use fret_bootstrap::ui_diagnostics::UiDiagnosticsService;
 use fret_core::{AppWindowId, Event, Rect, UiServices, geometry::Px};
-use fret_docking::{
-    DockManager, DockPanel, DockPanelElementRegistry, DockPanelElementRegistryService,
-    DockSpaceElementOptions, DockingRuntime,
-};
+use fret_docking::{DockHostOptions, DockPanel, DockPanelElementRegistry, DockSurface};
 use fret_launch::{
     FnDriver, WindowCreateSpec, WinitCommandContext, WinitEventContext, WinitHotReloadContext,
     WinitRenderContext, WinitRunnerConfig, WinitWindowContext,
@@ -228,7 +225,7 @@ pub struct ContainerQueriesDockingDemoWindowState {
 
 #[derive(Default)]
 pub struct ContainerQueriesDockingDemoDriver {
-    docking_runtime: Option<DockingRuntime>,
+    dock_surface: Option<DockSurface>,
 }
 
 impl ContainerQueriesDockingDemoDriver {
@@ -243,53 +240,49 @@ impl ContainerQueriesDockingDemoDriver {
         }
     }
 
-    fn ensure_dock_graph(app: &mut App, window: AppWindowId) {
+    fn ensure_dock_graph(surface: DockSurface, app: &mut App, window: AppWindowId) {
         use fret_core::{Axis, DockNode, PanelKey};
 
-        app.with_global_mut(DockManager::default, |dock, _app| {
-            dock.ensure_panel(&PanelKey::new("examples.cq.left"), || DockPanel {
-                title: "Container queries".to_string(),
-                color: fret_core::Color::TRANSPARENT,
-                viewport: None,
-            });
-            dock.ensure_panel(&PanelKey::new("examples.cq.right"), || DockPanel {
-                title: "Spacer".to_string(),
-                color: fret_core::Color::TRANSPARENT,
-                viewport: None,
-            });
+        surface.ensure_panel(app, &PanelKey::new("examples.cq.left"), || DockPanel {
+            title: "Container queries".to_string(),
+            color: fret_core::Color::TRANSPARENT,
+            viewport: None,
+        });
+        surface.ensure_panel(app, &PanelKey::new("examples.cq.right"), || DockPanel {
+            title: "Spacer".to_string(),
+            color: fret_core::Color::TRANSPARENT,
+            viewport: None,
+        });
 
-            if dock.graph.window_root(window).is_some() {
-                return;
-            }
-
-            let left = dock.graph.insert_node(DockNode::Tabs {
+        surface.ensure_window_root(app, window, |graph| {
+            let left = graph.insert_node(DockNode::Tabs {
                 tabs: vec![PanelKey::new("examples.cq.left")],
                 active: 0,
             });
-            let right = dock.graph.insert_node(DockNode::Tabs {
+            let right = graph.insert_node(DockNode::Tabs {
                 tabs: vec![PanelKey::new("examples.cq.right")],
                 active: 0,
             });
-            let split = dock.graph.insert_node(DockNode::Split {
+            graph.insert_node(DockNode::Split {
                 axis: Axis::Horizontal,
                 children: vec![left, right],
                 fractions: vec![
                     INITIAL_SPLIT_FRACTION_LEFT,
                     1.0 - INITIAL_SPLIT_FRACTION_LEFT,
                 ],
-            });
-            dock.graph.set_window_root(window, split);
+            })
         });
     }
 
     fn render_dock(
+        surface: DockSurface,
         app: &mut App,
         services: &mut dyn UiServices,
         window: AppWindowId,
         state: &mut ContainerQueriesDockingDemoWindowState,
         bounds: Rect,
     ) {
-        Self::ensure_dock_graph(app, window);
+        Self::ensure_dock_graph(surface, app, window);
 
         let dock_space = fret_ui::declarative::render_root(
             &mut state.ui,
@@ -301,10 +294,10 @@ impl ContainerQueriesDockingDemoDriver {
             move |cx| {
                 let split_anchor = container_query_docking_split_anchor_rect(bounds);
                 let mut children = Vec::with_capacity(2);
-                children.push(fret_docking::dock_space_element_from_registry(
+                children.push(surface.host(
                     cx,
                     window,
-                    DockSpaceElementOptions {
+                    DockHostOptions {
                         test_id: Some("cq-dock-demo-dock-space"),
                         ..Default::default()
                     },
@@ -328,8 +321,10 @@ impl ContainerQueriesDockingDemoDriver {
     }
 }
 
-fn init(driver: &mut ContainerQueriesDockingDemoDriver, _app: &mut App, main_window: AppWindowId) {
-    driver.docking_runtime = Some(DockingRuntime::new(main_window));
+fn init(driver: &mut ContainerQueriesDockingDemoDriver, app: &mut App, main_window: AppWindowId) {
+    let surface = DockSurface::new(main_window);
+    surface.install_panel_registry(app, Arc::new(DemoDockPanelRegistry));
+    driver.dock_surface = Some(surface);
 }
 
 fn create_window_state(
@@ -430,11 +425,10 @@ fn handle_event(
 }
 
 fn dock_op(driver: &mut ContainerQueriesDockingDemoDriver, app: &mut App, op: fret_core::DockOp) {
-    let _ = driver
-        .docking_runtime
-        .as_ref()
-        .map(|rt| rt.on_dock_op(app, op))
-        .unwrap_or(false);
+    if let Some(surface) = driver.dock_surface {
+        let _ = surface.on_dock_op(app, op);
+        surface.flush_runtime_commands_to_effects(app);
+    }
 }
 
 fn render(
@@ -451,7 +445,11 @@ fn render(
         scene,
     } = context;
 
-    ContainerQueriesDockingDemoDriver::render_dock(app, services, window, state, bounds);
+    if let Some(surface) = driver.dock_surface {
+        ContainerQueriesDockingDemoDriver::render_dock(
+            surface, app, services, window, state, bounds,
+        );
+    }
 
     state.ui.request_semantics_snapshot();
     state.ui.ingest_paint_cache_source(scene);
@@ -580,11 +578,10 @@ fn window_created(
     request: &fret_app::CreateWindowRequest,
     new_window: AppWindowId,
 ) {
-    let _ = driver
-        .docking_runtime
-        .as_ref()
-        .map(|rt| rt.on_window_created(app, request, new_window))
-        .unwrap_or(false);
+    if let Some(surface) = driver.dock_surface {
+        let _ = surface.on_window_created(app, request, new_window);
+        surface.flush_runtime_commands_to_effects(app);
+    }
 }
 
 fn before_close_window(
@@ -592,11 +589,10 @@ fn before_close_window(
     app: &mut App,
     window: AppWindowId,
 ) -> bool {
-    let _ = driver
-        .docking_runtime
-        .as_ref()
-        .map(|rt| rt.before_close_window(app, window))
-        .unwrap_or(false);
+    if let Some(surface) = driver.dock_surface {
+        let _ = surface.before_close_window(app, window);
+        surface.flush_runtime_commands_to_effects(app);
+    }
     true
 }
 
@@ -745,12 +741,6 @@ pub fn run() -> anyhow::Result<()> {
 
     let mut app = App::new();
     app.set_global(PlatformCapabilities::default());
-    app.with_global_mut(
-        DockPanelElementRegistryService::<App>::default,
-        |svc, _app| {
-            svc.set(Arc::new(DemoDockPanelRegistry));
-        },
-    );
 
     let config = WinitRunnerConfig {
         main_window_title: "fret-demo container_queries_docking_demo".to_string(),

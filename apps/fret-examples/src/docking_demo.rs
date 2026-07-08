@@ -7,9 +7,8 @@ use fret_core::{
     geometry::Px,
 };
 use fret_docking::{
-    DockManager, DockPanel, DockPanelElementRegistry, DockPanelElementRegistryService,
-    DockSpaceElementOptions, DockViewportLayout, DockViewportOverlayHooks,
-    DockViewportOverlayHooksService, DockingRuntime, ViewportPanel,
+    DockHostOptions, DockPanel, DockPanelElementRegistry, DockSurface, DockViewportLayout,
+    DockViewportOverlayHooks, ViewportPanel, advanced::DockManager,
 };
 use fret_launch::{
     DevStateExport, DevStateHook, DevStateHooks, FnDriver, WindowCreateSpec, WinitCommandContext,
@@ -254,7 +253,7 @@ pub struct DockingDemoWindowState {
 
 #[derive(Default)]
 pub struct DockingDemoDriver {
-    docking_runtime: Option<DockingRuntime>,
+    dock_surface: Option<DockSurface>,
     main_window: Option<AppWindowId>,
 }
 
@@ -270,7 +269,7 @@ impl DockingDemoDriver {
         }
     }
 
-    fn ensure_dock_graph(app: &mut App, window: AppWindowId) {
+    fn ensure_dock_graph(surface: DockSurface, app: &mut App, window: AppWindowId) {
         use fret_core::{Axis, DockNode, PanelKey};
 
         let incoming_layout = app
@@ -278,54 +277,54 @@ impl DockingDemoDriver {
                 st.layout.take()
             });
 
-        app.with_global_mut(DockManager::default, |dock, _app| {
-            dock.ensure_panel(&PanelKey::new("core.hierarchy"), || DockPanel {
-                title: "Hierarchy".to_string(),
-                color: fret_core::Color::TRANSPARENT,
-                viewport: None,
-            });
-            dock.ensure_panel(&PanelKey::new("core.inspector"), || DockPanel {
-                title: "Inspector".to_string(),
-                color: fret_core::Color::TRANSPARENT,
-                viewport: None,
-            });
+        surface.ensure_panel(app, &PanelKey::new("core.hierarchy"), || DockPanel {
+            title: "Hierarchy".to_string(),
+            color: fret_core::Color::TRANSPARENT,
+            viewport: None,
+        });
+        surface.ensure_panel(app, &PanelKey::new("core.inspector"), || DockPanel {
+            title: "Inspector".to_string(),
+            color: fret_core::Color::TRANSPARENT,
+            viewport: None,
+        });
 
-            if dock.graph.window_root(window).is_some() {
+        if surface.has_window_root(app, window) {
+            return;
+        }
+
+        if let Some(layout) = incoming_layout.as_ref() {
+            let windows = [(window, "main".to_string())];
+            if surface.import_layout_for_windows(app, layout, &windows) {
                 return;
             }
+        }
 
-            if let Some(layout) = incoming_layout.as_ref() {
-                let windows = [(window, "main".to_string())];
-                if dock.graph.import_layout_for_windows(layout, &windows) {
-                    return;
-                }
-            }
-
-            let left = dock.graph.insert_node(DockNode::Tabs {
+        surface.ensure_window_root(app, window, |graph| {
+            let left = graph.insert_node(DockNode::Tabs {
                 tabs: vec![PanelKey::new("core.hierarchy")],
                 active: 0,
             });
-            let right = dock.graph.insert_node(DockNode::Tabs {
+            let right = graph.insert_node(DockNode::Tabs {
                 tabs: vec![PanelKey::new("core.inspector")],
                 active: 0,
             });
-            let split = dock.graph.insert_node(DockNode::Split {
+            graph.insert_node(DockNode::Split {
                 axis: Axis::Horizontal,
                 children: vec![left, right],
                 fractions: vec![0.5, 0.5],
-            });
-            dock.graph.set_window_root(window, split);
+            })
         });
     }
 
     fn render_dock(
+        surface: DockSurface,
         app: &mut App,
         services: &mut dyn UiServices,
         window: AppWindowId,
         state: &mut DockingDemoWindowState,
         bounds: Rect,
     ) {
-        Self::ensure_dock_graph(app, window);
+        Self::ensure_dock_graph(surface, app, window);
 
         let dock_space = fret_ui::declarative::render_root(
             &mut state.ui,
@@ -337,10 +336,10 @@ impl DockingDemoDriver {
             move |cx| {
                 let (left_anchor, right_anchor) = docking_demo_tab_anchor_rects(bounds);
                 let mut children = Vec::with_capacity(3);
-                children.push(fret_docking::dock_space_element_from_registry(
+                children.push(surface.host(
                     cx,
                     window,
-                    DockSpaceElementOptions {
+                    DockHostOptions {
                         test_id: Some("dock-demo-dock-space"),
                         ..Default::default()
                     },
@@ -373,7 +372,10 @@ impl DockingDemoDriver {
 }
 
 fn init(driver: &mut DockingDemoDriver, app: &mut App, main_window: AppWindowId) {
-    driver.docking_runtime = Some(DockingRuntime::new(main_window));
+    let surface = DockSurface::new(main_window);
+    surface.install_panel_registry(app, Arc::new(DemoDockPanelRegistry));
+    surface.install_viewport_overlay_hooks(app, Arc::new(DemoViewportOverlayHooks));
+    driver.dock_surface = Some(surface);
     driver.main_window = Some(main_window);
     app.with_global_mut_untracked(DockingDemoDevStateModels::default, |st, _app| {
         st.main_window = Some(main_window);
@@ -450,7 +452,7 @@ fn handle_command(
         return;
     }
     if command.as_str() == CMD_DOCK_DEMO_SPLIT_TOGGLE {
-        let Some(rt) = driver.docking_runtime else {
+        let Some(surface) = driver.dock_surface else {
             return;
         };
 
@@ -467,7 +469,7 @@ fn handle_command(
         };
 
         let target = if first_fraction < 0.2 { 0.5 } else { 0.12 };
-        let changed = rt.on_dock_op(
+        let changed = surface.on_dock_op(
             app,
             fret_core::DockOp::SetSplitFractionTwo {
                 split,
@@ -475,6 +477,7 @@ fn handle_command(
             },
         );
         let _ = changed;
+        surface.flush_runtime_commands_to_effects(app);
         return;
     }
     if command.as_str() == "dock_demo.close" {
@@ -506,12 +509,10 @@ fn handle_event(
 }
 
 fn dock_op(driver: &mut DockingDemoDriver, app: &mut App, op: fret_core::DockOp) {
-    let changed = driver
-        .docking_runtime
-        .as_ref()
-        .map(|rt| rt.on_dock_op(app, op))
-        .unwrap_or(false);
-    let _ = changed;
+    if let Some(surface) = driver.dock_surface {
+        let _ = surface.on_dock_op(app, op);
+        surface.flush_runtime_commands_to_effects(app);
+    }
 }
 
 fn render(driver: &mut DockingDemoDriver, context: WinitRenderContext<'_, DockingDemoWindowState>) {
@@ -525,7 +526,9 @@ fn render(driver: &mut DockingDemoDriver, context: WinitRenderContext<'_, Dockin
         scene,
     } = context;
 
-    DockingDemoDriver::render_dock(app, services, window, state, bounds);
+    if let Some(surface) = driver.dock_surface {
+        DockingDemoDriver::render_dock(surface, app, services, window, state, bounds);
+    }
 
     state.ui.request_semantics_snapshot();
     state.ui.ingest_paint_cache_source(scene);
@@ -652,21 +655,17 @@ fn window_created(
     request: &fret_app::CreateWindowRequest,
     new_window: AppWindowId,
 ) {
-    let changed = driver
-        .docking_runtime
-        .as_ref()
-        .map(|rt| rt.on_window_created(app, request, new_window))
-        .unwrap_or(false);
-    let _ = changed;
+    if let Some(surface) = driver.dock_surface {
+        let _ = surface.on_window_created(app, request, new_window);
+        surface.flush_runtime_commands_to_effects(app);
+    }
 }
 
 fn before_close_window(driver: &mut DockingDemoDriver, app: &mut App, window: AppWindowId) -> bool {
-    let changed = driver
-        .docking_runtime
-        .as_ref()
-        .map(|rt| rt.before_close_window(app, window))
-        .unwrap_or(false);
-    let _ = changed;
+    if let Some(surface) = driver.dock_surface {
+        let _ = surface.before_close_window(app, window);
+        surface.flush_runtime_commands_to_effects(app);
+    }
     true
 }
 
@@ -811,15 +810,6 @@ pub fn run() -> anyhow::Result<()> {
 
     let mut app = App::new();
     app.set_global(PlatformCapabilities::default());
-    app.with_global_mut(
-        DockPanelElementRegistryService::<App>::default,
-        |svc, _app| {
-            svc.set(Arc::new(DemoDockPanelRegistry));
-        },
-    );
-    app.with_global_mut(DockViewportOverlayHooksService::default, |svc, _app| {
-        svc.set(Arc::new(DemoViewportOverlayHooks));
-    });
     app.with_global_mut_untracked(DevStateHooks::default, |hooks, _app| {
         hooks.register(
             DevStateHook::new(DEV_STATE_DOCKING_LAYOUT_KEY, |app| {
@@ -829,14 +819,15 @@ pub fn run() -> anyhow::Result<()> {
                 let Some(window) = models.main_window else {
                     return DevStateExport::Noop;
                 };
-                let Some(dock) = app.global::<DockManager>() else {
-                    return DevStateExport::Noop;
-                };
-                if dock.graph.window_root(window).is_none() {
+                let surface = DockSurface::new(window);
+                if !surface.has_window_root(app, window) {
                     return DevStateExport::Noop;
                 }
 
-                let layout = dock.graph.export_layout(&[(window, "main".to_string())]);
+                let Some(layout) = surface.export_layout(app, &[(window, "main".to_string())])
+                else {
+                    return DevStateExport::Noop;
+                };
                 match serde_json::to_value(layout) {
                     Ok(value) => DevStateExport::Set(value),
                     Err(_) => DevStateExport::Noop,

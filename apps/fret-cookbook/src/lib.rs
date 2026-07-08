@@ -1327,9 +1327,13 @@ mod authoring_surface_policy_tests {
         assert!(DOCKING_EXAMPLE.contains("advanced::prelude::*"));
         assert!(DOCKING_EXAMPLE.contains("integration::InstallIntoApp"));
         assert!(DOCKING_EXAMPLE.contains("DockPanelElementRegistry<KernelApp>"));
-        assert!(DOCKING_EXAMPLE.contains("DockPanelElementRegistryService::<KernelApp>"));
-        assert!(DOCKING_EXAMPLE.contains("dock_space_element_from_registry("));
-        assert!(DOCKING_EXAMPLE.contains("handle_dock_op(app, op)"));
+        assert!(DOCKING_EXAMPLE.contains("DockSurface"));
+        assert!(DOCKING_EXAMPLE.contains("DockSurface::new"));
+        assert!(DOCKING_EXAMPLE.contains("surface.install_panel_registry"));
+        assert!(DOCKING_EXAMPLE.contains("surface.install_policy"));
+        assert!(DOCKING_EXAMPLE.contains(".host("));
+        assert!(DOCKING_EXAMPLE.contains("surface.on_dock_op(app, op)"));
+        assert!(DOCKING_EXAMPLE.contains("advanced::{DockManager, request_dock_invalidation}"));
         assert!(DOCKING_EXAMPLE.contains("impl InstallIntoApp for DockingBasicsBundle"));
         assert!(
             DOCKING_EXAMPLE

@@ -42,8 +42,12 @@ fn imui_editor_proof_demo_routes_dock_window_shell_through_demo_local_owner() {
         "ViewportPanel",
         "WindowRole::Auxiliary",
         "ActivationPolicy::NonActivating",
-        "dock_runtime::handle_dock_window_created",
-        "dock_runtime::handle_dock_before_close_window",
+        "DockSurface::new",
+        "surface.on_dock_op",
+        "surface.on_window_created",
+        "surface.before_close_window",
+        "surface.flush_runtime_commands_to_effects",
+        "request_dock_invalidation",
     ] {
         assert!(
             shell_source.contains(needle),

@@ -1,7 +1,7 @@
 use fret_core::{AppWindowId, DockOp};
 use fret_runtime::UiHost;
 
-use crate::DockManager;
+use crate::dock::DockManager;
 use crate::invalidation::DockInvalidationService;
 
 pub(super) fn invalidate_windows<H: UiHost>(

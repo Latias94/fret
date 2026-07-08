@@ -9,9 +9,9 @@ use fret_core::{
     ViewportInputEvent, dock::DropZone, geometry::Px,
 };
 use fret_docking::{
-    DockManager, DockPanel, DockPanelElementRegistry, DockPanelElementRegistryService,
-    DockSpaceElementOptions, DockViewportOverlayHooks, DockViewportOverlayHooksService,
-    DockingPolicy, DockingPolicyService, DockingRuntime,
+    DockHostOptions, DockPanel, DockPanelElementRegistry, DockSurface, DockViewportOverlayHooks,
+    DockingPolicy,
+    advanced::{DockManager, request_dock_invalidation},
 };
 use fret_launch::{
     DevStateExport, DevStateHook, DevStateHooks, DevStateWindowKeyRegistry, FnDriver,
@@ -870,8 +870,7 @@ fn docking_arbitration_layout_harness_surface(
     }
 
     let float_zone_anchor_rect = {
-        // Mirror `fret_docking::dock::layout::float_zone(...)` logic for stable, pixel-free
-        // scripted diagnostics.
+        // Mirror the docking float-zone geometry for stable, pixel-free scripted diagnostics.
         //
         // Note: This is intentionally duplicated here (demo-only harness) to avoid relying on
         // crate-private helpers.
@@ -2003,7 +2002,7 @@ struct DockingArbitrationWindowState {
 #[derive(Default)]
 struct DockingArbitrationDriver {
     main_window: Option<AppWindowId>,
-    docking_runtime: Option<DockingRuntime>,
+    dock_surface: Option<DockSurface>,
     pending_layout: Option<fret_core::DockLayout>,
     restore: Option<DockLayoutRestoreState>,
     logical_windows: HashMap<AppWindowId, String>,
@@ -2111,7 +2110,7 @@ impl DockingArbitrationDriver {
         }
         Self {
             main_window: None,
-            docking_runtime: None,
+            dock_surface: None,
             pending_layout,
             restore: None,
             logical_windows: HashMap::new(),
@@ -2583,7 +2582,7 @@ impl DockingArbitrationDriver {
                 .graph
                 .import_layout_for_windows(&restore.layout, &windows);
             if changed {
-                fret_docking::runtime::request_dock_invalidation(app, dock.graph.windows());
+                request_dock_invalidation(app, dock.graph.windows());
                 for w in dock.graph.windows() {
                     app.request_redraw(w);
                 }
@@ -2632,7 +2631,7 @@ impl DockingArbitrationDriver {
                         main_window,
                     );
                 if changed {
-                    fret_docking::runtime::request_dock_invalidation(app, [main_window]);
+                    request_dock_invalidation(app, [main_window]);
                     app.request_redraw(main_window);
                 }
             });
@@ -2729,6 +2728,9 @@ impl DockingArbitrationDriver {
         bounds: Rect,
     ) {
         self.ensure_dock_graph(app, window);
+        let Some(surface) = self.dock_surface else {
+            return;
+        };
 
         OverlayController::begin_frame(app, window);
 
@@ -2770,10 +2772,10 @@ impl DockingArbitrationDriver {
             bounds,
             "dock-arb-dock-space",
             move |cx| {
-                let dock_space = fret_docking::dock_space_element_from_registry(
+                let dock_space = surface.host(
                     cx,
                     window,
-                    DockSpaceElementOptions {
+                    DockHostOptions {
                         test_id: Some("dock-arb-dock-space"),
                         allow_multi_window_tear_off: allow_chained_tear_off,
                         ..Default::default()
@@ -2811,10 +2813,28 @@ impl DockingArbitrationDriver {
 
 fn init(driver: &mut DockingArbitrationDriver, app: &mut App, main_window: AppWindowId) {
     driver.main_window = Some(main_window);
-    driver.docking_runtime = Some(DockingRuntime::new(main_window));
+    let surface = DockSurface::new(main_window);
+    let policy_flags = app
+        .global::<DockingArbitrationPolicyFlags>()
+        .cloned()
+        .unwrap_or_else(DockingArbitrationPolicyFlags::new);
+    surface.install_policy(
+        app,
+        Arc::new(DockingArbitrationDockingPolicy {
+            flags: policy_flags,
+        }),
+    );
+    surface.install_panel_registry(app, Arc::new(DockingArbitrationPanelRegistry));
+    surface.install_viewport_overlay_hooks(
+        app,
+        Arc::new(DemoViewportOverlayHooks {
+            tools: driver.viewport_tools.clone(),
+        }),
+    );
+    driver.dock_surface = Some(surface);
     app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
-            svc.set_app_snapshot_provider(Some(Arc::new(|_app, _window| {
-                Some(json!({
+        svc.set_app_snapshot_provider(Some(Arc::new(|_app, _window| {
+            Some(json!({
                     "env": {
                         "FRET_DOCK_ARB_PRESET": std::env::var("FRET_DOCK_ARB_PRESET").ok(),
                         "FRET_DOCK_ALLOW_MULTI_WINDOW_TEAR_OFF": std::env::var("FRET_DOCK_ALLOW_MULTI_WINDOW_TEAR_OFF").ok(),
@@ -3228,9 +3248,12 @@ fn viewport_input(driver: &mut DockingArbitrationDriver, app: &mut App, event: V
 
 fn dock_op(driver: &mut DockingArbitrationDriver, app: &mut App, op: fret_core::DockOp) {
     let changed = driver
-        .docking_runtime
-        .as_ref()
-        .map(|rt| rt.on_dock_op(app, op))
+        .dock_surface
+        .map(|surface| {
+            let changed = surface.on_dock_op(app, op);
+            surface.flush_runtime_commands_to_effects(app);
+            changed
+        })
         .unwrap_or(false);
     if changed {
         driver.sync_dev_state_models(app);
@@ -3464,11 +3487,10 @@ fn window_created(
 ) {
     match &request.kind {
         CreateWindowKind::DockFloating { .. } => {
-            let _ = driver
-                .docking_runtime
-                .as_ref()
-                .map(|rt| rt.on_window_created(app, request, new_window))
-                .unwrap_or(false);
+            if let Some(surface) = driver.dock_surface {
+                let _ = surface.on_window_created(app, request, new_window);
+                surface.flush_runtime_commands_to_effects(app);
+            }
             let logical = driver.alloc_floating_logical_window_id();
             let logical_key = logical.clone();
             driver.logical_windows.insert(new_window, logical);
@@ -3512,11 +3534,10 @@ fn before_close_window(
         DevStateHooks::export_all(app);
     }
 
-    let _ = driver
-        .docking_runtime
-        .as_ref()
-        .map(|rt| rt.before_close_window(app, window))
-        .unwrap_or(false);
+    if let Some(surface) = driver.dock_surface {
+        let _ = surface.before_close_window(app, window);
+        surface.flush_runtime_commands_to_effects(app);
+    }
     true
 }
 
@@ -3670,12 +3691,7 @@ pub fn run() -> anyhow::Result<()> {
     let mut app = App::new();
 
     let policy_flags = DockingArbitrationPolicyFlags::new();
-    app.set_global(policy_flags.clone());
-    app.with_global_mut(DockingPolicyService::default, |svc, _app| {
-        svc.set(Arc::new(DockingArbitrationDockingPolicy {
-            flags: policy_flags,
-        }));
-    });
+    app.set_global(policy_flags);
 
     let viewport_tools = Arc::new(Mutex::new(DemoViewportToolState::default()));
     let diag_enabled =
@@ -3709,17 +3725,6 @@ pub fn run() -> anyhow::Result<()> {
         caps.ui.window_tear_off = false;
     }
     app.set_global(caps);
-    app.with_global_mut(
-        DockPanelElementRegistryService::<App>::default,
-        |svc, _app| {
-            svc.set(Arc::new(DockingArbitrationPanelRegistry));
-        },
-    );
-    app.with_global_mut(DockViewportOverlayHooksService::default, |svc, _app| {
-        svc.set(Arc::new(DemoViewportOverlayHooks {
-            tools: viewport_tools.clone(),
-        }));
-    });
     app.with_global_mut_untracked(DevStateHooks::default, |hooks, _app| {
         hooks.register(
             DevStateHook::new(DEV_STATE_DOCKING_LAYOUT_KEY, |app| {

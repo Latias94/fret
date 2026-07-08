@@ -8,8 +8,8 @@ use fret::imui::{UiWriter as _, UiWriterImUiFacadeExt as _, imui};
 use fret_app::{CreateWindowKind, CreateWindowRequest, Effect, WindowRequest};
 use fret_core::{AppWindowId, Color, DockFloatingWindow, DockNode, Point, Px, Rect, Size};
 use fret_docking::{
-    DockManager, DockPanel, DockPanelElementRegistry, DockPanelElementRegistryService,
-    ViewportPanel, runtime as dock_runtime,
+    DockPanel, DockPanelElementRegistry, DockSurface, ViewportPanel,
+    advanced::{DockManager, request_dock_invalidation},
 };
 use fret_runtime::{ActivationPolicy, WindowRole, WindowStyleRequest};
 use fret_ui::ElementContext;
@@ -19,12 +19,8 @@ use fret_ui_kit::{IntoUiElement as _, StyledExt as _, UiExt as _};
 use super::{AUX_LOGICAL_WINDOW_ID, VIEWPORT_PX_SIZE, diag_enabled, single_window_mode_enabled};
 
 pub(super) fn install_dock_panel_registry(app: &mut KernelApp) {
-    app.with_global_mut(
-        DockPanelElementRegistryService::<KernelApp>::default,
-        |svc, _app| {
-            svc.set(Arc::new(ImUiEditorProofControlsPanelRegistry));
-        },
-    );
+    DockSurface::new(AppWindowId::default())
+        .install_panel_registry(app, Arc::new(ImUiEditorProofControlsPanelRegistry));
 }
 
 struct ImUiEditorProofControlsPanelRegistry;
@@ -191,7 +187,7 @@ fn ensure_dock_graph_inner(app: &mut KernelApp, window: AppWindowId, force: bool
             dock.graph.set_window_root(window, root);
         }
 
-        dock_runtime::request_dock_invalidation(app, [window]);
+        request_dock_invalidation(app, [window]);
     });
 }
 
@@ -235,7 +231,9 @@ pub(super) fn ensure_aux_window_requested(app: &mut KernelApp, window: AppWindow
 }
 
 pub(super) fn on_dock_op(app: &mut KernelApp, op: fret_core::DockOp) {
-    let _ = dock_runtime::handle_dock_op(app, op);
+    let surface = dock_surface_for_app(app);
+    let _ = surface.on_dock_op(app, op);
+    surface.flush_runtime_commands_to_effects(app);
 }
 
 pub(super) fn window_create_spec(
@@ -280,7 +278,9 @@ pub(super) fn window_created(
             app.push_effect(Effect::RequestAnimationFrame(new_window));
         }
     }
-    let _ = dock_runtime::handle_dock_window_created(app, request, new_window);
+    let surface = dock_surface_for_app(app);
+    let _ = surface.on_window_created(app, request, new_window);
+    surface.flush_runtime_commands_to_effects(app);
 }
 
 pub(super) fn before_close_window(app: &mut KernelApp, closing_window: AppWindowId) -> bool {
@@ -288,6 +288,16 @@ pub(super) fn before_close_window(app: &mut KernelApp, closing_window: AppWindow
         .global::<WindowBootstrapService>()
         .and_then(|svc| svc.main_window)
         .unwrap_or(closing_window);
-    let _ = dock_runtime::handle_dock_before_close_window(app, closing_window, target_window);
+    let surface = DockSurface::new(target_window);
+    let _ = surface.before_close_window(app, closing_window);
+    surface.flush_runtime_commands_to_effects(app);
     true
+}
+
+fn dock_surface_for_app(app: &KernelApp) -> DockSurface {
+    let main_window = app
+        .global::<WindowBootstrapService>()
+        .and_then(|svc| svc.main_window)
+        .unwrap_or_default();
+    DockSurface::new(main_window)
 }

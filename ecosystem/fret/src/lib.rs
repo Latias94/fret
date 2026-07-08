@@ -498,12 +498,10 @@ pub mod imui {
 
     /// Docking helpers for immediate-mode authoring.
     pub mod docking {
-        pub use fret_docking::dock;
         pub use fret_docking::imui::*;
-        pub use fret_docking::{
-            DockingRuntime, handle_dock_before_close_window, handle_dock_op,
-            handle_dock_window_created,
-        };
+        pub use fret_docking::{DockHostOptions, DockPanel, DockPanelElementRegistry, DockSurface};
+        pub use fret_docking::{DockViewportLayout, DockViewportOverlayHooks, DockingPolicy};
+        pub use fret_docking::{ViewportPanel, advanced};
     }
 
     /// Common imports for immediate-mode authoring on the explicit `fret::imui` lane.

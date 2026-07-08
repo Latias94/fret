@@ -73,9 +73,11 @@ use overflow::{
     declarative_handle_tab_strip_wheel, declarative_open_tab_overflow_menu,
     declarative_tab_hover_for_position, declarative_tab_overflow_menu_for_window,
 };
+#[cfg(test)]
+pub(crate) use registry::dock_panel_element;
 pub use registry::{
     DockPanelElement, DockPanelElementRegistry, DockPanelElementRegistryService,
-    DockSpaceElementOptions, dock_panel_element,
+    DockSpaceElementOptions,
 };
 use registry::{
     bind_panel_children, collect_panels_for_window, missing_panel_element, panel_nodes_for_window,
