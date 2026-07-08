@@ -311,8 +311,7 @@ fn watch_first_f32(cx: &mut AppComponentCx<'_>, model: &LocalState<Vec<f32>>, de
 
 fn view(cx: &mut ElementContext<'_, App>, st: &mut CustomEffectV1State) -> Ui {
     let Some(effect) = cx.app.global::<DemoEffect>().map(|v| v.0) else {
-        return vec![shadcn::raw::typography::h3("Custom effects unavailable").into_element(cx)]
-            .into();
+        return vec![shadcn::typography::h3("Custom effects unavailable").into_element(cx)].into();
     };
 
     let enabled = st.enabled.layout_value(cx);
@@ -395,8 +394,8 @@ fn stage(
     )
     .into_element(cx);
 
-    let title = shadcn::raw::typography::h3("Custom Effect V1 (CustomV1)").into_element(cx);
-    let subtitle = shadcn::raw::typography::muted(
+    let title = shadcn::typography::h3("Custom Effect V1 (CustomV1)").into_element(cx);
+    let subtitle = shadcn::typography::muted(
         "The lens on the right runs a custom WGSL function and is clipped/scissored.",
     )
     .into_element(cx);

@@ -76,7 +76,7 @@ SELECTED_RAW_OWNER_SOURCE_POLICIES: list[RawOwnerSourcePolicy] = [
         "postprocess_theme_demo.rs",
         [
             "let cx = cx.elements();",
-            "shadcn::raw::typography::h3(\"Custom effects unavailable\").into_element_in(cx)",
+            "shadcn::typography::h3(\"Custom effects unavailable\").into_element_in(cx)",
         ],
         [],
     ),

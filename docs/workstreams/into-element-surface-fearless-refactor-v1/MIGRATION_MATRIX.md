@@ -892,9 +892,10 @@ Execution note on 2026-03-13:
   first-party shadcn examples do not need local trait imports just to land typed helpers.
 - the examples source-policy gate for raw shadcn escape hatches is now aligned to the reviewed
   allowlist instead of a broad `raw::*` allowance:
-  `apps/fret-examples/src/lib.rs::examples_source_tree_limits_raw_shadcn_escape_hatches`
-  currently permits only `shadcn::raw::typography::*`, `shadcn::raw::extras::*`,
-  `fret::shadcn::raw::prelude::*`, and the documented advanced service hooks
+  `tools/examples_source_tree_policy/gate.py::ALLOWED_RAW_SHADCN_ESCAPES`
+  now keeps typography/extras examples on `shadcn::typography::*` / `shadcn::extras::*` and
+  permits only explicitly retained raw interop seams such as `fret::shadcn::raw::prelude::*`
+  plus the documented advanced service hooks
   `raw::advanced::{sync_theme_from_environment(...), install_with_ui_services(...)}`.
 - next execution order on 2026-03-13:
   1. keep M3 focused on helper-return migration outside the now-closed shadcn raw inventory,

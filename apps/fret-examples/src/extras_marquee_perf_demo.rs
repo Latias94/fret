@@ -31,7 +31,7 @@ fn init_window(_app: &mut KernelApp, _window: AppWindowId) -> ExtrasMarqueePerfS
 }
 
 fn view(cx: &mut ElementContext<'_, KernelApp>, _st: &mut ExtrasMarqueePerfState) -> ViewElements {
-    let marquee = shadcn::raw::extras::Marquee::new([
+    let marquee = shadcn::extras::Marquee::new([
         "Alpha", "Beta", "Gamma", "Delta", "Epsilon", "Zeta", "Eta", "Theta",
     ])
     .speed_px_per_frame(Px(1.0))

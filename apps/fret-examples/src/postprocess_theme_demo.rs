@@ -226,10 +226,8 @@ impl View for ThemePostprocessView {
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let Some(effect) = cx.app().global::<DemoEffect>().map(|v| v.0) else {
-            return vec![
-                shadcn::raw::typography::h3("Custom effects unavailable").into_element_in(cx),
-            ]
-            .into();
+            return vec![shadcn::typography::h3("Custom effects unavailable").into_element_in(cx)]
+                .into();
         };
 
         let mut st = ThemePostprocessState::new(cx);
@@ -737,7 +735,7 @@ fn stage_body(
                             .items_center()
                             .into_element(cx),
                         subtitle,
-                        shadcn::raw::typography::muted(label).into_element(cx),
+                        shadcn::typography::muted(label).into_element(cx),
                     ]
                 },
             );
@@ -770,8 +768,8 @@ fn stage_cards(cx: &mut AppComponentCx<'_>) -> impl IntoUiElement<App> + use<> {
             },
             move |cx| {
                 vec![
-                    shadcn::raw::typography::large(title).into_element(cx),
-                    shadcn::raw::typography::muted(subtitle).into_element(cx),
+                    shadcn::typography::large(title).into_element(cx),
+                    shadcn::typography::muted(subtitle).into_element(cx),
                     cx.spacer(SpacerProps::default()),
                     shadcn::Button::new("Primary")
                         .variant(shadcn::ButtonVariant::Default)

@@ -381,7 +381,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut State) -> Ui {
         } else {
             "CustomV3 is unsupported on this backend"
         };
-        return vec![shadcn::raw::typography::h3(msg).into_element(cx)].into();
+        return vec![shadcn::typography::h3(msg).into_element(cx)].into();
     };
 
     let view_settings: CustomEffectV3ViewSettings = cx.data().selector_layout(
@@ -478,8 +478,8 @@ fn stage(
         user1_image,
     );
 
-    let title = shadcn::raw::typography::h3("Custom Effect V3 (CustomV3)").into_element(cx);
-    let subtitle = shadcn::raw::typography::muted(
+    let title = shadcn::typography::h3("Custom Effect V3 (CustomV3)").into_element(cx);
+    let subtitle = shadcn::typography::muted(
         "V3 can request renderer sources: src_raw + an optional bounded pyramid (for liquid glass ceilings).",
     )
     .into_element(cx);

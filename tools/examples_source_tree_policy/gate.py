@@ -32,8 +32,6 @@ ALLOWED_FRET_UI_SHADCN_IMPORTS = {
 }
 
 ALLOWED_RAW_SHADCN_ESCAPES = [
-    "shadcn::raw::typography::",
-    "shadcn::raw::extras::",
     "fret::shadcn::raw::prelude::",
     "shadcn::raw::advanced::sync_theme_from_environment(",
     "fret::shadcn::raw::advanced::sync_theme_from_environment(",
@@ -862,7 +860,6 @@ CURATED_SHADCN_FORBIDDEN_MARKERS = [
     "use fret_ui_shadcn as shadcn;",
     "use fret_ui_shadcn::{self as shadcn",
     "shadcn::shadcn_themes::",
-    "shadcn::typography::",
 ]
 
 

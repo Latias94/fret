@@ -539,12 +539,13 @@ Direct crate usage rule for first-party recipe crates:
   discovery lane; remaining flat-root exposure is limited to doc-hidden compatibility/glue residue
   rather than peer first-contact API
 - first-party teaching surfaces may currently use only the documented explicit lanes:
-  `shadcn::typography::*`, `shadcn::raw::extras::*`,
-  `shadcn::raw::breadcrumb::primitives`, `shadcn::raw::experimental::*` for the
-  `DataGridElement` prototype, prelude-imported `icon::*` glue, module-local advanced
-  customization enums/styles such as `shadcn::raw::{button, calendar, context_menu,
-  dropdown_menu, kbd, menubar, select, switch, tabs, toggle_group}::*`, and
+  common component names and curated part aliases on `shadcn::*`, explicit helper modules such as
+  `shadcn::typography::*`, `shadcn::extras::*`, and `shadcn::experimental::*` for the
+  `DataGridElement` prototype, prelude-imported `icon::*` glue, `fret_ui_shadcn::advanced::*`
+  service hooks when the example is explicitly about environment / `UiServices` integration, and
   explicitly justified retained/interop seams such as `fret::shadcn::raw::prelude::*`
+- UI Gallery snippet/page surfaces are gated to reject `shadcn::raw::*`; raw remains a fully
+  explicit escape hatch for non-teaching/source-alignment work, not a first-contact authoring lane.
 - 2026-03-15 implementation note: first-party UI Gallery snippet/page surfaces are now aligned to
   this rule; remaining direct-crate cleanup is bounded to non-gallery first-party consumers and
   selected internal tests/docs strings.

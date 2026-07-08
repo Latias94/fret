@@ -1255,8 +1255,8 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut LiquidGlassState) -> Ui {
                                 move |cx| {
                                     vec![ui::v_flex(|cx| {
                                             vec![
-                                                shadcn::raw::typography::h4( "Liquid glass").into_element(cx),
-                                                shadcn::raw::typography::muted(
+                                                shadcn::typography::h4( "Liquid glass").into_element(cx),
+                                                shadcn::typography::muted(
                                                     "BackdropWarpV2 (bounded), WebGPU-safe.",
                                                 ).into_element(cx),
                                                 shadcn::Separator::new().into_element(cx),

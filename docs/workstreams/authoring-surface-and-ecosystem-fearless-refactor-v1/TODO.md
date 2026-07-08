@@ -512,11 +512,12 @@ Post-closeout handoff order on 2026-03-16:
   - [x] Migrate first-party direct-crate examples to `fret_ui_shadcn::{facade as shadcn, prelude::*}`
     and require raw-only helpers to flow through `shadcn::raw::*`.
   - [x] Classify the first-party raw escape hatches and gate them to the documented set
-    (`typography`, `extras`, breadcrumb primitives, low-level icon helpers, advanced/raw prelude
-    seams where explicitly justified).
+    (`shadcn::typography::*`, `shadcn::extras::*`, curated breadcrumb/collapsible part aliases,
+    `shadcn::experimental::*` for `DataGridElement`, prelude-imported icon glue, and
+    advanced/raw prelude seams where explicitly justified).
   - [x] Add a source gate that forbids first-party curated examples from drifting back to
-    `use fret_ui_shadcn as shadcn;`, `shadcn::shadcn_themes::*`, or root
-    `shadcn::typography::*`.
+    `use fret_ui_shadcn as shadcn;`, `shadcn::shadcn_themes::*`, or raw
+    `shadcn::raw::{typography,extras}::*`.
   - [x] Audit remaining first-party docs/examples for root-level shadcn app-install teaching.
   - [x] Reduce first-contact shadcn discovery to one taught lane.
     - Goal: `use fret_ui_shadcn::{facade as shadcn, prelude::*};` is the only default first-contact
@@ -534,7 +535,10 @@ Post-closeout handoff order on 2026-03-16:
     - 2026-03-15 follow-up: first-party UI Gallery snippet/page surfaces no longer use
       `fret_ui_shadcn::icon::*`, `fret_ui_shadcn::empty::*`, `fret_ui_shadcn::select::*`,
       `fret_ui_shadcn::tabs::*`, or similar flat root/module lanes; gallery authoring now flows
-      through `shadcn::*`, `shadcn::raw::*`, or prelude glue only.
+      through `shadcn::*`, explicit helper modules, or prelude glue only.
+    - 2026-07-08 follow-up: UI Gallery no longer admits `shadcn::raw::*` in snippet/page source;
+      raw-only component helpers were replaced by curated part aliases, explicit
+      `shadcn::{typography,extras,experimental}` modules, or prelude icon glue.
     - 2026-03-15 follow-up: after continuing through `fret-ui-ai`, `fret-bootstrap`, and
       `ecosystem/fret`, non-test first-party workspace code no longer contains
       `fret_ui_shadcn::*` flat root/component calls outside explicit `facade::*` / `raw::*` /

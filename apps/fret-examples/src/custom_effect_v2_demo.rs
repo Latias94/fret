@@ -321,8 +321,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut CustomEffectV2State) -> Ui {
         )
     };
     let Some(effect) = effect else {
-        return vec![shadcn::raw::typography::h3("Custom effects unavailable").into_element(cx)]
-            .into();
+        return vec![shadcn::typography::h3("Custom effects unavailable").into_element(cx)].into();
     };
 
     let view_settings: CustomEffectV2ViewSettings = cx.data().selector_layout(
@@ -408,8 +407,8 @@ fn stage(
     )
     .into_element(cx);
 
-    let title = shadcn::raw::typography::h3("Custom Effect V2 (CustomV2)").into_element(cx);
-    let subtitle = shadcn::raw::typography::muted(
+    let title = shadcn::typography::h3("Custom Effect V2 (CustomV2)").into_element(cx);
+    let subtitle = shadcn::typography::muted(
         "CustomV2 can sample one user-provided ImageId (e.g. noise/LUT/normal map).",
     )
     .into_element(cx);
