@@ -77,11 +77,11 @@ Multi-viewport platform backends (platform responsibilities + hovered-viewport s
 Docking model and ops:
 
 - Dock graph model:
-  - `crates/fret-core/src/dock.rs` (`DockGraph`, `DockNode`, `DropZone`)
+  - `crates/fret-core/src/dock/mod.rs` (`DockGraph`, `DockNode`, `DropZone`)
 - Dock ops vocabulary:
-  - `crates/fret-core/src/dock_op.rs` (`DockOp::*`, including `MoveTabs`, `FloatTabsInWindow`)
+  - `crates/fret-core/src/dock/op.rs` (`DockOp::*`, including `MoveTabs`, `FloatTabsInWindow`)
 - Dock layout helpers:
-  - `crates/fret-core/src/dock_layout.rs` (split math helpers; keep `fret-core` pure)
+  - `crates/fret-core/src/dock/layout.rs` (layout schema and helpers; keep `fret-core` pure)
 
 Docking UI + hit testing + previews:
 
@@ -111,13 +111,14 @@ Docking UI + hit testing + previews:
 
 Docking runtime integration (durable ops + docking-owned window commands):
 
-- `ecosystem/fret-docking/src/runtime.rs`:
+- `ecosystem/fret-docking/src/runtime/{apply,commands,coordinator,tear_off,window_created,before_close,layout_invalidation}.rs`:
   - durable `DockOp` application and invalidation
   - tear-off request queueing, duplicate suppression, cancellation, completion, and close/merge policies
+  - explicit before-close merge targets, transient-state cleanup, imported-layout invalidation, and typed diagnostics for drop rejection/cleanup
 - `ecosystem/fret-docking/src/facade.rs`:
   - `DockSurface::{open_panel,select_panel,close_panel,snapshot,viewports,host_lifecycle}`
-  - `DockSurface::viewports().{open_panel,before_close_window}` for typed app-facing OS-window lifecycle
-  - `DockSurface::host_lifecycle().{on_dock_op,on_window_created,before_close_window}` for ordinary host callbacks
+  - `DockSurface::viewports().{open_panel,before_close_window,before_close_window_into}` for typed app-facing OS-window lifecycle
+  - `DockSurface::host_lifecycle().{on_dock_op,on_window_created,before_close_window,before_close_window_into}` for ordinary host callbacks
 - `ecosystem/fret-docking/src/facade/{viewport,host,driver}.rs`:
   - split typed app lifecycle outcomes and ordinary host callbacks from driver-tier graph/runtime command vocabulary
   - keep explicit command ownership behind `fret_docking::advanced::DockSurfaceDriver`; downstream `DockOp` matches must include a wildcard because `DockOp` is non-exhaustive

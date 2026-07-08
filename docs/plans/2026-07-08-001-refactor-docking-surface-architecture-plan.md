@@ -15,10 +15,19 @@ execution: code
 | Field | Value |
 |---|---|
 | Objective | Rebuild Fret docking around a deep app-facing surface, a docking-owned runtime transaction module, workspace/model authority, resolved drop transactions, and explicit interaction arbitration while preserving Fret's core/runtime layering. |
-| Authority | User request, repository `AGENTS.md`, ADR 0013/0072/0075/0077/0083/0155/0158/0159, current Fret source, `repo-ref/open-gpui` docking, `repo-ref/imgui` docking branch, and local planning research. |
+| Authority | User request, repository `AGENTS.md`, ADR 0013/0072/0075/0077/0083/0155/0158/0159, current Fret source, `repo-ref/open-gpui` docking `71b42a39`, `repo-ref/imgui` docking branch `4be08b1ec`, and local planning research. |
 | Execution profile | Deep, breaking, deletion-biased refactor. Direct code transplantation from the reference repos is allowed only behind Fret-owned internal module interfaces. Characterization and fixture coverage come before behavior-moving edits. |
 | Stop conditions | Stop if platform/window/view handles enter `crates/fret-core`, preview and commit use different drop resolution, legacy public APIs are preserved by adding shallow compatibility layers, close/fallback paths can lose panels, or ADR evidence cannot be updated honestly. |
 | Tail ownership | Goal execution owns implementation, focused tests, diagnostics evidence, doc alignment, code review, cleanup of abandoned attempts, and conventional commits at completed unit boundaries. |
+
+---
+
+## Reference Snapshot
+
+| Source | Pinned state | Refactor impact |
+|---|---|---|
+| `repo-ref/open-gpui` | `71b42a39dd7c259175da3ba02e451fec97375491` (`71b42a39 refactor(docking): split viewport preview cleanup tests`) | Facade-first app surface, route-authority separation, release revalidation, typed viewport/session boundaries, and focused preview cleanup tests. |
+| `repo-ref/imgui` | docking branch `4be08b1ecf7709f15e4274fb2ddac37e121d7d9a` (`4be08b1ec Docking: minor packing of AuthorityForXXX fields.`) | Dockspace liveness, runtime-owned request processing, settings/lifecycle separation, platform viewport callback responsibilities, and preview/commit consistency. |
 
 ---
 

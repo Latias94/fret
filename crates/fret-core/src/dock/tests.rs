@@ -575,6 +575,43 @@ fn move_window_to_empty_dock_space_rejects_non_empty_target() {
 }
 
 #[test]
+fn move_window_to_empty_dock_space_rejects_floating_only_target() {
+    let w1 = window(1);
+    let w2 = window(2);
+    let panel_a = PanelKey::new("test.a");
+    let panel_b = PanelKey::new("test.b");
+
+    let mut g = DockGraph::new();
+    let source = g.insert_node(DockNode::Tabs {
+        tabs: vec![panel_a.clone()],
+        active: 0,
+    });
+    g.set_window_root(w1, source);
+
+    let floating_tabs = g.insert_node(DockNode::Tabs {
+        tabs: vec![panel_b.clone()],
+        active: 0,
+    });
+    let floating = g.insert_node(DockNode::Floating {
+        child: floating_tabs,
+    });
+    g.floating_windows_mut(w2).push(DockFloatingWindow {
+        floating,
+        rect: rect(10.0, 20.0, 240.0, 180.0),
+    });
+
+    assert!(!g.apply_op(&DockOp::MoveWindowToEmptyDockSpace {
+        source_window: w1,
+        target_window: w2,
+    }));
+    assert_eq!(g.collect_panels_in_window(w1), vec![panel_a]);
+    assert!(g.window_root(w2).is_none());
+    assert_eq!(g.floating_windows(w2).len(), 1);
+    assert_eq!(g.collect_panels_in_window(w2), vec![panel_b]);
+    assert_canonical_all_windows(&g);
+}
+
+#[test]
 fn move_panel_rejects_unreachable_edge_target_without_removing_source() {
     let w = window(1);
     let panel_a = PanelKey::new("test.a");
