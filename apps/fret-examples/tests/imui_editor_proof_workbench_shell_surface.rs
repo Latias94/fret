@@ -43,10 +43,10 @@ fn imui_editor_proof_demo_routes_dock_window_shell_through_demo_local_owner() {
         "WindowRole::Auxiliary",
         "ActivationPolicy::NonActivating",
         "DockSurface::new",
-        "surface.on_dock_op",
-        "surface.on_window_created",
-        "surface.before_close_window",
-        "surface.flush_runtime_commands_to_effects",
+        "surface.driver().on_dock_op",
+        "surface.driver().on_window_created",
+        "surface.driver().before_close_window",
+        "surface.driver().flush_runtime_commands_to_effects",
         "request_dock_invalidation",
     ] {
         assert!(

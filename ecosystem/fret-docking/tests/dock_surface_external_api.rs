@@ -1,5 +1,6 @@
 use fret_core::{AppWindowId, Color, PanelKey};
-use fret_docking::{DockHostOptions, DockPanel, DockRuntimeCommand, DockSurface};
+use fret_docking::advanced::DockRuntimeCommand;
+use fret_docking::{DockHostOptions, DockPanel, DockSurface};
 use slotmap::KeyData;
 
 #[test]

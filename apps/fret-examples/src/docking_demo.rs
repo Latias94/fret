@@ -299,7 +299,7 @@ impl DockingDemoDriver {
             }
         }
 
-        surface.ensure_window_root(app, window, |graph| {
+        surface.driver().ensure_window_root(app, window, |graph| {
             let left = graph.insert_node(DockNode::Tabs {
                 tabs: vec![PanelKey::new("core.hierarchy")],
                 active: 0,
@@ -469,7 +469,7 @@ fn handle_command(
         };
 
         let target = if first_fraction < 0.2 { 0.5 } else { 0.12 };
-        let changed = surface.on_dock_op(
+        let changed = surface.driver().on_dock_op(
             app,
             fret_core::DockOp::SetSplitFractionTwo {
                 split,
@@ -477,7 +477,7 @@ fn handle_command(
             },
         );
         let _ = changed;
-        surface.flush_runtime_commands_to_effects(app);
+        surface.driver().flush_runtime_commands_to_effects(app);
         return;
     }
     if command.as_str() == "dock_demo.close" {
@@ -510,8 +510,8 @@ fn handle_event(
 
 fn dock_op(driver: &mut DockingDemoDriver, app: &mut App, op: fret_core::DockOp) {
     if let Some(surface) = driver.dock_surface {
-        let _ = surface.on_dock_op(app, op);
-        surface.flush_runtime_commands_to_effects(app);
+        let _ = surface.driver().on_dock_op(app, op);
+        surface.driver().flush_runtime_commands_to_effects(app);
     }
 }
 
@@ -656,15 +656,15 @@ fn window_created(
     new_window: AppWindowId,
 ) {
     if let Some(surface) = driver.dock_surface {
-        let _ = surface.on_window_created(app, request, new_window);
-        surface.flush_runtime_commands_to_effects(app);
+        let _ = surface.driver().on_window_created(app, request, new_window);
+        surface.driver().flush_runtime_commands_to_effects(app);
     }
 }
 
 fn before_close_window(driver: &mut DockingDemoDriver, app: &mut App, window: AppWindowId) -> bool {
     if let Some(surface) = driver.dock_surface {
-        let _ = surface.before_close_window(app, window);
-        surface.flush_runtime_commands_to_effects(app);
+        let _ = surface.driver().before_close_window(app, window);
+        surface.driver().flush_runtime_commands_to_effects(app);
     }
     true
 }

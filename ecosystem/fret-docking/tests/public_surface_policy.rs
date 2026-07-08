@@ -7,7 +7,6 @@ fn public_docking_surface_prefers_dock_surface_entry_points() {
     for symbol in [
         "DockSurface",
         "DockHostOptions",
-        "DockRuntimeCommand",
         "DockPanel",
         "DockPanelElementRegistry",
         "DockViewportLayout",
@@ -40,8 +39,11 @@ fn public_docking_surface_prefers_dock_surface_entry_points() {
         );
     }
     assert!(
-        lib.contains("pub mod advanced") && lib.contains("DockManager"),
-        "advanced-only low-level manager access should be explicit"
+        lib.contains("pub mod advanced")
+            && lib.contains("DockManager")
+            && lib.contains("DockSurfaceDriver")
+            && lib.contains("DockRuntimeCommand"),
+        "advanced-only low-level driver and manager access should be explicit"
     );
     assert!(
         dock_mod.contains("DockPanelElementRegistryService")
@@ -93,13 +95,21 @@ fn dock_surface_root_entry_point_is_public_without_internal_command_queue() {
     let runtime = include_str!("../src/runtime.rs");
     let commands = include_str!("../src/runtime/commands.rs");
 
-    for symbol in ["DockSurface", "DockHostOptions", "DockRuntimeCommand"] {
+    for symbol in ["DockSurface", "DockHostOptions"] {
         assert!(
             lib.contains(symbol),
             "`lib.rs` should expose app-facing docking facade symbol `{symbol}`"
         );
     }
 
+    assert!(
+        !lib.contains("pub use runtime::DockRuntimeCommand;"),
+        "`DockRuntimeCommand` is a driver-tier type and must not be re-exported from the common root"
+    );
+    assert!(
+        lib.contains("DockSurfaceDriver") && lib.contains("DockRuntimeCommand"),
+        "`advanced` should name driver-tier surface and runtime command types explicitly"
+    );
     assert!(
         !lib.contains("DockRuntimeCommandQueue"),
         "`DockRuntimeCommandQueue` is storage detail and must not be part of the crate root API"
@@ -132,6 +142,93 @@ fn dock_surface_root_entry_point_is_public_without_internal_command_queue() {
             "`runtime::{helper}` must not be exposed as a public advanced API by accident"
         );
     }
+}
+
+fn impl_block<'a>(source: &'a str, header: &str) -> &'a str {
+    let start = source
+        .find(header)
+        .unwrap_or_else(|| panic!("missing impl block `{header}`"));
+    let open = source[start..]
+        .find('{')
+        .map(|offset| start + offset)
+        .unwrap_or_else(|| panic!("missing impl body for `{header}`"));
+    let mut depth = 0usize;
+
+    for (offset, ch) in source[open..].char_indices() {
+        match ch {
+            '{' => depth += 1,
+            '}' => {
+                depth -= 1;
+                if depth == 0 {
+                    return &source[open + 1..open + offset];
+                }
+            }
+            _ => {}
+        }
+    }
+
+    panic!("unterminated impl block `{header}`");
+}
+
+fn public_function_signatures(block: &str) -> Vec<String> {
+    let mut signatures = Vec::new();
+    let mut current = String::new();
+    let mut collecting = false;
+
+    for line in block.lines() {
+        let trimmed = line.trim();
+        if !collecting && trimmed.starts_with("pub fn ") {
+            collecting = true;
+            current.clear();
+        }
+        if collecting {
+            current.push_str(trimmed);
+            current.push(' ');
+            if trimmed.ends_with('{') || trimmed.ends_with(';') {
+                signatures.push(current.trim().to_string());
+                collecting = false;
+            }
+        }
+    }
+
+    signatures
+}
+
+#[test]
+fn dock_surface_common_signatures_do_not_expose_driver_tier_types() {
+    let facade = include_str!("../src/facade.rs");
+    let dock_surface_signatures =
+        public_function_signatures(impl_block(facade, "impl DockSurface"));
+
+    for forbidden in [
+        "DockGraph",
+        "DockNodeId",
+        "DockOp",
+        "CreateWindowRequest",
+        "DockRuntimeCommand",
+    ] {
+        assert!(
+            dock_surface_signatures
+                .iter()
+                .all(|signature| !signature.contains(forbidden)),
+            "`DockSurface` common facade signature must not expose driver-tier type `{forbidden}`; signatures: {dock_surface_signatures:#?}"
+        );
+    }
+
+    let driver_signatures =
+        public_function_signatures(impl_block(facade, "impl DockSurfaceDriver"));
+    assert!(
+        driver_signatures
+            .iter()
+            .any(|signature| signature.contains("DockOp")),
+        "`DockSurfaceDriver` should own operation-routing signatures"
+    );
+    assert!(
+        driver_signatures
+            .iter()
+            .any(|signature| signature.contains("DockRuntimeCommand")),
+        "`DockSurfaceDriver` should own runtime-command signatures"
+    );
 }
 
 #[test]

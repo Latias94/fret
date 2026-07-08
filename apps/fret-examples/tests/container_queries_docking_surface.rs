@@ -48,12 +48,12 @@ fn container_queries_docking_demo_uses_dock_surface_for_common_docking_assembly(
         "DockSurface::new",
         "surface.install_panel_registry",
         "surface.ensure_panel",
-        "surface.ensure_window_root",
+        "surface.driver().ensure_window_root",
         "surface.host",
-        "surface.on_dock_op",
-        "surface.on_window_created",
-        "surface.before_close_window",
-        "surface.flush_runtime_commands_to_effects",
+        "surface.driver().on_dock_op",
+        "surface.driver().on_window_created",
+        "surface.driver().before_close_window",
+        "surface.driver().flush_runtime_commands_to_effects",
     ] {
         assert!(
             source.contains(needle),

@@ -536,8 +536,8 @@ behavior from its TabBar implementation, whereas Fret implements a dedicated doc
         - `DockOp::FloatPanelInWindow` / `DockOp::FloatTabsInWindow`
         - `DockOp::SetFloatingRect`
       - New OS window (tear-off):
-        - `DockSurface::request_float_panel_to_new_window(...)` / `DockSurface::request_float_tabs_to_new_window(...)`
-        - `DockSurface::take_runtime_commands(...)` yields `DockRuntimeCommand::CreateWindow(CreateWindowKind::DockFloating { .. })`
+        - `DockSurface::driver().request_float_panel_to_new_window(...)` / `DockSurface::driver().request_float_tabs_to_new_window(...)`
+        - `DockSurface::driver().take_runtime_commands(...)` yields `advanced::DockRuntimeCommand::CreateWindow(CreateWindowKind::DockFloating { .. })`
   - Evidence anchors:
     - Dock UI resolves request intent: `ecosystem/fret-docking/src/dock/drop_resolve/transaction.rs`
     - Runtime queues window create: `ecosystem/fret-docking/src/runtime/request.rs`

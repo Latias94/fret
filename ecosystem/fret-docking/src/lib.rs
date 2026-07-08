@@ -20,7 +20,6 @@ pub use dock::{
     DockingPolicy, ViewportPanel,
 };
 pub use facade::{DockHostOptions, DockSurface};
-pub use runtime::DockRuntimeCommand;
 
 /// Explicit low-level docking access for framework tests and advanced first-party integrations.
 ///
@@ -31,7 +30,10 @@ pub mod advanced {
     pub use crate::dock::{
         ActivatePanelOptions, DockManager, DockPanelCatalog, DockPanelCatalogError, DockWorkspace,
     };
-    pub use crate::runtime::{recenter_in_window_floatings, request_dock_invalidation};
+    pub use crate::facade::DockSurfaceDriver;
+    pub use crate::runtime::{
+        DockRuntimeCommand, recenter_in_window_floatings, request_dock_invalidation,
+    };
 }
 
 #[cfg(test)]

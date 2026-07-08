@@ -3273,8 +3273,8 @@ fn dock_op(driver: &mut DockingArbitrationDriver, app: &mut App, op: fret_core::
     let changed = driver
         .dock_surface
         .map(|surface| {
-            let changed = surface.on_dock_op(app, op);
-            surface.flush_runtime_commands_to_effects(app);
+            let changed = surface.driver().on_dock_op(app, op);
+            surface.driver().flush_runtime_commands_to_effects(app);
             changed
         })
         .unwrap_or(false);
@@ -3511,8 +3511,8 @@ fn window_created(
     match &request.kind {
         CreateWindowKind::DockFloating { .. } => {
             if let Some(surface) = driver.dock_surface {
-                let _ = surface.on_window_created(app, request, new_window);
-                surface.flush_runtime_commands_to_effects(app);
+                let _ = surface.driver().on_window_created(app, request, new_window);
+                surface.driver().flush_runtime_commands_to_effects(app);
             }
             let logical = driver.alloc_floating_logical_window_id();
             let logical_key = logical.clone();
@@ -3558,8 +3558,8 @@ fn before_close_window(
     }
 
     if let Some(surface) = driver.dock_surface {
-        let _ = surface.before_close_window(app, window);
-        surface.flush_runtime_commands_to_effects(app);
+        let _ = surface.driver().before_close_window(app, window);
+        surface.driver().flush_runtime_commands_to_effects(app);
     }
     true
 }

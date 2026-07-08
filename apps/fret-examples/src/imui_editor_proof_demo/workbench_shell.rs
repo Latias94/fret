@@ -233,8 +233,8 @@ pub(super) fn ensure_aux_window_requested(app: &mut KernelApp, window: AppWindow
 
 pub(super) fn on_dock_op(app: &mut KernelApp, op: fret_core::DockOp) {
     let surface = dock_surface_for_app(app);
-    let _ = surface.on_dock_op(app, op);
-    surface.flush_runtime_commands_to_effects(app);
+    let _ = surface.driver().on_dock_op(app, op);
+    surface.driver().flush_runtime_commands_to_effects(app);
 }
 
 pub(super) fn window_create_spec(
@@ -280,8 +280,8 @@ pub(super) fn window_created(
         }
     }
     let surface = dock_surface_for_app(app);
-    let _ = surface.on_window_created(app, request, new_window);
-    surface.flush_runtime_commands_to_effects(app);
+    let _ = surface.driver().on_window_created(app, request, new_window);
+    surface.driver().flush_runtime_commands_to_effects(app);
 }
 
 pub(super) fn before_close_window(app: &mut KernelApp, closing_window: AppWindowId) -> bool {
@@ -290,8 +290,8 @@ pub(super) fn before_close_window(app: &mut KernelApp, closing_window: AppWindow
         .and_then(|svc| svc.main_window)
         .unwrap_or(closing_window);
     let surface = DockSurface::new(target_window);
-    let _ = surface.before_close_window(app, closing_window);
-    surface.flush_runtime_commands_to_effects(app);
+    let _ = surface.driver().before_close_window(app, closing_window);
+    surface.driver().flush_runtime_commands_to_effects(app);
     true
 }
 

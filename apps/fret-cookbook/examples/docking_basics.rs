@@ -421,16 +421,16 @@ fn on_command(
 
     // Apply directly (not via Effect) to keep this example self-contained.
     let surface = DockSurface::new(window);
-    let _ = surface.on_dock_op(app, op);
-    surface.flush_runtime_commands_to_effects(app);
+    let _ = surface.driver().on_dock_op(app, op);
+    surface.driver().flush_runtime_commands_to_effects(app);
     request_dock_invalidation(app, [window]);
 }
 
 fn on_dock_op(app: &mut KernelApp, op: DockOp) {
     // DockSpace emits Effect::Dock(op); the runner routes it here.
     let surface = DockSurface::new(AppWindowId::default());
-    let _ = surface.on_dock_op(app, op);
-    surface.flush_runtime_commands_to_effects(app);
+    let _ = surface.driver().on_dock_op(app, op);
+    surface.driver().flush_runtime_commands_to_effects(app);
 }
 
 fn configure_driver(

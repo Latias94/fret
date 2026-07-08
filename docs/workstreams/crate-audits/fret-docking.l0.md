@@ -21,13 +21,14 @@ Evidence anchors:
 ## 2) Public contract surface
 
 - Key exports / stable types:
-  - App surface: `DockSurface`, `DockHostOptions`, `DockRuntimeCommand`
+  - App surface: `DockSurface`, `DockHostOptions`
   - Panels: `DockPanel`, `DockPanelElementRegistry`, `ViewportPanel`
   - Viewport integration: `DockViewportLayout`, `DockViewportOverlayHooks`
   - Policy: `DockingPolicy`
-  - Advanced low-level access: `fret_docking::advanced::{DockManager, DockWorkspace, DockPanelCatalog, ...}`
+  - Advanced low-level access: `fret_docking::advanced::{DockSurfaceDriver, DockRuntimeCommand, DockManager, DockWorkspace, DockPanelCatalog, ...}`
 - Public-surface rule:
-  - Ordinary apps should use `DockSurface` for panel registration, host mounting, runtime command handoff, window-created callbacks, and before-close merge.
+  - Ordinary apps should use `DockSurface` for panel registration, host mounting, layout import/export, and policy installation.
+  - Host/runtime integrations should opt into `DockSurface::driver()` for graph root construction, runtime command handoff, window-created callbacks, and before-close merge.
   - Manager/workspace/catalog access is intentionally explicit under `advanced`; free runtime helpers and service globals are crate-private/internal.
 - Feature flags and intent:
   - `imui` feature pulls in `fret-authoring` (optional) and should remain strictly opt-in.
