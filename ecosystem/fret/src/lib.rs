@@ -4875,13 +4875,15 @@ mod authoring_surface_policy_tests {
                 .contains("`fret_ui_shadcn::advanced::*` is an implementation/debug lane")
         );
         assert!(CRATE_USAGE_GUIDE.contains("`shadcn::raw::*`"));
-        assert!(CRATE_USAGE_GUIDE.contains("`shadcn::raw::typography::*`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`shadcn::typography::*` facade module"));
+        assert!(!CRATE_USAGE_GUIDE.contains("`shadcn::raw::typography::*`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::shadcn::app::install(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::shadcn::themes::apply_shadcn_new_york(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::shadcn::app::*` and"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::shadcn::themes::*` are setup lanes"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::shadcn::raw::*`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::shadcn::raw::advanced::*`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`fret::shadcn::typography::*` facade module"));
         assert!(!CRATE_USAGE_GUIDE.contains("`fret_ui_shadcn::install_app(...)`"));
         assert!(!CRATE_USAGE_GUIDE.contains("`fret_ui_shadcn::shadcn_themes::"));
         assert!(!CRATE_USAGE_GUIDE.contains("`fret::shadcn::shadcn_themes::"));
