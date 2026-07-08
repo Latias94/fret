@@ -753,6 +753,66 @@ fn window_created_for_stale_source_request_closes_created_window_without_moving_
 }
 
 #[test]
+fn window_created_graph_commit_failure_closes_created_window() {
+    let window_a = AppWindowId::from(KeyData::from_ffi(1));
+    let window_b = AppWindowId::from(KeyData::from_ffi(2));
+    let panel = PanelKey::new("test.panel");
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    app.set_global(DockManager::default());
+
+    app.with_global_mut(DockManager::default, |dock, _app| {
+        dock.insert_panel(panel.clone(), test_panel("Panel"));
+        let tabs = dock.graph.insert_node(DockNode::Tabs {
+            tabs: vec![panel.clone()],
+            active: 0,
+        });
+        dock.graph.set_window_root(window_a, tabs);
+    });
+
+    assert!(handle_dock_op(
+        &mut app,
+        DockOp::RequestFloatPanelToNewWindow {
+            source_window: window_a,
+            panel: panel.clone(),
+            anchor: None,
+        }
+    ));
+
+    let request = app
+        .take_effects()
+        .iter()
+        .find_map(|e| match e {
+            Effect::Window(WindowRequest::Create(req)) => Some(req.clone()),
+            _ => None,
+        })
+        .expect("expected WindowRequest::Create");
+
+    app.with_global_mut(DockManager::default, |dock, _app| {
+        assert!(
+            dock.graph.close_panel(window_a, panel.clone()),
+            "test setup should remove the source panel without notifying the tear-off machine"
+        );
+    });
+
+    assert!(handle_dock_window_created(&mut app, &request, window_b));
+
+    let effects = app.take_effects();
+    assert!(
+        effects
+            .iter()
+            .any(|e| matches!(e, Effect::Window(WindowRequest::Close(w)) if *w == window_b)),
+        "graph commit failure should close the created dock-floating window"
+    );
+    let dock = app.global::<DockManager>().expect("dock manager exists");
+    assert!(
+        dock.graph.find_panel_in_window(window_b, &panel).is_none(),
+        "failed graph commit must not invent the panel in the new window"
+    );
+}
+
+#[test]
 fn redock_from_dock_floating_window_auto_closes_empty_os_window() {
     let window_a = AppWindowId::from(KeyData::from_ffi(1));
     let window_b = AppWindowId::from(KeyData::from_ffi(2));

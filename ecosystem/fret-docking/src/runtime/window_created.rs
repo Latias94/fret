@@ -82,6 +82,7 @@ fn handle_dock_window_created_with_close_dispatch<H: UiHost>(
         .as_ref()
         .map(|p| p.kind)
         .unwrap_or(DockTearOffKind::Panel);
+    let mut graph_commit_failed = false;
     let handled = app.with_global_mut(DockManager::default, |dock, app| {
         let changed = match kind {
             DockTearOffKind::Panel => {
@@ -94,7 +95,8 @@ fn handle_dock_window_created_with_close_dispatch<H: UiHost>(
             }
         };
         if !changed {
-            return false;
+            graph_commit_failed = true;
+            return true;
         }
 
         let drag_kind = match kind {
@@ -118,6 +120,18 @@ fn handle_dock_window_created_with_close_dispatch<H: UiHost>(
         invalidate_windows(app, [*source_window, new_window]);
         true
     });
+
+    if graph_commit_failed {
+        if std::env::var_os("FRET_DOCK_TEAROFF_LOG").is_some_and(|v| !v.is_empty()) {
+            tracing::info!(
+                new_window = ?new_window,
+                request_kind = ?request.kind,
+                "dock tear-off: graph commit failed; closing newly created window"
+            );
+        }
+        commands::dispatch_close_window(app, close_dispatch, new_window);
+        return true;
+    }
 
     if handled {
         app.with_global_mut(DockFloatingOsWindowRegistry::default, |reg, _app| {

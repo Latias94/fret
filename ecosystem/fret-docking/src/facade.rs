@@ -396,6 +396,55 @@ mod tests {
     }
 
     #[test]
+    fn dock_surface_window_created_graph_commit_failure_queues_close_command() {
+        let window_a = AppWindowId::from(KeyData::from_ffi(1));
+        let window_b = AppWindowId::from(KeyData::from_ffi(2));
+        let panel = PanelKey::new("test.panel");
+        let surface = DockSurface::new(window_a);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        app.set_global(DockManager::default());
+        surface.register_panel(&mut app, panel.clone(), test_panel("Panel"));
+        app.with_global_mut(DockManager::default, |dock, _app| {
+            let tabs = dock.graph.insert_node(DockNode::Tabs {
+                tabs: vec![panel.clone()],
+                active: 0,
+            });
+            dock.graph.set_window_root(window_a, tabs);
+        });
+
+        assert!(surface.request_float_panel_to_new_window(&mut app, window_a, panel.clone(), None));
+        let commands = surface.take_runtime_commands(&mut app);
+        let DockRuntimeCommand::CreateWindow(create) = commands[0].clone() else {
+            panic!("expected create-window docking runtime command");
+        };
+        app.with_global_mut(DockManager::default, |dock, _app| {
+            assert!(
+                dock.graph.close_panel(window_a, panel.clone()),
+                "test setup should remove the source panel without notifying the tear-off machine"
+            );
+        });
+
+        assert!(surface.on_window_created(&mut app, &create, window_b));
+        assert_eq!(
+            surface.take_runtime_commands(&mut app),
+            vec![DockRuntimeCommand::CloseWindow(window_b)]
+        );
+        assert!(
+            app.take_effects()
+                .iter()
+                .all(|effect| !matches!(effect, Effect::Window(WindowRequest::Close(_)))),
+            "DockSurface graph commit failure cleanup should stay on the docking command queue"
+        );
+        let dock = app.global::<DockManager>().expect("dock manager exists");
+        assert!(
+            dock.graph.find_panel_in_window(window_b, &panel).is_none(),
+            "failed graph commit must not invent the panel in the new window"
+        );
+    }
+
+    #[test]
     fn dock_surface_redock_auto_close_uses_runtime_command_queue() {
         let window_a = AppWindowId::from(KeyData::from_ffi(1));
         let window_b = AppWindowId::from(KeyData::from_ffi(2));
