@@ -275,7 +275,7 @@ impl DockSurface {
         let before = panel_location(dock, panel);
 
         let driver = self.driver();
-        let command_baseline = driver.runtime_command_count(app);
+        let command_cursor = driver.runtime_command_cursor(app);
         driver.on_dock_op(
             app,
             DockOp::EnsurePanelVisible {
@@ -283,7 +283,7 @@ impl DockSurface {
                 panel: panel.clone(),
             },
         );
-        driver.flush_runtime_commands_since_to_effects(app, command_baseline);
+        driver.flush_runtime_commands_since_to_effects(app, command_cursor);
         Ok(self.panel_outcome_from_before(app, panel.clone(), before))
     }
 
@@ -306,9 +306,9 @@ impl DockSurface {
 
         let before = self.panel_location(app, panel);
         let driver = self.driver();
-        let command_baseline = driver.runtime_command_count(app);
+        let command_cursor = driver.runtime_command_cursor(app);
         driver.on_dock_op(app, op);
-        driver.flush_runtime_commands_since_to_effects(app, command_baseline);
+        driver.flush_runtime_commands_since_to_effects(app, command_cursor);
         Ok(self.panel_outcome_from_before(app, panel.clone(), before))
     }
 
@@ -329,7 +329,7 @@ impl DockSurface {
         let close_window = location.window;
         let before = Some(location);
         let driver = self.driver();
-        let command_baseline = driver.runtime_command_count(app);
+        let command_cursor = driver.runtime_command_cursor(app);
         driver.on_dock_op(
             app,
             DockOp::ClosePanel {
@@ -337,7 +337,7 @@ impl DockSurface {
                 panel: panel.clone(),
             },
         );
-        driver.flush_runtime_commands_since_to_effects(app, command_baseline);
+        driver.flush_runtime_commands_since_to_effects(app, command_cursor);
         Ok(self.panel_outcome_from_before(app, panel.clone(), before))
     }
 

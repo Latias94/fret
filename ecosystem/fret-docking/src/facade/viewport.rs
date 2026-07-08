@@ -49,7 +49,7 @@ impl DockSurfaceViewportSession {
         let supported =
             crate::runtime::dock_tear_off_supported(app.global::<PlatformCapabilities>());
         let driver = self.surface.driver();
-        let command_baseline = driver.runtime_command_count(app);
+        let command_cursor = driver.runtime_command_cursor(app);
         let requested =
             driver.request_float_panel_to_new_window(app, source_window, panel.clone(), anchor);
         if !requested {
@@ -60,7 +60,7 @@ impl DockSurfaceViewportSession {
         }
 
         let window_requests = if supported {
-            driver.flush_runtime_commands_since_to_effects(app, command_baseline)
+            driver.flush_runtime_commands_since_to_effects(app, command_cursor)
         } else {
             0
         };

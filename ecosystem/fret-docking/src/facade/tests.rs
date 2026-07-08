@@ -849,6 +849,64 @@ fn dock_surface_semantic_open_removes_canceled_create_for_same_panel_only() {
 }
 
 #[test]
+fn dock_surface_close_flushes_auto_close_after_canceled_create_removal() {
+    let window_a = AppWindowId::from(KeyData::from_ffi(1));
+    let window_b = AppWindowId::from(KeyData::from_ffi(2));
+    let panel = PanelKey::new("test.panel");
+    let surface = DockSurface::new(window_a);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    app.set_global(DockManager::default());
+    surface.register_panel(&mut app, panel.clone(), test_panel("Panel"));
+    surface.open_panel(&mut app, &panel).expect("open panel");
+    assert!(surface.driver().request_float_panel_to_new_window(
+        &mut app,
+        window_a,
+        panel.clone(),
+        None
+    ));
+    let commands = surface.driver().take_runtime_commands(&mut app);
+    let DockRuntimeCommand::CreateWindow(create) = commands[0].clone() else {
+        panic!("expected create-window docking runtime command");
+    };
+    assert!(
+        surface
+            .driver()
+            .on_window_created(&mut app, &create, window_b)
+    );
+    assert!(surface.driver().take_runtime_commands(&mut app).is_empty());
+    assert_eq!(
+        surface
+            .panel_location(&app, &panel)
+            .map(|location| location.window),
+        Some(window_b)
+    );
+
+    assert!(surface.driver().request_float_panel_to_new_window(
+        &mut app,
+        window_b,
+        panel.clone(),
+        None
+    ));
+    app.take_effects();
+
+    let outcome = surface.close_panel(&mut app, &panel).expect("close panel");
+
+    assert_eq!(outcome.location, None);
+    assert!(
+        surface.driver().take_runtime_commands(&mut app).is_empty(),
+        "canceled create and operation-local auto-close should both be drained"
+    );
+    let effects = app.take_effects();
+    assert_eq!(effects.len(), 1);
+    assert!(
+        matches!(&effects[0], Effect::Window(WindowRequest::Close(window)) if *window == window_b),
+        "closing the last panel in a dock floating window should flush its auto-close effect"
+    );
+}
+
+#[test]
 fn dock_surface_viewport_open_flushes_only_new_runtime_commands() {
     let window = AppWindowId::from(KeyData::from_ffi(1));
     let old_panel = PanelKey::new("test.old");

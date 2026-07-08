@@ -73,16 +73,16 @@ impl DockSurfaceDriver {
         self.push_runtime_commands_to_effects(app, commands)
     }
 
-    pub(super) fn runtime_command_count<H: UiHost>(&self, app: &mut H) -> usize {
-        crate::runtime::runtime_command_count(app)
+    pub(super) fn runtime_command_cursor<H: UiHost>(&self, app: &mut H) -> u64 {
+        crate::runtime::runtime_command_cursor(app)
     }
 
     pub(super) fn flush_runtime_commands_since_to_effects<H: UiHost>(
         &self,
         app: &mut H,
-        baseline: usize,
+        cursor: u64,
     ) -> usize {
-        let commands = crate::runtime::take_runtime_commands_since(app, baseline);
+        let commands = crate::runtime::take_runtime_commands_since(app, cursor);
         self.push_runtime_commands_to_effects(app, commands)
     }
 

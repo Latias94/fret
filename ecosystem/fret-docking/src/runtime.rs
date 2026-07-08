@@ -97,15 +97,15 @@ pub(crate) fn take_runtime_commands<H: UiHost>(app: &mut H) -> Vec<DockRuntimeCo
     commands::take_runtime_commands(app)
 }
 
-pub(crate) fn runtime_command_count<H: UiHost>(app: &mut H) -> usize {
-    commands::runtime_command_count(app)
+pub(crate) fn runtime_command_cursor<H: UiHost>(app: &mut H) -> u64 {
+    commands::runtime_command_cursor(app)
 }
 
 pub(crate) fn take_runtime_commands_since<H: UiHost>(
     app: &mut H,
-    baseline: usize,
+    cursor: u64,
 ) -> Vec<DockRuntimeCommand> {
-    commands::take_runtime_commands_since(app, baseline)
+    commands::take_runtime_commands_since(app, cursor)
 }
 
 /// Complete a dock floating window creation on the docking-owned command route.

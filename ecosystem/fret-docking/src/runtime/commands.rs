@@ -15,27 +15,46 @@ pub(super) enum CloseWindowDispatch {
 
 #[derive(Default)]
 pub(super) struct DockRuntimeCommandQueue {
-    commands: Vec<DockRuntimeCommand>,
+    commands: Vec<QueuedDockRuntimeCommand>,
+    next_sequence: u64,
+}
+
+struct QueuedDockRuntimeCommand {
+    sequence: u64,
+    command: DockRuntimeCommand,
 }
 
 impl DockRuntimeCommandQueue {
     fn push(&mut self, command: DockRuntimeCommand) {
-        self.commands.push(command);
+        let sequence = self.next_sequence;
+        self.next_sequence = self.next_sequence.saturating_add(1);
+        self.commands
+            .push(QueuedDockRuntimeCommand { sequence, command });
     }
 
-    fn len(&self) -> usize {
-        self.commands.len()
+    fn cursor(&self) -> u64 {
+        self.next_sequence
     }
 
     fn take(&mut self) -> Vec<DockRuntimeCommand> {
         std::mem::take(&mut self.commands)
+            .into_iter()
+            .map(|queued| queued.command)
+            .collect()
     }
 
-    fn take_since(&mut self, baseline: usize) -> Vec<DockRuntimeCommand> {
-        if baseline >= self.commands.len() {
-            return Vec::new();
+    fn take_since(&mut self, cursor: u64) -> Vec<DockRuntimeCommand> {
+        let mut taken = Vec::new();
+        let mut retained = Vec::with_capacity(self.commands.len());
+        for queued in self.commands.drain(..) {
+            if queued.sequence >= cursor {
+                taken.push(queued.command);
+            } else {
+                retained.push(queued);
+            }
         }
-        self.commands.drain(baseline..).collect()
+        self.commands = retained;
+        taken
     }
 
     fn remove_create_windows(&mut self, canceled: &[(AppWindowId, PanelKey)]) -> usize {
@@ -43,8 +62,8 @@ impl DockRuntimeCommandQueue {
             return 0;
         }
         let before = self.commands.len();
-        self.commands.retain(|command| {
-            let DockRuntimeCommand::CreateWindow(request) = command else {
+        self.commands.retain(|queued| {
+            let DockRuntimeCommand::CreateWindow(request) = &queued.command else {
                 return true;
             };
             let CreateWindowKind::DockFloating {
@@ -91,16 +110,18 @@ pub(super) fn take_runtime_commands<H: UiHost>(app: &mut H) -> Vec<DockRuntimeCo
     app.with_global_mut(DockRuntimeCommandQueue::default, |queue, _app| queue.take())
 }
 
-pub(super) fn runtime_command_count<H: UiHost>(app: &mut H) -> usize {
-    app.with_global_mut(DockRuntimeCommandQueue::default, |queue, _app| queue.len())
+pub(super) fn runtime_command_cursor<H: UiHost>(app: &mut H) -> u64 {
+    app.with_global_mut(DockRuntimeCommandQueue::default, |queue, _app| {
+        queue.cursor()
+    })
 }
 
 pub(super) fn take_runtime_commands_since<H: UiHost>(
     app: &mut H,
-    baseline: usize,
+    cursor: u64,
 ) -> Vec<DockRuntimeCommand> {
     app.with_global_mut(DockRuntimeCommandQueue::default, |queue, _app| {
-        queue.take_since(baseline)
+        queue.take_since(cursor)
     })
 }
 
