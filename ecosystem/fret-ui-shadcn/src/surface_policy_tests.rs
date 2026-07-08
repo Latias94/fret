@@ -193,6 +193,27 @@ fn public_non_method_anyelement_signatures(source: &str) -> Vec<String> {
         .collect()
 }
 
+fn assert_readme_avoids_root_install_surface(crate_path: &str) {
+    let forbidden = [
+        format!("{crate_path}::install("),
+        format!("{crate_path}::install_app("),
+        format!("{crate_path}::install_with("),
+        format!("{crate_path}::install_with_theme("),
+        format!("{crate_path}::install_with_ui_services("),
+        format!("`{crate_path}::install(...)`"),
+        format!("`{crate_path}::install_app(...)`"),
+        format!("`{crate_path}::install_with(...)`"),
+        format!("`{crate_path}::install_with_theme(...)`"),
+        format!("`{crate_path}::install_with_ui_services(...)`"),
+    ];
+    for forbidden in forbidden {
+        assert!(
+            !README.contains(forbidden.as_str()),
+            "README should not teach root installer surface `{forbidden}`"
+        );
+    }
+}
+
 fn visit_rust_files(dir: &std::path::Path, f: &mut impl FnMut(&std::path::Path, &str)) {
     for entry in std::fs::read_dir(dir).unwrap_or_else(|err| {
         panic!(
@@ -231,6 +252,11 @@ fn app_integration_stays_under_explicit_app_module() {
     assert!(README.contains("`fret_icons_lucide::app::install`"));
     assert!(README.contains("`fret_icons_radix::app::install`"));
     assert!(LIB_RS.contains("pub mod app;"));
+    assert!(!LIB_RS.contains("pub use app::"));
+    assert!(!LIB_RS.contains("pub fn install("));
+    assert!(!LIB_RS.contains("pub fn install_with("));
+    assert!(!LIB_RS.contains("pub fn install_with_theme("));
+    assert!(!LIB_RS.contains("pub fn install_with_ui_services("));
     assert!(APP_RS.contains("pub struct InstallConfig"));
     assert!(APP_RS.contains("pub fn install(app: &mut fret_app::App)"));
     assert!(APP_RS.contains("pub fn install_with("));
@@ -238,6 +264,7 @@ fn app_integration_stays_under_explicit_app_module() {
     assert!(!APP_RS.contains("sync_theme_from_environment"));
     assert!(!APP_RS.contains("install_with_ui_services"));
     assert!(!README.contains("`fret_ui_shadcn::install_app(...)`"));
+    assert_readme_avoids_root_install_surface("fret_ui_shadcn");
 }
 
 #[test]
