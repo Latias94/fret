@@ -515,7 +515,7 @@ pub mod facade {
     };
     pub use crate::select::{
         Select, SelectAlign, SelectContent, SelectEntry, SelectGroup, SelectItem,
-        SelectItemIndicator, SelectItemText, SelectLabel, SelectScrollButtons,
+        SelectItemIndicator, SelectItemText, SelectLabel, SelectPosition, SelectScrollButtons,
         SelectScrollDownButton, SelectScrollUpButton, SelectSeparator, SelectSide, SelectTextRun,
         SelectTextTone, SelectTrigger, SelectTriggerLabelPolicy, SelectTriggerSize, SelectValue,
     };
@@ -626,7 +626,7 @@ pub mod prelude {
     pub use crate::direction::{DirectionProvider, LayoutDirection, use_direction};
     pub use crate::facade::{
         Select, SelectAlign, SelectContent, SelectEntry, SelectGroup, SelectItem,
-        SelectItemIndicator, SelectItemText, SelectLabel, SelectScrollButtons,
+        SelectItemIndicator, SelectItemText, SelectLabel, SelectPosition, SelectScrollButtons,
         SelectScrollDownButton, SelectScrollUpButton, SelectSeparator, SelectSide, SelectTextRun,
         SelectTextTone, SelectTrigger, SelectTriggerLabelPolicy, SelectTriggerSize, SelectValue,
     };

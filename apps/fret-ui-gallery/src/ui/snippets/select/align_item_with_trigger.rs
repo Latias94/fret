@@ -15,9 +15,9 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         .trigger(shadcn::SelectTrigger::new())
         .value(shadcn::SelectValue::new())
         .content(shadcn::SelectContent::new().position(if align {
-            shadcn::raw::select::SelectPosition::ItemAligned
+            shadcn::SelectPosition::ItemAligned
         } else {
-            shadcn::raw::select::SelectPosition::Popper
+            shadcn::SelectPosition::Popper
         }))
         .entries([shadcn::SelectGroup::new([
             shadcn::SelectItem::new("apple", "Apple").into(),

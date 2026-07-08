@@ -74,7 +74,7 @@ fn select_panel<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             .content(
                 shadcn::SelectContent::new()
                     .test_id(format!("{TEST_ID_PREFIX}-listbox"))
-                    .position(shadcn::raw::select::SelectPosition::Popper)
+                    .position(shadcn::SelectPosition::Popper)
                     .side_offset(Px(6.0)),
             )
             .items(status_items())

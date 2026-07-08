@@ -358,13 +358,13 @@ fn curated_prelude_and_internal_glue_do_not_depend_on_hidden_root_compatibility_
     );
     assert!(
         normalized_lib.contains(&normalize_ws(
-            "pub use crate::facade::{ Select, SelectAlign, SelectContent, SelectEntry, SelectGroup, SelectItem, SelectItemIndicator, SelectItemText, SelectLabel, SelectScrollButtons, SelectScrollDownButton, SelectScrollUpButton, SelectSeparator, SelectSide, SelectTextRun, SelectTextTone, SelectTrigger, SelectTriggerLabelPolicy, SelectTriggerSize, SelectValue, };"
+            "pub use crate::facade::{ Select, SelectAlign, SelectContent, SelectEntry, SelectGroup, SelectItem, SelectItemIndicator, SelectItemText, SelectLabel, SelectPosition, SelectScrollButtons, SelectScrollDownButton, SelectScrollUpButton, SelectSeparator, SelectSide, SelectTextRun, SelectTextTone, SelectTrigger, SelectTriggerLabelPolicy, SelectTriggerSize, SelectValue, };"
         )),
         "prelude should source authoring-critical family exports from the curated facade"
     );
     assert!(
         !normalized_lib.contains(&normalize_ws(
-            "pub use crate::{ Select, SelectAlign, SelectContent, SelectEntry, SelectGroup, SelectItem, SelectItemIndicator, SelectItemText, SelectLabel, SelectScrollButtons, SelectScrollDownButton, SelectScrollUpButton, SelectSeparator, SelectSide, SelectTextRun, SelectTextTone, SelectTrigger, SelectTriggerLabelPolicy, SelectTriggerSize, SelectValue, };"
+            "pub use crate::{ Select, SelectAlign, SelectContent, SelectEntry, SelectGroup, SelectItem, SelectItemIndicator, SelectItemText, SelectLabel, SelectPosition, SelectScrollButtons, SelectScrollDownButton, SelectScrollUpButton, SelectSeparator, SelectSide, SelectTextRun, SelectTextTone, SelectTrigger, SelectTriggerLabelPolicy, SelectTriggerSize, SelectValue, };"
         )),
         "prelude should not depend on hidden flat root compatibility exports"
     );
@@ -586,6 +586,7 @@ fn authoring_critical_family_exports_live_on_curated_facade_only() {
             "SelectTrigger",
             "SelectValue",
             "SelectContent",
+            "SelectPosition",
             "SelectItem",
         ],
     );
@@ -719,7 +720,7 @@ fn ui_builder_ext_keep_into_element_as_explicit_landing_seam() {
             &[
                 "fn into_element<H: UiHost>( self, cx: &mut ElementContext<'_, H>, cell_text_at: impl Fn(u64, u64) -> Arc<str> + Send + Sync + 'static, ) -> AnyElement;",
                 "fn into_element<H: UiHost, FRowKey, FRowState, FCell, TCell>( self, cx: &mut ElementContext<'_, H>, rows_revision: u64, cols_revision: u64, row_key_at: FRowKey, row_state_at: FRowState, cell_at: FCell, ) -> AnyElement where FRowKey: FnMut(usize) -> u64, FRowState: FnMut(usize) -> DataGridRowState, FCell: FnMut(&mut ElementContext<'_, H>, usize, usize) -> TCell, TCell: IntoUiElement<H>;",
-                "fn into_element<H: UiHost, TData, TCell>( self, cx: &mut ElementContext<'_, H>, data: Arc<[TData]>, data_revision: u64, state: impl IntoTableStateModel, columns: impl Into<Arc<[ColumnDef<TData>]>>, get_row_key: impl Fn(&TData, usize, Option<&RowKey>) -> RowKey + 'static, header_label: impl Fn(&ColumnDef<TData>) -> Arc<str> + 'static, cell_at: impl Fn(&mut ElementContext<'_, H>, &ColumnDef<TData>, &TData) -> TCell + 'static, ) -> AnyElement where TData: 'static, TCell: IntoUiElement<H>;",
+                "fn into_element<H: UiHost + 'static, TData, TCell>( self, cx: &mut ElementContext<'_, H>, data: Arc<[TData]>, data_revision: u64, state: impl IntoTableStateModel, columns: impl Into<Arc<[ColumnDef<TData>]>>, get_row_key: impl Fn(&TData, usize, Option<&RowKey>) -> RowKey + 'static, header_label: impl Fn(&ColumnDef<TData>) -> Arc<str> + 'static, cell_at: impl Fn(&mut ElementContext<'_, H>, &ColumnDef<TData>, &TData) -> TCell + 'static, ) -> AnyElement where TData: 'static, TCell: IntoUiElement<H>;",
             ][..],
         ),
         (

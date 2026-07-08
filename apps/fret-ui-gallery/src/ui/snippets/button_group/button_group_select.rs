@@ -41,7 +41,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             .value(shadcn::SelectValue::new())
             .content(
                 shadcn::SelectContent::new()
-                    .position(shadcn::raw::select::SelectPosition::Popper)
+                    .position(shadcn::SelectPosition::Popper)
                     .align(shadcn::SelectAlign::Start),
             )
             .entries(entries)

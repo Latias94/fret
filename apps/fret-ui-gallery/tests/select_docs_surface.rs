@@ -95,7 +95,7 @@ fn select_snippets_keep_the_default_root_lane_and_explicit_parts_adapter() {
         "shadcn::SelectTextRun::new(",
         ".label_policy(shadcn::SelectTriggerLabelPolicy::Value)",
         "shadcn::SelectContent::new()",
-        ".position(shadcn::raw::select::SelectPosition::Popper)",
+        ".position(shadcn::SelectPosition::Popper)",
     ] {
         assert!(
             rich_items.contains(needle),

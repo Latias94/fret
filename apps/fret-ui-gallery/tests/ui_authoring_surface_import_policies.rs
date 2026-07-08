@@ -103,10 +103,6 @@ fn documented_raw_shadcn_escape_hatch_reason(trimmed: &str) -> Option<&'static s
             "menubar item variant seam",
         ),
         (
-            "shadcn::raw::select::SelectPosition::",
-            "select positioning enum seam",
-        ),
-        (
             "shadcn::raw::switch::SwitchStyle::",
             "switch style refinement seam",
         ),
@@ -149,7 +145,6 @@ fn raw_shadcn_escape_hatch_gate_is_symbol_level_not_module_level() {
         "use shadcn::raw::breadcrumb::primitives as bc;",
         "use shadcn::raw::collapsible::primitives as shadcn_col;",
         ".variant(shadcn::raw::dropdown_menu::DropdownMenuItemVariant::Destructive)",
-        ".position(shadcn::raw::select::SelectPosition::Popper)",
         "let grid = shadcn::raw::experimental::DataGridElement::new(rows)",
     ] {
         assert!(
@@ -163,6 +158,7 @@ fn raw_shadcn_escape_hatch_gate_is_symbol_level_not_module_level() {
         "shadcn::raw::toggle_group::ToggleGroupStyle::default()",
         "shadcn::raw::experimental::UnclassifiedWidget::new()",
         "shadcn::raw::button::UnclassifiedButtonPart::new()",
+        "shadcn::raw::select::SelectPosition::Popper",
         "shadcn::raw::accordion::composable",
         "shadcn::raw::collapsible::primitives::*",
         "use shadcn::raw::breadcrumb::private as bc;",
