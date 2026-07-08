@@ -32,7 +32,7 @@ fn handle_applied_dock_op_with_close_dispatch<H: UiHost>(
             machine.prune_and_cancel_for_op(now, dock, &op);
         });
 
-        let changed = dock.graph.apply_op(&op);
+        let changed = dock.workspace.graph.apply_op(&op);
         if !changed {
             return false;
         }
@@ -74,8 +74,14 @@ fn log_cross_window_op(dock: &DockManager, op: &DockOp) {
             target_window,
             ..
         } => {
-            let src_panels = dock.graph.collect_panels_in_window(*source_window);
-            let tgt_panels = dock.graph.collect_panels_in_window(*target_window);
+            let src_panels = dock
+                .workspace
+                .graph
+                .collect_panels_in_window(*source_window);
+            let tgt_panels = dock
+                .workspace
+                .graph
+                .collect_panels_in_window(*target_window);
             tracing::info!(
                 op = ?op,
                 source_window = ?source_window,

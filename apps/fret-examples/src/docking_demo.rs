@@ -457,8 +457,8 @@ fn handle_command(
         };
 
         let Some((split, first_fraction)) = app.global::<DockManager>().and_then(|dock| {
-            let split = dock.graph.window_root(window)?;
-            match dock.graph.node(split)? {
+            let split = dock.workspace.graph.window_root(window)?;
+            match dock.workspace.graph.node(split)? {
                 fret_core::DockNode::Split { fractions, .. } if fractions.len() == 2 => {
                     Some((split, *fractions.first().unwrap_or(&0.5)))
                 }

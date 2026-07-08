@@ -28,7 +28,9 @@ pub use runtime::DockRuntimeCommand;
 /// crate root: service globals, free runtime handlers, and direct host constructors are not part of
 /// the common public surface.
 pub mod advanced {
-    pub use crate::dock::{ActivatePanelOptions, DockManager};
+    pub use crate::dock::{
+        ActivatePanelOptions, DockManager, DockPanelCatalog, DockPanelCatalogError, DockWorkspace,
+    };
     pub use crate::runtime::{recenter_in_window_floatings, request_dock_invalidation};
 }
 

@@ -34,6 +34,7 @@ pub(super) fn declarative_dragged_tab_for_drop<H: UiHost>(
 ) -> Option<(DockNodeId, usize)> {
     let payload = drag.payload::<DockPanelDragPayload>()?;
     app.global::<DockManager>()?
+        .workspace
         .graph
         .find_panel_in_window(drag.source_window, &payload.panel)
 }
@@ -73,7 +74,11 @@ pub(super) fn resolve_declarative_drag_target<H: UiHost>(
         .global::<DockingPolicyService>()
         .and_then(|service| service.policy());
     let mut candidates = Vec::<fret_runtime::DockDropCandidateRectDiagnostics>::new();
-    let graph = &app.global::<DockManager>().expect("dock manager").graph;
+    let graph = &app
+        .global::<DockManager>()
+        .expect("dock manager")
+        .workspace
+        .graph;
     let (target, source) = resolve_dock_drop_target(
         prev_hover,
         !dock_previews_enabled,

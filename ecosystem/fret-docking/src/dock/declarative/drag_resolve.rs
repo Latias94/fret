@@ -39,7 +39,7 @@ pub(super) fn declarative_resolve_internal_drag_drop<H: UiHost>(
 ) -> (Vec<Effect>, bool, bool, bool) {
     let Some(drag) = app.drag(pointer_id) else {
         let hover_cleared = app.with_global_mut(DockManager::default, |dock, _app| {
-            dock.hover.take().is_some()
+            dock.presentation.hover.take().is_some()
         });
         return (Vec::new(), hover_cleared, false, false);
     };
@@ -55,7 +55,7 @@ pub(super) fn declarative_resolve_internal_drag_drop<H: UiHost>(
     let dragging = drag.dragging || drag.source_window != window;
     if !dragging {
         let hover_cleared = app.with_global_mut(DockManager::default, |dock, _app| {
-            dock.hover.take().is_some()
+            dock.presentation.hover.take().is_some()
         });
         return (Vec::new(), hover_cleared, false, true);
     }
@@ -68,7 +68,7 @@ pub(super) fn declarative_resolve_internal_drag_drop<H: UiHost>(
     let diagnostics_enabled = should_publish_docking_diagnostics(app, diagnostics_env_enabled());
     let prev_hover = app
         .global::<DockManager>()
-        .and_then(|dock| dock.hover.clone());
+        .and_then(|dock| dock.presentation.hover.clone());
     let Some(target_resolution) = resolve_declarative_drag_target(
         app,
         window,
@@ -81,7 +81,7 @@ pub(super) fn declarative_resolve_internal_drag_drop<H: UiHost>(
         diagnostics_enabled,
     ) else {
         let hover_cleared = app.with_global_mut(DockManager::default, |dock, _app| {
-            dock.hover.take().is_some()
+            dock.presentation.hover.take().is_some()
         });
         return (Vec::new(), hover_cleared, false, true);
     };
@@ -147,7 +147,7 @@ pub(super) fn declarative_resolve_internal_drag_hover<H: UiHost>(
 ) -> (Vec<Effect>, bool, bool) {
     let Some(drag) = app.drag(pointer_id) else {
         let hover_cleared = app.with_global_mut(DockManager::default, |dock, _app| {
-            dock.hover.take().is_some()
+            dock.presentation.hover.take().is_some()
         });
         return (Vec::new(), hover_cleared, false);
     };
@@ -162,7 +162,7 @@ pub(super) fn declarative_resolve_internal_drag_hover<H: UiHost>(
     let dragging = drag.dragging || drag.source_window != window;
     if !dragging {
         let hover_cleared = app.with_global_mut(DockManager::default, |dock, _app| {
-            dock.hover.take().is_some()
+            dock.presentation.hover.take().is_some()
         });
         return (Vec::new(), hover_cleared, false);
     }
@@ -179,7 +179,7 @@ pub(super) fn declarative_resolve_internal_drag_hover<H: UiHost>(
     );
     if tear_off.requested_tear_off {
         let _hover_cleared = app.with_global_mut(DockManager::default, |dock, _app| {
-            dock.hover.take().is_some()
+            dock.presentation.hover.take().is_some()
         });
         return (tear_off.effects, true, true);
     }
@@ -226,7 +226,7 @@ pub(super) fn declarative_resolve_internal_drag_hover<H: UiHost>(
     if std::env::var_os("FRET_DOCK_DRAG_DEBUG").is_some_and(|v| !v.is_empty()) && changed {
         let target = app
             .global::<DockManager>()
-            .and_then(|dock| dock_drop_target_diagnostics(dock.hover.as_ref()));
+            .and_then(|dock| dock_drop_target_diagnostics(dock.presentation.hover.as_ref()));
         tracing::info!(
             window = ?window,
             invert_docking = !dock_previews_enabled,

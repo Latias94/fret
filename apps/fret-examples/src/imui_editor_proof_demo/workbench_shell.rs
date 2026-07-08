@@ -92,8 +92,8 @@ pub(super) fn ensure_dock_graph(app: &mut KernelApp, window: AppWindowId) {
 
 pub(super) fn reset_dock_graph(app: &mut KernelApp, window: AppWindowId) {
     app.with_global_mut(DockManager::default, |dock, _app| {
-        dock.graph.remove_window_root(window);
-        dock.graph.floating_windows_mut(window).clear();
+        dock.workspace.graph.remove_window_root(window);
+        dock.workspace.graph.floating_windows_mut(window).clear();
     });
     ensure_dock_graph_inner(app, window, true);
 }
@@ -128,7 +128,7 @@ fn ensure_dock_graph_inner(app: &mut KernelApp, window: AppWindowId, force: bool
             viewport: None,
         });
 
-        if let Some(panel) = dock.panels.get_mut(&viewport_panel) {
+        if let Some(panel) = dock.panel_mut(&viewport_panel) {
             panel.viewport = if target == fret_core::RenderTargetId::default() {
                 None
             } else {
@@ -141,27 +141,28 @@ fn ensure_dock_graph_inner(app: &mut KernelApp, window: AppWindowId, force: bool
             };
         }
 
-        if !force && dock.graph.window_root(window).is_some() {
+        if !force && dock.workspace.graph.window_root(window).is_some() {
             return;
         }
 
         if single_window_mode_enabled() {
             // In single-window mode we want the "floating window" affordance to be immediately
             // visible without requiring the user to discover the float zone gesture.
-            let tabs_viewport = dock.graph.insert_node(DockNode::Tabs {
+            let tabs_viewport = dock.workspace.graph.insert_node(DockNode::Tabs {
                 tabs: vec![viewport_panel],
                 active: 0,
             });
-            dock.graph.set_window_root(window, tabs_viewport);
+            dock.workspace.graph.set_window_root(window, tabs_viewport);
 
-            let tabs_controls = dock.graph.insert_node(DockNode::Tabs {
+            let tabs_controls = dock.workspace.graph.insert_node(DockNode::Tabs {
                 tabs: vec![controls_panel],
                 active: 0,
             });
-            let floating = dock.graph.insert_node(DockNode::Floating {
+            let floating = dock.workspace.graph.insert_node(DockNode::Floating {
                 child: tabs_controls,
             });
-            dock.graph
+            dock.workspace
+                .graph
                 .floating_windows_mut(window)
                 .push(DockFloatingWindow {
                     floating,
@@ -171,20 +172,20 @@ fn ensure_dock_graph_inner(app: &mut KernelApp, window: AppWindowId, force: bool
                     ),
                 });
         } else {
-            let tabs_viewport = dock.graph.insert_node(DockNode::Tabs {
+            let tabs_viewport = dock.workspace.graph.insert_node(DockNode::Tabs {
                 tabs: vec![viewport_panel],
                 active: 0,
             });
-            let tabs_controls = dock.graph.insert_node(DockNode::Tabs {
+            let tabs_controls = dock.workspace.graph.insert_node(DockNode::Tabs {
                 tabs: vec![controls_panel],
                 active: 0,
             });
-            let root = dock.graph.insert_node(DockNode::Split {
+            let root = dock.workspace.graph.insert_node(DockNode::Split {
                 axis: fret_core::Axis::Vertical,
                 children: vec![tabs_viewport, tabs_controls],
                 fractions: vec![0.7, 0.3],
             });
-            dock.graph.set_window_root(window, root);
+            dock.workspace.graph.set_window_root(window, root);
         }
 
         request_dock_invalidation(app, [window]);

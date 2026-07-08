@@ -95,16 +95,16 @@ pub(super) fn prepare_declarative_frame_paint_state<H: UiHost>(
         .global::<DockManager>()
         .map(|dock| {
             (
-                dock.hover.clone(),
+                dock.presentation.hover.clone(),
                 tab_chrome_paint_inputs(
-                    &dock.graph,
+                    &dock.workspace.graph,
                     &snapshot.layout_all,
                     &tab_widths,
                     &tab_scroll,
                     tab_hover.tab,
                 ),
                 tab_detail_paint_inputs(
-                    &dock.graph,
+                    &dock.workspace.graph,
                     &snapshot.layout_all,
                     &tab_widths,
                     &tab_scroll,
@@ -116,16 +116,16 @@ pub(super) fn prepare_declarative_frame_paint_state<H: UiHost>(
                 ),
                 complex_drop_overlay_paint_inputs(
                     theme,
-                    dock.hover.clone(),
+                    dock.presentation.hover.clone(),
                     window,
-                    &dock.graph,
+                    &dock.workspace.graph,
                     &snapshot.layout_all,
                     settings.split_handle_gap,
                     settings.split_handle_hit_thickness,
                     &tab_scroll,
                     &tab_widths,
                 ),
-                split_handle_paint_inputs(&dock.graph, &snapshot.layout_all),
+                split_handle_paint_inputs(&dock.workspace.graph, &snapshot.layout_all),
                 viewport_surface_paint_inputs(dock, window, &snapshot.layout_all),
             )
         })

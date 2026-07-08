@@ -11,7 +11,7 @@ pub fn recenter_in_window_floatings<H: UiHost>(app: &mut H, window: AppWindowId)
     let bounds = visible_bounds(app, window);
 
     app.with_global_mut(DockManager::default, |dock, _app| {
-        let floatings = dock.graph.floating_windows_mut(window);
+        let floatings = dock.workspace.graph.floating_windows_mut(window);
         for (ix, floating) in floatings.iter_mut().enumerate() {
             let size = floating.rect.size;
             let dx = (ix as f32) * 16.0;

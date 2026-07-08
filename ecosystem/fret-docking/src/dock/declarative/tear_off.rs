@@ -61,18 +61,28 @@ pub(super) fn declarative_allow_tear_off_for_panel<H: UiHost>(
     };
 
     if crate::runtime::is_dock_floating_os_window(app, source_window)
-        && dock.graph.collect_panels_in_window(source_window).len() == 1
+        && dock
+            .workspace
+            .graph
+            .collect_panels_in_window(source_window)
+            .len()
+            == 1
     {
         return false;
     }
 
-    if dock.graph.windows().len() > 1
-        && dock.graph.collect_panels_in_window(source_window).len() == 1
+    if dock.workspace.graph.windows().len() > 1
+        && dock
+            .workspace
+            .graph
+            .collect_panels_in_window(source_window)
+            .len()
+            == 1
     {
         return false;
     }
 
-    let info = dock.panels.get(panel);
+    let info = dock.panel(panel);
     let policy = app
         .global::<DockingPolicyService>()
         .and_then(|service| service.policy());
@@ -83,7 +93,7 @@ pub(super) fn declarative_allow_tear_off_for_panel<H: UiHost>(
         return false;
     }
 
-    if dock.graph.windows().len() <= 1 || allow_multi_window_tear_off {
+    if dock.workspace.graph.windows().len() <= 1 || allow_multi_window_tear_off {
         return true;
     }
 
@@ -159,7 +169,8 @@ pub(super) fn declarative_resolve_tear_off_hover<H: UiHost>(
                 .tear_off_oob_start_frame
                 .is_some_and(|frame| frame != now_frame);
         let disallow_chained_tear_off = app.global::<DockManager>().is_some_and(|dock| {
-            dock.graph.windows().len() > 1 && dock.graph.collect_panels_in_window(window).len() == 1
+            dock.workspace.graph.windows().len() > 1
+                && dock.workspace.graph.collect_panels_in_window(window).len() == 1
         });
         let allow_panel_tear_off = declarative_allow_tear_off_for_panel(
             app,
@@ -248,7 +259,8 @@ pub(super) fn declarative_resolve_tear_off_hover<H: UiHost>(
                     return None;
                 }
                 let dock = app.global::<DockManager>()?;
-                dock.graph
+                dock.workspace
+                    .graph
                     .find_panel_in_window(source_window, &payload.panel)
                     .is_some()
                     .then_some(DeclarativeTearOffRetryTarget::Panel)
@@ -262,7 +274,8 @@ pub(super) fn declarative_resolve_tear_off_hover<H: UiHost>(
                     return None;
                 }
                 let dock = app.global::<DockManager>()?;
-                dock.graph
+                dock.workspace
+                    .graph
                     .find_panel_in_window(source_window, panel)
                     .is_some()
                     .then_some(DeclarativeTearOffRetryTarget::Tabs)

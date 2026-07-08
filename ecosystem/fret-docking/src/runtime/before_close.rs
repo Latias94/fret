@@ -23,21 +23,24 @@ pub(super) fn handle_dock_before_close_window<H: UiHost>(
     });
 
     app.with_global_mut(DockManager::default, |dock, app| {
-        if dock.graph.window_root(closing_window).is_none() {
+        if dock.workspace.graph.window_root(closing_window).is_none() {
             return true;
         }
-        let changed = if let Some(target_tabs) = dock.graph.first_tabs_in_window(target_window) {
-            dock.graph.apply_op(&DockOp::MergeWindowInto {
-                source_window: closing_window,
-                target_window,
-                target_tabs,
-            })
-        } else {
-            dock.graph.apply_op(&DockOp::MoveWindowToEmptyDockSpace {
-                source_window: closing_window,
-                target_window,
-            })
-        };
+        let changed =
+            if let Some(target_tabs) = dock.workspace.graph.first_tabs_in_window(target_window) {
+                dock.workspace.graph.apply_op(&DockOp::MergeWindowInto {
+                    source_window: closing_window,
+                    target_window,
+                    target_tabs,
+                })
+            } else {
+                dock.workspace
+                    .graph
+                    .apply_op(&DockOp::MoveWindowToEmptyDockSpace {
+                        source_window: closing_window,
+                        target_window,
+                    })
+            };
         if !changed {
             return false;
         }

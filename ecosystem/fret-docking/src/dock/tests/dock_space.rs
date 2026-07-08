@@ -58,11 +58,11 @@ fn setup_single_panel_window(
                 context_menu_enabled: true,
             }),
         });
-        let tabs = dock.graph.insert_node(DockNode::Tabs {
+        let tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: vec![panel.clone()],
             active: 0,
         });
-        dock.graph.set_window_root(window, tabs);
+        dock.workspace.graph.set_window_root(window, tabs);
     });
 }
 
@@ -96,35 +96,35 @@ fn declarative_managed_surface_consumes_dock_space_layout_snapshot_for_panel_roo
             color: fret_core::Color::TRANSPARENT,
             viewport: None,
         });
-        let left_tabs = dock.graph.insert_node(DockNode::Tabs {
+        let left_tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: vec![panel_left.clone()],
             active: 0,
         });
-        let right_tabs = dock.graph.insert_node(DockNode::Tabs {
+        let right_tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: vec![panel_right.clone()],
             active: 0,
         });
-        let root = dock.graph.insert_node(DockNode::Split {
+        let root = dock.workspace.graph.insert_node(DockNode::Split {
             axis: fret_core::Axis::Horizontal,
             children: vec![left_tabs, right_tabs],
             fractions: vec![0.35, 0.65],
         });
-        dock.graph.set_window_root(window, root);
+        dock.workspace.graph.set_window_root(window, root);
     });
 
     let expected = {
         let dock = app.global::<DockManager>().expect("dock manager");
-        let root = dock.graph.window_root(window).expect("dock root");
+        let root = dock.workspace.graph.window_root(window).expect("dock root");
         let (_chrome, dock_bounds) = dock_space_regions(bounds);
         let settings = fret_runtime::DockingInteractionSettings::default();
         let layout = compute_layout_map(
-            &dock.graph,
+            &dock.workspace.graph,
             root,
             dock_bounds,
             settings.split_handle_gap,
             settings.split_handle_hit_thickness,
         );
-        active_panel_content_bounds(&dock.graph, &layout)
+        active_panel_content_bounds(&dock.workspace.graph, &layout)
     };
 
     let left_for_bind = panel_left.clone();
@@ -361,35 +361,35 @@ fn public_declarative_dock_space_entry_point_hosts_registry_panel_roots() {
             color: fret_core::Color::TRANSPARENT,
             viewport: None,
         });
-        let left_tabs = dock.graph.insert_node(DockNode::Tabs {
+        let left_tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: vec![panel_left.clone()],
             active: 0,
         });
-        let right_tabs = dock.graph.insert_node(DockNode::Tabs {
+        let right_tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: vec![panel_right.clone()],
             active: 0,
         });
-        let root = dock.graph.insert_node(DockNode::Split {
+        let root = dock.workspace.graph.insert_node(DockNode::Split {
             axis: fret_core::Axis::Horizontal,
             children: vec![left_tabs, right_tabs],
             fractions: vec![0.35, 0.65],
         });
-        dock.graph.set_window_root(window, root);
+        dock.workspace.graph.set_window_root(window, root);
     });
 
     let expected = {
         let dock = app.global::<DockManager>().expect("dock manager");
-        let root = dock.graph.window_root(window).expect("dock root");
+        let root = dock.workspace.graph.window_root(window).expect("dock root");
         let (_chrome, dock_bounds) = dock_space_regions(bounds);
         let settings = fret_runtime::DockingInteractionSettings::default();
         let layout = compute_layout_map(
-            &dock.graph,
+            &dock.workspace.graph,
             root,
             dock_bounds,
             settings.split_handle_gap,
             settings.split_handle_hit_thickness,
         );
-        active_panel_content_bounds(&dock.graph, &layout)
+        active_panel_content_bounds(&dock.workspace.graph, &layout)
     };
 
     let root = declarative::render_root(
@@ -497,36 +497,36 @@ fn public_declarative_dock_space_entry_point_records_panel_root_bounds_for_eleme
             color: fret_core::Color::TRANSPARENT,
             viewport: None,
         });
-        let left_tabs = dock.graph.insert_node(DockNode::Tabs {
+        let left_tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: vec![panel_left.clone()],
             active: 0,
         });
-        let right_tabs = dock.graph.insert_node(DockNode::Tabs {
+        let right_tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: vec![panel_right.clone()],
             active: 0,
         });
-        let split = dock.graph.insert_node(DockNode::Split {
+        let split = dock.workspace.graph.insert_node(DockNode::Split {
             axis: fret_core::Axis::Horizontal,
             children: vec![left_tabs, right_tabs],
             fractions: vec![0.35, 0.65],
         });
-        dock.graph.set_window_root(window, split);
+        dock.workspace.graph.set_window_root(window, split);
         split
     });
 
     let expected = |app: &TestHost| {
         let dock = app.global::<DockManager>().expect("dock manager");
-        let root = dock.graph.window_root(window).expect("dock root");
+        let root = dock.workspace.graph.window_root(window).expect("dock root");
         let (_chrome, dock_bounds) = dock_space_regions(bounds);
         let settings = fret_runtime::DockingInteractionSettings::default();
         let layout = compute_layout_map(
-            &dock.graph,
+            &dock.workspace.graph,
             root,
             dock_bounds,
             settings.split_handle_gap,
             settings.split_handle_hit_thickness,
         );
-        active_panel_content_bounds(&dock.graph, &layout)
+        active_panel_content_bounds(&dock.workspace.graph, &layout)
     };
 
     let render_host =
@@ -629,7 +629,9 @@ fn public_declarative_dock_space_entry_point_records_panel_root_bounds_for_eleme
 
     app.with_global_mut(DockManager::default, |dock, _app| {
         assert!(
-            dock.graph.update_split_fractions(split, vec![0.5, 0.5]),
+            dock.workspace
+                .graph
+                .update_split_fractions(split, vec![0.5, 0.5]),
             "expected split fraction update to succeed"
         );
     });
@@ -1229,11 +1231,11 @@ fn public_declarative_dock_space_entry_point_paints_tab_chrome() {
             color: fret_core::Color::TRANSPARENT,
             viewport: None,
         });
-        let tabs = dock.graph.insert_node(DockNode::Tabs {
+        let tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: vec![panel.clone()],
             active: 0,
         });
-        dock.graph.set_window_root(window, tabs);
+        dock.workspace.graph.set_window_root(window, tabs);
     });
 
     let bounds = Rect::new(
@@ -1334,11 +1336,11 @@ fn public_declarative_dock_space_entry_point_paints_tab_details() {
                 viewport: None,
             });
         }
-        let tabs = dock.graph.insert_node(DockNode::Tabs {
+        let tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: panels,
             active: 0,
         });
-        dock.graph.set_window_root(window, tabs);
+        dock.workspace.graph.set_window_root(window, tabs);
     });
 
     let bounds = Rect::new(
@@ -1439,11 +1441,11 @@ fn public_declarative_dock_space_entry_point_closes_tab_from_close_affordance() 
             color: fret_core::Color::TRANSPARENT,
             viewport: None,
         });
-        let tabs = dock.graph.insert_node(DockNode::Tabs {
+        let tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: vec![panel.clone(), sibling.clone()],
             active: 0,
         });
-        dock.graph.set_window_root(window, tabs);
+        dock.workspace.graph.set_window_root(window, tabs);
     });
 
     let bounds = Rect::new(
@@ -1559,11 +1561,11 @@ fn public_declarative_dock_space_entry_point_handles_overflow_menu_close() {
                 viewport: None,
             });
         }
-        let tabs = dock.graph.insert_node(DockNode::Tabs {
+        let tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: panels,
             active: 0,
         });
-        dock.graph.set_window_root(window, tabs);
+        dock.workspace.graph.set_window_root(window, tabs);
     });
 
     let bounds = Rect::new(
@@ -1720,11 +1722,11 @@ fn public_declarative_dock_space_entry_point_activates_overflow_menu_row() {
                 viewport: None,
             });
         }
-        let tabs = dock.graph.insert_node(DockNode::Tabs {
+        let tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: panels,
             active: 0,
         });
-        dock.graph.set_window_root(window, tabs);
+        dock.workspace.graph.set_window_root(window, tabs);
         tabs
     });
 
@@ -1865,11 +1867,11 @@ fn public_declarative_dock_space_entry_point_scrolls_overflow_menu_with_wheel() 
                 viewport: None,
             });
         }
-        let tabs = dock.graph.insert_node(DockNode::Tabs {
+        let tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: panels,
             active: 0,
         });
-        dock.graph.set_window_root(window, tabs);
+        dock.workspace.graph.set_window_root(window, tabs);
         tabs
     });
 
@@ -2024,11 +2026,11 @@ fn public_declarative_dock_space_entry_point_scrolls_tab_strip_with_wheel() {
                 viewport: None,
             });
         }
-        let tabs = dock.graph.insert_node(DockNode::Tabs {
+        let tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: panels,
             active: 0,
         });
-        dock.graph.set_window_root(window, tabs);
+        dock.workspace.graph.set_window_root(window, tabs);
     });
 
     let bounds = Rect::new(
@@ -2163,11 +2165,11 @@ fn public_declarative_dock_space_entry_point_hovers_tab() {
                 viewport: None,
             });
         }
-        let tabs = dock.graph.insert_node(DockNode::Tabs {
+        let tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: vec![panel_0, panel_1],
             active: 0,
         });
-        dock.graph.set_window_root(window, tabs);
+        dock.workspace.graph.set_window_root(window, tabs);
     });
 
     let bounds = Rect::new(
@@ -2273,11 +2275,11 @@ fn public_declarative_dock_space_entry_point_hovers_tab_overflow_button() {
                 viewport: None,
             });
         }
-        let tabs = dock.graph.insert_node(DockNode::Tabs {
+        let tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: panels,
             active: 0,
         });
-        dock.graph.set_window_root(window, tabs);
+        dock.workspace.graph.set_window_root(window, tabs);
     });
 
     let bounds = Rect::new(
@@ -2375,11 +2377,11 @@ fn public_declarative_dock_space_entry_point_hovers_overflow_menu_row() {
                 viewport: None,
             });
         }
-        let tabs = dock.graph.insert_node(DockNode::Tabs {
+        let tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: panels,
             active: 0,
         });
-        dock.graph.set_window_root(window, tabs);
+        dock.workspace.graph.set_window_root(window, tabs);
     });
 
     let bounds = Rect::new(
@@ -2512,11 +2514,11 @@ fn public_declarative_dock_space_entry_point_starts_tab_drag_after_threshold() {
                 viewport: None,
             });
         }
-        let tabs = dock.graph.insert_node(DockNode::Tabs {
+        let tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: vec![panel_0.clone(), panel_1],
             active: 0,
         });
-        dock.graph.set_window_root(window, tabs);
+        dock.workspace.graph.set_window_root(window, tabs);
     });
 
     let bounds = Rect::new(
@@ -2647,11 +2649,11 @@ fn public_declarative_dock_space_entry_point_respects_tab_drag_threshold() {
             color: fret_core::Color::TRANSPARENT,
             viewport: None,
         });
-        let tabs = dock.graph.insert_node(DockNode::Tabs {
+        let tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: vec![panel],
             active: 0,
         });
-        dock.graph.set_window_root(window, tabs);
+        dock.workspace.graph.set_window_root(window, tabs);
     });
 
     let bounds = Rect::new(
@@ -2779,11 +2781,11 @@ fn public_declarative_dock_space_entry_point_respects_panel_drag_policy() {
             color: fret_core::Color::TRANSPARENT,
             viewport: None,
         });
-        let tabs = dock.graph.insert_node(DockNode::Tabs {
+        let tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: vec![panel],
             active: 0,
         });
-        dock.graph.set_window_root(window, tabs);
+        dock.workspace.graph.set_window_root(window, tabs);
     });
 
     let bounds = Rect::new(
@@ -2899,11 +2901,11 @@ fn public_declarative_dock_space_entry_point_starts_tabs_group_drag_after_thresh
                 viewport: None,
             });
         }
-        let tabs = dock.graph.insert_node(DockNode::Tabs {
+        let tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: vec![panel_0.clone(), panel_1.clone()],
             active: 1,
         });
-        dock.graph.set_window_root(window, tabs);
+        dock.workspace.graph.set_window_root(window, tabs);
         tabs
     });
 
@@ -3046,11 +3048,11 @@ fn public_declarative_dock_space_entry_point_respects_tabs_group_drag_policy() {
             color: fret_core::Color::TRANSPARENT,
             viewport: None,
         });
-        let tabs = dock.graph.insert_node(DockNode::Tabs {
+        let tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: vec![panel],
             active: 0,
         });
-        dock.graph.set_window_root(window, tabs);
+        dock.workspace.graph.set_window_root(window, tabs);
     });
 
     let bounds = Rect::new(
@@ -3172,19 +3174,20 @@ fn public_declarative_dock_space_entry_point_paints_floating_chrome() {
             color: fret_core::Color::TRANSPARENT,
             viewport: None,
         });
-        let main_tabs = dock.graph.insert_node(DockNode::Tabs {
+        let main_tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: vec![main_panel.clone()],
             active: 0,
         });
-        let floating_tabs = dock.graph.insert_node(DockNode::Tabs {
+        let floating_tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: vec![floating_panel.clone()],
             active: 0,
         });
-        let floating = dock.graph.insert_node(DockNode::Floating {
+        let floating = dock.workspace.graph.insert_node(DockNode::Floating {
             child: floating_tabs,
         });
-        dock.graph.set_window_root(window, main_tabs);
-        dock.graph
+        dock.workspace.graph.set_window_root(window, main_tabs);
+        dock.workspace
+            .graph
             .floating_windows_mut(window)
             .push(fret_core::DockFloatingWindow {
                 floating,
@@ -3302,19 +3305,20 @@ fn public_declarative_dock_space_entry_point_hovers_floating_chrome() {
             color: fret_core::Color::TRANSPARENT,
             viewport: None,
         });
-        let main_tabs = dock.graph.insert_node(DockNode::Tabs {
+        let main_tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: vec![main_panel.clone()],
             active: 0,
         });
-        let floating_tabs = dock.graph.insert_node(DockNode::Tabs {
+        let floating_tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: vec![floating_panel.clone()],
             active: 0,
         });
-        let floating = dock.graph.insert_node(DockNode::Floating {
+        let floating = dock.workspace.graph.insert_node(DockNode::Floating {
             child: floating_tabs,
         });
-        dock.graph.set_window_root(window, main_tabs);
-        dock.graph
+        dock.workspace.graph.set_window_root(window, main_tabs);
+        dock.workspace
+            .graph
             .floating_windows_mut(window)
             .push(fret_core::DockFloatingWindow {
                 floating,
@@ -3486,19 +3490,20 @@ fn public_declarative_dock_space_entry_point_closes_floating_chrome() {
             color: fret_core::Color::TRANSPARENT,
             viewport: None,
         });
-        let main_tabs = dock.graph.insert_node(DockNode::Tabs {
+        let main_tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: vec![main_panel.clone()],
             active: 0,
         });
-        let floating_tabs = dock.graph.insert_node(DockNode::Tabs {
+        let floating_tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: vec![floating_panel.clone()],
             active: 0,
         });
-        let floating = dock.graph.insert_node(DockNode::Floating {
+        let floating = dock.workspace.graph.insert_node(DockNode::Floating {
             child: floating_tabs,
         });
-        dock.graph.set_window_root(window, main_tabs);
-        dock.graph
+        dock.workspace.graph.set_window_root(window, main_tabs);
+        dock.workspace
+            .graph
             .floating_windows_mut(window)
             .push(fret_core::DockFloatingWindow {
                 floating,
@@ -3640,19 +3645,20 @@ fn public_declarative_dock_space_entry_point_drags_floating_title_bar() {
             color: fret_core::Color::TRANSPARENT,
             viewport: None,
         });
-        let main_tabs = dock.graph.insert_node(DockNode::Tabs {
+        let main_tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: vec![main_panel.clone()],
             active: 0,
         });
-        let floating_tabs = dock.graph.insert_node(DockNode::Tabs {
+        let floating_tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: vec![floating_panel.clone()],
             active: 0,
         });
-        let floating = dock.graph.insert_node(DockNode::Floating {
+        let floating = dock.workspace.graph.insert_node(DockNode::Floating {
             child: floating_tabs,
         });
-        dock.graph.set_window_root(window, main_tabs);
-        dock.graph
+        dock.workspace.graph.set_window_root(window, main_tabs);
+        dock.workspace
+            .graph
             .floating_windows_mut(window)
             .push(fret_core::DockFloatingWindow {
                 floating,
@@ -3803,19 +3809,20 @@ fn public_declarative_dock_space_entry_point_merges_floating_title_bar_drag_on_c
             color: fret_core::Color::TRANSPARENT,
             viewport: None,
         });
-        let main_tabs = dock.graph.insert_node(DockNode::Tabs {
+        let main_tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: vec![main_panel.clone()],
             active: 0,
         });
-        let floating_tabs = dock.graph.insert_node(DockNode::Tabs {
+        let floating_tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: vec![floating_panel.clone()],
             active: 0,
         });
-        let floating = dock.graph.insert_node(DockNode::Floating {
+        let floating = dock.workspace.graph.insert_node(DockNode::Floating {
             child: floating_tabs,
         });
-        dock.graph.set_window_root(window, main_tabs);
-        dock.graph
+        dock.workspace.graph.set_window_root(window, main_tabs);
+        dock.workspace
+            .graph
             .floating_windows_mut(window)
             .push(fret_core::DockFloatingWindow {
                 floating,
@@ -3882,7 +3889,7 @@ fn public_declarative_dock_space_entry_point_merges_floating_title_bar_drag_on_c
 
     let hover = app
         .global::<DockManager>()
-        .and_then(|dock| dock.hover.clone());
+        .and_then(|dock| dock.presentation.hover.clone());
     assert!(
         matches!(
             hover,
@@ -3926,7 +3933,7 @@ fn public_declarative_dock_space_entry_point_merges_floating_title_bar_drag_on_c
     );
     let hover_after = app
         .global::<DockManager>()
-        .and_then(|dock| dock.hover.clone());
+        .and_then(|dock| dock.presentation.hover.clone());
     assert!(
         hover_after.is_none(),
         "expected declarative floating title-bar drop to clear hover, got: {hover_after:?}"
@@ -3973,11 +3980,11 @@ fn public_declarative_dock_space_entry_point_paints_drag_payload_ghost() {
             color: fret_core::Color::TRANSPARENT,
             viewport: None,
         });
-        let tabs = dock.graph.insert_node(DockNode::Tabs {
+        let tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: vec![panel.clone()],
             active: 0,
         });
-        dock.graph.set_window_root(window, tabs);
+        dock.workspace.graph.set_window_root(window, tabs);
     });
 
     app.begin_cross_window_drag_with_kind(
@@ -4083,12 +4090,12 @@ fn public_declarative_dock_space_entry_point_paints_center_drop_overlay() {
             color: fret_core::Color::TRANSPARENT,
             viewport: None,
         });
-        let target_tabs = dock.graph.insert_node(DockNode::Tabs {
+        let target_tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: vec![target_panel.clone()],
             active: 0,
         });
-        dock.graph.set_window_root(window, target_tabs);
-        dock.hover = Some(DockDropTarget::Dock(HoverTarget {
+        dock.workspace.graph.set_window_root(window, target_tabs);
+        dock.presentation.hover = Some(DockDropTarget::Dock(HoverTarget {
             tabs: target_tabs,
             root: target_tabs,
             leaf_tabs: target_tabs,
@@ -4213,12 +4220,12 @@ fn public_declarative_dock_space_entry_point_paints_drop_hint_pads() {
             color: fret_core::Color::TRANSPARENT,
             viewport: None,
         });
-        let target_tabs = dock.graph.insert_node(DockNode::Tabs {
+        let target_tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: vec![target_panel.clone()],
             active: 0,
         });
-        dock.graph.set_window_root(window, target_tabs);
-        dock.hover = Some(DockDropTarget::Dock(HoverTarget {
+        dock.workspace.graph.set_window_root(window, target_tabs);
+        dock.presentation.hover = Some(DockDropTarget::Dock(HoverTarget {
             tabs: target_tabs,
             root: target_tabs,
             leaf_tabs: target_tabs,
@@ -4328,20 +4335,20 @@ fn public_declarative_dock_space_entry_point_paints_edge_drop_preview_slot() {
     );
 
     let (root_split, target_tabs) = app.with_global_mut(DockManager::default, |dock, _app| {
-        let left_tabs = dock.graph.insert_node(DockNode::Tabs {
+        let left_tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: vec![PanelKey::new("demo.public.declarative.edge.left")],
             active: 0,
         });
-        let right_tabs = dock.graph.insert_node(DockNode::Tabs {
+        let right_tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: vec![PanelKey::new("demo.public.declarative.edge.right")],
             active: 0,
         });
-        let split = dock.graph.insert_node(DockNode::Split {
+        let split = dock.workspace.graph.insert_node(DockNode::Split {
             axis: fret_core::Axis::Horizontal,
             children: vec![left_tabs, right_tabs],
             fractions: vec![0.4, 0.6],
         });
-        dock.graph.set_window_root(window, split);
+        dock.workspace.graph.set_window_root(window, split);
 
         for (key, title) in [
             (PanelKey::new("demo.public.declarative.edge.left"), "Left"),
@@ -4354,7 +4361,7 @@ fn public_declarative_dock_space_entry_point_paints_edge_drop_preview_slot() {
             });
         }
 
-        dock.hover = Some(DockDropTarget::Dock(HoverTarget {
+        dock.presentation.hover = Some(DockDropTarget::Dock(HoverTarget {
             tabs: right_tabs,
             root: split,
             leaf_tabs: right_tabs,
@@ -4376,7 +4383,7 @@ fn public_declarative_dock_space_entry_point_paints_edge_drop_preview_slot() {
         let dock = app.global::<DockManager>().expect("expected dock manager");
         let (_chrome, dock_bounds) = dock_space_regions(bounds);
         let layout = compute_layout_map(
-            &dock.graph,
+            &dock.workspace.graph,
             root_split,
             dock_bounds,
             settings.split_handle_gap,
@@ -4391,12 +4398,13 @@ fn public_declarative_dock_space_entry_point_paints_edge_drop_preview_slot() {
             insert_index,
             ..
         }) = dock
+            .workspace
             .graph
             .edge_dock_decision(window, target_tabs, DropZone::Left)
         else {
             panic!("expected insert-into-split decision");
         };
-        let (axis, children_len, mut next_fractions) = match dock.graph.node(root_split) {
+        let (axis, children_len, mut next_fractions) = match dock.workspace.graph.node(root_split) {
             Some(DockNode::Split {
                 axis,
                 children,
@@ -4494,14 +4502,14 @@ fn public_declarative_dock_space_entry_point_paints_tab_insert_marker() {
         },
     );
     app.with_global_mut(DockManager::default, |dock, _app| {
-        let tabs = dock.graph.insert_node(DockNode::Tabs {
+        let tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: vec![
                 PanelKey::new("demo.public.declarative.marker.left"),
                 PanelKey::new("demo.public.declarative.marker.right"),
             ],
             active: 0,
         });
-        dock.graph.set_window_root(window, tabs);
+        dock.workspace.graph.set_window_root(window, tabs);
         for (key, title) in [
             (PanelKey::new("demo.public.declarative.marker.left"), "Left"),
             (
@@ -4515,7 +4523,7 @@ fn public_declarative_dock_space_entry_point_paints_tab_insert_marker() {
                 viewport: None,
             });
         }
-        dock.hover = Some(DockDropTarget::Dock(HoverTarget {
+        dock.presentation.hover = Some(DockDropTarget::Dock(HoverTarget {
             tabs,
             root: tabs,
             leaf_tabs: tabs,
@@ -4616,12 +4624,12 @@ fn public_declarative_dock_space_entry_point_paints_tab_insert_preview_title() {
             color: fret_core::Color::TRANSPARENT,
             viewport: None,
         });
-        let target_tabs = dock.graph.insert_node(DockNode::Tabs {
+        let target_tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: vec![target_panel.clone()],
             active: 0,
         });
-        dock.graph.set_window_root(window, target_tabs);
-        dock.hover = Some(DockDropTarget::Dock(HoverTarget {
+        dock.workspace.graph.set_window_root(window, target_tabs);
+        dock.presentation.hover = Some(DockDropTarget::Dock(HoverTarget {
             tabs: target_tabs,
             root: target_tabs,
             leaf_tabs: target_tabs,
@@ -4743,11 +4751,11 @@ fn public_declarative_dock_space_entry_point_handles_focus_requested_panel_comma
             color: fret_core::Color::TRANSPARENT,
             viewport: None,
         });
-        let tabs = dock.graph.insert_node(DockNode::Tabs {
+        let tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: vec![panel_left.clone(), panel_right.clone()],
             active: 0,
         });
-        dock.graph.set_window_root(window, tabs);
+        dock.workspace.graph.set_window_root(window, tabs);
     });
 
     let bounds = Rect::new(
@@ -4850,11 +4858,11 @@ fn public_declarative_dock_space_entry_point_installs_internal_drag_route_anchor
             color: fret_core::Color::TRANSPARENT,
             viewport: None,
         });
-        let tabs = dock.graph.insert_node(DockNode::Tabs {
+        let tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: vec![panel.clone()],
             active: 0,
         });
-        dock.graph.set_window_root(window, tabs);
+        dock.workspace.graph.set_window_root(window, tabs);
     });
 
     let bounds = Rect::new(
@@ -4943,12 +4951,12 @@ fn public_declarative_dock_space_entry_point_clears_hover_on_internal_drag_drop_
             color: fret_core::Color::TRANSPARENT,
             viewport: None,
         });
-        let tabs = dock.graph.insert_node(DockNode::Tabs {
+        let tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: vec![panel.clone()],
             active: 0,
         });
-        dock.graph.set_window_root(window, tabs);
-        dock.hover = Some(DockDropTarget::Float { window });
+        dock.workspace.graph.set_window_root(window, tabs);
+        dock.presentation.hover = Some(DockDropTarget::Float { window });
     });
 
     let bounds = Rect::new(
@@ -4987,7 +4995,7 @@ fn public_declarative_dock_space_entry_point_clears_hover_on_internal_drag_drop_
 
     let hover = app
         .global::<DockManager>()
-        .and_then(|dock| dock.hover.clone());
+        .and_then(|dock| dock.presentation.hover.clone());
     assert!(
         hover.is_none(),
         "declarative dock host should clear stale hover on internal drag drop, got: {hover:?}"
@@ -5038,20 +5046,20 @@ fn public_declarative_dock_space_entry_point_resolves_internal_drag_over_outer_h
                 viewport: None,
             });
         }
-        let left = dock.graph.insert_node(DockNode::Tabs {
+        let left = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: vec![left_panel.clone()],
             active: 0,
         });
-        let right = dock.graph.insert_node(DockNode::Tabs {
+        let right = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: vec![right_panel.clone()],
             active: 0,
         });
-        let split = dock.graph.insert_node(DockNode::Split {
+        let split = dock.workspace.graph.insert_node(DockNode::Split {
             axis: fret_core::Axis::Horizontal,
             children: vec![left, right],
             fractions: vec![0.5, 0.5],
         });
-        dock.graph.set_window_root(window, split);
+        dock.workspace.graph.set_window_root(window, split);
         split
     });
 
@@ -5118,7 +5126,7 @@ fn public_declarative_dock_space_entry_point_resolves_internal_drag_over_outer_h
 
     let hover = app
         .global::<DockManager>()
-        .and_then(|dock| dock.hover.clone());
+        .and_then(|dock| dock.presentation.hover.clone());
     assert!(
         matches!(
             hover,
@@ -5177,11 +5185,11 @@ fn public_declarative_dock_space_entry_point_drops_panel_on_inner_left_hint_rect
                 viewport: None,
             });
         }
-        let tabs = dock.graph.insert_node(DockNode::Tabs {
+        let tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: vec![left_panel.clone(), right_panel.clone()],
             active: 0,
         });
-        dock.graph.set_window_root(window, tabs);
+        dock.workspace.graph.set_window_root(window, tabs);
         tabs
     });
 
@@ -5280,16 +5288,21 @@ fn public_declarative_dock_space_entry_point_drops_panel_on_inner_left_hint_rect
 
     app.with_global_mut(DockManager::default, |dock, _app| {
         let applied = dock
+            .workspace
             .graph
             .apply_op_checked(&op)
             .expect("apply must succeed");
         assert!(applied);
 
-        let root = dock.graph.window_root(window).expect("window root exists");
-        let Some(DockNode::Split { axis, children, .. }) = dock.graph.node(root) else {
+        let root = dock
+            .workspace
+            .graph
+            .window_root(window)
+            .expect("window root exists");
+        let Some(DockNode::Split { axis, children, .. }) = dock.workspace.graph.node(root) else {
             panic!(
                 "expected root to become a split after declarative left docking, got: {:?}",
-                dock.graph.node(root)
+                dock.workspace.graph.node(root)
             );
         };
         assert_eq!(*axis, fret_core::Axis::Horizontal);
@@ -5297,12 +5310,12 @@ fn public_declarative_dock_space_entry_point_drops_panel_on_inner_left_hint_rect
 
         let left = children[0];
         let right = children[1];
-        let Some(DockNode::Tabs { tabs, .. }) = dock.graph.node(left) else {
+        let Some(DockNode::Tabs { tabs, .. }) = dock.workspace.graph.node(left) else {
             panic!("expected left child tabs");
         };
         let Some(DockNode::Tabs {
             tabs: right_tabs, ..
-        }) = dock.graph.node(right)
+        }) = dock.workspace.graph.node(right)
         else {
             panic!("expected right child tabs");
         };
@@ -5361,11 +5374,11 @@ impl DeclarativeTabDropHarness {
                     viewport: None,
                 });
             }
-            let tabs = dock.graph.insert_node(DockNode::Tabs {
+            let tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
                 tabs: panels,
                 active: 0,
             });
-            dock.graph.set_window_root(window, tabs);
+            dock.workspace.graph.set_window_root(window, tabs);
             (tabs, dragged_panel)
         });
 
@@ -5450,7 +5463,7 @@ impl DeclarativeTabDropHarness {
         let tab_count = self
             .app
             .global::<DockManager>()
-            .and_then(|dock| match dock.graph.node(self.tabs_node) {
+            .and_then(|dock| match dock.workspace.graph.node(self.tabs_node) {
                 Some(DockNode::Tabs { tabs, .. }) => Some(tabs.len()),
                 _ => None,
             })
@@ -5562,12 +5575,14 @@ fn public_declarative_dock_space_entry_point_tab_drop_reorders_tabs_when_move_op
         .app
         .with_global_mut(DockManager::default, |dock, _app| {
             assert!(
-                dock.graph
+                dock.workspace
+                    .graph
                     .apply_op_checked(&op)
                     .expect("apply must succeed"),
                 "expected emitted tab-drop op to mutate the graph"
             );
-            let Some(DockNode::Tabs { tabs, .. }) = dock.graph.node(harness.tabs_node) else {
+            let Some(DockNode::Tabs { tabs, .. }) = dock.workspace.graph.node(harness.tabs_node)
+            else {
                 panic!("expected target tabs node to remain tabs");
             };
             assert_eq!(
@@ -5649,11 +5664,14 @@ fn public_declarative_dock_space_entry_point_auto_scrolls_tab_bar_during_dock_dr
                 viewport: None,
             });
         }
-        let tabs_node = dock.graph.insert_node(DockNode::Tabs { tabs, active: 0 });
-        dock.graph.set_window_root(window, tabs_node);
-        dock.panels.insert(
-            PanelKey::new("demo.public.declarative.auto-scroll.dragged"),
-            crate::DockPanel {
+        let tabs_node = dock
+            .workspace
+            .graph
+            .insert_node(DockNode::Tabs { tabs, active: 0 });
+        dock.workspace.graph.set_window_root(window, tabs_node);
+        dock.ensure_panel(
+            &PanelKey::new("demo.public.declarative.auto-scroll.dragged"),
+            || crate::DockPanel {
                 title: "Dragged".to_string(),
                 color: fret_core::Color::TRANSPARENT,
                 viewport: None,
@@ -5726,7 +5744,7 @@ fn public_declarative_dock_space_entry_point_auto_scrolls_tab_bar_during_dock_dr
 
     let first_ix = match app
         .global::<DockManager>()
-        .and_then(|dock| dock.hover.clone())
+        .and_then(|dock| dock.presentation.hover.clone())
     {
         Some(DockDropTarget::Dock(target)) => {
             assert_eq!(target.tabs, tabs_node);
@@ -5750,7 +5768,7 @@ fn public_declarative_dock_space_entry_point_auto_scrolls_tab_bar_during_dock_dr
         );
         if let Some(DockDropTarget::Dock(target)) = app
             .global::<DockManager>()
-            .and_then(|dock| dock.hover.clone())
+            .and_then(|dock| dock.presentation.hover.clone())
         {
             ix_after_scroll = target.insert_index.expect("expected insert index");
         }
@@ -5798,11 +5816,11 @@ fn public_declarative_dock_space_entry_point_requests_tear_off_after_stable_oob_
             color: fret_core::Color::TRANSPARENT,
             viewport: None,
         });
-        let tabs = dock.graph.insert_node(DockNode::Tabs {
+        let tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: vec![panel.clone()],
             active: 0,
         });
-        dock.graph.set_window_root(window, tabs);
+        dock.workspace.graph.set_window_root(window, tabs);
     });
 
     let bounds = Rect::new(
@@ -5936,11 +5954,11 @@ fn public_declarative_dock_space_entry_point_publishes_diagnostics_and_liveness(
             color: fret_core::Color::TRANSPARENT,
             viewport: None,
         });
-        let tabs = dock.graph.insert_node(DockNode::Tabs {
+        let tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: vec![panel.clone()],
             active: 0,
         });
-        dock.graph.set_window_root(window, tabs);
+        dock.workspace.graph.set_window_root(window, tabs);
     });
 
     app.begin_cross_window_drag_with_kind(
@@ -6057,11 +6075,11 @@ fn public_declarative_dock_space_entry_point_syncs_viewport_layouts() {
                 context_menu_enabled: true,
             }),
         });
-        let tabs = dock.graph.insert_node(DockNode::Tabs {
+        let tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: vec![panel.clone()],
             active: 0,
         });
-        dock.graph.set_window_root(window, tabs);
+        dock.workspace.graph.set_window_root(window, tabs);
         dock.set_viewport_content_rect(
             window,
             stale_target,
@@ -6151,11 +6169,11 @@ fn public_declarative_dock_space_entry_point_paints_viewport_surface() {
                 context_menu_enabled: true,
             }),
         });
-        let tabs = dock.graph.insert_node(DockNode::Tabs {
+        let tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: vec![panel.clone()],
             active: 0,
         });
-        dock.graph.set_window_root(window, tabs);
+        dock.workspace.graph.set_window_root(window, tabs);
     });
 
     let bounds = Rect::new(
@@ -6256,11 +6274,11 @@ fn render_public_declarative_viewport_host(
                 context_menu_enabled: true,
             }),
         });
-        let tabs = dock.graph.insert_node(DockNode::Tabs {
+        let tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: vec![panel.clone()],
             active: 0,
         });
-        dock.graph.set_window_root(window, tabs);
+        dock.workspace.graph.set_window_root(window, tabs);
     });
 
     let bounds = Rect::new(

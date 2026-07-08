@@ -56,7 +56,7 @@ pub(in crate::dock) fn viewport_surface_paint_inputs(
 ) -> Vec<ViewportSurfacePaintInput> {
     let mut inputs = Vec::new();
     for (&node_id, &rect) in layout.iter() {
-        let Some(DockNode::Tabs { tabs, active }) = dock.graph.node(node_id) else {
+        let Some(DockNode::Tabs { tabs, active }) = dock.workspace.graph.node(node_id) else {
             continue;
         };
         let Some(panel_key) = tabs.get(*active) else {

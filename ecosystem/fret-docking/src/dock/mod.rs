@@ -33,7 +33,9 @@ pub(crate) use declarative::{
 };
 #[cfg(test)]
 pub(crate) use declarative::{dock_panel_element, dock_space_element};
-pub use manager::{ActivatePanelOptions, DockManager};
+pub use manager::{
+    ActivatePanelOptions, DockManager, DockPanelCatalog, DockPanelCatalogError, DockWorkspace,
+};
 #[cfg(test)]
 pub(crate) use services::DockPanelContentService;
 pub(crate) use services::{DockViewportOverlayHooksService, DockingPolicyService};

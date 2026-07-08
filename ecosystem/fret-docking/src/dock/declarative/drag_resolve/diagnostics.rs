@@ -30,11 +30,11 @@ pub(super) fn capture_drag_drop_diagnostics<H: UiHost>(
     candidates: Vec<fret_runtime::DockDropCandidateRectDiagnostics>,
 ) -> DragResolveDiagnosticsCapture {
     app.with_global_mut(DockManager::default, |dock, _app| {
-        dock.hover = None;
+        dock.presentation.hover = None;
         let graph_stats =
-            diagnostics_enabled.then(|| dock_graph_stats_for_window(&dock.graph, window));
-        let graph_signature =
-            diagnostics_enabled.then(|| dock_graph_signature_for_window(&dock.graph, window));
+            diagnostics_enabled.then(|| dock_graph_stats_for_window(&dock.workspace.graph, window));
+        let graph_signature = diagnostics_enabled
+            .then(|| dock_graph_signature_for_window(&dock.workspace.graph, window));
         let dock_drop_resolve = diagnostics_enabled.then(|| {
             compute_dock_drop_resolve_diagnostics(
                 pointer_id,
@@ -42,7 +42,7 @@ pub(super) fn capture_drag_drop_diagnostics<H: UiHost>(
                 bounds,
                 dock_bounds,
                 source,
-                &dock.graph,
+                &dock.workspace.graph,
                 window,
                 target,
                 candidates,
@@ -70,12 +70,12 @@ pub(super) fn update_hover_and_capture_diagnostics<H: UiHost>(
     candidates: Vec<fret_runtime::DockDropCandidateRectDiagnostics>,
 ) -> (bool, DragResolveDiagnosticsCapture) {
     app.with_global_mut(DockManager::default, |dock, _app| {
-        let changed = dock.hover != hover;
-        dock.hover = hover;
+        let changed = dock.presentation.hover != hover;
+        dock.presentation.hover = hover;
         let graph_stats =
-            diagnostics_enabled.then(|| dock_graph_stats_for_window(&dock.graph, window));
-        let graph_signature =
-            diagnostics_enabled.then(|| dock_graph_signature_for_window(&dock.graph, window));
+            diagnostics_enabled.then(|| dock_graph_stats_for_window(&dock.workspace.graph, window));
+        let graph_signature = diagnostics_enabled
+            .then(|| dock_graph_signature_for_window(&dock.workspace.graph, window));
         let dock_drop_resolve = diagnostics_enabled.then(|| {
             compute_dock_drop_resolve_diagnostics(
                 pointer_id,
@@ -83,9 +83,9 @@ pub(super) fn update_hover_and_capture_diagnostics<H: UiHost>(
                 bounds,
                 dock_bounds,
                 source,
-                &dock.graph,
+                &dock.workspace.graph,
                 window,
-                dock.hover.as_ref(),
+                dock.presentation.hover.as_ref(),
                 candidates,
             )
         });

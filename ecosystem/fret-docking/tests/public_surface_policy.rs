@@ -276,8 +276,38 @@ fn public_root_legacy_low_level_surface_is_removed_after_dock_surface_lands() {
         "low-level graph access should be explicit under `advanced`, not taught as the common root"
     );
     assert!(
-        manager.contains("pub graph: DockGraph") && manager.contains("pub panels: HashMap"),
-        "`DockManager` still exposes mixed state until U4 moves it behind a workspace authority"
+        manager.contains("pub workspace: DockWorkspace")
+            && manager.contains("pub(crate) presentation: DockPresentationState"),
+        "`DockManager` should coordinate explicit workspace and transient presentation owners"
+    );
+    let manager_struct = manager
+        .split("pub struct DockManager")
+        .nth(1)
+        .and_then(|rest| rest.split("}").next())
+        .expect("DockManager struct is present");
+    for mixed_field in [
+        "pub graph: DockGraph",
+        "pub panels: HashMap",
+        "hover:",
+        "viewport_layouts:",
+        "dock_space_nodes:",
+    ] {
+        assert!(
+            !manager_struct.contains(mixed_field),
+            "`DockManager` must not expose old mixed state field `{mixed_field}` directly"
+        );
+    }
+    assert!(
+        manager.contains("pub struct DockWorkspace")
+            && manager.contains("pub struct DockPanelCatalog")
+            && manager.contains("DuplicatePanelKey"),
+        "durable graph and panel catalog authority should live behind explicit workspace/catalog types"
+    );
+    assert!(
+        lib.contains("DockWorkspace")
+            && lib.contains("DockPanelCatalog")
+            && lib.contains("DockPanelCatalogError"),
+        "advanced low-level access should name workspace/catalog types explicitly"
     );
     assert!(
         !facade.contains("pub struct DockingRuntime") && !facade.contains("impl DockingRuntime"),

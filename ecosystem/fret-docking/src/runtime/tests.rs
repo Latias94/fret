@@ -50,11 +50,11 @@ fn request_float_creates_window_and_window_created_moves_panel() {
                 viewport: None,
             },
         );
-        let tabs = dock.graph.insert_node(DockNode::Tabs {
+        let tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: vec![panel.clone()],
             active: 0,
         });
-        dock.graph.set_window_root(window_a, tabs);
+        dock.workspace.graph.set_window_root(window_a, tabs);
     });
 
     let op = DockOp::RequestFloatPanelToNewWindow {
@@ -97,11 +97,17 @@ fn request_float_creates_window_and_window_created_moves_panel() {
 
     let dock = app.global::<DockManager>().expect("dock manager exists");
     assert!(
-        dock.graph.find_panel_in_window(window_b, &panel).is_some(),
+        dock.workspace
+            .graph
+            .find_panel_in_window(window_b, &panel)
+            .is_some(),
         "expected panel to be floated into the new window"
     );
     assert!(
-        dock.graph.find_panel_in_window(window_a, &panel).is_none(),
+        dock.workspace
+            .graph
+            .find_panel_in_window(window_a, &panel)
+            .is_none(),
         "expected panel to be removed from the source window"
     );
 }
@@ -174,11 +180,11 @@ fn request_float_degrades_to_in_window_when_multi_window_is_disabled() {
                 viewport: None,
             },
         );
-        let tabs = dock.graph.insert_node(DockNode::Tabs {
+        let tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: vec![panel.clone()],
             active: 0,
         });
-        dock.graph.set_window_root(window_a, tabs);
+        dock.workspace.graph.set_window_root(window_a, tabs);
     });
 
     let op = DockOp::RequestFloatPanelToNewWindow {
@@ -197,9 +203,12 @@ fn request_float_degrades_to_in_window_when_multi_window_is_disabled() {
     );
 
     let dock = app.global::<DockManager>().expect("dock manager exists");
-    assert_eq!(dock.graph.floating_windows(window_a).len(), 1);
+    assert_eq!(dock.workspace.graph.floating_windows(window_a).len(), 1);
     assert!(
-        dock.graph.find_panel_in_window(window_a, &panel).is_some(),
+        dock.workspace
+            .graph
+            .find_panel_in_window(window_a, &panel)
+            .is_some(),
         "expected panel to remain in window, inside a floating container"
     );
 }
@@ -220,11 +229,11 @@ fn request_float_tabs_degrades_to_in_window_when_multi_window_is_disabled() {
     let source_tabs = app.with_global_mut(DockManager::default, |dock, _app| {
         dock.insert_panel(panel_a.clone(), test_panel("A"));
         dock.insert_panel(panel_b.clone(), test_panel("B"));
-        let tabs = dock.graph.insert_node(DockNode::Tabs {
+        let tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: vec![panel_a.clone(), panel_b.clone()],
             active: 1,
         });
-        dock.graph.set_window_root(window_a, tabs);
+        dock.workspace.graph.set_window_root(window_a, tabs);
         tabs
     });
 
@@ -245,9 +254,9 @@ fn request_float_tabs_degrades_to_in_window_when_multi_window_is_disabled() {
     );
 
     let dock = app.global::<DockManager>().expect("dock manager exists");
-    assert_eq!(dock.graph.floating_windows(window_a).len(), 1);
+    assert_eq!(dock.workspace.graph.floating_windows(window_a).len(), 1);
     assert_eq!(
-        dock.graph.collect_panels_in_window(window_a),
+        dock.workspace.graph.collect_panels_in_window(window_a),
         vec![panel_a, panel_b],
         "expected all dragged tabs to remain in window inside a floating container"
     );
@@ -274,11 +283,11 @@ fn request_float_degrades_to_in_window_when_tear_off_is_disabled() {
                 viewport: None,
             },
         );
-        let tabs = dock.graph.insert_node(DockNode::Tabs {
+        let tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: vec![panel.clone()],
             active: 0,
         });
-        dock.graph.set_window_root(window_a, tabs);
+        dock.workspace.graph.set_window_root(window_a, tabs);
     });
 
     let op = DockOp::RequestFloatPanelToNewWindow {
@@ -297,9 +306,12 @@ fn request_float_degrades_to_in_window_when_tear_off_is_disabled() {
     );
 
     let dock = app.global::<DockManager>().expect("dock manager exists");
-    assert_eq!(dock.graph.floating_windows(window_a).len(), 1);
+    assert_eq!(dock.workspace.graph.floating_windows(window_a).len(), 1);
     assert!(
-        dock.graph.find_panel_in_window(window_a, &panel).is_some(),
+        dock.workspace
+            .graph
+            .find_panel_in_window(window_a, &panel)
+            .is_some(),
         "expected panel to remain in window, inside a floating container"
     );
 }
@@ -326,11 +338,11 @@ fn request_float_degrades_to_in_window_when_window_hover_detection_is_none() {
                 viewport: None,
             },
         );
-        let tabs = dock.graph.insert_node(DockNode::Tabs {
+        let tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: vec![panel.clone()],
             active: 0,
         });
-        dock.graph.set_window_root(window_a, tabs);
+        dock.workspace.graph.set_window_root(window_a, tabs);
     });
 
     let op = DockOp::RequestFloatPanelToNewWindow {
@@ -349,9 +361,12 @@ fn request_float_degrades_to_in_window_when_window_hover_detection_is_none() {
     );
 
     let dock = app.global::<DockManager>().expect("dock manager exists");
-    assert_eq!(dock.graph.floating_windows(window_a).len(), 1);
+    assert_eq!(dock.workspace.graph.floating_windows(window_a).len(), 1);
     assert!(
-        dock.graph.find_panel_in_window(window_a, &panel).is_some(),
+        dock.workspace
+            .graph
+            .find_panel_in_window(window_a, &panel)
+            .is_some(),
         "expected panel to remain in window, inside a floating container"
     );
 }
@@ -374,11 +389,11 @@ fn request_float_is_idempotent_until_window_created() {
                 viewport: None,
             },
         );
-        let tabs = dock.graph.insert_node(DockNode::Tabs {
+        let tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: vec![panel.clone()],
             active: 0,
         });
-        dock.graph.set_window_root(window_a, tabs);
+        dock.workspace.graph.set_window_root(window_a, tabs);
     });
 
     let op = DockOp::RequestFloatPanelToNewWindow {
@@ -410,11 +425,11 @@ fn request_float_tabs_is_idempotent_until_window_created() {
     let source_tabs = app.with_global_mut(DockManager::default, |dock, _app| {
         dock.insert_panel(panel_a.clone(), test_panel("A"));
         dock.insert_panel(panel_b.clone(), test_panel("B"));
-        let tabs = dock.graph.insert_node(DockNode::Tabs {
+        let tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: vec![panel_a.clone(), panel_b.clone()],
             active: 1,
         });
-        dock.graph.set_window_root(window_a, tabs);
+        dock.workspace.graph.set_window_root(window_a, tabs);
         tabs
     });
 
@@ -449,11 +464,11 @@ fn expired_pending_request_allows_later_float_request() {
 
     app.with_global_mut(DockManager::default, |dock, _app| {
         dock.insert_panel(panel.clone(), test_panel("Panel"));
-        let tabs = dock.graph.insert_node(DockNode::Tabs {
+        let tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: vec![panel.clone()],
             active: 0,
         });
-        dock.graph.set_window_root(window_a, tabs);
+        dock.workspace.graph.set_window_root(window_a, tabs);
     });
 
     let op = DockOp::RequestFloatPanelToNewWindow {
@@ -505,11 +520,11 @@ fn window_created_updates_drag_source_window_for_active_dock_drag() {
                 viewport: None,
             },
         );
-        let tabs = dock.graph.insert_node(DockNode::Tabs {
+        let tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: vec![panel.clone()],
             active: 0,
         });
-        dock.graph.set_window_root(window_a, tabs);
+        dock.workspace.graph.set_window_root(window_a, tabs);
     });
 
     app.begin_cross_window_drag_with_kind(
@@ -572,11 +587,11 @@ fn window_created_updates_drag_source_window_for_active_dock_tabs_drag() {
                 viewport: None,
             },
         );
-        let tabs = dock.graph.insert_node(DockNode::Tabs {
+        let tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: vec![panel_a.clone(), panel_b.clone()],
             active: 1,
         });
-        dock.graph.set_window_root(window_a, tabs);
+        dock.workspace.graph.set_window_root(window_a, tabs);
         tabs
     });
 
@@ -613,11 +628,14 @@ fn window_created_updates_drag_source_window_for_active_dock_tabs_drag() {
 
     let dock = app.global::<DockManager>().expect("dock manager exists");
     assert!(
-        dock.graph.collect_panels_in_window(window_a).is_empty(),
+        dock.workspace
+            .graph
+            .collect_panels_in_window(window_a)
+            .is_empty(),
         "expected source window to be empty after floating tabs to new window"
     );
     assert_eq!(
-        dock.graph.collect_panels_in_window(window_b),
+        dock.workspace.graph.collect_panels_in_window(window_b),
         vec![panel_a, panel_b],
         "expected all tabs to be moved to the new window"
     );
@@ -644,11 +662,11 @@ fn window_created_prefers_pending_pointer_id_over_drag_source_window_match() {
                 viewport: None,
             },
         );
-        let tabs = dock.graph.insert_node(DockNode::Tabs {
+        let tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: vec![panel.clone()],
             active: 0,
         });
-        dock.graph.set_window_root(window_a, tabs);
+        dock.workspace.graph.set_window_root(window_a, tabs);
     });
 
     app.begin_cross_window_drag_with_kind(
@@ -703,11 +721,11 @@ fn window_created_for_stale_source_request_closes_created_window_without_moving_
 
     app.with_global_mut(DockManager::default, |dock, _app| {
         dock.insert_panel(panel.clone(), test_panel("Panel"));
-        let tabs = dock.graph.insert_node(DockNode::Tabs {
+        let tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: vec![panel.clone()],
             active: 0,
         });
-        dock.graph.set_window_root(window_a, tabs);
+        dock.workspace.graph.set_window_root(window_a, tabs);
     });
 
     assert!(handle_dock_op(
@@ -743,11 +761,17 @@ fn window_created_for_stale_source_request_closes_created_window_without_moving_
     );
     let dock = app.global::<DockManager>().expect("dock manager exists");
     assert!(
-        dock.graph.find_panel_in_window(window_a, &panel).is_some(),
+        dock.workspace
+            .graph
+            .find_panel_in_window(window_a, &panel)
+            .is_some(),
         "stale source mismatch should preserve the panel in the original source window"
     );
     assert!(
-        dock.graph.find_panel_in_window(window_b, &panel).is_none(),
+        dock.workspace
+            .graph
+            .find_panel_in_window(window_b, &panel)
+            .is_none(),
         "stale source mismatch should not move the panel into the new window"
     );
 }
@@ -764,11 +788,11 @@ fn window_created_graph_commit_failure_closes_created_window() {
 
     app.with_global_mut(DockManager::default, |dock, _app| {
         dock.insert_panel(panel.clone(), test_panel("Panel"));
-        let tabs = dock.graph.insert_node(DockNode::Tabs {
+        let tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: vec![panel.clone()],
             active: 0,
         });
-        dock.graph.set_window_root(window_a, tabs);
+        dock.workspace.graph.set_window_root(window_a, tabs);
     });
 
     assert!(handle_dock_op(
@@ -791,7 +815,7 @@ fn window_created_graph_commit_failure_closes_created_window() {
 
     app.with_global_mut(DockManager::default, |dock, _app| {
         assert!(
-            dock.graph.close_panel(window_a, panel.clone()),
+            dock.workspace.graph.close_panel(window_a, panel.clone()),
             "test setup should remove the source panel without notifying the tear-off machine"
         );
     });
@@ -807,7 +831,10 @@ fn window_created_graph_commit_failure_closes_created_window() {
     );
     let dock = app.global::<DockManager>().expect("dock manager exists");
     assert!(
-        dock.graph.find_panel_in_window(window_b, &panel).is_none(),
+        dock.workspace
+            .graph
+            .find_panel_in_window(window_b, &panel)
+            .is_none(),
         "failed graph commit must not invent the panel in the new window"
     );
 }
@@ -835,11 +862,11 @@ fn redock_from_dock_floating_window_auto_closes_empty_os_window() {
         // Keep a stable target tabs node in the main window even if the only "real" panel is
         // temporarily floated away. Canonicalization in `fret-core` prunes empty tabs nodes,
         // so tests should avoid assuming an empty root tabs survives as a drop target.
-        let tabs = dock.graph.insert_node(DockNode::Tabs {
+        let tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: vec![PanelKey::new("main.placeholder"), panel.clone()],
             active: 1,
         });
-        dock.graph.set_window_root(window_a, tabs);
+        dock.workspace.graph.set_window_root(window_a, tabs);
     });
 
     assert!(handle_dock_op(
@@ -866,6 +893,7 @@ fn redock_from_dock_floating_window_auto_closes_empty_os_window() {
     let target_tabs = app
         .global::<DockManager>()
         .expect("dock manager exists")
+        .workspace
         .graph
         .first_tabs_in_window(window_a)
         .expect("expected a target tabs node in the main window");
@@ -892,11 +920,17 @@ fn redock_from_dock_floating_window_auto_closes_empty_os_window() {
 
     let dock = app.global::<DockManager>().expect("dock manager exists");
     assert!(
-        dock.graph.collect_panels_in_window(window_b).is_empty(),
+        dock.workspace
+            .graph
+            .collect_panels_in_window(window_b)
+            .is_empty(),
         "expected the source window to be empty after re-docking its last panel"
     );
     assert!(
-        dock.graph.find_panel_in_window(window_a, &panel).is_some(),
+        dock.workspace
+            .graph
+            .find_panel_in_window(window_a, &panel)
+            .is_some(),
         "expected the panel to be present in the target window after re-dock"
     );
 }
@@ -921,17 +955,17 @@ fn before_close_window_merges_dock_floating_panels_into_target_window() {
             },
         );
 
-        let tabs_a = dock.graph.insert_node(DockNode::Tabs {
+        let tabs_a = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: vec![PanelKey::new("main.placeholder")],
             active: 0,
         });
-        dock.graph.set_window_root(window_a, tabs_a);
+        dock.workspace.graph.set_window_root(window_a, tabs_a);
 
-        let tabs_b = dock.graph.insert_node(DockNode::Tabs {
+        let tabs_b = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: vec![panel.clone()],
             active: 0,
         });
-        dock.graph.set_window_root(window_b, tabs_b);
+        dock.workspace.graph.set_window_root(window_b, tabs_b);
     });
 
     assert!(
@@ -941,11 +975,14 @@ fn before_close_window_merges_dock_floating_panels_into_target_window() {
 
     let dock = app.global::<DockManager>().expect("dock manager exists");
     assert!(
-        dock.graph.window_root(window_b).is_none(),
+        dock.workspace.graph.window_root(window_b).is_none(),
         "expected closing window root to be removed after merge"
     );
     assert!(
-        dock.graph.find_panel_in_window(window_a, &panel).is_some(),
+        dock.workspace
+            .graph
+            .find_panel_in_window(window_a, &panel)
+            .is_some(),
         "expected panel to be merged into target window"
     );
 }
@@ -963,11 +1000,11 @@ fn before_close_window_without_target_tabs_moves_closing_root_to_target_window()
     app.with_global_mut(DockManager::default, |dock, _app| {
         dock.insert_panel(panel.clone(), test_panel("Panel"));
 
-        let tabs_b = dock.graph.insert_node(DockNode::Tabs {
+        let tabs_b = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: vec![panel.clone()],
             active: 0,
         });
-        dock.graph.set_window_root(window_b, tabs_b);
+        dock.workspace.graph.set_window_root(window_b, tabs_b);
     });
 
     assert!(
@@ -977,15 +1014,18 @@ fn before_close_window_without_target_tabs_moves_closing_root_to_target_window()
 
     let dock = app.global::<DockManager>().expect("dock manager exists");
     assert!(
-        dock.graph.window_root(window_b).is_none(),
+        dock.workspace.graph.window_root(window_b).is_none(),
         "expected closing window root to be removed"
     );
     assert!(
-        dock.graph.window_root(window_a).is_some(),
+        dock.workspace.graph.window_root(window_a).is_some(),
         "expected target window to receive the closing dock root"
     );
     assert!(
-        dock.graph.find_panel_in_window(window_a, &panel).is_some(),
+        dock.workspace
+            .graph
+            .find_panel_in_window(window_a, &panel)
+            .is_some(),
         "expected panel to survive in the target window"
     );
 }
@@ -1009,11 +1049,11 @@ fn request_float_canceled_by_close_panel_closes_created_window() {
                 viewport: None,
             },
         );
-        let tabs = dock.graph.insert_node(DockNode::Tabs {
+        let tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: vec![panel.clone()],
             active: 0,
         });
-        dock.graph.set_window_root(window_a, tabs);
+        dock.workspace.graph.set_window_root(window_a, tabs);
     });
 
     let op = DockOp::RequestFloatPanelToNewWindow {
@@ -1052,7 +1092,10 @@ fn request_float_canceled_by_close_panel_closes_created_window() {
 
     let dock = app.global::<DockManager>().expect("dock manager exists");
     assert!(
-        dock.graph.find_panel_in_window(window_b, &panel).is_none(),
+        dock.workspace
+            .graph
+            .find_panel_in_window(window_b, &panel)
+            .is_none(),
         "expected panel not to be moved after cancelation"
     );
 }
@@ -1070,16 +1113,16 @@ fn request_float_canceled_by_move_panel_closes_created_window_and_preserves_move
 
     let target_tabs = app.with_global_mut(DockManager::default, |dock, _app| {
         dock.insert_panel(panel.clone(), test_panel("Panel"));
-        let source_tabs = dock.graph.insert_node(DockNode::Tabs {
+        let source_tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: vec![panel.clone()],
             active: 0,
         });
-        dock.graph.set_window_root(window_a, source_tabs);
-        let target_tabs = dock.graph.insert_node(DockNode::Tabs {
+        dock.workspace.graph.set_window_root(window_a, source_tabs);
+        let target_tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: vec![PanelKey::new("target.placeholder")],
             active: 0,
         });
-        dock.graph.set_window_root(window_c, target_tabs);
+        dock.workspace.graph.set_window_root(window_c, target_tabs);
         target_tabs
     });
 
@@ -1125,11 +1168,17 @@ fn request_float_canceled_by_move_panel_closes_created_window_and_preserves_move
 
     let dock = app.global::<DockManager>().expect("dock manager exists");
     assert!(
-        dock.graph.find_panel_in_window(window_c, &panel).is_some(),
+        dock.workspace
+            .graph
+            .find_panel_in_window(window_c, &panel)
+            .is_some(),
         "panel should remain in the window it was moved to while the request was pending"
     );
     assert!(
-        dock.graph.find_panel_in_window(window_b, &panel).is_none(),
+        dock.workspace
+            .graph
+            .find_panel_in_window(window_b, &panel)
+            .is_none(),
         "canceled pending request must not steal the moved panel into the new window"
     );
 }
@@ -1153,11 +1202,11 @@ fn window_created_does_not_update_drag_source_when_canceled() {
                 viewport: None,
             },
         );
-        let tabs = dock.graph.insert_node(DockNode::Tabs {
+        let tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
             tabs: vec![panel.clone()],
             active: 0,
         });
-        dock.graph.set_window_root(window_a, tabs);
+        dock.workspace.graph.set_window_root(window_a, tabs);
     });
 
     app.begin_cross_window_drag_with_kind(

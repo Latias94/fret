@@ -57,7 +57,7 @@ pub(in crate::dock::declarative) fn begin_declarative_tabs_group_drag<H: UiHost>
     let wants_dock_previews = settings.drag_inversion.wants_dock_previews(modifiers);
     let (tabs, active) = app
         .global::<DockManager>()
-        .and_then(|dock| match dock.graph.node(pending.tabs) {
+        .and_then(|dock| match dock.workspace.graph.node(pending.tabs) {
             Some(fret_core::DockNode::Tabs { tabs, active }) => Some((tabs.clone(), *active)),
             _ => None,
         })

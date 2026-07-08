@@ -38,7 +38,8 @@ pub(super) fn declarative_open_tab_overflow_menu<H: UiHost>(
     let dock = app.global::<DockManager>()?;
     let tab_widths = declarative_tab_widths_for_layout(app, window, theme.clone(), layout_all);
     for (&node_id, &rect) in layout_all {
-        let Some(fret_core::DockNode::Tabs { tabs, active }) = dock.graph.node(node_id) else {
+        let Some(fret_core::DockNode::Tabs { tabs, active }) = dock.workspace.graph.node(node_id)
+        else {
             continue;
         };
         if tabs.is_empty() {
@@ -109,7 +110,7 @@ pub(super) fn declarative_handle_tab_overflow_menu_left_click<H: UiHost>(
     let mut effects = Vec::new();
 
     let tabs_rect = layout_all.get(&menu.tabs).copied();
-    let node = dock.graph.node(menu.tabs);
+    let node = dock.workspace.graph.node(menu.tabs);
     if let (Some(tabs_rect), Some(fret_core::DockNode::Tabs { tabs, .. })) = (tabs_rect, node) {
         let (tab_bar, _content) = super::super::layout::split_tab_bar(tabs_rect);
         let item_count = menu.items.len();
@@ -187,7 +188,7 @@ pub(super) fn declarative_handle_tab_overflow_menu_wheel<H: UiHost>(
     let Some(tabs_rect) = layout_all.get(&menu.tabs).copied() else {
         return (false, Some(menu));
     };
-    let Some(fret_core::DockNode::Tabs { .. }) = dock.graph.node(menu.tabs) else {
+    let Some(fret_core::DockNode::Tabs { .. }) = dock.workspace.graph.node(menu.tabs) else {
         return (false, Some(menu));
     };
 
@@ -234,7 +235,8 @@ pub(super) fn declarative_handle_tab_strip_wheel<H: UiHost>(
     );
 
     for (&node_id, &rect) in layout_all {
-        let Some(fret_core::DockNode::Tabs { tabs, active }) = dock.graph.node(node_id) else {
+        let Some(fret_core::DockNode::Tabs { tabs, active }) = dock.workspace.graph.node(node_id)
+        else {
             continue;
         };
         if tabs.is_empty() {
@@ -299,7 +301,7 @@ pub(super) fn declarative_tab_hover_for_position<H: UiHost>(
     );
 
     let hovered = hit_test_tab(
-        &dock.graph,
+        &dock.workspace.graph,
         layout_all,
         &tab_scroll,
         &tab_widths,
@@ -315,7 +317,8 @@ pub(super) fn declarative_tab_hover_for_position<H: UiHost>(
     let mut pointer_cursor = hover.tab.is_some();
 
     for (&node_id, &rect) in layout_all {
-        let Some(fret_core::DockNode::Tabs { tabs, .. }) = dock.graph.node(node_id) else {
+        let Some(fret_core::DockNode::Tabs { tabs, .. }) = dock.workspace.graph.node(node_id)
+        else {
             continue;
         };
         if tabs.is_empty() {
@@ -338,7 +341,7 @@ pub(super) fn declarative_tab_hover_for_position<H: UiHost>(
     if let Some(menu) = next_menu.as_mut() {
         let mut close_menu = false;
         if let Some(&tabs_rect) = layout_all.get(&menu.tabs) {
-            if dock.graph.node(menu.tabs).is_some() {
+            if dock.workspace.graph.node(menu.tabs).is_some() {
                 let (tab_bar, _content) = super::super::layout::split_tab_bar(tabs_rect);
                 let item_count = menu.items.len();
                 if item_count == 0 {

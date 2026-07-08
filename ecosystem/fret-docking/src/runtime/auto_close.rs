@@ -20,7 +20,7 @@ pub(super) fn collect_empty_dock_floating_windows<H: UiHost>(
     // of which DockOps might have emptied a particular window.
     if log {
         for window in reg.windows() {
-            let panel_count = dock.graph.collect_panels_in_window(window).len();
+            let panel_count = dock.workspace.graph.collect_panels_in_window(window).len();
             tracing::info!(
                 window = ?window,
                 panel_count,
@@ -31,7 +31,12 @@ pub(super) fn collect_empty_dock_floating_windows<H: UiHost>(
 
     let mut windows = Vec::new();
     for window in reg.windows() {
-        if dock.graph.collect_panels_in_window(window).is_empty() {
+        if dock
+            .workspace
+            .graph
+            .collect_panels_in_window(window)
+            .is_empty()
+        {
             windows.push(window);
         }
     }

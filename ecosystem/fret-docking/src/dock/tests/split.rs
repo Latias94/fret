@@ -310,17 +310,17 @@ fn render_public_declarative_split_drag_harness(
                     context_menu_enabled: false,
                 }),
             });
-            children.push(dock.graph.insert_node(DockNode::Tabs {
+            children.push(dock.workspace.graph.insert_node(DockNode::Tabs {
                 tabs: vec![panel],
                 active: 0,
             }));
         }
-        let split = dock.graph.insert_node(DockNode::Split {
+        let split = dock.workspace.graph.insert_node(DockNode::Split {
             axis: fret_core::Axis::Horizontal,
             children,
             fractions: options.fractions.to_vec(),
         });
-        dock.graph.set_window_root(window, split);
+        dock.workspace.graph.set_window_root(window, split);
         split
     });
 
@@ -356,7 +356,8 @@ fn horizontal_handle_position(
     let (_chrome, dock_bounds) = dock_space_regions(bounds);
     let settings = fret_runtime::DockingInteractionSettings::default();
     let dock = app.global::<DockManager>().expect("dock manager");
-    let DockNode::Split { fractions, .. } = dock.graph.node(split).expect("split node") else {
+    let DockNode::Split { fractions, .. } = dock.workspace.graph.node(split).expect("split node")
+    else {
         panic!("expected split node");
     };
     let computed = split_geometry::compute_layout(
@@ -381,7 +382,7 @@ fn horizontal_handle_position(
 fn split_fractions_for(app: &TestHost, split: fret_core::DockNodeId) -> Vec<f32> {
     app.global::<DockManager>()
         .and_then(|dock| {
-            let DockNode::Split { fractions, .. } = dock.graph.node(split)? else {
+            let DockNode::Split { fractions, .. } = dock.workspace.graph.node(split)? else {
                 return None;
             };
             Some(fractions.clone())

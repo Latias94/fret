@@ -110,7 +110,7 @@ pub(super) fn collect_panels_for_window<H: UiHost>(
         return Vec::new();
     };
 
-    let mut panels = dock.graph.collect_panels_in_window(window);
+    let mut panels = dock.workspace.graph.collect_panels_in_window(window);
     panels.sort_by(sort_panel_keys);
     panels.dedup();
 

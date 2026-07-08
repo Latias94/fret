@@ -138,7 +138,7 @@ pub(super) fn declarative_tab_widths_for_layout<H: UiHost>(
         return widths;
     };
     for &node in layout.keys() {
-        let Some(fret_core::DockNode::Tabs { tabs, .. }) = dock.graph.node(node) else {
+        let Some(fret_core::DockNode::Tabs { tabs, .. }) = dock.workspace.graph.node(node) else {
             continue;
         };
         if tabs.is_empty() {
@@ -181,7 +181,7 @@ pub(super) fn declarative_tab_widths_from_prepared_titles<H: UiHost>(
         return widths;
     };
     for &node in frame.layout_all.keys() {
-        let Some(fret_core::DockNode::Tabs { tabs, .. }) = dock.graph.node(node) else {
+        let Some(fret_core::DockNode::Tabs { tabs, .. }) = dock.workspace.graph.node(node) else {
             continue;
         };
         if tabs.is_empty() {
@@ -284,7 +284,9 @@ pub(super) fn declarative_tab_scroll_for_frame<H: UiHost>(
 
     if let Some(dock) = app.global::<DockManager>() {
         for (&node_id, &rect) in layout_all {
-            let Some(fret_core::DockNode::Tabs { tabs, active }) = dock.graph.node(node_id) else {
+            let Some(fret_core::DockNode::Tabs { tabs, active }) =
+                dock.workspace.graph.node(node_id)
+            else {
                 continue;
             };
             visible_tabs.insert(node_id);

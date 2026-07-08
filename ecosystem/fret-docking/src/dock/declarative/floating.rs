@@ -146,7 +146,7 @@ pub(super) fn declarative_resolve_floating_title_bar_drag_target<H: UiHost>(
         return Some(DockDropTarget::Float { window });
     }
     let (tabs, rect) =
-        declarative_leaf_tabs_node_at_pos(&dock.graph, &snapshot.root_layout, position)?;
+        declarative_leaf_tabs_node_at_pos(&dock.workspace.graph, &snapshot.root_layout, position)?;
 
     let font_size = theme.metric_token("font.size");
     let settings = app

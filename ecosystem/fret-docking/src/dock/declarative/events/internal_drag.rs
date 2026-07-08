@@ -104,7 +104,7 @@ fn handle_internal_drag_clear_hover<H: UiHost + 'static>(
     let hover_cleared = cx
         .app()
         .with_global_mut(DockManager::default, |dock, _app| {
-            dock.hover.take().is_some()
+            dock.presentation.hover.take().is_some()
         });
     if hover_cleared {
         cx.request_redraw();

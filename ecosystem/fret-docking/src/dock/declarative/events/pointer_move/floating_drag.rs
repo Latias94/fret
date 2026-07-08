@@ -68,7 +68,9 @@ pub(super) fn handle_pointer_move_floating_drag<H: UiHost + 'static>(
             position,
         );
         cx.app()
-            .with_global_mut(DockManager::default, |dock, _app| dock.hover = hover);
+            .with_global_mut(DockManager::default, |dock, _app| {
+                dock.presentation.hover = hover
+            });
     }
     cx.app().with_global_mut(
         DeclarativeDockInteractionService::default,

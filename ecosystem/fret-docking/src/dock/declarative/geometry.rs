@@ -48,7 +48,7 @@ pub(super) fn declarative_hit_test_tab_close<H: UiHost>(
         false,
     );
     hit_test_tab(
-        &dock.graph,
+        &dock.workspace.graph,
         &snapshot.layout_all,
         &tab_scroll,
         &tab_widths,
@@ -90,7 +90,7 @@ pub(super) fn declarative_hit_test_tab_content<H: UiHost>(
         false,
     );
     let (tabs, index, panel, close) = hit_test_tab(
-        &dock.graph,
+        &dock.workspace.graph,
         &snapshot.layout_all,
         &tab_scroll,
         &tab_widths,
@@ -102,7 +102,7 @@ pub(super) fn declarative_hit_test_tab_content<H: UiHost>(
     }
     let tabs_rect = snapshot.layout_all.get(&tabs).copied()?;
     let (tab_bar, _content) = split_tab_bar(tabs_rect);
-    let tab_count = match dock.graph.node(tabs) {
+    let tab_count = match dock.workspace.graph.node(tabs) {
         Some(fret_core::DockNode::Tabs { tabs, .. }) => tabs.len(),
         _ => 0,
     };
@@ -137,7 +137,7 @@ pub(super) fn declarative_hit_test_tab_bar_empty_space<H: UiHost>(
         false,
     );
     if hit_test_tab(
-        &dock.graph,
+        &dock.workspace.graph,
         &snapshot.layout_all,
         &tab_scroll,
         &tab_widths,
@@ -151,7 +151,7 @@ pub(super) fn declarative_hit_test_tab_bar_empty_space<H: UiHost>(
 
     let mut best: Option<(fret_core::DockNodeId, Rect, f32)> = None;
     for (&node, &rect) in &snapshot.layout_all {
-        let Some(fret_core::DockNode::Tabs { tabs, .. }) = dock.graph.node(node) else {
+        let Some(fret_core::DockNode::Tabs { tabs, .. }) = dock.workspace.graph.node(node) else {
             continue;
         };
         if tabs.is_empty() || !rect.contains(position) {
@@ -225,7 +225,7 @@ fn declarative_node_min_size(
     node: fret_core::DockNodeId,
     split_handle_gap: fret_core::Px,
 ) -> Size {
-    let Some(node) = dock.graph.node(node) else {
+    let Some(node) = dock.workspace.graph.node(node) else {
         return Size::new(fret_core::Px(0.0), fret_core::Px(0.0));
     };
 
@@ -297,7 +297,7 @@ fn declarative_split_child_min_px(
     axis: fret_core::Axis,
     split_handle_gap: fret_core::Px,
 ) -> Vec<fret_core::Px> {
-    let Some(fret_core::DockNode::Split { children, .. }) = dock.graph.node(split) else {
+    let Some(fret_core::DockNode::Split { children, .. }) = dock.workspace.graph.node(split) else {
         return Vec::new();
     };
 
@@ -324,7 +324,7 @@ pub(super) fn declarative_split_handle_hit_for_position<H: UiHost>(
         .global::<DockingPolicyService>()
         .and_then(|service| service.policy());
     let handle = hit_test_split_handle(
-        &dock.graph,
+        &dock.workspace.graph,
         &snapshot.layout_all,
         snapshot.split_handle_gap,
         snapshot.split_handle_hit_thickness,
@@ -370,5 +370,10 @@ pub(super) fn declarative_hit_test_active_viewport_panel<H: UiHost>(
 ) -> Option<ViewportHit> {
     let dock = app.global::<DockManager>()?;
     let snapshot = declarative_layout_snapshot_for_bounds(app, window, bounds)?;
-    hit_test_active_viewport_panel(&dock.graph, &dock.panels, &snapshot.layout_all, position)
+    hit_test_active_viewport_panel(
+        &dock.workspace.graph,
+        dock.panels(),
+        &snapshot.layout_all,
+        position,
+    )
 }

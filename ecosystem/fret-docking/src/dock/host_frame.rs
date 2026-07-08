@@ -184,8 +184,8 @@ impl DockSpaceLayoutSnapshot {
         split_handle_hit_thickness: Px,
         split_overrides: &HashMap<DockNodeId, Arc<[f32]>>,
     ) -> Option<Self> {
-        let root = dock.graph.window_root(window);
-        let has_floatings = !dock.graph.floating_windows(window).is_empty();
+        let root = dock.workspace.graph.window_root(window);
+        let has_floatings = !dock.workspace.graph.floating_windows(window).is_empty();
         if root.is_none() && !has_floatings {
             return None;
         }
@@ -193,7 +193,7 @@ impl DockSpaceLayoutSnapshot {
         let root_layout = root
             .map(|root| {
                 compute_layout_map_with_split_fractions_overrides(
-                    &dock.graph,
+                    &dock.workspace.graph,
                     root,
                     dock_bounds,
                     split_handle_gap,
@@ -205,10 +205,10 @@ impl DockSpaceLayoutSnapshot {
 
         let mut layout_all = root_layout.clone();
         let mut floating_layouts = Vec::new();
-        for floating in dock.graph.floating_windows(window) {
+        for floating in dock.workspace.graph.floating_windows(window) {
             let chrome = floating_chrome(floating.rect);
             let layout = compute_layout_map_with_split_fractions_overrides(
-                &dock.graph,
+                &dock.workspace.graph,
                 floating.floating,
                 chrome.inner,
                 split_handle_gap,
@@ -227,7 +227,7 @@ impl DockSpaceLayoutSnapshot {
 
         let mut active_panel_bounds = HashMap::new();
         let paint_panel_bounds = active_panel_content_bounds_in_graph_order(
-            &dock.graph,
+            &dock.workspace.graph,
             root,
             &root_layout,
             &floating_layouts,
@@ -240,7 +240,8 @@ impl DockSpaceLayoutSnapshot {
         for (&node_id, &rect) in &layout_all {
             let (_tab_bar, content) = split_tab_bar(rect);
             let viewport = (|| {
-                let DockNode::Tabs { tabs, active } = dock.graph.node(node_id)?.clone() else {
+                let DockNode::Tabs { tabs, active } = dock.workspace.graph.node(node_id)?.clone()
+                else {
                     return None;
                 };
                 let panel_key = tabs.get(active)?;

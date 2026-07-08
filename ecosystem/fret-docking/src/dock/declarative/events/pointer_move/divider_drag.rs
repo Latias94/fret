@@ -38,6 +38,7 @@ pub(super) fn handle_pointer_move_divider_drag<H: UiHost + 'static>(
         .app()
         .with_global_mut(DockManager::default, |dock, _app| {
             let Some((children_len, fractions_now)) = dock
+                .workspace
                 .graph
                 .node(divider_drag.handle.split)
                 .and_then(|node| match node {
@@ -69,7 +70,8 @@ pub(super) fn handle_pointer_move_divider_drag<H: UiHost + 'static>(
                 return false;
             };
 
-            dock.graph
+            dock.workspace
+                .graph
                 .update_split_fractions(divider_drag.handle.split, next)
         });
     if changed {

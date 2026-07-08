@@ -168,8 +168,11 @@ pub(super) fn publish_docking_diagnostics_snapshot<H: fret_ui::UiHost>(
         .global::<DockManager>()
         .map(|dock| {
             (
-                Some(dock_graph_stats_for_window(&dock.graph, window)),
-                Some(dock_graph_signature_for_window(&dock.graph, window)),
+                Some(dock_graph_stats_for_window(&dock.workspace.graph, window)),
+                Some(dock_graph_signature_for_window(
+                    &dock.workspace.graph,
+                    window,
+                )),
             )
         })
         .unwrap_or((None, None));

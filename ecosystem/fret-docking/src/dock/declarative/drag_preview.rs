@@ -38,6 +38,7 @@ fn dock_drag_source_tabs_for_window<H: UiHost>(
     }
     let payload = drag.payload::<DockPanelDragPayload>()?;
     app.global::<DockManager>()?
+        .workspace
         .graph
         .find_panel_in_window(drag.source_window, &payload.panel)
         .map(|(tabs, _active)| tabs)
@@ -84,7 +85,7 @@ pub(super) fn declarative_tab_insert_preview_title<H: UiHost>(
         .filter(|title| !title.is_empty())
         .unwrap_or(ghost.panel.kind.0.as_str())
         .to_string();
-    let tab_count = match dock.graph.node(target.tabs) {
+    let tab_count = match dock.workspace.graph.node(target.tabs) {
         Some(fret_core::DockNode::Tabs { tabs, .. }) => tabs.len(),
         _ => 0,
     };

@@ -186,13 +186,13 @@ impl DockTearOffMachine {
     }
 
     fn cancel_for_window(&mut self, dock: &DockManager, source_window: AppWindowId) {
-        for panel in dock.graph.collect_panels_in_window(source_window) {
+        for panel in dock.workspace.graph.collect_panels_in_window(source_window) {
             self.cancel_for_panel(&panel);
         }
     }
 
     fn cancel_for_tabs_node(&mut self, dock: &DockManager, source_tabs: DockNodeId) {
-        if let Some(DockNode::Tabs { tabs, .. }) = dock.graph.node(source_tabs) {
+        if let Some(DockNode::Tabs { tabs, .. }) = dock.workspace.graph.node(source_tabs) {
             for panel in tabs {
                 self.cancel_for_panel(panel);
             }

@@ -110,9 +110,9 @@ struct DockLayoutIds {
 }
 
 fn reset_dock_layout(dock: &mut DockManager, window: AppWindowId) -> DockLayoutIds {
-    dock.graph = fret_core::DockGraph::new();
-    dock.graph.remove_window_root(window);
-    dock.graph.floating_windows_mut(window).clear();
+    dock.workspace.graph = fret_core::DockGraph::new();
+    dock.workspace.graph.remove_window_root(window);
+    dock.workspace.graph.floating_windows_mut(window).clear();
 
     let hierarchy = panel_hierarchy();
     let inspector = panel_inspector();
@@ -140,20 +140,20 @@ fn reset_dock_layout(dock: &mut DockManager, window: AppWindowId) -> DockLayoutI
         viewport: None,
     });
 
-    let left_tabs = dock.graph.insert_node(DockNode::Tabs {
+    let left_tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
         tabs: vec![hierarchy, inspector],
         active: 0,
     });
-    let right_tabs = dock.graph.insert_node(DockNode::Tabs {
+    let right_tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
         tabs: vec![editor, console],
         active: 0,
     });
-    let root = dock.graph.insert_node(DockNode::Split {
+    let root = dock.workspace.graph.insert_node(DockNode::Split {
         axis: Axis::Horizontal,
         children: vec![left_tabs, right_tabs],
         fractions: vec![0.3, 0.7],
     });
-    dock.graph.set_window_root(window, root);
+    dock.workspace.graph.set_window_root(window, root);
 
     DockLayoutIds {
         left_tabs,
@@ -245,7 +245,7 @@ fn init_window(app: &mut KernelApp, window: AppWindowId) -> DockingBasicsWindowS
 
 fn active_tab_title(app: &KernelApp, tabs: DockNodeId) -> Option<String> {
     let dock = app.global::<DockManager>()?;
-    let DockNode::Tabs { tabs, active } = dock.graph.node(tabs)? else {
+    let DockNode::Tabs { tabs, active } = dock.workspace.graph.node(tabs)? else {
         return None;
     };
     let panel = tabs.get(*active)?;
@@ -254,7 +254,7 @@ fn active_tab_title(app: &KernelApp, tabs: DockNodeId) -> Option<String> {
 
 fn active_tab_state(app: &KernelApp, tabs: DockNodeId) -> Option<(u32, u32)> {
     let dock = app.global::<DockManager>()?;
-    let DockNode::Tabs { tabs, active } = dock.graph.node(tabs)? else {
+    let DockNode::Tabs { tabs, active } = dock.workspace.graph.node(tabs)? else {
         return None;
     };
 

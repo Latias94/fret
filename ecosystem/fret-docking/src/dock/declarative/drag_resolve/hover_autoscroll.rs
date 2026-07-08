@@ -33,7 +33,7 @@ pub(super) fn apply_drag_hover_auto_scroll<H: UiHost>(
     let target_tabs = target.tabs;
     let tabs_len =
         app.global::<DockManager>()
-            .and_then(|dock| match dock.graph.node(target_tabs) {
+            .and_then(|dock| match dock.workspace.graph.node(target_tabs) {
                 Some(fret_core::DockNode::Tabs { tabs, .. }) => Some(tabs.len()),
                 _ => None,
             });

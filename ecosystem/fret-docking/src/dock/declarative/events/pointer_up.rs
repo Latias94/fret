@@ -64,7 +64,9 @@ pub(super) fn handle_pointer_up_event<H: UiHost + 'static>(
         );
         cx.push_effect(Effect::ViewportInput(input));
         cx.app()
-            .with_global_mut(DockManager::default, |dock, _app| dock.hover = None);
+            .with_global_mut(DockManager::default, |dock, _app| {
+                dock.presentation.hover = None
+            });
         cx.release_pointer_capture();
         cx.request_redraw();
         if suppress_context_menu {
@@ -89,7 +91,7 @@ pub(super) fn handle_pointer_up_event<H: UiHost + 'static>(
                 && let Some(target_tabs) = cx
                     .app()
                     .global::<DockManager>()
-                    .and_then(|dock| dock.graph.first_tabs_in_window(window))
+                    .and_then(|dock| dock.workspace.graph.first_tabs_in_window(window))
             {
                 cx.push_effect(Effect::Dock(fret_core::DockOp::MergeFloatingInto {
                     window,
@@ -134,7 +136,9 @@ pub(super) fn handle_pointer_up_event<H: UiHost + 'static>(
                 }));
             }
             cx.app()
-                .with_global_mut(DockManager::default, |dock, _app| dock.hover = None);
+                .with_global_mut(DockManager::default, |dock, _app| {
+                    dock.presentation.hover = None
+                });
             cx.release_pointer_capture();
             cx.request_redraw();
             cx.stop_propagation();
@@ -153,7 +157,8 @@ pub(super) fn handle_pointer_up_event<H: UiHost + 'static>(
             let updates = cx
                 .app()
                 .with_global_mut(DockManager::default, |dock, _app| {
-                    dock.graph
+                    dock.workspace
+                        .graph
                         .node(divider_drag.handle.split)
                         .and_then(|node| match node {
                             fret_core::DockNode::Split {

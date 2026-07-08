@@ -28,7 +28,9 @@ pub(super) fn handle_pointer_cancel_event<H: UiHost + 'static>(
         );
         cx.push_effect(Effect::ViewportInput(input));
         cx.app()
-            .with_global_mut(DockManager::default, |dock, _app| dock.hover = None);
+            .with_global_mut(DockManager::default, |dock, _app| {
+                dock.presentation.hover = None
+            });
         cx.release_pointer_capture();
         cx.request_redraw();
         cx.stop_propagation();

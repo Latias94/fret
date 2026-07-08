@@ -85,12 +85,14 @@ fn handle_dock_window_created_with_close_dispatch<H: UiHost>(
     let mut graph_commit_failed = false;
     let handled = app.with_global_mut(DockManager::default, |dock, app| {
         let changed = match kind {
-            DockTearOffKind::Panel => {
-                dock.graph
-                    .float_panel_to_window(*source_window, panel.clone(), new_window)
-            }
+            DockTearOffKind::Panel => dock.workspace.graph.float_panel_to_window(
+                *source_window,
+                panel.clone(),
+                new_window,
+            ),
             DockTearOffKind::Tabs { source_tabs } => {
-                dock.graph
+                dock.workspace
+                    .graph
                     .float_tabs_to_window(*source_window, source_tabs, new_window)
             }
         };

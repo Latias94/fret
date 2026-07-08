@@ -749,17 +749,21 @@ fn docking_arbitration_layout_harness_surface(
                 (x, y)
             };
 
-            if let Some(root) = dock.graph.window_root(window) {
-                if let Some(tabs_rect) =
-                    tabs_rect_for_panel(&dock.graph, root, bounds, split_handle_gap, panel)
-                {
+            if let Some(root) = dock.workspace.graph.window_root(window) {
+                if let Some(tabs_rect) = tabs_rect_for_panel(
+                    &dock.workspace.graph,
+                    root,
+                    bounds,
+                    split_handle_gap,
+                    panel,
+                ) {
                     return Some(anchor_for_rect(tabs_rect, false));
                 }
             }
 
-            for floating in dock.graph.floating_windows(window) {
+            for floating in dock.workspace.graph.floating_windows(window) {
                 if let Some(tabs_rect) = tabs_rect_for_panel(
-                    &dock.graph,
+                    &dock.workspace.graph,
                     floating.floating,
                     floating.rect,
                     split_handle_gap,
@@ -800,17 +804,21 @@ fn docking_arbitration_layout_harness_surface(
                 (x, y)
             };
 
-            if let Some(root) = dock.graph.window_root(window) {
-                if let Some(tabs_rect) =
-                    tabs_rect_for_panel(&dock.graph, root, bounds, split_handle_gap, panel)
-                {
+            if let Some(root) = dock.workspace.graph.window_root(window) {
+                if let Some(tabs_rect) = tabs_rect_for_panel(
+                    &dock.workspace.graph,
+                    root,
+                    bounds,
+                    split_handle_gap,
+                    panel,
+                ) {
                     return Some(anchor_for_rect(tabs_rect, false));
                 }
             }
 
-            for floating in dock.graph.floating_windows(window) {
+            for floating in dock.workspace.graph.floating_windows(window) {
                 if let Some(tabs_rect) = tabs_rect_for_panel(
-                    &dock.graph,
+                    &dock.workspace.graph,
                     floating.floating,
                     floating.rect,
                     split_handle_gap,
@@ -968,15 +976,23 @@ fn docking_arbitration_layout_harness_surface(
         let theme = cx.theme().snapshot();
 
         let dock = cx.app().global::<DockManager>()?;
-        let root = dock.graph.window_root(window)?;
+        let root = dock.workspace.graph.window_root(window)?;
 
         // Anchor overflow geometry to the left viewport's tabs container. Most arbitration
         // scripts build tab overflow by merging additional tabs into that leaf.
         let left_panel = viewport_left_panel_key();
-        let tabs_rect =
-            tabs_rect_for_panel(&dock.graph, root, bounds, split_handle_gap, &left_panel)?;
-        let (tabs_node, _active) = dock.graph.find_panel_in_window(window, &left_panel)?;
-        let (tabs, active) = match dock.graph.node(tabs_node)? {
+        let tabs_rect = tabs_rect_for_panel(
+            &dock.workspace.graph,
+            root,
+            bounds,
+            split_handle_gap,
+            &left_panel,
+        )?;
+        let (tabs_node, _active) = dock
+            .workspace
+            .graph
+            .find_panel_in_window(window, &left_panel)?;
+        let (tabs, active) = match dock.workspace.graph.node(tabs_node)? {
             DockNode::Tabs { tabs, active } => (tabs.as_slice(), *active),
             _ => (&[][..], 0),
         };
@@ -1153,7 +1169,7 @@ fn docking_arbitration_layout_harness_surface(
 
     let floating_anchor_rect = (|| {
         let dock = cx.app().global::<DockManager>()?;
-        let floating = dock.graph.floating_windows(window).last()?;
+        let floating = dock.workspace.graph.floating_windows(window).last()?;
         let outer = floating.rect;
         let x = outer.origin.x.0 + outer.size.width.0 * 0.5;
         // Heuristic: stay inside the floating title bar even if tokens vary.
@@ -1263,9 +1279,9 @@ fn docking_arbitration_layout_harness_surface(
         }
 
         let dock = cx.app().global::<DockManager>()?;
-        let root = dock.graph.window_root(window)?;
+        let root = dock.workspace.graph.window_root(window)?;
         first_handle_for_axis(
-            &dock.graph,
+            &dock.workspace.graph,
             root,
             bounds,
             fret_core::Axis::Horizontal,
@@ -2393,8 +2409,8 @@ impl DockingArbitrationDriver {
             // tear-off scripts would be disrupted by resetting the graph after creating new OS
             // windows.
             if should_sanitize_for_diag {
-                dock.graph = fret_core::DockGraph::new();
-            } else if dock.graph.window_root(window).is_some() {
+                dock.workspace.graph = fret_core::DockGraph::new();
+            } else if dock.workspace.graph.window_root(window).is_some() {
                 return;
             }
 
@@ -2430,20 +2446,20 @@ impl DockingArbitrationDriver {
 
             match layout_preset {
                 DockingArbitrationLayoutPreset::Default => {
-                    let tabs_left = tabs_for_panel(&mut dock.graph, viewport_left);
-                    let tabs_right = tabs_for_panel(&mut dock.graph, viewport_right);
-                    let viewport_split = dock.graph.insert_node(DockNode::Split {
+                    let tabs_left = tabs_for_panel(&mut dock.workspace.graph, viewport_left);
+                    let tabs_right = tabs_for_panel(&mut dock.workspace.graph, viewport_right);
+                    let viewport_split = dock.workspace.graph.insert_node(DockNode::Split {
                         axis: fret_core::Axis::Horizontal,
                         children: vec![tabs_left, tabs_right],
                         fractions: vec![0.5, 0.5],
                     });
-                    let tabs_controls = tabs_for_panel(&mut dock.graph, controls_panel);
-                    let root = dock.graph.insert_node(DockNode::Split {
+                    let tabs_controls = tabs_for_panel(&mut dock.workspace.graph, controls_panel);
+                    let root = dock.workspace.graph.insert_node(DockNode::Split {
                         axis: fret_core::Axis::Vertical,
                         children: vec![viewport_split, tabs_controls],
                         fractions: vec![0.7, 0.3],
                     });
-                    dock.graph.set_window_root(window, root);
+                    dock.workspace.graph.set_window_root(window, root);
                 }
                 DockingArbitrationLayoutPreset::Large => {
                     let extra_viewports: Vec<PanelKey> =
@@ -2465,22 +2481,26 @@ impl DockingArbitrationDriver {
                     }
 
                     let row1 = vec![
-                        tabs_for_panel(&mut dock.graph, viewport_left),
-                        tabs_for_panel(&mut dock.graph, viewport_right),
-                        tabs_for_panel(&mut dock.graph, extra_viewports[0].clone()),
-                        tabs_for_panel(&mut dock.graph, extra_viewports[1].clone()),
+                        tabs_for_panel(&mut dock.workspace.graph, viewport_left),
+                        tabs_for_panel(&mut dock.workspace.graph, viewport_right),
+                        tabs_for_panel(&mut dock.workspace.graph, extra_viewports[0].clone()),
+                        tabs_for_panel(&mut dock.workspace.graph, extra_viewports[1].clone()),
                     ];
                     let row2: Vec<fret_core::DockNodeId> = (2..6)
-                        .map(|ix| tabs_for_panel(&mut dock.graph, extra_viewports[ix].clone()))
+                        .map(|ix| {
+                            tabs_for_panel(&mut dock.workspace.graph, extra_viewports[ix].clone())
+                        })
                         .collect();
                     let row3: Vec<fret_core::DockNodeId> = (6..10)
-                        .map(|ix| tabs_for_panel(&mut dock.graph, extra_viewports[ix].clone()))
+                        .map(|ix| {
+                            tabs_for_panel(&mut dock.workspace.graph, extra_viewports[ix].clone())
+                        })
                         .collect();
 
-                    let row1 = row_split(&mut dock.graph, row1);
-                    let row2 = row_split(&mut dock.graph, row2);
-                    let row3 = row_split(&mut dock.graph, row3);
-                    let controls = tabs_for_panel(&mut dock.graph, controls_panel);
+                    let row1 = row_split(&mut dock.workspace.graph, row1);
+                    let row2 = row_split(&mut dock.workspace.graph, row2);
+                    let row3 = row_split(&mut dock.workspace.graph, row3);
+                    let controls = tabs_for_panel(&mut dock.workspace.graph, controls_panel);
 
                     let root_weights = [1.0f32, 1.0f32, 1.0f32, 0.8f32];
                     let root_sum: f32 = root_weights.iter().copied().sum();
@@ -2490,12 +2510,12 @@ impl DockingArbitrationDriver {
                         vec![0.25; 4]
                     };
 
-                    let root = dock.graph.insert_node(DockNode::Split {
+                    let root = dock.workspace.graph.insert_node(DockNode::Split {
                         axis: fret_core::Axis::Vertical,
                         children: vec![row1, row2, row3, controls],
                         fractions: root_fractions,
                     });
-                    dock.graph.set_window_root(window, root);
+                    dock.workspace.graph.set_window_root(window, root);
                 }
                 DockingArbitrationLayoutPreset::OverflowTabs => {
                     let extra_viewports: Vec<PanelKey> =
@@ -2535,25 +2555,25 @@ impl DockingArbitrationDriver {
                         extra_viewports[6].clone(),
                         extra_viewports[7].clone(),
                     ];
-                    let tabs_overflow = dock.graph.insert_node(DockNode::Tabs {
+                    let tabs_overflow = dock.workspace.graph.insert_node(DockNode::Tabs {
                         tabs: overflow_tabs,
                         active: 0,
                     });
 
                     let row1 = vec![
                         tabs_overflow,
-                        tabs_for_panel(&mut dock.graph, extra_viewports[8].clone()),
-                        tabs_for_panel(&mut dock.graph, extra_viewports[9].clone()),
-                        tabs_for_panel(&mut dock.graph, dummy_panel),
+                        tabs_for_panel(&mut dock.workspace.graph, extra_viewports[8].clone()),
+                        tabs_for_panel(&mut dock.workspace.graph, extra_viewports[9].clone()),
+                        tabs_for_panel(&mut dock.workspace.graph, dummy_panel),
                     ];
-                    let row1 = row_split(&mut dock.graph, row1);
-                    let controls = tabs_for_panel(&mut dock.graph, controls_panel);
-                    let root = dock.graph.insert_node(DockNode::Split {
+                    let row1 = row_split(&mut dock.workspace.graph, row1);
+                    let controls = tabs_for_panel(&mut dock.workspace.graph, controls_panel);
+                    let root = dock.workspace.graph.insert_node(DockNode::Split {
                         axis: fret_core::Axis::Vertical,
                         children: vec![row1, controls],
                         fractions: vec![0.7, 0.3],
                     });
-                    dock.graph.set_window_root(window, root);
+                    dock.workspace.graph.set_window_root(window, root);
                 }
             }
         });
@@ -2579,11 +2599,12 @@ impl DockingArbitrationDriver {
 
         app.with_global_mut(DockManager::default, |dock, app| {
             let changed = dock
+                .workspace
                 .graph
                 .import_layout_for_windows(&restore.layout, &windows);
             if changed {
-                request_dock_invalidation(app, dock.graph.windows());
-                for w in dock.graph.windows() {
+                request_dock_invalidation(app, dock.workspace.graph.windows());
+                for w in dock.workspace.graph.windows() {
                     app.request_redraw(w);
                 }
             }
@@ -2624,6 +2645,7 @@ impl DockingArbitrationDriver {
         if !multi_window {
             app.with_global_mut(DockManager::default, |dock, app| {
                 let changed = dock
+                    .workspace
                     .graph
                     .import_layout_for_windows_with_fallback_floatings(
                         &layout,
@@ -2704,7 +2726,8 @@ impl DockingArbitrationDriver {
             .collect();
 
         let layout = app.with_global_mut(DockManager::default, |dock, _app| {
-            dock.graph
+            dock.workspace
+                .graph
                 .export_layout_with_placement(&windows, |window| placements.get(&window).cloned())
         });
 
@@ -3771,9 +3794,12 @@ pub fn run() -> anyhow::Result<()> {
                     })
                     .collect();
 
-                let layout = dock.graph.export_layout_with_placement(&windows, |window| {
-                    placements.get(&window).cloned()
-                });
+                let layout = dock
+                    .workspace
+                    .graph
+                    .export_layout_with_placement(&windows, |window| {
+                        placements.get(&window).cloned()
+                    });
                 match serde_json::to_value(layout) {
                     Ok(value) => DevStateExport::Set(value),
                     Err(_) => DevStateExport::Noop,

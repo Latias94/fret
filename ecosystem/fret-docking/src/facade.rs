@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use fret_core::{
-    AppWindowId, DockGraph, DockLayout, DockNodeId, DockOp, DockWindowPlacement, PanelKey,
-    WindowAnchor,
+    AppWindowId, DockGraph, DockLayout, DockLayoutValidationError, DockNodeId, DockOp,
+    DockWindowPlacement, PanelKey, WindowAnchor,
 };
 use fret_runtime::{CreateWindowRequest, Effect, UiHost, WindowRequest};
 use fret_ui::ElementContext;
@@ -54,7 +54,7 @@ impl DockSurface {
 
     pub fn has_window_root<H: UiHost>(&self, app: &H, window: AppWindowId) -> bool {
         app.global::<DockManager>()
-            .is_some_and(|dock| dock.graph.window_root(window).is_some())
+            .is_some_and(|dock| dock.workspace.graph.window_root(window).is_some())
     }
 
     pub fn ensure_window_root<H: UiHost>(
@@ -64,11 +64,11 @@ impl DockSurface {
         make_root: impl FnOnce(&mut DockGraph) -> DockNodeId,
     ) -> bool {
         app.with_global_mut(DockManager::default, |dock, _app| {
-            if dock.graph.window_root(window).is_some() {
+            if dock.workspace.graph.window_root(window).is_some() {
                 return false;
             }
-            let root = make_root(&mut dock.graph);
-            dock.graph.set_window_root(window, root);
+            let root = make_root(&mut dock.workspace.graph);
+            dock.workspace.graph.set_window_root(window, root);
             true
         })
     }
@@ -79,8 +79,19 @@ impl DockSurface {
         layout: &DockLayout,
         windows: &[(AppWindowId, String)],
     ) -> bool {
+        self.try_import_layout_for_windows(app, layout, windows)
+            .unwrap_or(false)
+    }
+
+    pub fn try_import_layout_for_windows<H: UiHost>(
+        &self,
+        app: &mut H,
+        layout: &DockLayout,
+        windows: &[(AppWindowId, String)],
+    ) -> Result<bool, DockLayoutValidationError> {
         app.with_global_mut(DockManager::default, |dock, _app| {
-            dock.graph.import_layout_for_windows(layout, windows)
+            dock.workspace
+                .import_layout_for_windows_checked(layout, windows)
         })
     }
 
@@ -91,9 +102,29 @@ impl DockSurface {
         windows: &[(AppWindowId, String)],
         fallback_window: AppWindowId,
     ) -> bool {
+        self.try_import_layout_for_windows_with_fallback_floatings(
+            app,
+            layout,
+            windows,
+            fallback_window,
+        )
+        .unwrap_or(false)
+    }
+
+    pub fn try_import_layout_for_windows_with_fallback_floatings<H: UiHost>(
+        &self,
+        app: &mut H,
+        layout: &DockLayout,
+        windows: &[(AppWindowId, String)],
+        fallback_window: AppWindowId,
+    ) -> Result<bool, DockLayoutValidationError> {
         app.with_global_mut(DockManager::default, |dock, _app| {
-            dock.graph
-                .import_layout_for_windows_with_fallback_floatings(layout, windows, fallback_window)
+            dock.workspace
+                .import_layout_for_windows_with_fallback_floatings_checked(
+                    layout,
+                    windows,
+                    fallback_window,
+                )
         })
     }
 
@@ -103,7 +134,7 @@ impl DockSurface {
         windows: &[(AppWindowId, String)],
     ) -> Option<DockLayout> {
         app.global::<DockManager>()
-            .map(|dock| dock.graph.export_layout(windows))
+            .map(|dock| dock.workspace.graph.export_layout(windows))
     }
 
     pub fn export_layout_with_placement<H: UiHost>(
@@ -112,8 +143,11 @@ impl DockSurface {
         windows: &[(AppWindowId, String)],
         placement: impl Fn(AppWindowId) -> Option<DockWindowPlacement>,
     ) -> Option<DockLayout> {
-        app.global::<DockManager>()
-            .map(|dock| dock.graph.export_layout_with_placement(windows, placement))
+        app.global::<DockManager>().map(|dock| {
+            dock.workspace
+                .graph
+                .export_layout_with_placement(windows, placement)
+        })
     }
 
     pub fn install_panel_registry<H: UiHost + 'static>(
@@ -250,11 +284,11 @@ mod tests {
         app.set_global(DockManager::default());
         surface.register_panel(&mut app, panel.clone(), test_panel("Panel"));
         app.with_global_mut(DockManager::default, |dock, _app| {
-            let tabs = dock.graph.insert_node(DockNode::Tabs {
+            let tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
                 tabs: vec![panel.clone()],
                 active: 0,
             });
-            dock.graph.set_window_root(window_a, tabs);
+            dock.workspace.graph.set_window_root(window_a, tabs);
         });
 
         assert!(surface.request_float_panel_to_new_window(&mut app, window_a, panel.clone(), None));
@@ -280,11 +314,17 @@ mod tests {
         assert!(surface.on_window_created(&mut app, &create, window_b));
         let dock = app.global::<DockManager>().expect("dock manager exists");
         assert!(
-            dock.graph.find_panel_in_window(window_b, &panel).is_some(),
+            dock.workspace
+                .graph
+                .find_panel_in_window(window_b, &panel)
+                .is_some(),
             "expected panel to move after completing the queued create command"
         );
         assert!(
-            dock.graph.find_panel_in_window(window_a, &panel).is_none(),
+            dock.workspace
+                .graph
+                .find_panel_in_window(window_a, &panel)
+                .is_none(),
             "expected panel to leave the source window after queued create completion"
         );
     }
@@ -300,11 +340,11 @@ mod tests {
         app.set_global(DockManager::default());
         surface.register_panel(&mut app, panel.clone(), test_panel("Panel"));
         app.with_global_mut(DockManager::default, |dock, _app| {
-            let tabs = dock.graph.insert_node(DockNode::Tabs {
+            let tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
                 tabs: vec![panel.clone()],
                 active: 0,
             });
-            dock.graph.set_window_root(window, tabs);
+            dock.workspace.graph.set_window_root(window, tabs);
         });
 
         assert!(surface.request_float_panel_to_new_window(&mut app, window, panel.clone(), None));
@@ -339,11 +379,11 @@ mod tests {
         app.set_global(DockManager::default());
         surface.register_panel(&mut app, panel.clone(), test_panel("Panel"));
         app.with_global_mut(DockManager::default, |dock, _app| {
-            let tabs = dock.graph.insert_node(DockNode::Tabs {
+            let tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
                 tabs: vec![panel.clone()],
                 active: 0,
             });
-            dock.graph.set_window_root(window, tabs);
+            dock.workspace.graph.set_window_root(window, tabs);
         });
 
         assert!(surface.on_dock_op(
@@ -383,11 +423,11 @@ mod tests {
         app.set_global(DockManager::default());
         surface.register_panel(&mut app, panel.clone(), test_panel("Panel"));
         app.with_global_mut(DockManager::default, |dock, _app| {
-            let tabs = dock.graph.insert_node(DockNode::Tabs {
+            let tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
                 tabs: vec![panel.clone()],
                 active: 0,
             });
-            dock.graph.set_window_root(window, tabs);
+            dock.workspace.graph.set_window_root(window, tabs);
         });
 
         assert!(surface.on_dock_op(
@@ -443,11 +483,11 @@ mod tests {
         app.set_global(DockManager::default());
         surface.register_panel(&mut app, panel.clone(), test_panel("Panel"));
         app.with_global_mut(DockManager::default, |dock, _app| {
-            let tabs = dock.graph.insert_node(DockNode::Tabs {
+            let tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
                 tabs: vec![panel.clone()],
                 active: 0,
             });
-            dock.graph.set_window_root(window_a, tabs);
+            dock.workspace.graph.set_window_root(window_a, tabs);
         });
 
         assert!(surface.request_float_panel_to_new_window(&mut app, window_a, panel.clone(), None));
@@ -477,7 +517,10 @@ mod tests {
         );
         let dock = app.global::<DockManager>().expect("dock manager exists");
         assert!(
-            dock.graph.find_panel_in_window(window_c, &panel).is_some(),
+            dock.workspace
+                .graph
+                .find_panel_in_window(window_c, &panel)
+                .is_some(),
             "stale queued window completion must preserve the current graph owner"
         );
     }
@@ -494,11 +537,11 @@ mod tests {
         app.set_global(DockManager::default());
         surface.register_panel(&mut app, panel.clone(), test_panel("Panel"));
         app.with_global_mut(DockManager::default, |dock, _app| {
-            let tabs = dock.graph.insert_node(DockNode::Tabs {
+            let tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
                 tabs: vec![panel.clone()],
                 active: 0,
             });
-            dock.graph.set_window_root(window_a, tabs);
+            dock.workspace.graph.set_window_root(window_a, tabs);
         });
 
         assert!(surface.request_float_panel_to_new_window(&mut app, window_a, panel.clone(), None));
@@ -508,7 +551,7 @@ mod tests {
         };
         app.with_global_mut(DockManager::default, |dock, _app| {
             assert!(
-                dock.graph.close_panel(window_a, panel.clone()),
+                dock.workspace.graph.close_panel(window_a, panel.clone()),
                 "test setup should remove the source panel without notifying the tear-off machine"
             );
         });
@@ -526,7 +569,10 @@ mod tests {
         );
         let dock = app.global::<DockManager>().expect("dock manager exists");
         assert!(
-            dock.graph.find_panel_in_window(window_b, &panel).is_none(),
+            dock.workspace
+                .graph
+                .find_panel_in_window(window_b, &panel)
+                .is_none(),
             "failed graph commit must not invent the panel in the new window"
         );
     }
@@ -545,11 +591,11 @@ mod tests {
         surface.register_panel(&mut app, panel.clone(), test_panel("Panel"));
         surface.register_panel(&mut app, placeholder.clone(), test_panel("Placeholder"));
         app.with_global_mut(DockManager::default, |dock, _app| {
-            let tabs = dock.graph.insert_node(DockNode::Tabs {
+            let tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
                 tabs: vec![placeholder.clone(), panel.clone()],
                 active: 1,
             });
-            dock.graph.set_window_root(window_a, tabs);
+            dock.workspace.graph.set_window_root(window_a, tabs);
         });
 
         assert!(surface.request_float_panel_to_new_window(&mut app, window_a, panel.clone(), None));
@@ -566,6 +612,7 @@ mod tests {
         let target_tabs = app
             .global::<DockManager>()
             .expect("dock manager exists")
+            .workspace
             .graph
             .first_tabs_in_window(window_a)
             .expect("source window should still have placeholder tabs");
@@ -594,11 +641,17 @@ mod tests {
         );
         let dock = app.global::<DockManager>().expect("dock manager exists");
         assert!(
-            dock.graph.find_panel_in_window(window_a, &panel).is_some(),
+            dock.workspace
+                .graph
+                .find_panel_in_window(window_a, &panel)
+                .is_some(),
             "redocked panel should return to the target window"
         );
         assert!(
-            dock.graph.collect_panels_in_window(window_b).is_empty(),
+            dock.workspace
+                .graph
+                .collect_panels_in_window(window_b)
+                .is_empty(),
             "redocking the last panel should empty the dock-floating window"
         );
     }
