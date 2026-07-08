@@ -75,10 +75,6 @@ fn documented_raw_shadcn_escape_hatch_reason(trimmed: &str) -> Option<&'static s
             "collapsible primitive source-alignment alias",
         ),
         (
-            "shadcn::raw::calendar::CalendarLocale::",
-            "calendar locale enum seam",
-        ),
-        (
             "shadcn::raw::context_menu::ContextMenuItemVariant::",
             "context-menu item variant seam",
         ),
@@ -151,6 +147,7 @@ fn raw_shadcn_escape_hatch_gate_is_symbol_level_not_module_level() {
         "shadcn::raw::experimental::UnclassifiedWidget::new()",
         "shadcn::raw::button::UnclassifiedButtonPart::new()",
         "shadcn::raw::button::ButtonStyle::default()",
+        "shadcn::raw::calendar::CalendarLocale::Es",
         "shadcn::raw::select::SelectPosition::Popper",
         "shadcn::raw::tabs::TabsOrientation::Vertical",
         "shadcn::raw::accordion::composable",

@@ -648,6 +648,7 @@ fn authoring_critical_family_exports_live_on_curated_facade_only() {
         "tabs",
         &["Tabs", "TabsItem", "TabsOrientation", "TabsListVariant"],
     );
+    assert_facade_only_reexports("calendar", &["Calendar", "CalendarLocale"]);
 }
 
 #[test]

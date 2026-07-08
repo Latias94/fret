@@ -343,7 +343,7 @@ pub mod facade {
         ButtonGroup, ButtonGroupItem, ButtonGroupOrientation, ButtonGroupSeparator,
         ButtonGroupText, ButtonGroupVariants, button_group_variants,
     };
-    pub use crate::calendar::{Calendar, CalendarCaptionLayout, CalendarDayButton};
+    pub use crate::calendar::{Calendar, CalendarCaptionLayout, CalendarDayButton, CalendarLocale};
     pub use crate::calendar_hijri::CalendarHijri;
     pub use crate::calendar_month_model::IntoCalendarMonthModel;
     pub use crate::calendar_multiple::CalendarMultiple;
