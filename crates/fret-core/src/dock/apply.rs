@@ -101,6 +101,10 @@ impl DockGraph {
                 }
                 self.float_tabs_to_window(*source_window, *source_tabs, *target_window)
             }
+            DockOp::MoveWindowToEmptyDockSpace {
+                source_window,
+                target_window,
+            } => self.move_window_to_empty_dock_space(*source_window, *target_window),
             DockOp::FloatPanelToWindow {
                 source_window,
                 panel,

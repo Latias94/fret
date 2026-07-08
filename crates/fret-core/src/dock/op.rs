@@ -56,6 +56,16 @@ pub enum DockOp {
         target_window: AppWindowId,
     },
 
+    /// Move an entire dock window forest into a window that currently has no dock root.
+    ///
+    /// This preserves both the source root and any in-window floating dock containers owned by
+    /// `source_window`. It is used when an OS floating dock window is closing and the configured
+    /// merge target exists but has no tabs yet.
+    MoveWindowToEmptyDockSpace {
+        source_window: AppWindowId,
+        target_window: AppWindowId,
+    },
+
     FloatPanelToWindow {
         source_window: AppWindowId,
         panel: PanelKey,

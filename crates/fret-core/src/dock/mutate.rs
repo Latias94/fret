@@ -443,6 +443,37 @@ impl DockGraph {
         true
     }
 
+    pub(crate) fn move_window_to_empty_dock_space(
+        &mut self,
+        source_window: AppWindowId,
+        target_window: AppWindowId,
+    ) -> bool {
+        if source_window == target_window {
+            return false;
+        }
+        if self.window_root(target_window).is_some()
+            || self
+                .window_floatings
+                .get(&target_window)
+                .is_some_and(|floatings| !floatings.is_empty())
+        {
+            return false;
+        }
+
+        let Some(root) = self.remove_window_root(source_window) else {
+            return false;
+        };
+
+        self.set_window_root(target_window, root);
+        if let Some(floatings) = self.window_floatings.remove(&source_window)
+            && !floatings.is_empty()
+        {
+            self.window_floatings.insert(target_window, floatings);
+        }
+        self.simplify_window_forest(target_window);
+        true
+    }
+
     pub fn float_panel_in_window(
         &mut self,
         source_window: AppWindowId,

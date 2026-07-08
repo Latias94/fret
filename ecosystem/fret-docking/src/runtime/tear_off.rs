@@ -177,7 +177,17 @@ impl DockTearOffMachine {
             | DockOp::FloatTabsInWindow { source_tabs, .. } => {
                 self.cancel_for_tabs_node(dock, *source_tabs);
             }
+            DockOp::MoveWindowToEmptyDockSpace { source_window, .. }
+            | DockOp::MergeWindowInto { source_window, .. } => {
+                self.cancel_for_window(dock, *source_window);
+            }
             _ => {}
+        }
+    }
+
+    fn cancel_for_window(&mut self, dock: &DockManager, source_window: AppWindowId) {
+        for panel in dock.graph.collect_panels_in_window(source_window) {
+            self.cancel_for_panel(&panel);
         }
     }
 

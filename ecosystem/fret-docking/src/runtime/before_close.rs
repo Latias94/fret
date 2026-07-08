@@ -26,15 +26,21 @@ pub(super) fn handle_dock_before_close_window<H: UiHost>(
         if dock.graph.window_root(closing_window).is_none() {
             return true;
         }
-        let Some(target_tabs) = dock.graph.first_tabs_in_window(target_window) else {
-            return true;
+        let changed = if let Some(target_tabs) = dock.graph.first_tabs_in_window(target_window) {
+            dock.graph.apply_op(&DockOp::MergeWindowInto {
+                source_window: closing_window,
+                target_window,
+                target_tabs,
+            })
+        } else {
+            dock.graph.apply_op(&DockOp::MoveWindowToEmptyDockSpace {
+                source_window: closing_window,
+                target_window,
+            })
         };
-
-        let _ = dock.graph.apply_op(&DockOp::MergeWindowInto {
-            source_window: closing_window,
-            target_window,
-            target_tabs,
-        });
+        if !changed {
+            return false;
+        }
 
         dock.clear_viewport_layout_for_window(closing_window);
         dock.clear_viewport_layout_for_window(target_window);

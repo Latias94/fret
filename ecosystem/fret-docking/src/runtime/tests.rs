@@ -891,7 +891,7 @@ fn before_close_window_merges_dock_floating_panels_into_target_window() {
 }
 
 #[test]
-fn before_close_window_without_target_tabs_currently_leaves_closing_window_unmerged() {
+fn before_close_window_without_target_tabs_moves_closing_root_to_target_window() {
     let window_a = AppWindowId::from(KeyData::from_ffi(1));
     let window_b = AppWindowId::from(KeyData::from_ffi(2));
     let panel = PanelKey::new("test.panel");
@@ -912,17 +912,21 @@ fn before_close_window_without_target_tabs_currently_leaves_closing_window_unmer
 
     assert!(
         handle_dock_before_close_window(&mut app, window_b, window_a),
-        "legacy before_close behavior currently allows close when target window has no tabs"
+        "expected before_close hook to allow closing after preserving the dock root"
     );
 
     let dock = app.global::<DockManager>().expect("dock manager exists");
     assert!(
-        dock.graph.window_root(window_b).is_some(),
-        "legacy before_close behavior currently leaves the closing window graph intact"
+        dock.graph.window_root(window_b).is_none(),
+        "expected closing window root to be removed"
     );
     assert!(
-        dock.graph.find_panel_in_window(window_b, &panel).is_some(),
-        "legacy before_close behavior currently does not merge the panel without target tabs"
+        dock.graph.window_root(window_a).is_some(),
+        "expected target window to receive the closing dock root"
+    );
+    assert!(
+        dock.graph.find_panel_in_window(window_a, &panel).is_some(),
+        "expected panel to survive in the target window"
     );
 }
 

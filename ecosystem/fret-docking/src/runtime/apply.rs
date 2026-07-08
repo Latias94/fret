@@ -52,6 +52,10 @@ fn log_cross_window_op(dock: &DockManager, op: &DockOp) {
             target_window,
             ..
         }
+        | DockOp::MoveWindowToEmptyDockSpace {
+            source_window,
+            target_window,
+        }
         | DockOp::MergeWindowInto {
             source_window,
             target_window,

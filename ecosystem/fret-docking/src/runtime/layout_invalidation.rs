@@ -37,6 +37,10 @@ pub(super) fn invalidate_after_dock_op<H: UiHost>(
             target_window,
             ..
         }
+        | DockOp::MoveWindowToEmptyDockSpace {
+            source_window,
+            target_window,
+        }
         | DockOp::FloatPanelInWindow {
             source_window,
             target_window,

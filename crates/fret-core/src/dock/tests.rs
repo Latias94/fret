@@ -495,6 +495,86 @@ fn move_tabs_to_empty_dock_space_creates_target_root_tabs() {
 }
 
 #[test]
+fn move_window_to_empty_dock_space_moves_root_and_in_window_floatings() {
+    let w1 = window(1);
+    let w2 = window(2);
+    let panel_a = PanelKey::new("test.a");
+    let panel_b = PanelKey::new("test.b");
+    let panel_c = PanelKey::new("test.c");
+
+    let mut g = DockGraph::new();
+    let tabs = g.insert_node(DockNode::Tabs {
+        tabs: vec![panel_a.clone(), panel_b.clone(), panel_c.clone()],
+        active: 1,
+    });
+    g.set_window_root(w1, tabs);
+
+    assert!(g.apply_op(&DockOp::FloatPanelInWindow {
+        source_window: w1,
+        panel: panel_c.clone(),
+        target_window: w1,
+        rect: rect(10.0, 10.0, 200.0, 100.0),
+    }));
+
+    assert!(g.apply_op(&DockOp::MoveWindowToEmptyDockSpace {
+        source_window: w1,
+        target_window: w2,
+    }));
+
+    assert!(
+        g.window_root(w1).is_none(),
+        "expected source window root to be removed"
+    );
+    assert!(
+        g.floating_windows(w1).is_empty(),
+        "expected source window floating metadata to be moved"
+    );
+    assert!(
+        g.window_root(w2).is_some(),
+        "expected target window to receive the source root"
+    );
+    assert_eq!(
+        g.floating_windows(w2).len(),
+        1,
+        "expected target window to receive in-window floating containers"
+    );
+    assert_eq!(
+        g.collect_panels_in_window(w2),
+        vec![panel_a, panel_b, panel_c],
+        "expected every panel from the source window forest to survive"
+    );
+    assert_canonical_all_windows(&g);
+}
+
+#[test]
+fn move_window_to_empty_dock_space_rejects_non_empty_target() {
+    let w1 = window(1);
+    let w2 = window(2);
+    let panel_a = PanelKey::new("test.a");
+    let panel_b = PanelKey::new("test.b");
+
+    let mut g = DockGraph::new();
+    let source = g.insert_node(DockNode::Tabs {
+        tabs: vec![panel_a.clone()],
+        active: 0,
+    });
+    g.set_window_root(w1, source);
+    let target = g.insert_node(DockNode::Tabs {
+        tabs: vec![panel_b.clone()],
+        active: 0,
+    });
+    g.set_window_root(w2, target);
+
+    assert!(!g.apply_op(&DockOp::MoveWindowToEmptyDockSpace {
+        source_window: w1,
+        target_window: w2,
+    }));
+    assert_eq!(g.collect_panels_in_window(w1), vec![panel_a]);
+    assert_eq!(g.collect_panels_in_window(w2), vec![panel_b]);
+    assert_canonical_all_windows(&g);
+}
+
+#[test]
 fn move_tabs_merges_into_target_tabs_and_preserves_active() {
     let w = window(1);
     let panel_a = PanelKey::new("test.a");
@@ -837,6 +917,9 @@ fn run_dock_op_sequence_case(case: &DockOpSequenceCase) {
                         }
                         DockOp::MoveTabs { .. } => "move_tabs",
                         DockOp::MoveTabsToEmptyDockSpace { .. } => "move_tabs_to_empty_dock_space",
+                        DockOp::MoveWindowToEmptyDockSpace { .. } => {
+                            "move_window_to_empty_dock_space"
+                        }
                         DockOp::FloatPanelToWindow { .. } => "float_panel_to_window",
                         DockOp::RequestFloatPanelToNewWindow { .. } => {
                             "request_float_panel_to_new_window"
