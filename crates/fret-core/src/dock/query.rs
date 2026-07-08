@@ -225,15 +225,24 @@ impl DockGraph {
         window: AppWindowId,
         panel: &PanelKey,
     ) -> Option<(DockNodeId, usize)> {
+        self.panel_owner_in_window(window, panel)
+            .map(|owner| (owner.tabs, owner.tab_index))
+    }
+
+    pub(super) fn panel_owner_in_window(
+        &self,
+        window: AppWindowId,
+        panel: &PanelKey,
+    ) -> Option<DockPanelOwner> {
         if let Some(root) = self.window_root(window)
-            && let Some(found) = self.find_panel_in_subtree(root, panel)
+            && let Some(owner) = self.panel_owner_in_subtree(root, None, panel)
         {
-            return Some(found);
+            return Some(owner);
         }
 
         self.window_floatings.get(&window).and_then(|list| {
             list.iter()
-                .find_map(|w| self.find_panel_in_subtree(w.floating, panel))
+                .find_map(|w| self.panel_owner_in_subtree(w.floating, Some(w.floating), panel))
         })
     }
 
@@ -348,19 +357,28 @@ impl DockGraph {
         }
     }
 
-    fn find_panel_in_subtree(
+    fn panel_owner_in_subtree(
         &self,
         node: DockNodeId,
+        floating: Option<DockNodeId>,
         panel: &PanelKey,
-    ) -> Option<(DockNodeId, usize)> {
+    ) -> Option<DockPanelOwner> {
         let n = self.nodes.get(node)?;
         match n {
-            DockNode::Tabs { tabs, .. } => tabs.iter().position(|p| p == panel).map(|i| (node, i)),
+            DockNode::Tabs { tabs, .. } => {
+                tabs.iter()
+                    .position(|p| p == panel)
+                    .map(|tab_index| DockPanelOwner {
+                        tabs: node,
+                        tab_index,
+                        floating,
+                    })
+            }
             DockNode::Split { children, .. } => children
                 .iter()
                 .copied()
-                .find_map(|child| self.find_panel_in_subtree(child, panel)),
-            DockNode::Floating { child } => self.find_panel_in_subtree(*child, panel),
+                .find_map(|child| self.panel_owner_in_subtree(child, floating, panel)),
+            DockNode::Floating { child } => self.panel_owner_in_subtree(*child, Some(node), panel),
         }
     }
 

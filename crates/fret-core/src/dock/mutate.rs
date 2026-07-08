@@ -382,16 +382,16 @@ impl DockGraph {
     }
 
     pub fn ensure_panel_visible(&mut self, preferred_window: AppWindowId, panel: PanelKey) -> bool {
-        if let Some((tabs, index)) = self.find_panel_in_window(preferred_window, &panel) {
-            return self.set_active_tab(tabs, index);
+        if let Some(owner) = self.panel_owner_in_window(preferred_window, &panel) {
+            return self.activate_panel_owner(preferred_window, owner);
         }
 
         for candidate_window in self.windows() {
             if candidate_window == preferred_window {
                 continue;
             }
-            if let Some((tabs, index)) = self.find_panel_in_window(candidate_window, &panel) {
-                return self.set_active_tab(tabs, index);
+            if let Some(owner) = self.panel_owner_in_window(candidate_window, &panel) {
+                return self.activate_panel_owner(candidate_window, owner);
             }
         }
 
@@ -411,6 +411,15 @@ impl DockGraph {
         });
         self.set_window_root(preferred_window, tabs);
         true
+    }
+
+    fn activate_panel_owner(&mut self, window: AppWindowId, owner: DockPanelOwner) -> bool {
+        let raised = owner
+            .floating
+            .and_then(|floating| self.raise_floating_to_front(window, floating))
+            .unwrap_or(false);
+        let activated = self.set_active_tab(owner.tabs, owner.tab_index);
+        raised || activated
     }
 
     pub fn float_panel_to_window(
@@ -591,18 +600,26 @@ impl DockGraph {
     }
 
     pub fn raise_floating(&mut self, window: AppWindowId, floating: DockNodeId) -> bool {
+        self.raise_floating_to_front(window, floating).is_some()
+    }
+
+    fn raise_floating_to_front(
+        &mut self,
+        window: AppWindowId,
+        floating: DockNodeId,
+    ) -> Option<bool> {
         let Some(list) = self.window_floatings.get_mut(&window) else {
-            return false;
+            return None;
         };
         let Some(index) = list.iter().position(|w| w.floating == floating) else {
-            return false;
+            return None;
         };
         if index + 1 == list.len() {
-            return true;
+            return Some(false);
         }
         let entry = list.remove(index);
         list.push(entry);
-        true
+        Some(true)
     }
 
     pub fn merge_floating_into(

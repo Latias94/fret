@@ -84,6 +84,13 @@ pub struct DockPanelLocation {
     pub active: bool,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) struct DockPanelOwner {
+    pub tabs: DockNodeId,
+    pub tab_index: usize,
+    pub floating: Option<DockNodeId>,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct DockFloatingWindow {
     pub floating: DockNodeId,

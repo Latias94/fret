@@ -156,14 +156,27 @@ impl DockTearOffMachine {
         }
     }
 
-    fn cancel_for_panel(&mut self, panel: &PanelKey) {
+    fn cancel_for_panel(
+        &mut self,
+        panel: &PanelKey,
+        canceled_creates: &mut Vec<(AppWindowId, PanelKey)>,
+    ) {
         if let Some(pending) = self.pending_by_panel.get_mut(panel) {
+            if !pending.canceled {
+                canceled_creates.push((pending.source_window, panel.clone()));
+            }
             pending.canceled = true;
         }
     }
 
-    pub(super) fn prune_and_cancel_for_op(&mut self, now: TickId, dock: &DockManager, op: &DockOp) {
+    pub(super) fn prune_and_cancel_for_op(
+        &mut self,
+        now: TickId,
+        dock: &DockManager,
+        op: &DockOp,
+    ) -> Vec<(AppWindowId, PanelKey)> {
         self.prune_expired(now);
+        let mut canceled_creates = Vec::new();
         match op {
             DockOp::ClosePanel { panel, .. }
             | DockOp::EnsurePanelVisible { panel, .. }
@@ -171,31 +184,42 @@ impl DockTearOffMachine {
             | DockOp::MovePanelToEmptyDockSpace { panel, .. }
             | DockOp::FloatPanelToWindow { panel, .. }
             | DockOp::FloatPanelInWindow { panel, .. } => {
-                self.cancel_for_panel(panel);
+                self.cancel_for_panel(panel, &mut canceled_creates);
             }
             DockOp::MoveTabs { source_tabs, .. }
             | DockOp::MoveTabsToEmptyDockSpace { source_tabs, .. }
             | DockOp::FloatTabsInWindow { source_tabs, .. } => {
-                self.cancel_for_tabs_node(dock, *source_tabs);
+                self.cancel_for_tabs_node(dock, *source_tabs, &mut canceled_creates);
             }
             DockOp::MoveWindowToEmptyDockSpace { source_window, .. }
             | DockOp::MergeWindowInto { source_window, .. } => {
-                self.cancel_for_window(dock, *source_window);
+                self.cancel_for_window(dock, *source_window, &mut canceled_creates);
             }
             _ => {}
         }
+        canceled_creates
     }
 
-    fn cancel_for_window(&mut self, dock: &DockManager, source_window: AppWindowId) {
+    fn cancel_for_window(
+        &mut self,
+        dock: &DockManager,
+        source_window: AppWindowId,
+        canceled_creates: &mut Vec<(AppWindowId, PanelKey)>,
+    ) {
         for panel in dock.workspace.graph.collect_panels_in_window(source_window) {
-            self.cancel_for_panel(&panel);
+            self.cancel_for_panel(&panel, canceled_creates);
         }
     }
 
-    fn cancel_for_tabs_node(&mut self, dock: &DockManager, source_tabs: DockNodeId) {
+    fn cancel_for_tabs_node(
+        &mut self,
+        dock: &DockManager,
+        source_tabs: DockNodeId,
+        canceled_creates: &mut Vec<(AppWindowId, PanelKey)>,
+    ) {
         if let Some(DockNode::Tabs { tabs, .. }) = dock.workspace.graph.node(source_tabs) {
             for panel in tabs {
-                self.cancel_for_panel(panel);
+                self.cancel_for_panel(panel, canceled_creates);
             }
         }
     }

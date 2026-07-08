@@ -1,5 +1,5 @@
-use fret_core::AppWindowId;
-use fret_runtime::{CreateWindowRequest, Effect, UiHost, WindowRequest};
+use fret_core::{AppWindowId, PanelKey};
+use fret_runtime::{CreateWindowKind, CreateWindowRequest, Effect, UiHost, WindowRequest};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum DockRuntimeCommand {
@@ -36,6 +36,29 @@ impl DockRuntimeCommandQueue {
             return Vec::new();
         }
         self.commands.drain(baseline..).collect()
+    }
+
+    fn remove_create_windows(&mut self, canceled: &[(AppWindowId, PanelKey)]) -> usize {
+        if canceled.is_empty() {
+            return 0;
+        }
+        let before = self.commands.len();
+        self.commands.retain(|command| {
+            let DockRuntimeCommand::CreateWindow(request) = command else {
+                return true;
+            };
+            let CreateWindowKind::DockFloating {
+                source_window,
+                panel,
+            } = &request.kind
+            else {
+                return true;
+            };
+            !canceled.iter().any(|(canceled_window, canceled_panel)| {
+                canceled_window == source_window && canceled_panel == panel
+            })
+        });
+        before.saturating_sub(self.commands.len())
     }
 }
 
@@ -78,5 +101,14 @@ pub(super) fn take_runtime_commands_since<H: UiHost>(
 ) -> Vec<DockRuntimeCommand> {
     app.with_global_mut(DockRuntimeCommandQueue::default, |queue, _app| {
         queue.take_since(baseline)
+    })
+}
+
+pub(super) fn remove_queued_create_windows<H: UiHost>(
+    app: &mut H,
+    canceled: &[(AppWindowId, PanelKey)],
+) -> usize {
+    app.with_global_mut(DockRuntimeCommandQueue::default, |queue, _app| {
+        queue.remove_create_windows(canceled)
     })
 }

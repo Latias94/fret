@@ -3,7 +3,7 @@ use fret_runtime::UiHost;
 
 use crate::dock::DockManager;
 
-use super::commands::CloseWindowDispatch;
+use super::commands::{self, CloseWindowDispatch};
 use super::tear_off::DockTearOffMachine;
 use super::{auto_close, layout_invalidation};
 
@@ -29,7 +29,8 @@ fn handle_applied_dock_op_with_close_dispatch<H: UiHost>(
     let handled = app.with_global_mut(DockManager::default, |dock, app| {
         let now = app.tick_id();
         app.with_global_mut(DockTearOffMachine::default, |machine, _app| {
-            machine.prune_and_cancel_for_op(now, dock, &op);
+            let canceled_creates = machine.prune_and_cancel_for_op(now, dock, &op);
+            commands::remove_queued_create_windows(_app, &canceled_creates);
         });
 
         let changed = dock.workspace.graph.apply_op(&op);

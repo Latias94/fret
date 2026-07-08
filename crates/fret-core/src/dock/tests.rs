@@ -1634,6 +1634,13 @@ fn ensure_panel_visible_dedupes_existing_panel_in_floating_only_window() {
             active: true,
         })
     );
+    assert_eq!(
+        g.panel_location_in_window(window_b, &panel_b)
+            .map(|location| location.placement),
+        Some(DockPanelPlacement::Floating)
+    );
+    assert_eq!(g.selected_panel_in_window(window_b), Some(panel_b.clone()));
+    assert_eq!(g.selected_panel_in_window(window(99)), None);
 }
 
 #[test]
@@ -1684,6 +1691,54 @@ fn panel_location_and_selected_panel_report_docked_and_floating_tabs() {
     );
     assert_eq!(
         g.panel_location(&panel_c),
+        Some(DockPanelLocation {
+            window: w,
+            placement: DockPanelPlacement::Floating,
+            tab_index: 0,
+            tab_count: 1,
+            active: true,
+        })
+    );
+}
+
+#[test]
+fn ensure_panel_visible_raises_existing_floating_owner_to_front() {
+    let w = window(1);
+    let panel_a = PanelKey::new("test.a");
+    let panel_b = PanelKey::new("test.b");
+    let panel_c = PanelKey::new("test.c");
+
+    let mut g = DockGraph::new();
+    let root = g.insert_node(DockNode::Tabs {
+        tabs: vec![panel_a.clone(), panel_b.clone(), panel_c],
+        active: 2,
+    });
+    g.set_window_root(w, root);
+
+    assert!(g.apply_op(&DockOp::FloatPanelInWindow {
+        source_window: w,
+        panel: panel_a.clone(),
+        target_window: w,
+        rect: rect(10.0, 10.0, 240.0, 180.0),
+    }));
+    assert!(g.apply_op(&DockOp::FloatPanelInWindow {
+        source_window: w,
+        panel: panel_b.clone(),
+        target_window: w,
+        rect: rect(20.0, 20.0, 240.0, 180.0),
+    }));
+    let floating_a = g.floating_windows(w)[0].floating;
+    let floating_b = g.floating_windows(w)[1].floating;
+    assert_eq!(g.floating_windows(w).last().unwrap().floating, floating_b);
+
+    assert!(g.apply_op(&DockOp::EnsurePanelVisible {
+        preferred_window: w,
+        panel: panel_a.clone(),
+    }));
+
+    assert_eq!(g.floating_windows(w).last().unwrap().floating, floating_a);
+    assert_eq!(
+        g.panel_location(&panel_a),
         Some(DockPanelLocation {
             window: w,
             placement: DockPanelPlacement::Floating,

@@ -1,10 +1,11 @@
 use super::*;
-use crate::dock::{DockManager, DockPanel};
+use crate::dock::{DockManager, DockPanel, DockViewportLayout};
 use crate::runtime::DockRuntimeCommand;
 use crate::test_host::TestHost;
 use fret_core::{
     AppWindowId, DockLayout, DockLayoutNode, DockLayoutWindow, DockNode, DockOp,
-    DockWindowPlacement, DropZone, PanelKey,
+    DockWindowPlacement, DropZone, PanelKey, Point, Px, Rect, RenderTargetId, Size, ViewportFit,
+    ViewportMapping,
 };
 use fret_runtime::{CreateWindowKind, Effect, PlatformCapabilities, WindowRequest};
 use slotmap::KeyData;
@@ -15,6 +16,41 @@ fn test_panel(title: &str) -> DockPanel {
         color: fret_core::Color::TRANSPARENT,
         viewport: None,
     }
+}
+
+fn render_target(id: u64) -> RenderTargetId {
+    RenderTargetId::from(KeyData::from_ffi(id))
+}
+
+fn rect(x: f32, y: f32, width: f32, height: f32) -> Rect {
+    Rect::new(Point::new(Px(x), Px(y)), Size::new(Px(width), Px(height)))
+}
+
+fn viewport_layout(rect: Rect) -> DockViewportLayout {
+    let mapping = ViewportMapping {
+        content_rect: rect,
+        target_px_size: (320, 240),
+        fit: ViewportFit::Stretch,
+    };
+    DockViewportLayout {
+        content_rect: rect,
+        mapping,
+        draw_rect: mapping.map().draw_rect,
+    }
+}
+
+fn queued_create_panel(command: &DockRuntimeCommand) -> Option<(AppWindowId, PanelKey)> {
+    let DockRuntimeCommand::CreateWindow(create) = command else {
+        return None;
+    };
+    let CreateWindowKind::DockFloating {
+        source_window,
+        panel,
+    } = &create.kind
+    else {
+        return None;
+    };
+    Some((*source_window, panel.clone()))
 }
 
 #[test]
@@ -180,6 +216,20 @@ fn dock_surface_preferred_open_invalidates_actual_owner_window() {
     surface
         .open_panel_with_preferred_window(&mut app, other_window, &panel_b)
         .expect("open panel b in other window");
+    let main_target = render_target(201);
+    let other_target = render_target(202);
+    app.with_global_mut(DockManager::default, |dock, _app| {
+        dock.set_viewport_layout(
+            main_window,
+            main_target,
+            viewport_layout(rect(0.0, 0.0, 320.0, 240.0)),
+        );
+        dock.set_viewport_layout(
+            other_window,
+            other_target,
+            viewport_layout(rect(10.0, 10.0, 320.0, 240.0)),
+        );
+    });
     app.take_redraws();
 
     let outcome = surface
@@ -200,6 +250,9 @@ fn dock_surface_preferred_open_invalidates_actual_owner_window() {
         redraws.contains(&main_window),
         "preferred-window command should also invalidate the preferred window"
     );
+    let dock = app.global::<DockManager>().expect("dock manager exists");
+    assert_eq!(dock.viewport_layout(main_window, main_target), None);
+    assert_eq!(dock.viewport_layout(other_window, other_target), None);
 }
 
 #[test]
@@ -704,17 +757,25 @@ fn dock_surface_open_panel_invalidates_layout_and_cancels_pending_tearoff() {
 fn dock_surface_semantic_open_does_not_flush_existing_runtime_commands() {
     let window = AppWindowId::from(KeyData::from_ffi(1));
     let panel = PanelKey::new("test.panel");
+    let queued_panel = PanelKey::new("test.queued");
     let surface = DockSurface::new(window);
 
     let mut app = TestHost::new();
     app.set_global(PlatformCapabilities::default());
     app.set_global(DockManager::default());
     surface.register_panel(&mut app, panel.clone(), test_panel("Panel"));
+    surface.register_panel(&mut app, queued_panel.clone(), test_panel("Queued"));
     surface.open_panel(&mut app, &panel).expect("open panel");
+    surface
+        .open_panel(&mut app, &queued_panel)
+        .expect("open queued panel");
+    surface
+        .open_panel(&mut app, &panel)
+        .expect("make panel active again");
     assert!(surface.driver().request_float_panel_to_new_window(
         &mut app,
         window,
-        panel.clone(),
+        queued_panel.clone(),
         None
     ));
     app.take_effects();
@@ -735,9 +796,101 @@ fn dock_surface_semantic_open_does_not_flush_existing_runtime_commands() {
             .driver()
             .take_runtime_commands(&mut app)
             .iter()
-            .any(|command| matches!(command, DockRuntimeCommand::CreateWindow(_))),
-        "pre-existing docking runtime command should remain queued"
+            .any(|command| queued_create_panel(command) == Some((window, queued_panel.clone()))),
+        "pre-existing unrelated docking runtime command should remain queued"
     );
+}
+
+#[test]
+fn dock_surface_semantic_open_removes_canceled_create_for_same_panel_only() {
+    let window = AppWindowId::from(KeyData::from_ffi(1));
+    let panel = PanelKey::new("test.panel");
+    let other_panel = PanelKey::new("test.other");
+    let surface = DockSurface::new(window);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    app.set_global(DockManager::default());
+    surface.register_panel(&mut app, panel.clone(), test_panel("Panel"));
+    surface.register_panel(&mut app, other_panel.clone(), test_panel("Other"));
+    surface.open_panel(&mut app, &panel).expect("open panel");
+    surface
+        .open_panel(&mut app, &other_panel)
+        .expect("open other panel");
+    assert!(surface.driver().request_float_panel_to_new_window(
+        &mut app,
+        window,
+        panel.clone(),
+        None
+    ));
+    assert!(surface.driver().request_float_panel_to_new_window(
+        &mut app,
+        window,
+        other_panel.clone(),
+        None
+    ));
+    app.take_effects();
+
+    surface.open_panel(&mut app, &panel).expect("reopen panel");
+
+    assert!(
+        app.take_effects()
+            .iter()
+            .all(|effect| !matches!(effect, Effect::Window(WindowRequest::Create(_)))),
+        "semantic panel commands must not emit a canceled create-window request"
+    );
+    let queued = surface.driver().take_runtime_commands(&mut app);
+    assert_eq!(queued.len(), 1);
+    assert_eq!(
+        queued_create_panel(&queued[0]),
+        Some((window, other_panel)),
+        "only the unrelated pending create should remain queued"
+    );
+}
+
+#[test]
+fn dock_surface_viewport_open_flushes_only_new_runtime_commands() {
+    let window = AppWindowId::from(KeyData::from_ffi(1));
+    let old_panel = PanelKey::new("test.old");
+    let new_panel = PanelKey::new("test.new");
+    let surface = DockSurface::new(window);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    app.set_global(DockManager::default());
+    surface.register_panel(&mut app, old_panel.clone(), test_panel("Old"));
+    surface.register_panel(&mut app, new_panel.clone(), test_panel("New"));
+    surface.open_panel(&mut app, &old_panel).expect("open old");
+    surface.open_panel(&mut app, &new_panel).expect("open new");
+    assert!(surface.driver().request_float_panel_to_new_window(
+        &mut app,
+        window,
+        old_panel.clone(),
+        None
+    ));
+    app.take_effects();
+
+    let outcome = surface
+        .viewports()
+        .open_panel(&mut app, &new_panel, None)
+        .expect("open viewport for new panel");
+
+    assert_eq!(outcome.window_requests, 1);
+    let effects = app.take_effects();
+    assert_eq!(effects.len(), 1);
+    let Effect::Window(WindowRequest::Create(create)) = &effects[0] else {
+        panic!("expected only the newly queued create command to be flushed");
+    };
+    assert!(matches!(
+        create.kind,
+        CreateWindowKind::DockFloating {
+            source_window,
+            panel: ref requested,
+        } if source_window == window && requested == &new_panel
+    ));
+    let queued = surface.driver().take_runtime_commands(&mut app);
+    assert_eq!(queued.len(), 1);
+    assert_eq!(queued_create_panel(&queued[0]), Some((window, old_panel)));
 }
 
 #[test]
@@ -1050,11 +1203,11 @@ fn dock_surface_flushes_close_runtime_commands_to_host_effects() {
         surface.driver().take_runtime_commands(&mut app).is_empty(),
         "flushed close command should be drained from the docking runtime queue"
     );
+    let effects = app.take_effects();
+    assert_eq!(effects.len(), 1);
     assert!(
-        app.take_effects()
-            .iter()
-            .any(|effect| matches!(effect, Effect::Window(WindowRequest::Close(window)) if *window == window_b)),
-        "expected flushed docking runtime command to become WindowRequest::Close"
+        matches!(&effects[0], Effect::Window(WindowRequest::Close(window)) if *window == window_b),
+        "expected the only flushed docking runtime command to become WindowRequest::Close"
     );
 }
 

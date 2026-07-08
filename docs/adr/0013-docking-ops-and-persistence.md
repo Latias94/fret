@@ -38,6 +38,7 @@ Platform/window objects are not stored in the graph; window geometry and OS hand
 
 Define docking changes as high-level operations (conceptually `DockOp`) such as:
 
+- ensure a panel is visible (`EnsurePanelVisible`) without duplicating an already-open `PanelKey`,
 - move tab (including reorder within tab bar),
 - split and insert,
 - tear-off to a new window root,
@@ -213,7 +214,9 @@ app-owned dock graph and multi-root overlay model (ADR 0011):
 - Durable transaction vocabulary: `DockOp` exists in `crates/fret-core/src/dock/op.rs`.
   - The demo applies `DockOp` via the runner’s effect drain path (`Effect::Dock`), which is the intended integration point.
   - `DockOp` is `#[non_exhaustive]`; downstream driver/runtime integrations must include a wildcard arm, and ordinary app code should prefer the semantic `DockSurface` facade instead of exhaustive operation matching.
+  - `DockOp::EnsurePanelVisible { preferred_window, panel }` selects an existing `PanelKey` wherever it is already owned instead of duplicating it. `preferred_window` is used only when the panel is not already present. If the existing owner is an in-window floating dock container, the operation raises that floating container so “visible” means active and front-most in the window's floating z-order.
   - `Effect::Dock` carries only durable graph mutations. App-facing OS-window tear-off uses `fret_docking::DockSurface::viewports().open_panel(...)` for typed lifecycle outcomes, while host/runtime integration can opt into `DockSurface::driver().request_float_*_to_new_window(...)`; window creation remains app/runner-owned.
+  - App-facing semantic docking commands drain only runtime commands produced by the current operation. When an operation cancels a pending tear-off, the matching queued `CreateWindow` command is removed so stale creates do not later become create-then-close ghost windows; unrelated queued commands remain on the explicit driver queue.
   - Closing a floating OS window merges its panels back into the main window through the docking runtime before-close path (`DockSurface::viewports().before_close_window(...)` for typed app usage, `DockSurface::driver().before_close_window(...)` for low-level host callbacks).
   - Split sizing is updated via `DockOp::SetSplitFractionsMany` (atomic batch; each vector length matches `children.len()`).
     `SetSplitFractions` remains for single-split updates, and `SetSplitFractionTwo` remains as a legacy convenience for binary splits.
