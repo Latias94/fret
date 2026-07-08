@@ -10,7 +10,7 @@ use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 fn sidebar_icon(cx: &mut AppComponentCx<'_>, id: &'static str) -> AnyElement {
-    shadcn::raw::icon::icon(cx, IconId::new_static(id)).into_element(cx)
+    icon::icon(cx, IconId::new_static(id)).into_element(cx)
 }
 
 fn set_text_model(model: Model<Arc<str>>, value: &'static str) -> OnActivate {

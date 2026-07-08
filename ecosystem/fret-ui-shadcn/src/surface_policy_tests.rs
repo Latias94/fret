@@ -514,7 +514,7 @@ fn first_party_code_avoids_root_authoring_glue_lane() {
         );
         assert!(
             !source.contains("fret_ui_shadcn::icon::"),
-            "{} should use `shadcn::raw::icon::*` or prelude-imported icon glue instead of the root glue lane",
+            "{} should use prelude-imported icon glue instead of the root glue lane",
             path.display()
         );
         assert!(

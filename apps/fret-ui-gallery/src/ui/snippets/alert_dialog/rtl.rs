@@ -57,7 +57,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                         .test_id("ui-gallery-alert-dialog-rtl-small-trigger"),
                 )),
                 shadcn::AlertDialogPart::content_with(|cx| {
-                    let icon = shadcn::raw::icon::icon_with(
+                    let icon = icon::icon_with(
                         cx,
                         fret_icons::IconId::new_static("lucide.bluetooth"),
                         Some(Px(32.0)),

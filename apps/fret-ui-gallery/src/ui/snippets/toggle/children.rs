@@ -8,11 +8,11 @@ use fret_ui_shadcn::{facade as shadcn, prelude::*};
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     ui::h_row(|cx| {
         let bookmark_children = vec![
-            shadcn::raw::icon::icon(cx, IconId::new_static("lucide.bookmark")),
+            icon::icon(cx, IconId::new_static("lucide.bookmark")),
             decl_text::text_button_label(cx, "Bookmark"),
         ];
         let underline_children = vec![
-            shadcn::raw::icon::icon(cx, IconId::new_static("lucide.underline")),
+            icon::icon(cx, IconId::new_static("lucide.underline")),
             decl_text::text_button_label(cx, "Underline"),
         ];
 

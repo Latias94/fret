@@ -23,7 +23,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                     }),
                     shadcn::BreadcrumbSeparatorPart::new()
                         .children(|cx| {
-                            [shadcn::raw::icon::icon_with(
+                            [icon::icon_with(
                                 cx,
                                 fret_icons::ids::ui::SLASH,
                                 Some(Px(14.0)),
@@ -41,7 +41,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                     }),
                     shadcn::BreadcrumbSeparatorPart::new()
                         .children(|cx| {
-                            [shadcn::raw::icon::icon_with(
+                            [icon::icon_with(
                                 cx,
                                 fret_icons::ids::ui::SLASH,
                                 Some(Px(14.0)),

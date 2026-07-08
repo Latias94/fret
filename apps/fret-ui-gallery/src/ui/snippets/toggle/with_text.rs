@@ -11,7 +11,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             shadcn::toggle_uncontrolled(cx, false, |cx| {
                 ui::children![
                     cx;
-                    shadcn::raw::icon::icon(cx, IconId::new_static("lucide.italic")),
+                    icon::icon(cx, IconId::new_static("lucide.italic")),
                     decl_text::text_button_label(cx, "Italic")
                 ]
             })

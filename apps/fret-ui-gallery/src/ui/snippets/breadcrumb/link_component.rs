@@ -24,7 +24,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                                 .children(|cx| {
                                     [ui::h_row(move |cx| {
                                         vec![
-                                            shadcn::raw::icon::icon_with(
+                                            icon::icon_with(
                                                 cx,
                                                 fret_icons::ids::ui::FOLDER_OPEN,
                                                 Some(Px(14.0)),
@@ -49,7 +49,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                                 .children(|cx| {
                                     [ui::h_row(move |cx| {
                                         vec![
-                                            shadcn::raw::icon::icon_with(
+                                            icon::icon_with(
                                                 cx,
                                                 fret_icons::ids::ui::FOLDER,
                                                 Some(Px(14.0)),

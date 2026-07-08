@@ -541,7 +541,7 @@ Direct crate usage rule for first-party recipe crates:
 - first-party teaching surfaces may currently use only the documented explicit lanes:
   `shadcn::typography::*`, `shadcn::raw::extras::*`,
   `shadcn::raw::breadcrumb::primitives`, `shadcn::raw::experimental::*` for the
-  `DataGridElement` prototype, low-level `shadcn::raw::icon::*`, module-local advanced
+  `DataGridElement` prototype, prelude-imported `icon::*` glue, module-local advanced
   customization enums/styles such as `shadcn::raw::{button, calendar, context_menu,
   dropdown_menu, kbd, menubar, select, switch, tabs, toggle_group}::*`, and
   explicitly justified retained/interop seams such as `fret::shadcn::raw::prelude::*`

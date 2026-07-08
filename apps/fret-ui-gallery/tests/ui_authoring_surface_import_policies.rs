@@ -54,11 +54,7 @@ fn assert_curated_facade_root_only(relative_paths: &[&str]) {
     }
 }
 
-fn documented_raw_shadcn_escape_hatch_reason(trimmed: &str) -> Option<&'static str> {
-    if trimmed.contains("shadcn::raw::icon::") {
-        return Some("low-level icon helper");
-    }
-
+fn documented_raw_shadcn_escape_hatch_reason(_trimmed: &str) -> Option<&'static str> {
     None
 }
 
@@ -81,14 +77,8 @@ fn assert_only_documented_raw_shadcn_modules(path: &std::path::Path, source: &st
 
 #[test]
 fn raw_shadcn_escape_hatch_gate_is_symbol_level_not_module_level() {
-    for allowed in ["shadcn::raw::icon::icon(cx, icon)"] {
-        assert!(
-            documented_raw_shadcn_escape_hatch_reason(allowed).is_some(),
-            "expected `{allowed}` to stay classified as an explicit raw escape hatch",
-        );
-    }
-
     for forbidden in [
+        "shadcn::raw::icon::icon(cx, icon)",
         "shadcn::raw::kbd::KbdStyle::default()",
         "shadcn::raw::toggle_group::ToggleGroupStyle::default()",
         "shadcn::raw::experimental::UnclassifiedWidget::new()",

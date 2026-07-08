@@ -6,7 +6,7 @@ use fret_icons::IconId;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
-    let icon = shadcn::raw::icon::icon(cx, IconId::new_static("lucide.info"));
+    let icon = icon::icon(cx, IconId::new_static("lucide.info"));
     shadcn::extras::Banner::new([
         shadcn::extras::BannerIcon::new(icon).into_element(cx),
         shadcn::extras::BannerTitle::new("A new version is available.").into_element(cx),

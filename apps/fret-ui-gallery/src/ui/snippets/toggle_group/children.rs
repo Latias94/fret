@@ -11,7 +11,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             shadcn::ToggleGroupItem::new(
                 "list",
                 [
-                    shadcn::raw::icon::icon(cx, IconId::new_static("lucide.list")),
+                    icon::icon(cx, IconId::new_static("lucide.list")),
                     decl_text::text_button_label(cx, "List"),
                 ],
             )
@@ -19,7 +19,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             shadcn::ToggleGroupItem::new(
                 "grid",
                 [
-                    shadcn::raw::icon::icon(cx, IconId::new_static("lucide.grid-2x2")),
+                    icon::icon(cx, IconId::new_static("lucide.grid-2x2")),
                     decl_text::text_button_label(cx, "Grid"),
                 ],
             )
@@ -27,7 +27,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             shadcn::ToggleGroupItem::new(
                 "cards",
                 [
-                    shadcn::raw::icon::icon(cx, IconId::new_static("lucide.layout-panel-top")),
+                    icon::icon(cx, IconId::new_static("lucide.layout-panel-top")),
                     decl_text::text_button_label(cx, "Cards"),
                 ],
             )

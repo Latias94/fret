@@ -3,6 +3,7 @@ pub const SOURCE: &str = include_str!("media.rs");
 // region: example
 use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
+use fret_ui_kit::declarative::icon;
 use fret_ui_shadcn::facade as shadcn;
 
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
@@ -16,7 +17,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                     .test_id("ui-gallery-alert-dialog-media-trigger"),
             )),
             shadcn::AlertDialogPart::content_with(|cx| {
-                let icon = shadcn::raw::icon::icon_with(
+                let icon = icon::icon_with(
                     cx,
                     fret_icons::IconId::new_static("lucide.circle-fading-plus"),
                     Some(Px(32.0)),

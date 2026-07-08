@@ -175,7 +175,7 @@ const PROJECTS: &[ProjectSpec] = &[
 ];
 
 fn sidebar_icon(cx: &mut AppComponentCx<'_>, id: &'static str) -> AnyElement {
-    shadcn::raw::icon::icon(cx, IconId::new_static(id)).into_element(cx)
+    icon::icon(cx, IconId::new_static(id)).into_element(cx)
 }
 
 fn avatar_badge(cx: &mut AppComponentCx<'_>, initials: &'static str) -> AnyElement {

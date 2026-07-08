@@ -11,6 +11,7 @@ use fret_core::{
 use fret_runtime::Effect;
 use fret_ui::Theme;
 use fret_ui::element::{SelectableTextInteractiveSpan, SelectableTextProps};
+use fret_ui_kit::declarative::icon;
 use fret_ui_kit::{ChromeRefinement, ColorRef};
 use fret_ui_shadcn::facade as shadcn;
 
@@ -91,7 +92,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                         "destructive/10"
                     })
                     .unwrap_or_else(|| theme.color_token("muted"));
-                let icon = shadcn::raw::icon::icon_with(
+                let icon = icon::icon_with(
                     cx,
                     fret_icons::IconId::new_static("lucide.trash-2"),
                     Some(Px(32.0)),

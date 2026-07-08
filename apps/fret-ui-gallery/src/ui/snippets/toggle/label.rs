@@ -30,7 +30,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                 shadcn::toggle(cx, pressed.clone(), |cx| {
                     ui::children![
                         cx;
-                        shadcn::raw::icon::icon(cx, IconId::new_static("lucide.bookmark")),
+                        icon::icon(cx, IconId::new_static("lucide.bookmark")),
                         decl_text::text_button_label(cx, "Bookmark")
                     ]
                 })

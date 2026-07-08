@@ -2,6 +2,7 @@ use super::*;
 use crate::spec::ENV_UI_GALLERY_START_SECTION;
 use fret::{AppComponentCx, UiChild};
 use fret_ui_kit::IntoUiElement;
+use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_shadcn::facade as shadcn;
 
@@ -617,7 +618,7 @@ where
 // Typed icon relay: the shared icon facade still lands a concrete icon leaf internally, but
 // doc-layout callers no longer need to spell that raw detail on their own helper signatures.
 pub(in crate::ui) fn icon(cx: &mut AppComponentCx<'_>, id: &'static str) -> impl UiChild + use<> {
-    shadcn::raw::icon::icon(cx, fret_icons::IconId::new_static(id))
+    decl_icon::icon(cx, fret_icons::IconId::new_static(id))
 }
 
 #[allow(dead_code)]

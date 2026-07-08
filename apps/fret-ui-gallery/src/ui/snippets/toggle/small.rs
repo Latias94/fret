@@ -8,7 +8,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     shadcn::toggle_uncontrolled(
         cx,
         false,
-        |cx| ui::children![cx; shadcn::raw::icon::icon(cx, IconId::new_static("lucide.italic"))],
+        |cx| ui::children![cx; icon::icon(cx, IconId::new_static("lucide.italic"))],
     )
     .size(shadcn::ToggleSize::Sm)
     .a11y_label("Toggle italic")

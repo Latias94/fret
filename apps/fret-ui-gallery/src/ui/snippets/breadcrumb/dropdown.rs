@@ -13,7 +13,7 @@ const CMD_APP_OPEN: &str = "ui_gallery.app.open";
 fn slash_separator<H: UiHost>(cx: &mut ElementContext<'_, H>) -> impl IntoUiElement<H> + use<H> {
     shadcn::BreadcrumbSeparatorPart::new()
         .children(|cx| {
-            [shadcn::raw::icon::icon_with(
+            [icon::icon_with(
                 cx,
                 fret_icons::ids::ui::SLASH,
                 Some(Px(14.0)),
@@ -59,7 +59,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                                     .text_color(fret_ui_kit::ColorRef::Color(color))
                                     .nowrap()
                                     .into_element(cx);
-                                let chevron = shadcn::raw::icon::icon_with(
+                                let chevron = icon::icon_with(
                                     cx,
                                     fret_icons::IconId::new_static("lucide.chevron-down"),
                                     Some(Px(14.0)),
