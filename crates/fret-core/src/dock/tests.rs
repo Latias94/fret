@@ -1537,6 +1537,46 @@ fn open_panel_selects_existing_panel_instead_of_duplicating_it() {
 }
 
 #[test]
+fn open_panel_selects_existing_panel_in_another_window_instead_of_duplicating_it() {
+    let window_a = window(1);
+    let window_b = window(2);
+    let panel_a = PanelKey::new("test.a");
+    let panel_b = PanelKey::new("test.b");
+
+    let mut g = DockGraph::new();
+    let tabs_a = g.insert_node(DockNode::Tabs {
+        tabs: vec![panel_a.clone(), panel_b.clone()],
+        active: 0,
+    });
+    g.set_window_root(window_a, tabs_a);
+    let tabs_b = g.insert_node(DockNode::Tabs {
+        tabs: vec![PanelKey::new("test.c")],
+        active: 0,
+    });
+    g.set_window_root(window_b, tabs_b);
+
+    assert!(g.apply_op(&DockOp::OpenPanel {
+        window: window_b,
+        panel: panel_b.clone(),
+    }));
+
+    let DockNode::Tabs { tabs, active } = g.node(tabs_a).expect("source tabs node must exist")
+    else {
+        panic!("expected source tabs");
+    };
+    assert_eq!(tabs, &vec![panel_a, panel_b.clone()]);
+    assert_eq!(*active, 1);
+    assert_eq!(
+        g.collect_panels_in_window(window_b)
+            .iter()
+            .filter(|panel| **panel == panel_b)
+            .count(),
+        0,
+        "open panel must not duplicate a panel already owned by another window"
+    );
+}
+
+#[test]
 fn close_panel_before_active_preserves_active_panel() {
     let w = window(1);
     let panel_a = PanelKey::new("test.a");

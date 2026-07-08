@@ -5,6 +5,7 @@ use crate::{AppWindowId, DockNodeId, DropZone, PanelKey, Rect};
 /// This is the transaction vocabulary that enables persistence, undo/redo, and plugins
 /// without letting UI widgets mutate the dock graph ad-hoc.
 #[derive(Debug, Clone, PartialEq)]
+#[non_exhaustive]
 pub enum DockOp {
     SetActiveTab {
         tabs: DockNodeId,

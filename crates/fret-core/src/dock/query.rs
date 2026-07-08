@@ -291,7 +291,7 @@ impl DockGraph {
         }
     }
 
-    fn first_tabs_in_subtree(&self, node: DockNodeId) -> Option<DockNodeId> {
+    pub(super) fn first_tabs_in_subtree(&self, node: DockNodeId) -> Option<DockNodeId> {
         let n = self.nodes.get(node)?;
         match n {
             DockNode::Tabs { .. } => Some(node),
