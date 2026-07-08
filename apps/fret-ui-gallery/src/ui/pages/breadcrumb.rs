@@ -26,7 +26,7 @@ pub(super) fn preview_breadcrumb(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement>
 
     let notes = doc_layout::notes_block([
         "API implementation: `ecosystem/fret-ui-shadcn/src/breadcrumb.rs`.",
-        "Gallery now keeps the shadcn docs-path examples (`Demo`, `Usage`, `Basic`, `Custom Separator`, `Collapsed`) on the curated facade lane, and reopens raw breadcrumb primitives only for advanced seams such as dropdown trigger composition, richer router-shaped inline children, responsive drawer handoff, and RTL-specific overlay alignment.",
+        "Gallery now keeps the shadcn docs-path examples (`Demo`, `Usage`, `Basic`, `Custom Separator`, `Dropdown`, `Collapsed`, `Link Component`, `RTL`) on the curated facade lane, and reopens raw breadcrumb primitives only for the Fret-specific responsive drawer handoff.",
         "Breadcrumb already exposes a compact builder plus an upstream-shaped composition lane; the main gap here was the teaching surface, not the mechanism layer or default recipe ownership.",
         "The `RTL` preview now stays closer to the upstream translated example too: Arabic labels, dot separators, and an end-aligned dropdown attached to the middle breadcrumb item.",
         "Default `BreadcrumbSeparator` chevrons already mirror toward logical `inline-end` in `fret-ui-shadcn`; the docs-aligned RTL preview overrides separators with dots because upstream does, not because the default chevron separator needs a manual RTL fix.",

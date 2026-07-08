@@ -4,18 +4,17 @@ pub const SOURCE: &str = include_str!("link_component.rs");
 use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
-use shadcn::raw::breadcrumb::primitives as bc;
 
 const CMD_APP_OPEN: &str = "ui_gallery.app.open";
 
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
-    bc::Breadcrumb::new()
+    shadcn::BreadcrumbRoot::new()
         .into_element(cx, |cx| {
-            vec![bc::BreadcrumbList::new().into_element(cx, |cx| {
+            vec![shadcn::BreadcrumbList::new().into_element(cx, |cx| {
                 vec![
-                    bc::BreadcrumbItem::new().into_element(cx, |cx| {
+                    shadcn::BreadcrumbItemPart::new().into_element(cx, |cx| {
                         vec![
-                            bc::BreadcrumbLink::new("Home")
+                            shadcn::BreadcrumbLink::new("Home")
                                 .href("https://example.com")
                                 // Keep the gallery deterministic while preserving link semantics.
                                 .action(CMD_APP_OPEN)
@@ -41,10 +40,10 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                                 .into_element(cx),
                         ]
                     }),
-                    bc::BreadcrumbSeparator::new().into_element(cx),
-                    bc::BreadcrumbItem::new().into_element(cx, |cx| {
+                    shadcn::BreadcrumbSeparatorPart::new().into_element(cx),
+                    shadcn::BreadcrumbItemPart::new().into_element(cx, |cx| {
                         vec![
-                            bc::BreadcrumbLink::new("Components")
+                            shadcn::BreadcrumbLink::new("Components")
                                 .href("https://example.com/components")
                                 .action(CMD_APP_OPEN)
                                 .children(|cx| {
@@ -66,10 +65,10 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                                 .into_element(cx),
                         ]
                     }),
-                    bc::BreadcrumbSeparator::new().into_element(cx),
-                    bc::BreadcrumbItem::new().into_element(cx, |cx| {
+                    shadcn::BreadcrumbSeparatorPart::new().into_element(cx),
+                    shadcn::BreadcrumbItemPart::new().into_element(cx, |cx| {
                         vec![
-                            bc::BreadcrumbPage::new("Breadcrumb")
+                            shadcn::BreadcrumbPage::new("Breadcrumb")
                                 .children(|cx| [ui::text("Breadcrumb").into_element(cx)])
                                 .into_element(cx),
                         ]

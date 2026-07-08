@@ -6,13 +6,12 @@ use fret_core::Px;
 use fret_ui::Theme;
 use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
-use shadcn::raw::breadcrumb::primitives as bc;
 use std::sync::Arc;
 
 const CMD_APP_OPEN: &str = "ui_gallery.app.open";
 
 fn slash_separator<H: UiHost>(cx: &mut ElementContext<'_, H>) -> impl IntoUiElement<H> + use<H> {
-    bc::BreadcrumbSeparator::new()
+    shadcn::BreadcrumbSeparatorPart::new()
         .children(|cx| {
             [shadcn::raw::icon::icon_with(
                 cx,
@@ -27,11 +26,11 @@ fn slash_separator<H: UiHost>(cx: &mut ElementContext<'_, H>) -> impl IntoUiElem
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let open = cx.local_model(|| false);
 
-    let crumb = bc::Breadcrumb::new().into_element(cx, |cx| {
-        let list = bc::BreadcrumbList::new().into_element(cx, |cx| {
-            let home = bc::BreadcrumbItem::new().into_element(cx, |cx| {
+    let crumb = shadcn::BreadcrumbRoot::new().into_element(cx, |cx| {
+        let list = shadcn::BreadcrumbList::new().into_element(cx, |cx| {
+            let home = shadcn::BreadcrumbItemPart::new().into_element(cx, |cx| {
                 vec![
-                    bc::BreadcrumbLink::new("Home")
+                    shadcn::BreadcrumbLink::new("Home")
                         .href("/")
                         // Keep the gallery deterministic while preserving link semantics.
                         .action(CMD_APP_OPEN)
@@ -40,7 +39,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                 ]
             });
 
-            let components_dropdown = bc::BreadcrumbItem::new().into_element(cx, |cx| {
+            let components_dropdown = shadcn::BreadcrumbItemPart::new().into_element(cx, |cx| {
                 let menu = shadcn::DropdownMenu::from_open(open.clone())
                     .align(shadcn::DropdownMenuAlign::Start)
                     .into_element(
@@ -96,8 +95,8 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                 vec![menu]
             });
 
-            let page = bc::BreadcrumbItem::new().into_element(cx, |cx| {
-                vec![bc::BreadcrumbPage::new("Breadcrumb").into_element(cx)]
+            let page = shadcn::BreadcrumbItemPart::new().into_element(cx, |cx| {
+                vec![shadcn::BreadcrumbPage::new("Breadcrumb").into_element(cx)]
             });
 
             vec![

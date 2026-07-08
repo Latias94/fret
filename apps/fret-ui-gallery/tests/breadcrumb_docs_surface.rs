@@ -68,7 +68,7 @@ fn breadcrumb_dropdown_keeps_runtime_action_state_anchors() {
 
     for needle in [
         "const CMD_APP_OPEN: &str = \"ui_gallery.app.open\";",
-        "bc::BreadcrumbLink::new(\"Home\")",
+        "shadcn::BreadcrumbLink::new(\"Home\")",
         ".href(\"/\")",
         ".action(CMD_APP_OPEN)",
         ".test_id(\"ui-gallery-breadcrumb-dropdown-home-link\")",
