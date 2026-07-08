@@ -619,12 +619,8 @@ impl DockGraph {
         window: AppWindowId,
         floating: DockNodeId,
     ) -> Option<bool> {
-        let Some(list) = self.window_floatings.get_mut(&window) else {
-            return None;
-        };
-        let Some(index) = list.iter().position(|w| w.floating == floating) else {
-            return None;
-        };
+        let list = self.window_floatings.get_mut(&window)?;
+        let index = list.iter().position(|w| w.floating == floating)?;
         if index + 1 == list.len() {
             return Some(false);
         }
