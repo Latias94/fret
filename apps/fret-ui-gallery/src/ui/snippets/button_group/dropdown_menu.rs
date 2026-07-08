@@ -63,9 +63,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                 shadcn::DropdownMenuEntry::Group(shadcn::DropdownMenuGroup::new([
                     shadcn::DropdownMenuEntry::Item(
                         shadcn::DropdownMenuItem::new("Delete Conversation")
-                            .variant(
-                                shadcn::raw::dropdown_menu::DropdownMenuItemVariant::Destructive,
-                            )
+                            .variant(shadcn::DropdownMenuItemVariant::Destructive)
                             .leading_icon(icon_id("lucide.trash")),
                     ),
                 ])),

@@ -277,7 +277,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                 shadcn::DropdownMenuGroup::new([shadcn::DropdownMenuItem::new("Sign Out")
                     .leading_icon(IconId::new_static("lucide.log-out"))
                     .shortcut("⇧⌘Q")
-                    .variant(shadcn::raw::dropdown_menu::DropdownMenuItemVariant::Destructive)
+                    .variant(shadcn::DropdownMenuItemVariant::Destructive)
                     .into()])
                 .into(),
             ])

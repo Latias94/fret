@@ -182,7 +182,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                     .into(),
                     shadcn::DropdownMenuSeparator::new().into(),
                     shadcn::DropdownMenuGroup::new([shadcn::DropdownMenuItem::new("تسجيل الخروج")
-                        .variant(shadcn::raw::dropdown_menu::DropdownMenuItemVariant::Destructive)
+                        .variant(shadcn::DropdownMenuItemVariant::Destructive)
                         .test_id("ui-gallery-dropdown-menu-rtl-item-logout")
                         .into()])
                     .into(),

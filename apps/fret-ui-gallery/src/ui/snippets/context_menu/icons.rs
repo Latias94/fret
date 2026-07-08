@@ -92,7 +92,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                     shadcn::ContextMenuItem::new("Delete")
                         .action(CommandId::new("ui_gallery.context_menu.icons.delete"))
                         .leading_icon(IconId::new_static("lucide.trash"))
-                        .variant(shadcn::raw::context_menu::ContextMenuItemVariant::Destructive)
+                        .variant(shadcn::ContextMenuItemVariant::Destructive)
                         .test_id("ui-gallery-context-menu-icons-delete"),
                 ),
             ])),

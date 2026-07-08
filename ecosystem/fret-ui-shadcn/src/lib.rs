@@ -393,8 +393,8 @@ pub mod facade {
     };
     pub use crate::context_menu::{
         ContextMenu, ContextMenuCheckboxItem, ContextMenuContent, ContextMenuEntry,
-        ContextMenuGroup, ContextMenuItem, ContextMenuLabel, ContextMenuPortal,
-        ContextMenuRadioGroup, ContextMenuRadioItem, ContextMenuRadioItemSpec,
+        ContextMenuGroup, ContextMenuItem, ContextMenuItemVariant, ContextMenuLabel,
+        ContextMenuPortal, ContextMenuRadioGroup, ContextMenuRadioItem, ContextMenuRadioItemSpec,
         ContextMenuSeparator, ContextMenuShortcut, ContextMenuSub, ContextMenuSubContent,
         ContextMenuSubTrigger, ContextMenuTrigger,
     };
@@ -429,8 +429,8 @@ pub mod facade {
     };
     pub use crate::dropdown_menu::{
         DropdownMenu, DropdownMenuAlign, DropdownMenuCheckboxItem, DropdownMenuContent,
-        DropdownMenuEntry, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel,
-        DropdownMenuPortal, DropdownMenuRadioGroup, DropdownMenuRadioItem,
+        DropdownMenuEntry, DropdownMenuGroup, DropdownMenuItem, DropdownMenuItemVariant,
+        DropdownMenuLabel, DropdownMenuPortal, DropdownMenuRadioGroup, DropdownMenuRadioItem,
         DropdownMenuRadioItemSpec, DropdownMenuSeparator, DropdownMenuShortcut, DropdownMenuSide,
         DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger,
     };
@@ -475,9 +475,9 @@ pub mod facade {
     pub use crate::media_image::MediaImage;
     pub use crate::menubar::{
         Menubar, MenubarCheckboxItem, MenubarContent, MenubarEntry, MenubarGroup, MenubarItem,
-        MenubarLabel, MenubarMenu, MenubarMenuEntries, MenubarPortal, MenubarRadioGroup,
-        MenubarRadioItem, MenubarRadioItemSpec, MenubarSeparator, MenubarShortcut, MenubarSub,
-        MenubarSubContent, MenubarSubTrigger, MenubarTrigger,
+        MenubarItemVariant, MenubarLabel, MenubarMenu, MenubarMenuEntries, MenubarPortal,
+        MenubarRadioGroup, MenubarRadioItem, MenubarRadioItemSpec, MenubarSeparator,
+        MenubarShortcut, MenubarSub, MenubarSubContent, MenubarSubTrigger, MenubarTrigger,
     };
     pub use crate::native_select::{
         NativeSelect, NativeSelectOptGroup, NativeSelectOption, NativeSelectSize, native_select,

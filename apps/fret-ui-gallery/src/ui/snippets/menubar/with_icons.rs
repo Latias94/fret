@@ -58,7 +58,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                     .action(CommandId::new("ui_gallery.menubar.with_icons.delete"))
                     .leading_icon(icon_id("lucide.trash"))
                     .test_id("ui-gallery-menubar-with-icons-delete")
-                    .variant(shadcn::raw::menubar::MenubarItemVariant::Destructive)
+                    .variant(shadcn::MenubarItemVariant::Destructive)
                     .into(),
             ])
             .into()],

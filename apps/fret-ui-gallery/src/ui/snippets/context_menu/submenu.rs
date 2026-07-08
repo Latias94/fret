@@ -113,7 +113,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                     shadcn::ContextMenuGroup::new(vec![
                         shadcn::ContextMenuItem::new("Delete")
                             .action(CommandId::new("ui_gallery.context_menu.submenu.delete"))
-                            .variant(shadcn::raw::context_menu::ContextMenuItemVariant::Destructive)
+                            .variant(shadcn::ContextMenuItemVariant::Destructive)
                             .test_id("ui-gallery-context-menu-submenu-delete")
                             .into(),
                     ])

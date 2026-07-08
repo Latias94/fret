@@ -217,7 +217,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                                                             "ui-gallery-context-menu-rtl-item-delete",
                                                         )
                                                         .variant(
-                                                            shadcn::raw::context_menu::ContextMenuItemVariant::Destructive,
+                                                            shadcn::ContextMenuItemVariant::Destructive,
                                                         ),
                                                 ),
                                             ]),

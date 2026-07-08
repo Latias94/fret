@@ -650,6 +650,12 @@ fn authoring_critical_family_exports_live_on_curated_facade_only() {
     );
     assert_facade_only_reexports("calendar", &["Calendar", "CalendarLocale"]);
     assert_facade_only_reexports("switch", &["Switch", "SwitchStyle"]);
+    assert_facade_only_reexports(
+        "dropdown_menu",
+        &["DropdownMenu", "DropdownMenuItemVariant"],
+    );
+    assert_facade_only_reexports("context_menu", &["ContextMenu", "ContextMenuItemVariant"]);
+    assert_facade_only_reexports("menubar", &["Menubar", "MenubarItemVariant"]);
 }
 
 #[test]

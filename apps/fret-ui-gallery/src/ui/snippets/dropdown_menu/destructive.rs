@@ -33,7 +33,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                 shadcn::DropdownMenuSeparator::new().into(),
                 shadcn::DropdownMenuGroup::new([shadcn::DropdownMenuItem::new("Delete")
                     .leading_icon(IconId::new_static("lucide.trash"))
-                    .variant(shadcn::raw::dropdown_menu::DropdownMenuItemVariant::Destructive)
+                    .variant(shadcn::DropdownMenuItemVariant::Destructive)
                     .into()])
                 .into(),
             ])

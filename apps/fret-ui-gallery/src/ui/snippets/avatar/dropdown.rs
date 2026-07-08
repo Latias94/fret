@@ -42,7 +42,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                 shadcn::DropdownMenuEntry::Separator,
                 shadcn::DropdownMenuEntry::Item(
                     shadcn::DropdownMenuItem::new("Log out")
-                        .variant(shadcn::raw::dropdown_menu::DropdownMenuItemVariant::Destructive)
+                        .variant(shadcn::DropdownMenuItemVariant::Destructive)
                         .test_id("ui-gallery-avatar-dropdown-item-logout"),
                 ),
             ]
