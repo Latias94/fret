@@ -12,7 +12,7 @@ fn stack<H: UiHost>(cx: &mut ElementContext<'_, H>, test_id: &'static str) -> An
     let d = shadcn::Avatar::new([shadcn::AvatarFallback::new("D").into_element(cx)]);
     let e = shadcn::Avatar::new([shadcn::AvatarFallback::new("E").into_element(cx)]);
 
-    shadcn::raw::extras::AvatarStack::new([a, b, c, d, e])
+    shadcn::extras::AvatarStack::new([a, b, c, d, e])
         .size_px(Px(40.0))
         .max_visible(4)
         .into_element(cx)

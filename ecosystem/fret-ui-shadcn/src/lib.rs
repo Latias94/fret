@@ -603,6 +603,18 @@ pub mod facade {
         pub use crate::experimental::{DataGridElement, DataGridRowState};
     }
 
+    /// Explicit Fret extras that are outside the default shadcn/ui v4 taxonomy.
+    pub mod extras {
+        pub use crate::extras::{
+            Announcement, AnnouncementTag, AnnouncementTitle, AvatarStack, AvatarStackItem, Banner,
+            BannerAction, BannerClose, BannerIcon, BannerTitle, Kanban, KanbanCardCtx,
+            KanbanCardMode, KanbanColumn, KanbanItem, Marquee, MarqueeDirection, Rating,
+            RelativeTime, RelativeTimeClockZone, RelativeTimeTick, RelativeTimeZone,
+            RelativeTimeZoneDate, RelativeTimeZoneDisplay, RelativeTimeZoneLabel, Tag, Tags,
+            Ticker, TickerChangeKind,
+        };
+    }
+
     /// Explicit app integration helpers for shadcn defaults.
     #[cfg(feature = "app-integration")]
     pub mod app {

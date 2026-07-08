@@ -9,21 +9,21 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     cx.named("shadcn-extras-kanban-demo", |cx| {
         let items = cx.local_model_keyed("items", || {
             vec![
-                shadcn::raw::extras::KanbanItem::new("card-1", "Write docs", "backlog"),
-                shadcn::raw::extras::KanbanItem::new("card-2", "Port block", "backlog"),
-                shadcn::raw::extras::KanbanItem::new("card-3", "Add gates", "in_progress"),
-                shadcn::raw::extras::KanbanItem::new("card-4", "Fix regressions", "in_progress"),
-                shadcn::raw::extras::KanbanItem::new("card-5", "Ship", "done"),
+                shadcn::extras::KanbanItem::new("card-1", "Write docs", "backlog"),
+                shadcn::extras::KanbanItem::new("card-2", "Port block", "backlog"),
+                shadcn::extras::KanbanItem::new("card-3", "Add gates", "in_progress"),
+                shadcn::extras::KanbanItem::new("card-4", "Fix regressions", "in_progress"),
+                shadcn::extras::KanbanItem::new("card-5", "Ship", "done"),
             ]
         });
 
         let columns = vec![
-            shadcn::raw::extras::KanbanColumn::new("backlog", "Backlog"),
-            shadcn::raw::extras::KanbanColumn::new("in_progress", "In Progress"),
-            shadcn::raw::extras::KanbanColumn::new("done", "Done"),
+            shadcn::extras::KanbanColumn::new("backlog", "Backlog"),
+            shadcn::extras::KanbanColumn::new("in_progress", "In Progress"),
+            shadcn::extras::KanbanColumn::new("done", "Done"),
         ];
 
-        shadcn::raw::extras::Kanban::new(columns, items)
+        shadcn::extras::Kanban::new(columns, items)
             .test_id("ui-gallery-shadcn-extras-kanban")
             .into_element_with(cx, |cx, item, ctx| {
                 let title = decl_text::text_button_label(cx, item.name.clone());
@@ -38,7 +38,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                     .layout(LayoutRefinement::default().w_full())
                     .into_element(cx);
 
-                let header = if ctx.mode == shadcn::raw::extras::KanbanCardMode::Board {
+                let header = if ctx.mode == shadcn::extras::KanbanCardMode::Board {
                     let checkbox =
                         shadcn::Checkbox::new_controllable(cx, None, false).into_element(cx);
                     ui::h_flex(move |_cx| vec![checkbox, title])

@@ -69,6 +69,7 @@ const RESIZABLE_RS: &str = include_str!("resizable.rs");
 const SCROLL_AREA_RS: &str = include_str!("scroll_area.rs");
 const SWITCH_RS: &str = include_str!("switch.rs");
 const TABS_RS: &str = include_str!("tabs.rs");
+const EXTRAS_MOD_RS: &str = include_str!("extras/mod.rs");
 const EXTRAS_BANNER_RS: &str = include_str!("extras/banner.rs");
 const EXTRAS_RATING_RS: &str = include_str!("extras/rating.rs");
 const EXTRAS_TICKER_RS: &str = include_str!("extras/ticker.rs");
@@ -2778,6 +2779,29 @@ fn data_grid_element_stays_under_explicit_experimental_facade_module() {
             "pub use crate::experimental::{ DataGridElement, DataGridRowState, };"
         )),
         "facade should not promote element-grid prototypes to stable top-level names"
+    );
+}
+
+#[test]
+fn extras_stay_under_explicit_facade_module() {
+    let lib_rs = normalize_ws(LIB_RS);
+    assert!(
+        lib_rs.contains(&normalize_ws(
+            "pub mod extras { pub use crate::extras::{ Announcement, AnnouncementTag, AnnouncementTitle, AvatarStack, AvatarStackItem, Banner, BannerAction, BannerClose, BannerIcon, BannerTitle, Kanban, KanbanCardCtx, KanbanCardMode, KanbanColumn, KanbanItem, Marquee, MarqueeDirection, Rating, RelativeTime, RelativeTimeClockZone, RelativeTimeTick, RelativeTimeZone, RelativeTimeZoneDate, RelativeTimeZoneDisplay, RelativeTimeZoneLabel, Tag, Tags, Ticker, TickerChangeKind, }; }"
+        )),
+        "facade should expose Fret extras only through an explicit extras module"
+    );
+    assert!(
+        lib_rs
+            .matches(&normalize_ws("pub use crate::extras::{"))
+            .count()
+            == 1,
+        "facade should not promote Fret extras to stable top-level names"
+    );
+    assert!(
+        EXTRAS_MOD_RS.contains("fret_ui_shadcn::facade::extras::*")
+            && !EXTRAS_MOD_RS.contains("fret_ui_shadcn::raw::extras::*"),
+        "extras module docs should teach the explicit facade module, not a raw escape hatch"
     );
 }
 

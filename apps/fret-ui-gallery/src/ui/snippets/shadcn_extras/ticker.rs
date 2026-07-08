@@ -7,16 +7,16 @@ use fret_ui_shadcn::{facade as shadcn, prelude::*};
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     ui::h_flex(|cx| {
         vec![
-            shadcn::raw::extras::Ticker::new("AAPL")
+            shadcn::extras::Ticker::new("AAPL")
                 .price("$199.18")
                 .change("+1.01%")
-                .change_kind(shadcn::raw::extras::TickerChangeKind::Up)
+                .change_kind(shadcn::extras::TickerChangeKind::Up)
                 .into_element(cx)
                 .test_id("ui-gallery-shadcn-extras-ticker-aapl"),
-            shadcn::raw::extras::Ticker::new("TSLA")
+            shadcn::extras::Ticker::new("TSLA")
                 .price("$187.42")
                 .change("-2.31%")
-                .change_kind(shadcn::raw::extras::TickerChangeKind::Down)
+                .change_kind(shadcn::extras::TickerChangeKind::Down)
                 .into_element(cx)
                 .test_id("ui-gallery-shadcn-extras-ticker-tsla"),
         ]

@@ -61,9 +61,6 @@ fn documented_raw_shadcn_escape_hatch_reason(trimmed: &str) -> Option<&'static s
     if trimmed.contains("shadcn::raw::icon::") {
         return Some("low-level icon helper");
     }
-    if trimmed.contains("shadcn::raw::extras::") {
-        return Some("explicit shadcn extras raw family");
-    }
 
     None
 }
@@ -90,7 +87,6 @@ fn raw_shadcn_escape_hatch_gate_is_symbol_level_not_module_level() {
     for allowed in [
         "shadcn::raw::typography::muted(\"copy\")",
         "shadcn::raw::icon::icon(cx, icon)",
-        "shadcn::raw::extras::Ticker::new(\"AAPL\")",
     ] {
         assert!(
             documented_raw_shadcn_escape_hatch_reason(allowed).is_some(),
@@ -104,6 +100,7 @@ fn raw_shadcn_escape_hatch_gate_is_symbol_level_not_module_level() {
         "shadcn::raw::experimental::UnclassifiedWidget::new()",
         "shadcn::raw::experimental::DataGridElement::new(rows)",
         "shadcn::raw::experimental::DataGridRowState::default()",
+        "shadcn::raw::extras::Ticker::new(\"AAPL\")",
         "shadcn::raw::button::UnclassifiedButtonPart::new()",
         "shadcn::raw::button::ButtonStyle::default()",
         "shadcn::raw::calendar::CalendarLocale::Es",
@@ -219,7 +216,10 @@ fn gallery_source_tree_rejects_legacy_shadcn_alias_patterns() {
                     .is_some_and(|ch| ch.is_ascii_lowercase());
                 if is_module_path
                     && starts_with_lowercase
-                    && !matches!(segment, "raw" | "themes" | "app" | "experimental")
+                    && !matches!(
+                        segment,
+                        "raw" | "themes" | "app" | "experimental" | "extras"
+                    )
                 {
                     panic!(
                         "{}:{} reintroduced non-curated shadcn module path `shadcn::{}::`",
@@ -320,7 +320,7 @@ fn gallery_ai_snippet_tree_avoids_direct_shadcn_root_paths() {
 }
 
 #[test]
-fn gallery_shadcn_extras_batch_uses_explicit_raw_escape_hatch() {
+fn gallery_shadcn_extras_batch_uses_explicit_extras_facade_module() {
     let relative_paths = [
         "src/ui/snippets/shadcn_extras/announcement.rs",
         "src/ui/snippets/shadcn_extras/avatar_stack.rs",
@@ -339,8 +339,13 @@ fn gallery_shadcn_extras_batch_uses_explicit_raw_escape_hatch() {
         let path = manifest_path(relative_path);
         let source = read_path(&path);
         assert!(
-            source.contains("shadcn::raw::extras::"),
-            "{} should use the explicit raw extras escape hatch",
+            source.contains("shadcn::extras::"),
+            "{} should use the explicit extras facade module",
+            path.display()
+        );
+        assert!(
+            !source.contains("shadcn::raw::extras::"),
+            "{} should not reopen the raw extras module",
             path.display()
         );
     }
