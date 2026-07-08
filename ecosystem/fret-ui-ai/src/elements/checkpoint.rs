@@ -13,11 +13,11 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, ColorFallback, ColorRef, Items, LayoutRefinement, Space};
 use fret_ui_kit::{WidgetStateProperty, WidgetStates};
+use fret_ui_shadcn::facade::ButtonStyle;
 use fret_ui_shadcn::facade::{
     Button, ButtonSize, ButtonVariant, Separator, Tooltip, TooltipAlign, TooltipContent,
     TooltipSide,
 };
-use fret_ui_shadcn::raw::button::ButtonStyle;
 
 type ActionPayloadFactory = Arc<dyn Fn() -> Box<dyn Any + Send + Sync> + 'static>;
 

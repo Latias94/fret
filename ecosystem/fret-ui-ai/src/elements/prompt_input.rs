@@ -16,6 +16,7 @@ use fret_ui_kit::{
     WidgetStateProperty, WidgetStates,
 };
 
+use fret_ui_shadcn::facade::ButtonStyle;
 use fret_ui_shadcn::facade::{
     Button, ButtonSize, ButtonVariant, CommandEmpty as ShadcnCommandEmpty,
     CommandEntry as ShadcnCommandEntry, CommandGroup as ShadcnCommandGroup,
@@ -30,7 +31,6 @@ use fret_ui_shadcn::facade::{
     SelectTriggerSize, SelectValue as ShadcnSelectValue, Spinner, Tooltip, TooltipContent,
     TooltipSide,
 };
-use fret_ui_shadcn::raw::button::ButtonStyle;
 
 type ActionPayloadFactory = Arc<dyn Fn() -> Box<dyn Any + Send + Sync> + 'static>;
 

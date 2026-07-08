@@ -15,7 +15,7 @@ use fret_ui_kit::{
 use fret_ui_shadcn::facade::{
     Badge, Collapsible, CollapsibleContent, CollapsibleTrigger, TabsContent, TabsList, TabsRoot,
 };
-use fret_ui_shadcn::raw::tabs::{TabsListHeightOverride, TabsListVariant, TabsStyle};
+use fret_ui_shadcn::facade::{TabsListHeightOverride, TabsListVariant, TabsStyle};
 
 use crate::elements::ToolStatus;
 

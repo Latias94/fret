@@ -17,7 +17,7 @@ fn rust_sources(root: &Path, out: &mut Vec<PathBuf>) {
 }
 
 #[test]
-fn ai_elements_avoid_flat_shadcn_root_imports() {
+fn ai_elements_use_curated_shadcn_facade_imports() {
     let mut sources = Vec::new();
     rust_sources(
         &PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("src/elements"),
@@ -33,11 +33,10 @@ fn ai_elements_avoid_flat_shadcn_root_imports() {
             }
 
             let allowed = trimmed.starts_with("use fret_ui_shadcn::facade::")
-                || trimmed.starts_with("use fret_ui_shadcn::raw::")
                 || trimmed == "use fret_ui_shadcn::prelude::*;";
             assert!(
                 allowed,
-                "{}:{} reintroduced a flat fret_ui_shadcn import lane: {}",
+                "{}:{} reintroduced a non-curated fret_ui_shadcn import lane: {}",
                 path.display(),
                 line_idx + 1,
                 trimmed
