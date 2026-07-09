@@ -2,6 +2,8 @@ use std::sync::Arc;
 
 use fret_runtime::{CommandId, Menu, MenuBar, MenuItem, MenuRole, SystemMenuType};
 
+use crate::commands::{act, typed_command_id};
+
 /// Command IDs used by `workspace_default_menu_bar`.
 ///
 /// This keeps `fret-workspace` independent from `fret-app` core command constants.
@@ -104,29 +106,25 @@ impl Default for WorkspaceMenuCommands {
             router_back: None,
             router_forward: None,
 
-            next_tab: CommandId::new(crate::commands::CMD_WORKSPACE_TAB_NEXT),
-            prev_tab: CommandId::new(crate::commands::CMD_WORKSPACE_TAB_PREV),
-            close_tab: CommandId::new(crate::commands::CMD_WORKSPACE_TAB_CLOSE),
+            next_tab: typed_command_id::<act::WorkspaceTabNext>(),
+            prev_tab: typed_command_id::<act::WorkspaceTabPrev>(),
+            close_tab: typed_command_id::<act::WorkspaceTabClose>(),
 
-            next_pane: CommandId::new(crate::commands::CMD_WORKSPACE_PANE_NEXT),
-            prev_pane: CommandId::new(crate::commands::CMD_WORKSPACE_PANE_PREV),
+            next_pane: typed_command_id::<act::WorkspacePaneNext>(),
+            prev_pane: typed_command_id::<act::WorkspacePanePrev>(),
 
-            split_right: CommandId::new(crate::commands::CMD_WORKSPACE_PANE_SPLIT_RIGHT),
-            split_left: CommandId::new(crate::commands::CMD_WORKSPACE_PANE_SPLIT_LEFT),
-            split_up: CommandId::new(crate::commands::CMD_WORKSPACE_PANE_SPLIT_UP),
-            split_down: CommandId::new(crate::commands::CMD_WORKSPACE_PANE_SPLIT_DOWN),
+            split_right: typed_command_id::<act::WorkspacePaneSplitRight>(),
+            split_left: typed_command_id::<act::WorkspacePaneSplitLeft>(),
+            split_up: typed_command_id::<act::WorkspacePaneSplitUp>(),
+            split_down: typed_command_id::<act::WorkspacePaneSplitDown>(),
 
-            move_active_tab_next_pane: CommandId::new(
-                crate::commands::CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_NEXT,
-            ),
-            move_active_tab_prev_pane: CommandId::new(
-                crate::commands::CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_PREV,
-            ),
+            move_active_tab_next_pane: typed_command_id::<act::WorkspacePaneMoveActiveTabNext>(),
+            move_active_tab_prev_pane: typed_command_id::<act::WorkspacePaneMoveActiveTabPrev>(),
 
-            resize_pane_right: CommandId::new(crate::commands::CMD_WORKSPACE_PANE_RESIZE_RIGHT),
-            resize_pane_left: CommandId::new(crate::commands::CMD_WORKSPACE_PANE_RESIZE_LEFT),
-            resize_pane_up: CommandId::new(crate::commands::CMD_WORKSPACE_PANE_RESIZE_UP),
-            resize_pane_down: CommandId::new(crate::commands::CMD_WORKSPACE_PANE_RESIZE_DOWN),
+            resize_pane_right: typed_command_id::<act::WorkspacePaneResizeRight>(),
+            resize_pane_left: typed_command_id::<act::WorkspacePaneResizeLeft>(),
+            resize_pane_up: typed_command_id::<act::WorkspacePaneResizeUp>(),
+            resize_pane_down: typed_command_id::<act::WorkspacePaneResizeDown>(),
         }
     }
 }
@@ -376,12 +374,12 @@ pub fn workspace_default_menu_bar(cmds: WorkspaceMenuCommands) -> MenuBar {
             },
             MenuItem::Separator,
             MenuItem::Command {
-                command: CommandId::new(crate::commands::CMD_WORKSPACE_TAB_MOVE_LEFT),
+                command: typed_command_id::<act::WorkspaceTabMoveLeft>(),
                 when: None,
                 toggle: None,
             },
             MenuItem::Command {
-                command: CommandId::new(crate::commands::CMD_WORKSPACE_TAB_MOVE_RIGHT),
+                command: typed_command_id::<act::WorkspaceTabMoveRight>(),
                 when: None,
                 toggle: None,
             },
@@ -392,17 +390,17 @@ pub fn workspace_default_menu_bar(cmds: WorkspaceMenuCommands) -> MenuBar {
                 toggle: None,
             },
             MenuItem::Command {
-                command: CommandId::new(crate::commands::CMD_WORKSPACE_TAB_CLOSE_OTHERS),
+                command: typed_command_id::<act::WorkspaceTabCloseOthers>(),
                 when: None,
                 toggle: None,
             },
             MenuItem::Command {
-                command: CommandId::new(crate::commands::CMD_WORKSPACE_TAB_CLOSE_LEFT),
+                command: typed_command_id::<act::WorkspaceTabCloseLeft>(),
                 when: None,
                 toggle: None,
             },
             MenuItem::Command {
-                command: CommandId::new(crate::commands::CMD_WORKSPACE_TAB_CLOSE_RIGHT),
+                command: typed_command_id::<act::WorkspaceTabCloseRight>(),
                 when: None,
                 toggle: None,
             },
@@ -460,30 +458,22 @@ pub fn workspace_default_menu_bar(cmds: WorkspaceMenuCommands) -> MenuBar {
                     },
                     MenuItem::Separator,
                     MenuItem::Command {
-                        command: CommandId::new(
-                            crate::commands::CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_LEFT,
-                        ),
+                        command: typed_command_id::<act::WorkspacePaneMoveActiveTabLeft>(),
                         when: None,
                         toggle: None,
                     },
                     MenuItem::Command {
-                        command: CommandId::new(
-                            crate::commands::CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_RIGHT,
-                        ),
+                        command: typed_command_id::<act::WorkspacePaneMoveActiveTabRight>(),
                         when: None,
                         toggle: None,
                     },
                     MenuItem::Command {
-                        command: CommandId::new(
-                            crate::commands::CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_UP,
-                        ),
+                        command: typed_command_id::<act::WorkspacePaneMoveActiveTabUp>(),
                         when: None,
                         toggle: None,
                     },
                     MenuItem::Command {
-                        command: CommandId::new(
-                            crate::commands::CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_DOWN,
-                        ),
+                        command: typed_command_id::<act::WorkspacePaneMoveActiveTabDown>(),
                         when: None,
                         toggle: None,
                     },
@@ -494,22 +484,22 @@ pub fn workspace_default_menu_bar(cmds: WorkspaceMenuCommands) -> MenuBar {
                 when: None,
                 items: vec![
                     MenuItem::Command {
-                        command: CommandId::new(crate::commands::CMD_WORKSPACE_PANE_FOCUS_LEFT),
+                        command: typed_command_id::<act::WorkspacePaneFocusLeft>(),
                         when: None,
                         toggle: None,
                     },
                     MenuItem::Command {
-                        command: CommandId::new(crate::commands::CMD_WORKSPACE_PANE_FOCUS_RIGHT),
+                        command: typed_command_id::<act::WorkspacePaneFocusRight>(),
                         when: None,
                         toggle: None,
                     },
                     MenuItem::Command {
-                        command: CommandId::new(crate::commands::CMD_WORKSPACE_PANE_FOCUS_UP),
+                        command: typed_command_id::<act::WorkspacePaneFocusUp>(),
                         when: None,
                         toggle: None,
                     },
                     MenuItem::Command {
-                        command: CommandId::new(crate::commands::CMD_WORKSPACE_PANE_FOCUS_DOWN),
+                        command: typed_command_id::<act::WorkspacePaneFocusDown>(),
                         when: None,
                         toggle: None,
                     },

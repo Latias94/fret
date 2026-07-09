@@ -88,61 +88,93 @@ pub const CMD_WORKSPACE_PANE_TOGGLE_TAB_STRIP_FOCUS: &str = "workspace.pane.togg
 pub mod act {
     use super::*;
 
-    pub struct WorkspaceTabNext;
-    impl TypedAction for WorkspaceTabNext {
-        fn action_id() -> ActionId {
-            ActionId::new(CMD_WORKSPACE_TAB_NEXT)
-        }
+    macro_rules! workspace_unit_action {
+        ($name:ident, $id:ident) => {
+            pub struct $name;
+
+            impl $name {
+                pub const ID: &'static str = $id;
+
+                pub fn command_id() -> CommandId {
+                    CommandId::from(Self::ID)
+                }
+            }
+
+            impl TypedAction for $name {
+                fn action_id() -> ActionId {
+                    Self::command_id()
+                }
+            }
+        };
     }
 
-    pub struct WorkspaceTabPrev;
-    impl TypedAction for WorkspaceTabPrev {
-        fn action_id() -> ActionId {
-            ActionId::new(CMD_WORKSPACE_TAB_PREV)
-        }
-    }
+    workspace_unit_action!(WorkspaceTabNext, CMD_WORKSPACE_TAB_NEXT);
+    workspace_unit_action!(WorkspaceTabPrev, CMD_WORKSPACE_TAB_PREV);
+    workspace_unit_action!(WorkspaceTabClose, CMD_WORKSPACE_TAB_CLOSE);
+    workspace_unit_action!(WorkspaceTabCloseOthers, CMD_WORKSPACE_TAB_CLOSE_OTHERS);
+    workspace_unit_action!(WorkspaceTabCloseLeft, CMD_WORKSPACE_TAB_CLOSE_LEFT);
+    workspace_unit_action!(WorkspaceTabCloseRight, CMD_WORKSPACE_TAB_CLOSE_RIGHT);
+    workspace_unit_action!(WorkspaceTabMoveLeft, CMD_WORKSPACE_TAB_MOVE_LEFT);
+    workspace_unit_action!(WorkspaceTabMoveRight, CMD_WORKSPACE_TAB_MOVE_RIGHT);
+    workspace_unit_action!(WorkspaceTabTogglePin, CMD_WORKSPACE_TAB_TOGGLE_PIN);
+    workspace_unit_action!(WorkspaceTabCommitPreview, CMD_WORKSPACE_TAB_COMMIT_PREVIEW);
 
-    pub struct WorkspaceTabClose;
-    impl TypedAction for WorkspaceTabClose {
-        fn action_id() -> ActionId {
-            ActionId::new(CMD_WORKSPACE_TAB_CLOSE)
-        }
-    }
+    workspace_unit_action!(WorkspacePaneNext, CMD_WORKSPACE_PANE_NEXT);
+    workspace_unit_action!(WorkspacePanePrev, CMD_WORKSPACE_PANE_PREV);
+    workspace_unit_action!(
+        WorkspacePaneMoveActiveTabNext,
+        CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_NEXT
+    );
+    workspace_unit_action!(
+        WorkspacePaneMoveActiveTabPrev,
+        CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_PREV
+    );
 
-    pub struct WorkspaceTabTogglePin;
-    impl TypedAction for WorkspaceTabTogglePin {
-        fn action_id() -> ActionId {
-            ActionId::new(CMD_WORKSPACE_TAB_TOGGLE_PIN)
-        }
-    }
+    workspace_unit_action!(WorkspacePaneResizeRight, CMD_WORKSPACE_PANE_RESIZE_RIGHT);
+    workspace_unit_action!(WorkspacePaneResizeLeft, CMD_WORKSPACE_PANE_RESIZE_LEFT);
+    workspace_unit_action!(WorkspacePaneResizeUp, CMD_WORKSPACE_PANE_RESIZE_UP);
+    workspace_unit_action!(WorkspacePaneResizeDown, CMD_WORKSPACE_PANE_RESIZE_DOWN);
 
-    pub struct WorkspacePaneNext;
-    impl TypedAction for WorkspacePaneNext {
-        fn action_id() -> ActionId {
-            ActionId::new(CMD_WORKSPACE_PANE_NEXT)
-        }
-    }
+    workspace_unit_action!(WorkspacePaneSplitRight, CMD_WORKSPACE_PANE_SPLIT_RIGHT);
+    workspace_unit_action!(WorkspacePaneSplitLeft, CMD_WORKSPACE_PANE_SPLIT_LEFT);
+    workspace_unit_action!(WorkspacePaneSplitUp, CMD_WORKSPACE_PANE_SPLIT_UP);
+    workspace_unit_action!(WorkspacePaneSplitDown, CMD_WORKSPACE_PANE_SPLIT_DOWN);
 
-    pub struct WorkspacePanePrev;
-    impl TypedAction for WorkspacePanePrev {
-        fn action_id() -> ActionId {
-            ActionId::new(CMD_WORKSPACE_PANE_PREV)
-        }
-    }
+    workspace_unit_action!(WorkspacePaneFocusRight, CMD_WORKSPACE_PANE_FOCUS_RIGHT);
+    workspace_unit_action!(WorkspacePaneFocusLeft, CMD_WORKSPACE_PANE_FOCUS_LEFT);
+    workspace_unit_action!(WorkspacePaneFocusUp, CMD_WORKSPACE_PANE_FOCUS_UP);
+    workspace_unit_action!(WorkspacePaneFocusDown, CMD_WORKSPACE_PANE_FOCUS_DOWN);
 
-    pub struct WorkspacePaneFocusTabStrip;
-    impl TypedAction for WorkspacePaneFocusTabStrip {
-        fn action_id() -> ActionId {
-            ActionId::new(CMD_WORKSPACE_PANE_FOCUS_TAB_STRIP)
-        }
-    }
+    workspace_unit_action!(
+        WorkspacePaneMoveActiveTabRight,
+        CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_RIGHT
+    );
+    workspace_unit_action!(
+        WorkspacePaneMoveActiveTabLeft,
+        CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_LEFT
+    );
+    workspace_unit_action!(
+        WorkspacePaneMoveActiveTabUp,
+        CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_UP
+    );
+    workspace_unit_action!(
+        WorkspacePaneMoveActiveTabDown,
+        CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_DOWN
+    );
 
-    pub struct WorkspacePaneFocusContent;
-    impl TypedAction for WorkspacePaneFocusContent {
-        fn action_id() -> ActionId {
-            ActionId::new(CMD_WORKSPACE_PANE_FOCUS_CONTENT)
-        }
-    }
+    workspace_unit_action!(
+        WorkspacePaneFocusTabStrip,
+        CMD_WORKSPACE_PANE_FOCUS_TAB_STRIP
+    );
+    workspace_unit_action!(WorkspacePaneFocusContent, CMD_WORKSPACE_PANE_FOCUS_CONTENT);
+    workspace_unit_action!(
+        WorkspacePaneToggleTabStripFocus,
+        CMD_WORKSPACE_PANE_TOGGLE_TAB_STRIP_FOCUS
+    );
+}
+
+pub fn typed_command_id<A: TypedAction>() -> CommandId {
+    A::action_id()
 }
 
 /// Prefix for "activate a specific tab" commands.
@@ -439,7 +471,7 @@ pub fn register_workspace_commands(registry: &mut CommandRegistry) {
     );
 
     registry.register(
-        CommandId::new(CMD_WORKSPACE_TAB_NEXT),
+        typed_command_id::<act::WorkspaceTabNext>(),
         CommandMeta::new("Next Tab")
             .with_category("Workspace")
             .with_keywords(["tab", "next", "workspace"])
@@ -451,7 +483,7 @@ pub fn register_workspace_commands(registry: &mut CommandRegistry) {
     );
 
     registry.register(
-        CommandId::new(CMD_WORKSPACE_TAB_PREV),
+        typed_command_id::<act::WorkspaceTabPrev>(),
         CommandMeta::new("Previous Tab")
             .with_category("Workspace")
             .with_keywords(["tab", "previous", "workspace"])
@@ -463,7 +495,7 @@ pub fn register_workspace_commands(registry: &mut CommandRegistry) {
     );
 
     registry.register(
-        CommandId::new(CMD_WORKSPACE_TAB_CLOSE),
+        typed_command_id::<act::WorkspaceTabClose>(),
         CommandMeta::new("Close Tab")
             .with_category("Workspace")
             .with_keywords(["tab", "close", "workspace"])
@@ -475,35 +507,35 @@ pub fn register_workspace_commands(registry: &mut CommandRegistry) {
     );
 
     registry.register(
-        CommandId::new(CMD_WORKSPACE_TAB_CLOSE_OTHERS),
+        typed_command_id::<act::WorkspaceTabCloseOthers>(),
         CommandMeta::new("Close Other Tabs")
             .with_category("Workspace")
             .with_keywords(["tab", "close", "others", "workspace"]),
     );
 
     registry.register(
-        CommandId::new(CMD_WORKSPACE_TAB_CLOSE_LEFT),
+        typed_command_id::<act::WorkspaceTabCloseLeft>(),
         CommandMeta::new("Close Tabs to the Left")
             .with_category("Workspace")
             .with_keywords(["tab", "close", "left", "workspace"]),
     );
 
     registry.register(
-        CommandId::new(CMD_WORKSPACE_TAB_CLOSE_RIGHT),
+        typed_command_id::<act::WorkspaceTabCloseRight>(),
         CommandMeta::new("Close Tabs to the Right")
             .with_category("Workspace")
             .with_keywords(["tab", "close", "right", "workspace"]),
     );
 
     registry.register(
-        CommandId::new(CMD_WORKSPACE_TAB_COMMIT_PREVIEW),
+        typed_command_id::<act::WorkspaceTabCommitPreview>(),
         CommandMeta::new("Commit Preview Tab")
             .with_category("Workspace")
             .with_keywords(["tab", "preview", "commit", "workspace"]),
     );
 
     registry.register(
-        CommandId::new(CMD_WORKSPACE_TAB_MOVE_LEFT),
+        typed_command_id::<act::WorkspaceTabMoveLeft>(),
         CommandMeta::new("Move Tab Left")
             .with_category("Workspace")
             .with_keywords(["tab", "move", "left", "reorder", "workspace"])
@@ -548,7 +580,7 @@ pub fn register_workspace_commands(registry: &mut CommandRegistry) {
     );
 
     registry.register(
-        CommandId::new(CMD_WORKSPACE_TAB_MOVE_RIGHT),
+        typed_command_id::<act::WorkspaceTabMoveRight>(),
         CommandMeta::new("Move Tab Right")
             .with_category("Workspace")
             .with_keywords(["tab", "move", "right", "reorder", "workspace"])
@@ -593,56 +625,56 @@ pub fn register_workspace_commands(registry: &mut CommandRegistry) {
     );
 
     registry.register(
-        CommandId::new(CMD_WORKSPACE_TAB_TOGGLE_PIN),
+        typed_command_id::<act::WorkspaceTabTogglePin>(),
         CommandMeta::new("Toggle Tab Pin")
             .with_category("Workspace")
             .with_keywords(["tab", "pin", "unpin", "workspace"]),
     );
 
     registry.register(
-        CommandId::new(CMD_WORKSPACE_PANE_NEXT),
+        typed_command_id::<act::WorkspacePaneNext>(),
         CommandMeta::new("Next Pane")
             .with_category("Workspace")
             .with_keywords(["pane", "next", "workspace"]),
     );
 
     registry.register(
-        CommandId::new(CMD_WORKSPACE_PANE_PREV),
+        typed_command_id::<act::WorkspacePanePrev>(),
         CommandMeta::new("Previous Pane")
             .with_category("Workspace")
             .with_keywords(["pane", "previous", "workspace"]),
     );
 
     registry.register(
-        CommandId::new(CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_NEXT),
+        typed_command_id::<act::WorkspacePaneMoveActiveTabNext>(),
         CommandMeta::new("Move Active Tab to Next Pane")
             .with_category("Workspace")
             .with_keywords(["move", "tab", "pane", "next", "workspace"]),
     );
 
     registry.register(
-        CommandId::new(CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_PREV),
+        typed_command_id::<act::WorkspacePaneMoveActiveTabPrev>(),
         CommandMeta::new("Move Active Tab to Previous Pane")
             .with_category("Workspace")
             .with_keywords(["move", "tab", "pane", "previous", "workspace"]),
     );
 
     registry.register(
-        CommandId::new(CMD_WORKSPACE_PANE_FOCUS_TAB_STRIP),
+        typed_command_id::<act::WorkspacePaneFocusTabStrip>(),
         CommandMeta::new("Focus Tab Strip")
             .with_category("Workspace")
             .with_keywords(["focus", "tab", "tabstrip", "pane", "workspace"]),
     );
 
     registry.register(
-        CommandId::new(CMD_WORKSPACE_PANE_FOCUS_CONTENT),
+        typed_command_id::<act::WorkspacePaneFocusContent>(),
         CommandMeta::new("Focus Pane Content")
             .with_category("Workspace")
             .with_keywords(["focus", "content", "pane", "workspace"]),
     );
 
     registry.register(
-        CommandId::new(CMD_WORKSPACE_PANE_TOGGLE_TAB_STRIP_FOCUS),
+        typed_command_id::<act::WorkspacePaneToggleTabStripFocus>(),
         CommandMeta::new("Toggle Tab Strip Focus")
             .with_category("Workspace")
             .with_keywords(["toggle", "focus", "tab", "tabstrip", "pane", "workspace"])
@@ -654,7 +686,7 @@ pub fn register_workspace_commands(registry: &mut CommandRegistry) {
     );
 
     registry.register(
-        CommandId::new(CMD_WORKSPACE_PANE_RESIZE_RIGHT),
+        typed_command_id::<act::WorkspacePaneResizeRight>(),
         CommandMeta::new("Resize Pane Right")
             .with_category("Workspace")
             .with_keywords(["resize", "pane", "right", "workspace"])
@@ -705,7 +737,7 @@ pub fn register_workspace_commands(registry: &mut CommandRegistry) {
     );
 
     registry.register(
-        CommandId::new(CMD_WORKSPACE_PANE_RESIZE_LEFT),
+        typed_command_id::<act::WorkspacePaneResizeLeft>(),
         CommandMeta::new("Resize Pane Left")
             .with_category("Workspace")
             .with_keywords(["resize", "pane", "left", "workspace"])
@@ -756,7 +788,7 @@ pub fn register_workspace_commands(registry: &mut CommandRegistry) {
     );
 
     registry.register(
-        CommandId::new(CMD_WORKSPACE_PANE_RESIZE_UP),
+        typed_command_id::<act::WorkspacePaneResizeUp>(),
         CommandMeta::new("Resize Pane Up")
             .with_category("Workspace")
             .with_keywords(["resize", "pane", "up", "workspace"])
@@ -807,7 +839,7 @@ pub fn register_workspace_commands(registry: &mut CommandRegistry) {
     );
 
     registry.register(
-        CommandId::new(CMD_WORKSPACE_PANE_RESIZE_DOWN),
+        typed_command_id::<act::WorkspacePaneResizeDown>(),
         CommandMeta::new("Resize Pane Down")
             .with_category("Workspace")
             .with_keywords(["resize", "pane", "down", "workspace"])
@@ -858,7 +890,7 @@ pub fn register_workspace_commands(registry: &mut CommandRegistry) {
     );
 
     registry.register(
-        CommandId::new(CMD_WORKSPACE_PANE_SPLIT_RIGHT),
+        typed_command_id::<act::WorkspacePaneSplitRight>(),
         CommandMeta::new("Split Pane Right")
             .with_category("Workspace")
             .with_keywords(["split", "pane", "right", "workspace"])
@@ -891,7 +923,7 @@ pub fn register_workspace_commands(registry: &mut CommandRegistry) {
     );
 
     registry.register(
-        CommandId::new(CMD_WORKSPACE_PANE_SPLIT_LEFT),
+        typed_command_id::<act::WorkspacePaneSplitLeft>(),
         CommandMeta::new("Split Pane Left")
             .with_category("Workspace")
             .with_keywords(["split", "pane", "left", "workspace"])
@@ -921,7 +953,7 @@ pub fn register_workspace_commands(registry: &mut CommandRegistry) {
     );
 
     registry.register(
-        CommandId::new(CMD_WORKSPACE_PANE_SPLIT_UP),
+        typed_command_id::<act::WorkspacePaneSplitUp>(),
         CommandMeta::new("Split Pane Up")
             .with_category("Workspace")
             .with_keywords(["split", "pane", "up", "workspace"])
@@ -951,7 +983,7 @@ pub fn register_workspace_commands(registry: &mut CommandRegistry) {
     );
 
     registry.register(
-        CommandId::new(CMD_WORKSPACE_PANE_SPLIT_DOWN),
+        typed_command_id::<act::WorkspacePaneSplitDown>(),
         CommandMeta::new("Split Pane Down")
             .with_category("Workspace")
             .with_keywords(["split", "pane", "down", "workspace"])
@@ -984,7 +1016,7 @@ pub fn register_workspace_commands(registry: &mut CommandRegistry) {
     );
 
     registry.register(
-        CommandId::new(CMD_WORKSPACE_PANE_FOCUS_RIGHT),
+        typed_command_id::<act::WorkspacePaneFocusRight>(),
         CommandMeta::new("Focus Pane Right")
             .with_category("Workspace")
             .with_keywords(["focus", "pane", "right", "workspace"])
@@ -1032,7 +1064,7 @@ pub fn register_workspace_commands(registry: &mut CommandRegistry) {
     );
 
     registry.register(
-        CommandId::new(CMD_WORKSPACE_PANE_FOCUS_LEFT),
+        typed_command_id::<act::WorkspacePaneFocusLeft>(),
         CommandMeta::new("Focus Pane Left")
             .with_category("Workspace")
             .with_keywords(["focus", "pane", "left", "workspace"])
@@ -1080,7 +1112,7 @@ pub fn register_workspace_commands(registry: &mut CommandRegistry) {
     );
 
     registry.register(
-        CommandId::new(CMD_WORKSPACE_PANE_FOCUS_UP),
+        typed_command_id::<act::WorkspacePaneFocusUp>(),
         CommandMeta::new("Focus Pane Up")
             .with_category("Workspace")
             .with_keywords(["focus", "pane", "up", "workspace"])
@@ -1128,7 +1160,7 @@ pub fn register_workspace_commands(registry: &mut CommandRegistry) {
     );
 
     registry.register(
-        CommandId::new(CMD_WORKSPACE_PANE_FOCUS_DOWN),
+        typed_command_id::<act::WorkspacePaneFocusDown>(),
         CommandMeta::new("Focus Pane Down")
             .with_category("Workspace")
             .with_keywords(["focus", "pane", "down", "workspace"])
@@ -1176,7 +1208,7 @@ pub fn register_workspace_commands(registry: &mut CommandRegistry) {
     );
 
     registry.register(
-        CommandId::new(CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_RIGHT),
+        typed_command_id::<act::WorkspacePaneMoveActiveTabRight>(),
         CommandMeta::new("Move Active Tab Right")
             .with_category("Workspace")
             .with_keywords(["move", "tab", "pane", "right", "workspace"])
@@ -1224,7 +1256,7 @@ pub fn register_workspace_commands(registry: &mut CommandRegistry) {
     );
 
     registry.register(
-        CommandId::new(CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_LEFT),
+        typed_command_id::<act::WorkspacePaneMoveActiveTabLeft>(),
         CommandMeta::new("Move Active Tab Left")
             .with_category("Workspace")
             .with_keywords(["move", "tab", "pane", "left", "workspace"])
@@ -1272,7 +1304,7 @@ pub fn register_workspace_commands(registry: &mut CommandRegistry) {
     );
 
     registry.register(
-        CommandId::new(CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_UP),
+        typed_command_id::<act::WorkspacePaneMoveActiveTabUp>(),
         CommandMeta::new("Move Active Tab Up")
             .with_category("Workspace")
             .with_keywords(["move", "tab", "pane", "up", "workspace"])
@@ -1320,7 +1352,7 @@ pub fn register_workspace_commands(registry: &mut CommandRegistry) {
     );
 
     registry.register(
-        CommandId::new(CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_DOWN),
+        typed_command_id::<act::WorkspacePaneMoveActiveTabDown>(),
         CommandMeta::new("Move Active Tab Down")
             .with_category("Workspace")
             .with_keywords(["move", "tab", "pane", "down", "workspace"])
