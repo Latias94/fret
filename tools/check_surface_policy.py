@@ -170,6 +170,11 @@ DEFAULT_AUTHORING_SURFACES: tuple[SurfacePath, ...] = (
         "default data-table cookbook should not teach raw local-state construction",
     ),
     SurfacePath(
+        "apps/fret-examples/src/datatable_demo.rs",
+        "default_app_clean",
+        "datatable demo should stay on the FretApp ui harness and shadcn DataTable recipe",
+    ),
+    SurfacePath(
         "apps/fret-cookbook/examples/commands_keymap_basics.rs",
         "default_app_clean",
         "default command/keymap cookbook should stay on the explicit fret command facade",
@@ -2489,14 +2494,17 @@ CANVAS_DATAGRID_STRESS_FORBIDDEN_RAW_WRITE_PATTERNS: tuple[
 DATATABLE_OWNER = "examples-datatable"
 
 DATATABLE_REQUIRED_COMPACT_MARKERS = (
-    "usefret::app::AppLocalStateExtas_;",
-    "usefret::app::LocalState;",
+    "usefret::app::{self,App,AppLocalStateExtas_,LocalState,text};",
     "table_output:LocalState<shadcn::DataTableViewOutput>,",
+    "table_recipe:shadcn::DataTableRecipe<DemoRow>,",
     "lettable_output=app.local_state(shadcn::DataTableViewOutput::default());",
+    "shadcn::DataTableRecipe::new(&table_state,&table_output,columns,",
     "lettable_output=state.table_output.clone();",
+    "lettable_recipe=state.table_recipe.clone();",
     "let_=table_output.layout_value(cx);",
-    "shadcn::DataTablePagination::new(&table_state,table_output.clone())",
-    ".output_model(table_output.clone())",
+    "lettable_parts=table_recipe.into_elements(cx,rows,1,",
+    "fret::FretApp::new(\"datatable-demo\")",
+    ".ui(create_window_state,render_datatable_demo)?",
 )
 
 DATATABLE_FORBIDDEN_COMPACT_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
@@ -2516,6 +2524,12 @@ DATATABLE_FORBIDDEN_COMPACT_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = 
         "legacy-model-import",
         re.compile(r"usefret_app::\{App,CommandId,Effect,Model,WindowRequest\};"),
     ),
+    ("manual-driver", re.compile(r"\bFnDriver\b")),
+    ("manual-retained-tree", re.compile(r"\bUiTree\b")),
+    ("manual-render-root", re.compile(r"\bRenderRootContext\b")),
+    ("manual-frame", re.compile(r"\bUiFrameCx\b")),
+    ("manual-launch-import", re.compile(r"\bfret_launch\b")),
+    ("manual-window-id", re.compile(r"\bAppWindowId\b")),
 )
 
 EDITOR_NOTES_OWNER = "examples-editor-notes"
@@ -3098,22 +3112,6 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
             "UiTree",
         ),
         owner=COMPONENTS_GALLERY_OWNER,
-    ),
-    _fret_examples_advanced_surface(
-        "datatable_demo.rs",
-        "the datatable demo owns manual driver/table harness plumbing while keeping DataTable "
-        "output on app-facing LocalState instead of raw shared model output handles",
-        (
-            "fret_app",
-            "fret_core",
-            "fret_launch",
-            "fret_runtime",
-            "fret_ui",
-            "FnDriver",
-            "UiTree",
-        ),
-        owner=DATATABLE_OWNER,
-        retirement=DATATABLE_GPUI_RETIREMENT,
     ),
     *(
         _fret_examples_manual_chart_surface(filename)
@@ -6006,6 +6004,7 @@ def check_surface_policy(
 
     for spec in default_surfaces:
         violations.extend(_scan_default_authoring_surface(root, spec))
+        violations.extend(_scan_datatable_output_boundary(root, spec))
 
     for spec in advanced_manual_surfaces:
         violations.extend(_scan_classified_raw_surface(root, spec))

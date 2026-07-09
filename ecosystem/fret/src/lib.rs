@@ -178,10 +178,13 @@ pub mod time {
 pub mod style {
     pub use fret_core::scene::DashPatternV1;
     pub use fret_core::{
-        AttributedText, Color, Corners, DecorationLineStyle, Edges, FontWeight, StrikethroughStyle,
-        TextAlign, TextOverflow, TextPaintStyle, TextSpan, TextWrap,
+        AttributedText, Axis, Color, Corners, DecorationLineStyle, Edges, FontWeight, Px,
+        StrikethroughStyle, TextAlign, TextOverflow, TextPaintStyle, TextSpan, TextWrap,
     };
-    pub use fret_ui::element::{ContainerProps, LayoutStyle, Length, Overflow, SizeStyle};
+    pub use fret_ui::element::{
+        ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow, SizeStyle,
+        SpacingLength,
+    };
     pub use fret_ui::{Theme, ThemeSnapshot};
     pub use fret_ui_kit::{
         ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, ShadowPreset, Size, Space,
@@ -812,6 +815,22 @@ pub mod app {
     /// Explicit context-access capability for helper signatures that should not hard-code raw
     /// `ElementContext` ownership.
     pub use fret_ui::ElementContextAccess;
+
+    /// Request that the runner close a window.
+    pub fn close_window(app: &mut App, window: crate::WindowId) {
+        app.push_effect(fret_app::Effect::Window(fret_app::WindowRequest::Close(
+            window,
+        )));
+    }
+
+    /// Build an activation handler that closes the active window.
+    pub fn close_window_activate() -> fret_ui::action::OnActivate {
+        std::sync::Arc::new(|host, acx, _reason| {
+            host.push_effect(fret_app::Effect::Window(fret_app::WindowRequest::Close(
+                acx.window,
+            )));
+        })
+    }
 
     /// App-facing text helpers for the default render lane.
     ///

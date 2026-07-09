@@ -2664,10 +2664,14 @@ fn default_facing_clickable_widgets_keep_action_first_aliases_on_public_builders
 #[test]
 fn data_table_surfaces_keep_narrow_table_state_bridges() {
     assert!(
-        LIB_RS.contains(
-            "pub use fret_ui_kit::declarative::table::{IntoTableStateModel, IntoTableViewOutputModel};"
-        ),
-        "facade should re-export the dedicated table state/output bridges so the LocalState-first path stays discoverable"
+        [
+            "IntoTableStateModel",
+            "IntoTableViewOutputModel",
+            "TableDebugIds"
+        ]
+        .into_iter()
+        .all(|marker| LIB_RS.contains(marker)),
+        "facade should re-export the dedicated table state/output bridges and debug ids so the LocalState-first path stays discoverable"
     );
     assert!(
         LIB_RS.contains("pub use crate::data_table::{DataTable, DataTableVirtualizationStrategy};"),

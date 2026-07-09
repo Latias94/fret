@@ -321,6 +321,25 @@ impl FretApp {
         )
     }
 
+    /// Build a retained-state UI app without exposing raw launch/frame ownership.
+    pub fn ui<S: 'static>(
+        self,
+        init_window: fn(&mut crate::app::App, crate::WindowId) -> S,
+        view: for<'a> fn(&mut crate::AppRenderCx<'a>, &mut S) -> crate::Ui,
+    ) -> Result<UiAppBuilder<S>> {
+        self.ui_with_hooks(init_window, view, |driver| driver)
+    }
+
+    /// Same as [`ui`](Self::ui), with driver hook configuration.
+    pub fn ui_with_hooks<S: 'static>(
+        self,
+        init_window: fn(&mut crate::app::App, crate::WindowId) -> S,
+        view: for<'a> fn(&mut crate::AppRenderCx<'a>, &mut S) -> crate::Ui,
+        configure: fn(UiAppDriver<S>) -> UiAppDriver<S>,
+    ) -> Result<UiAppBuilder<S>> {
+        self.ui_driver_with_hooks(init_window, view, configure)
+    }
+
     pub(crate) fn ui_driver_with_hooks<S: 'static>(
         self,
         init_window: fn(&mut crate::app::App, crate::WindowId) -> S,

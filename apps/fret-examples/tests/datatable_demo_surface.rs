@@ -8,7 +8,6 @@ fn datatable_demo_keeps_fixed_table_text_on_roles() {
     let source = compact(source);
 
     for needle in [
-        "usefret::app::text;",
         "text::control_readout(cx,Arc::from(format!(\"DataTable|selected={selected}sort={sorting}\")),)",
         "\"id\"=>text::table_cell(cx,Arc::from(row.id.to_string()))",
         "\"name\"=>text::table_cell(cx,Arc::clone(&row.name))",
@@ -48,11 +47,14 @@ fn datatable_demo_uses_local_state_table_output() {
 
     for needle in [
         "table_output:LocalState<shadcn::DataTableViewOutput>,",
+        "table_recipe:shadcn::DataTableRecipe<DemoRow>,",
         "lettable_output=app.local_state(shadcn::DataTableViewOutput::default());",
+        "shadcn::DataTableRecipe::new(&table_state,&table_output,columns,",
         "lettable_output=state.table_output.clone();",
+        "lettable_recipe=state.table_recipe.clone();",
         "let_=table_output.layout_value(cx);",
-        "shadcn::DataTablePagination::new(&table_state,table_output.clone())",
-        ".output_model(table_output.clone())",
+        "lettable_parts=table_recipe.into_elements(cx,rows,1,",
+        "datatable_debug_ids()",
     ] {
         assert!(
             source.contains(needle),
@@ -69,6 +71,40 @@ fn datatable_demo_uses_local_state_table_output() {
         assert!(
             !source.contains(needle),
             "datatable demo should not expose raw table output model plumbing; unexpected `{needle}`"
+        );
+    }
+}
+
+#[test]
+fn datatable_demo_uses_app_facing_driver_path() {
+    let source = include_str!("../src/datatable_demo.rs");
+    let source = compact(source);
+
+    for needle in [
+        "fret::FretApp::new(\"datatable-demo\")",
+        ".window(\"fret-demodatatable_demo\",(980.0,720.0))",
+        ".ui(create_window_state,render_datatable_demo)?",
+    ] {
+        assert!(
+            source.contains(needle),
+            "datatable demo should run through the app-facing FretApp ui harness; missing `{needle}`"
+        );
+    }
+
+    for needle in [
+        "FnDriver",
+        "UiTree",
+        "RenderRootContext",
+        "UiFrameCx",
+        "WinitRenderContext",
+        "run_native_with_fn_driver",
+        "fret_launch",
+        "PlatformCapabilities",
+        "AppWindowId",
+    ] {
+        assert!(
+            !source.contains(needle),
+            "datatable demo should not teach manual driver/frame/tree ownership; unexpected `{needle}`"
         );
     }
 }

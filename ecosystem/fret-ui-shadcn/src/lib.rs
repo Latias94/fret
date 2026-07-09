@@ -408,8 +408,8 @@ pub mod facade {
         DataTableViewOptionItem, DataTableViewOptions, DataTableViewOptionsVisibility,
     };
     pub use crate::data_table_recipes::{
-        DataTableFacetedFilterOption, DataTablePagination, DataTableToolbar,
-        DataTableToolbarResponsiveQuery,
+        DataTableColumnLabel, DataTableFacetedFilterOption, DataTablePagination, DataTableRecipe,
+        DataTableRecipeElements, DataTableToolbar, DataTableToolbarResponsiveQuery,
     };
     pub use crate::date_picker::DatePicker;
     pub use crate::date_picker_with_presets::DatePickerWithPresets;
@@ -586,8 +586,11 @@ pub mod facade {
     pub use crate::u8_value_model::IntoU8ValueModel;
     pub use fret_ui_headless::calendar::{DateRange, DateRangeSelection};
     pub use fret_ui_headless::calendar_solar_hijri::SolarHijriMonth;
+    pub use fret_ui_headless::table::{ColumnDef, RowKey, TableState, create_column_helper};
     pub use fret_ui_kit::declarative::table::TableViewOutput as DataTableViewOutput;
-    pub use fret_ui_kit::declarative::table::{IntoTableStateModel, IntoTableViewOutputModel};
+    pub use fret_ui_kit::declarative::table::{
+        IntoTableStateModel, IntoTableViewOutputModel, TableDebugIds,
+    };
 
     /// Default high-performance data grid surface (canvas-rendered).
     ///

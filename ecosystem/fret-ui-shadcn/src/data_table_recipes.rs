@@ -9,11 +9,13 @@ use fret_ui::action::OnActivate;
 use fret_ui::element::{AnyElement, LayoutQueryRegionProps, LayoutStyle, Length};
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, Theme, UiHost};
-use fret_ui_headless::table::{ColumnDef, ColumnId, ColumnPinPosition, TableState, pin_column};
+use fret_ui_headless::table::{
+    ColumnDef, ColumnId, ColumnPinPosition, RowKey, TableState, pin_column,
+};
 use fret_ui_kit::declarative::icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::table::{
-    IntoTableStateModel, IntoTableViewOutputModel, TableViewOutput,
+    IntoTableStateModel, IntoTableViewOutputModel, TableDebugIds, TableViewOutput,
 };
 use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space, ui};
@@ -21,6 +23,7 @@ use serde_json::Value;
 
 use crate::button::{Button, ButtonSize, ButtonVariant};
 use crate::command::{CommandEntry, CommandGroup, CommandItem, CommandPalette, CommandSeparator};
+use crate::data_table::DataTable;
 use crate::data_table_controls::{is_column_visible, sync_column_visibility};
 use crate::direction::{LayoutDirection, use_direction};
 use crate::dropdown_menu::{
@@ -1610,6 +1613,199 @@ impl<TData> DataTableToolbar<TData> {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DataTableColumnLabel {
+    pub id: ColumnId,
+    pub label: Arc<str>,
+}
+
+impl DataTableColumnLabel {
+    pub fn new(id: impl Into<ColumnId>, label: impl Into<Arc<str>>) -> Self {
+        Self {
+            id: id.into(),
+            label: label.into(),
+        }
+    }
+}
+
+pub struct DataTableRecipeElements {
+    pub toolbar: AnyElement,
+    pub table: AnyElement,
+    pub pagination: AnyElement,
+}
+
+impl DataTableRecipeElements {
+    pub fn into_vec(self) -> Vec<AnyElement> {
+        vec![self.toolbar, self.table, self.pagination]
+    }
+}
+
+/// App-facing shadcn `DataTable` assembly recipe.
+///
+/// The recipe owns composition only. Callers still pass and can inspect the `TableState`,
+/// output model, columns, row-key function, labels, pagination sizes, and debug ids.
+#[derive(Clone)]
+pub struct DataTableRecipe<TData> {
+    state: Model<TableState>,
+    output: Model<TableViewOutput>,
+    columns: Arc<[ColumnDef<TData>]>,
+    column_labels: Arc<[DataTableColumnLabel]>,
+    row_key: Arc<dyn Fn(&TData, usize, Option<&RowKey>) -> RowKey>,
+    debug_ids: TableDebugIds,
+    table: DataTable,
+    page_sizes: Arc<[usize]>,
+    toolbar_test_id_prefix: Option<Arc<str>>,
+}
+
+impl<TData> std::fmt::Debug for DataTableRecipe<TData> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("DataTableRecipe")
+            .field("columns_len", &self.columns.len())
+            .field("column_labels_len", &self.column_labels.len())
+            .field("page_sizes", &self.page_sizes)
+            .field("debug_ids", &self.debug_ids)
+            .finish_non_exhaustive()
+    }
+}
+
+impl<TData> DataTableRecipe<TData> {
+    pub fn new(
+        state: impl IntoTableStateModel,
+        output: impl IntoTableViewOutputModel,
+        columns: impl Into<Arc<[ColumnDef<TData>]>>,
+        row_key: impl Fn(&TData, usize, Option<&RowKey>) -> RowKey + 'static,
+    ) -> Self {
+        Self {
+            state: state.into_table_state_model(),
+            output: output.into_table_view_output_model(),
+            columns: columns.into(),
+            column_labels: Arc::from(Vec::<DataTableColumnLabel>::new().into_boxed_slice()),
+            row_key: Arc::new(row_key),
+            debug_ids: TableDebugIds::default(),
+            table: DataTable::new(),
+            page_sizes: Arc::from([10usize, 20, 25, 30, 40, 50]),
+            toolbar_test_id_prefix: None,
+        }
+    }
+
+    pub fn column_labels(mut self, labels: impl IntoIterator<Item = DataTableColumnLabel>) -> Self {
+        self.column_labels = Arc::from(labels.into_iter().collect::<Vec<_>>().into_boxed_slice());
+        self
+    }
+
+    pub fn debug_ids(mut self, debug_ids: TableDebugIds) -> Self {
+        self.debug_ids = debug_ids;
+        self
+    }
+
+    pub fn table(mut self, table: DataTable) -> Self {
+        self.table = table;
+        self
+    }
+
+    pub fn page_sizes(mut self, sizes: impl Into<Arc<[usize]>>) -> Self {
+        self.page_sizes = sizes.into();
+        self
+    }
+
+    pub fn toolbar_test_id_prefix(mut self, prefix: impl Into<Arc<str>>) -> Self {
+        self.toolbar_test_id_prefix = Some(prefix.into());
+        self
+    }
+
+    pub fn state_model(&self) -> Model<TableState> {
+        self.state.clone()
+    }
+
+    pub fn output_model(&self) -> Model<TableViewOutput> {
+        self.output.clone()
+    }
+
+    pub fn columns(&self) -> Arc<[ColumnDef<TData>]> {
+        self.columns.clone()
+    }
+
+    pub fn column_labels_model(&self) -> Arc<[DataTableColumnLabel]> {
+        self.column_labels.clone()
+    }
+
+    pub fn debug_ids_model(&self) -> TableDebugIds {
+        self.debug_ids.clone()
+    }
+
+    pub fn page_sizes_model(&self) -> Arc<[usize]> {
+        self.page_sizes.clone()
+    }
+
+    pub fn row_key_for(&self, row: &TData, index: usize, parent: Option<&RowKey>) -> RowKey {
+        (self.row_key)(row, index, parent)
+    }
+
+    pub fn label_for_column(&self, column: &ColumnDef<TData>) -> Arc<str> {
+        label_for_column(&self.column_labels, column)
+    }
+
+    #[track_caller]
+    pub fn into_elements<H: UiHost + 'static>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        data: Arc<[TData]>,
+        data_revision: u64,
+        cell_at: impl Fn(&mut ElementContext<'_, H>, &ColumnDef<TData>, &TData) -> AnyElement + 'static,
+    ) -> DataTableRecipeElements
+    where
+        TData: 'static,
+    {
+        let state = self.state.clone();
+        let output = self.output.clone();
+        let columns = self.columns.clone();
+        let column_labels = self.column_labels.clone();
+        let row_key = self.row_key.clone();
+
+        let toolbar_labels = column_labels.clone();
+        let mut toolbar = DataTableToolbar::new(&state, columns.clone(), move |column| {
+            label_for_column(&toolbar_labels, column)
+        });
+        if let Some(prefix) = self.toolbar_test_id_prefix {
+            toolbar = toolbar.test_id_prefix(prefix);
+        }
+        let toolbar = toolbar.into_element(cx);
+
+        let table_labels = column_labels.clone();
+        let table = self
+            .table
+            .output_model(output.clone())
+            .debug_ids(self.debug_ids)
+            .into_element(
+                cx,
+                data,
+                data_revision,
+                &state,
+                columns,
+                move |row, index, parent| row_key(row, index, parent),
+                move |column| label_for_column(&table_labels, column),
+                cell_at,
+            );
+
+        let pagination = DataTablePagination::new(&state, output)
+            .page_sizes(self.page_sizes)
+            .into_element(cx);
+
+        DataTableRecipeElements {
+            toolbar,
+            table,
+            pagination,
+        }
+    }
+}
+
+fn label_for_column<TData>(labels: &[DataTableColumnLabel], column: &ColumnDef<TData>) -> Arc<str> {
+    labels
+        .iter()
+        .find_map(|entry| (entry.id.as_ref() == column.id.as_ref()).then(|| entry.label.clone()))
+        .unwrap_or_else(|| column.id.clone())
+}
+
 /// shadcn/ui `DataTable` pagination (recipe).
 ///
 /// This is a v1 surface wired to `TableState.pagination`.
@@ -2096,5 +2292,76 @@ mod tests {
         st.pagination.page_index = 3;
         assert!(!apply_column_visibility_change(&mut st, &desired));
         assert_eq!(st.pagination.page_index, 3);
+    }
+
+    #[derive(Clone)]
+    struct RecipeRow {
+        id: u64,
+        name: Arc<str>,
+    }
+
+    fn recipe_columns() -> Arc<[ColumnDef<RecipeRow>]> {
+        let helper = fret_ui_headless::table::create_column_helper::<RecipeRow>();
+        Arc::from(
+            vec![
+                helper.clone().accessor("id", |row| row.id),
+                helper.accessor_str("name", |row| row.name.as_ref()),
+            ]
+            .into_boxed_slice(),
+        )
+    }
+
+    #[test]
+    fn data_table_recipe_keeps_state_output_and_identity_inspectable() {
+        let mut app = App::new();
+        let state = app.models_mut().insert(TableState::default());
+        let output = app.models_mut().insert(TableViewOutput::default());
+        let columns = recipe_columns();
+        let debug_ids = TableDebugIds {
+            header_row_test_id: Some(Arc::from("orders-header")),
+            body_test_id: Some(Arc::from("orders-body")),
+            header_cell_test_id_prefix: Some(Arc::from("orders-header-")),
+            row_test_id_prefix: Some(Arc::from("orders-row-")),
+            row_cell_test_ids: false,
+        };
+
+        let recipe = DataTableRecipe::new(
+            state.clone(),
+            output.clone(),
+            columns.clone(),
+            |row: &RecipeRow, _index, _parent| RowKey(row.id),
+        )
+        .column_labels([
+            DataTableColumnLabel::new("id", "ID"),
+            DataTableColumnLabel::new("name", "Name"),
+        ])
+        .debug_ids(debug_ids.clone())
+        .toolbar_test_id_prefix("orders-table")
+        .page_sizes(Arc::from([25usize, 50, 100]))
+        .table(DataTable::new().column_actions_menu(true));
+
+        assert_eq!(recipe.state_model(), state);
+        assert_eq!(recipe.output_model(), output);
+        assert_eq!(recipe.columns().len(), columns.len());
+        assert_eq!(recipe.page_sizes_model().as_ref(), &[25, 50, 100]);
+        assert_eq!(
+            recipe.debug_ids_model().row_test_id_prefix.as_deref(),
+            Some("orders-row-")
+        );
+        assert!(!recipe.debug_ids_model().row_cell_test_ids);
+
+        let label_entries = recipe.column_labels_model();
+        assert_eq!(label_entries.len(), 2);
+        assert_eq!(
+            recipe.label_for_column(&columns[1]).as_ref(),
+            "Name",
+            "recipe should expose caller-owned column labels"
+        );
+
+        let row = RecipeRow {
+            id: 42,
+            name: Arc::from("Ada"),
+        };
+        assert_eq!(recipe.row_key_for(&row, 0, None), RowKey(42));
     }
 }
