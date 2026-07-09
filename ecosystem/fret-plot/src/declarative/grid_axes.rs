@@ -78,7 +78,7 @@ pub(super) fn paint_line_plot_grid_and_axes(
     let baseline_y = transform
         .data_y_to_px(0.0)
         .filter(|y| y.0 >= plot.origin.y.0 && y.0 <= plot.origin.y.0 + plot.size.height.0)
-        .unwrap_or_else(|| Px(plot.origin.y.0 + plot.size.height.0 - 1.0));
+        .unwrap_or(Px(plot.origin.y.0 + plot.size.height.0 - 1.0));
     let baseline_x = transform
         .data_x_to_px(0.0)
         .filter(|x| x.0 >= plot.origin.x.0 && x.0 <= plot.origin.x.0 + plot.size.width.0)

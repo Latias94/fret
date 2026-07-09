@@ -39,5 +39,5 @@ pub(in crate::imui::table_controls) fn table_header_label_text<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     label: Arc<str>,
 ) -> AnyElement {
-    crate::declarative::text::text_table_cell(cx, label)
+    crate::declarative::text::text_table_header_label(cx, label)
 }

@@ -7,7 +7,7 @@ mod images;
 mod summaries;
 mod svg_text;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct ImUiDebugDrawList {
     pub(in crate::imui::debug_draw_controls) commands: Vec<DebugDrawCommand>,
     pub(in crate::imui::debug_draw_controls) channel_split: Option<DebugDrawChannelSplit>,

@@ -1572,21 +1572,10 @@ fn web_vs_fret_layout_input_with_label_geometry() {
             move |cx| vec![shadcn::Label::new("Email").into_element(cx)],
         );
 
-        let input = cx.semantics(
-            fret_ui::element::SemanticsProps {
-                role: SemanticsRole::Panel,
-                label: Some(Arc::from("Golden:input-with-label:input")),
-                ..Default::default()
-            },
-            move |cx| {
-                vec![
-                    shadcn::Input::new(model)
-                        .a11y_label("Email")
-                        .placeholder("Email")
-                        .into_element(cx),
-                ]
-            },
-        );
+        let input = shadcn::Input::new(model)
+            .a11y_label("Email")
+            .placeholder("Email")
+            .into_element(cx);
 
         let col = cx.flex(
             FlexProps {
@@ -1624,12 +1613,7 @@ fn web_vs_fret_layout_input_with_label_geometry() {
         Some("Golden:input-with-label:label"),
     )
     .expect("fret label");
-    let input = find_semantics(
-        &snap,
-        SemanticsRole::Panel,
-        Some("Golden:input-with-label:input"),
-    )
-    .expect("fret input");
+    let input = find_semantics(&snap, SemanticsRole::TextField, Some("Email")).expect("fret input");
 
     assert_close_px(
         "input-with-label label h",

@@ -40,7 +40,7 @@ pub(in crate::imui) fn spacing_element<H: UiHost>(
                 key: "component.imui.item_spacing_y_px",
                 fallback: MetricFallback::Px(Px(4.0)),
             }
-            .resolve(&*theme),
+            .resolve(theme),
         )
     });
     dummy_element(

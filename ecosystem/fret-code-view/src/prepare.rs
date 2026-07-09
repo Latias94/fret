@@ -127,7 +127,7 @@ pub(crate) enum CodeBlockPrepareMode {
     LineIndexed,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub(crate) struct PreparedCodeBlock {
     pub(crate) revision: u64,
     pub(crate) show_line_numbers: bool,
@@ -135,19 +135,6 @@ pub(crate) struct PreparedCodeBlock {
     pub(crate) max_line_columns: usize,
     pub(crate) syntax_highlights: Vec<&'static str>,
     pub(crate) lines: Vec<PreparedLine>,
-}
-
-impl Default for PreparedCodeBlock {
-    fn default() -> Self {
-        Self {
-            revision: 0,
-            show_line_numbers: false,
-            line_number_width: 0,
-            max_line_columns: 0,
-            syntax_highlights: Vec::new(),
-            lines: Vec::new(),
-        }
-    }
 }
 
 #[derive(Debug, Clone, Default)]

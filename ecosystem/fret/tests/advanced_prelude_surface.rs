@@ -81,11 +81,14 @@ fn advanced_prelude_stays_advanced_only_instead_of_smuggling_component_surface()
 fn advanced_prelude_keeps_manual_assembly_seams_explicit() {
     let advanced_prelude = advanced_prelude_slice();
     let advanced_public = advanced_public_slice();
-    assert!(advanced_prelude.contains("pub use crate::advanced::*;"));
     assert!(advanced_prelude.contains("pub use crate::AppRenderCx;"));
     assert!(advanced_prelude_exports_symbol("AppRenderCx"));
     assert!(advanced_prelude.contains("pub use crate::AppComponentCx;"));
     assert!(advanced_prelude.contains("pub use crate::{AppUi, Ui};"));
+    assert!(advanced_prelude.contains("pub use crate::advanced::KernelApp;"));
+    assert!(advanced_prelude.contains("pub use crate::advanced::driver::{"));
+    assert!(advanced_prelude.contains("pub use crate::advanced::interop::embedded_viewport::{"));
+    assert!(advanced_prelude.contains("pub use crate::advanced::kernel;"));
     assert!(advanced_public.contains("LocalStateRawModelExt"));
     assert!(advanced_public.contains("LocalStateModelStoreExt"));
     assert!(advanced_public.contains("LocalStateElementContextExt"));
@@ -146,19 +149,38 @@ fn advanced_prelude_omits_broad_ui_kit_internals() {
 
 #[test]
 fn advanced_call_sites_import_component_prelude_explicitly_when_needed() {
-    for (label, source) in [
-        ("async_playground_demo", ASYNC_PLAYGROUND_DEMO),
-        ("imui_editor_proof_demo", IMUI_EDITOR_PROOF_DEMO),
-    ] {
-        assert!(
-            source.contains("advanced::prelude::*"),
-            "{label} should stay on the explicit advanced lane",
-        );
-        assert!(
-            source.contains("component::prelude::*"),
-            "{label} should add an explicit component lane import when it needs component authoring vocabulary",
-        );
-    }
+    assert!(
+        ASYNC_PLAYGROUND_DEMO.contains("use fret::app::prelude::*;"),
+        "async_playground_demo should stay on the default app lane for app-owned state and view code",
+    );
+    assert!(
+        ASYNC_PLAYGROUND_DEMO.contains("use fret::app::{")
+            && ASYNC_PLAYGROUND_DEMO.contains("AppElement, AppRenderContext, LocalState"),
+        "async_playground_demo should name extra app helper seams explicitly",
+    );
+    assert!(
+        !ASYNC_PLAYGROUND_DEMO.contains("advanced::prelude::*")
+            && !ASYNC_PLAYGROUND_DEMO.contains("component::prelude::*"),
+        "async_playground_demo should not reacquire broad advanced/component preludes",
+    );
+
+    assert!(
+        IMUI_EDITOR_PROOF_DEMO.contains("use fret::advanced::KernelApp;"),
+        "imui_editor_proof_demo should name the kernel app seam explicitly",
+    );
+    assert!(
+        IMUI_EDITOR_PROOF_DEMO.contains("use fret::advanced::driver::{UiAppDriver, ViewElements};"),
+        "imui_editor_proof_demo should import driver seams from the advanced driver module",
+    );
+    assert!(
+        IMUI_EDITOR_PROOF_DEMO.contains("use fret::app::{ElementContextAccess, View};"),
+        "imui_editor_proof_demo should import app-facing view seams explicitly",
+    );
+    assert!(
+        !IMUI_EDITOR_PROOF_DEMO.contains("advanced::prelude::*")
+            && !IMUI_EDITOR_PROOF_DEMO.contains("component::prelude::*"),
+        "imui_editor_proof_demo should not reacquire broad advanced/component preludes",
+    );
 
     assert!(
         !ACTION_FIRST_VIEW.contains("advanced::prelude::*"),

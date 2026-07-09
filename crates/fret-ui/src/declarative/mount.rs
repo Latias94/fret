@@ -2774,6 +2774,39 @@ fn declarative_instance_change_mask(
                 paint_changed = true;
             }
         }
+        (ElementInstance::TextInput(a), ElementInstance::TextInput(b)) => {
+            if a.model != b.model {
+                paint_changed = true;
+                if matches!(
+                    super::text_input_props_text_change_invalidation(b),
+                    crate::Invalidation::Layout
+                ) {
+                    layout_changed = true;
+                }
+            }
+            if a.layout != b.layout
+                || a.chrome != b.chrome
+                || a.text_style != b.text_style
+                || a.placeholder != b.placeholder
+                || a.obscure_text != b.obscure_text
+            {
+                layout_changed = true;
+                paint_changed = true;
+            }
+            if a.enabled != b.enabled || a.focusable != b.focusable {
+                layout_changed = true;
+                paint_changed = true;
+            }
+            if a.focus_ring_always_paint != b.focus_ring_always_paint {
+                paint_changed = true;
+            }
+            if text_input_semantics_changed(a, b) {
+                semantics_changed = true;
+            }
+            if a.submit_command != b.submit_command || a.cancel_command != b.cancel_command {
+                semantics_changed = true;
+            }
+        }
         (ElementInstance::VirtualList(a), ElementInstance::VirtualList(b)) => {
             if virtual_list_layout_inputs_changed(a, b) {
                 layout_changed = true;
@@ -2882,6 +2915,29 @@ fn pressable_a11y_semantics_changed(
         || a.set_size != b.set_size
 }
 
+fn text_input_semantics_changed(
+    a: &crate::element::TextInputProps,
+    b: &crate::element::TextInputProps,
+) -> bool {
+    a.enabled != b.enabled
+        || a.focusable != b.focusable
+        || a.model != b.model
+        || a.placeholder != b.placeholder
+        || a.a11y_label != b.a11y_label
+        || a.a11y_state_description != b.a11y_state_description
+        || a.a11y_role != b.a11y_role
+        || a.test_id != b.test_id
+        || a.read_only != b.read_only
+        || a.a11y_required != b.a11y_required
+        || a.a11y_invalid != b.a11y_invalid
+        || a.active_descendant != b.active_descendant
+        || a.labelled_by_element != b.labelled_by_element
+        || a.described_by_element != b.described_by_element
+        || a.active_descendant_element != b.active_descendant_element
+        || a.controls_element != b.controls_element
+        || a.expanded != b.expanded
+}
+
 fn text_content_update_can_skip_layout(
     layout: &LayoutStyle,
     style: &fret_core::TextStyle,
@@ -2968,14 +3024,7 @@ fn apply_pending_invalidations<H: UiHost>(ui: &mut UiTree<H>, pending: &mut Hash
                 detail,
             );
         }
-        if (mask & INVALIDATION_PAINT) != 0 {
-            ui.invalidate_with_source_and_detail(
-                node,
-                Invalidation::Paint,
-                UiDebugInvalidationSource::Other,
-                detail,
-            );
-        } else if (mask & INVALIDATION_SEMANTICS) != 0 {
+        if (mask & (INVALIDATION_PAINT | INVALIDATION_SEMANTICS)) != 0 {
             ui.invalidate_with_source_and_detail(
                 node,
                 Invalidation::Paint,

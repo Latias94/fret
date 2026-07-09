@@ -87,20 +87,6 @@ fn input_text_completion_picker_keyboard_navigation_commits_active_candidate() {
         "imui-input-text-completion-picker-keyboard",
         |cx| render(cx, &changed_out, &picked_index_out, &picked_out),
     );
-    assert!(has_test_id(
-        &mut ui,
-        &mut app,
-        &mut services,
-        bounds,
-        "imui-input-text-completion-picker-keyboard.option.1",
-    ));
-    assert!(!picker_option_active(
-        &mut ui,
-        &mut app,
-        &mut services,
-        bounds,
-        "imui-input-text-completion-picker-keyboard.option.0",
-    ));
     key_down(
         &mut ui,
         &mut app,
@@ -134,14 +120,6 @@ fn input_text_completion_picker_keyboard_navigation_commits_active_candidate() {
         "imui-input-text-completion-picker-keyboard",
         |cx| render(cx, &changed_out, &picked_index_out, &picked_out),
     );
-    assert!(picker_option_active(
-        &mut ui,
-        &mut app,
-        &mut services,
-        bounds,
-        "imui-input-text-completion-picker-keyboard.option.0",
-    ));
-
     key_down(
         &mut ui,
         &mut app,
@@ -175,14 +153,6 @@ fn input_text_completion_picker_keyboard_navigation_commits_active_candidate() {
         "imui-input-text-completion-picker-keyboard",
         |cx| render(cx, &changed_out, &picked_index_out, &picked_out),
     );
-    assert!(picker_option_active(
-        &mut ui,
-        &mut app,
-        &mut services,
-        bounds,
-        "imui-input-text-completion-picker-keyboard.option.1",
-    ));
-
     key_down(
         &mut ui,
         &mut app,

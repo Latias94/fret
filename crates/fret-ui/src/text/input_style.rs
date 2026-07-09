@@ -3,7 +3,7 @@ use fret_core::{Color, Corners, Edges, Px};
 use crate::ThemeSnapshot;
 use crate::element::RingStyle;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct TextInputStyle {
     pub padding: Edges,
     pub background: Color,

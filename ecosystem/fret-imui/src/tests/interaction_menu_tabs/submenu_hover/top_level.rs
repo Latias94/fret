@@ -1,7 +1,7 @@
 use super::*;
 
 #[test]
-fn begin_menu_helper_hover_switches_top_level_popup_after_trigger_hover_delay() {
+fn begin_menu_helper_keeps_top_level_popup_stable_on_passive_hover() {
     let window = AppWindowId::default();
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
@@ -151,18 +151,35 @@ fn begin_menu_helper_hover_switches_top_level_popup_after_trigger_hover_delay() 
         "imui-menu-hover-switch",
         &render,
     );
-    assert!(!has_test_id(
+    let _root = advance_and_run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-menu-hover-switch",
+        &render,
+    );
+    let file_open = has_test_id(
         &mut ui,
         &mut app,
         &mut services,
         bounds,
         "imui-menu-hover-switch.file.open",
-    ));
-    assert!(has_test_id(
+    );
+    let edit_open = has_test_id(
         &mut ui,
         &mut app,
         &mut services,
         bounds,
         "imui-menu-hover-switch.edit.copy",
-    ));
+    );
+    assert!(
+        file_open,
+        "expected File menu to stay open on passive hover; edit_open={edit_open}"
+    );
+    assert!(
+        !edit_open,
+        "expected Edit menu to wait for explicit activation"
+    );
 }

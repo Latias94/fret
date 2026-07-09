@@ -189,7 +189,7 @@ fn debug_draw_api_compiles<H: UiHost>(ui: &mut impl UiWriterImUiFacadeExt<H>) {
             Point::new(Px(88.0), Px(62.0)),
             Point::new(Px(104.0), Px(48.0)),
             Point::new(Px(120.0), Px(62.0)),
-            Color::from_srgb_hex_rgb(0x84_cc_16),
+            Color::from_srgb_hex_rgb(0x84cc16),
             DebugDrawStrokeStyle::new(Px(1.0)).with_cap(StrokeCapV1::Round),
         );
         draw.add_bezier_cubic(
@@ -197,7 +197,7 @@ fn debug_draw_api_compiles<H: UiHost>(ui: &mut impl UiWriterImUiFacadeExt<H>) {
             Point::new(Px(136.0), Px(48.0)),
             Point::new(Px(148.0), Px(76.0)),
             Point::new(Px(160.0), Px(62.0)),
-            Color::from_srgb_hex_rgb(0xf9_73_16),
+            Color::from_srgb_hex_rgb(0xf97316),
             Px(1.0),
         );
         draw.path(|path| {

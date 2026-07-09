@@ -128,6 +128,16 @@ fn observe_combobox_open(
             .ok_or_else(|| ScenarioObserveError::new("missing combobox snapshot before nav"))?;
         let input = find_by_test_id(&snap, "semantics-combobox-input");
         ui.set_focus(Some(input.id));
+        render_combobox_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            true,
+            value.clone(),
+            open.clone(),
+        );
         for step in navigation {
             dispatch_key_press(&mut ui, &mut app, &mut services, step.key_code());
         }

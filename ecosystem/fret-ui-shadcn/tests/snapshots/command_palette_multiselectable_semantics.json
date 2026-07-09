@@ -35,7 +35,7 @@
         },
         "size": {
           "w": 420.0,
-          "h": 110.0
+          "h": 240.0
         }
       },
       "flags": {
@@ -151,52 +151,6 @@
         "size": {
           "w": 418.0,
           "h": 108.0
-        }
-      },
-      "flags": {
-        "focused": false,
-        "captured": false,
-        "disabled": false,
-        "selected": false,
-        "expanded": false,
-        "checked": null
-      }
-    },
-    {
-      "role": "Generic",
-      "label": null,
-      "value": null,
-      "bounds": {
-        "origin": {
-          "x": 1.0,
-          "y": 37.0
-        },
-        "size": {
-          "w": 418.0,
-          "h": 72.0
-        }
-      },
-      "flags": {
-        "focused": false,
-        "captured": false,
-        "disabled": false,
-        "selected": false,
-        "expanded": false,
-        "checked": null
-      }
-    },
-    {
-      "role": "Generic",
-      "label": null,
-      "value": null,
-      "bounds": {
-        "origin": {
-          "x": 1.0,
-          "y": 37.0
-        },
-        "size": {
-          "w": 418.0,
-          "h": 72.0
         }
       },
       "flags": {
@@ -479,8 +433,8 @@
       "flags": {
         "focused": false,
         "captured": false,
-        "disabled": true,
-        "selected": false,
+        "disabled": false,
+        "selected": true,
         "expanded": false,
         "checked": null
       }
@@ -502,7 +456,7 @@
       "flags": {
         "focused": false,
         "captured": false,
-        "disabled": true,
+        "disabled": false,
         "selected": false,
         "expanded": false,
         "checked": null
@@ -543,29 +497,6 @@
         "size": {
           "w": 394.0,
           "h": 10.0
-        }
-      },
-      "flags": {
-        "focused": false,
-        "captured": false,
-        "disabled": false,
-        "selected": false,
-        "expanded": false,
-        "checked": null
-      }
-    },
-    {
-      "role": "Viewport",
-      "label": null,
-      "value": null,
-      "bounds": {
-        "origin": {
-          "x": 1.0,
-          "y": 37.0
-        },
-        "size": {
-          "w": 418.0,
-          "h": 72.0
         }
       },
       "flags": {
@@ -642,7 +573,7 @@
         },
         "size": {
           "w": 420.0,
-          "h": 110.0
+          "h": 240.0
         }
       },
       "background": {
@@ -679,7 +610,7 @@
         },
         "size": {
           "w": 420.0,
-          "h": 110.0
+          "h": 240.0
         }
       },
       "corner_radii": {
@@ -796,11 +727,11 @@
       "rect": {
         "origin": {
           "x": 37.0,
-          "y": -2.0
+          "y": 10.0
         },
         "size": {
           "w": 370.0,
-          "h": 41.0
+          "h": 17.0
         }
       }
     },
@@ -834,6 +765,43 @@
       }
     },
     {
+      "kind": "Quad",
+      "rect": {
+        "origin": {
+          "x": 5.0,
+          "y": 41.0
+        },
+        "size": {
+          "w": 410.0,
+          "h": 22.0
+        }
+      },
+      "background": {
+        "r": 0.037,
+        "g": 0.045,
+        "b": 0.061,
+        "a": 1.0
+      },
+      "border": {
+        "top": 0.0,
+        "right": 0.0,
+        "bottom": 0.0,
+        "left": 0.0
+      },
+      "border_color": {
+        "r": 0.0,
+        "g": 0.0,
+        "b": 0.0,
+        "a": 0.0
+      },
+      "corner_radii": {
+        "top_left": 6.0,
+        "top_right": 6.0,
+        "bottom_right": 6.0,
+        "bottom_left": 6.0
+      }
+    },
+    {
       "kind": "Text",
       "origin": {
         "x": 13.0,
@@ -843,7 +811,7 @@
         "r": 0.68,
         "g": 0.73,
         "b": 0.815,
-        "a": 0.5
+        "a": 1.0
       }
     },
     {
@@ -856,7 +824,7 @@
         "r": 0.68,
         "g": 0.73,
         "b": 0.815,
-        "a": 0.5
+        "a": 1.0
       }
     },
     {

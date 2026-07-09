@@ -56,10 +56,11 @@ fn hover_card_snippets_stay_copyable_and_docs_aligned() {
     let children = include_str!("../src/ui/snippets/hover_card/children.rs");
 
     for needle in [
-        "use fret::{UiChild, AppComponentCx};",
+        "use fret::{AppComponentCx, UiChild};",
         "use fret_ui_shadcn::{facade as shadcn, prelude::*};",
         "shadcn::HoverCard::new(",
-        "shadcn::HoverCardTrigger::build(ui::raw_text(\"Hover\"))",
+        "let trigger_label = decl_text::text_button_label(cx, \"Hover\");",
+        "shadcn::HoverCardTrigger::build(trigger_label)",
         "shadcn::HoverCardContent::build(cx, |cx| {",
     ] {
         assert!(
@@ -71,7 +72,7 @@ fn hover_card_snippets_stay_copyable_and_docs_aligned() {
     for needle in [
         "shadcn::Button::new(\"@nextjs\")",
         ".variant(shadcn::ButtonVariant::Link)",
-        ".refine_layout(LayoutRefinement::default().max_w(Px(320.0)))",
+        ".refine_layout(LayoutRefinement::default().w_px(Px(320.0)).max_w(Px(320.0)))",
         ".test_id(\"ui-gallery-hover-card-demo-content\")",
     ] {
         assert!(

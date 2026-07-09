@@ -1929,6 +1929,9 @@ struct CommandPaletteItemRowMeta {
     test_id: Option<Arc<str>>,
 }
 
+type CommandPaletteRowElementKey = (CommandPaletteRowKey, u32);
+type CommandPaletteRowElementMap = HashMap<CommandPaletteRowElementKey, GlobalElementId>;
+
 #[derive(Clone)]
 struct CommandPaletteItemRowData {
     label: Arc<str>,
@@ -3165,12 +3168,6 @@ impl CommandPalette {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-        enum RowKey {
-            Command(CommandId),
-            Value(Arc<str>),
-        }
-
         struct KeyHandlerState {
             disabled: Rc<Cell<bool>>,
             wrap: Rc<Cell<bool>>,
@@ -3319,6 +3316,19 @@ impl CommandPalette {
             };
             let should_virtualize_items = item_row_data.is_some();
             let active_row_element = Rc::new(Cell::new(None::<GlobalElementId>));
+            let row_elements: Rc<RefCell<CommandPaletteRowElementMap>> = cx.slot_state(
+                || Rc::new(RefCell::new(CommandPaletteRowElementMap::default())),
+                |elements| elements.clone(),
+            );
+            let previous_row_elements = row_elements.borrow().clone();
+            row_elements.borrow_mut().clear();
+            let active_row_element_for_semantics = active_idx
+                .and_then(|idx| item_row_metas.get(idx))
+                .and_then(|meta| {
+                    previous_row_elements
+                        .get(&(meta.key.clone(), meta.occurrence))
+                        .copied()
+                });
 
             let border_color = border(&theme);
             let wrapper_h = theme
@@ -3410,6 +3420,7 @@ impl CommandPalette {
                 virtual_list_layout.overflow = Overflow::Clip;
 
                 let active_row_for_virtual = active_row_element.clone();
+                let row_elements_for_virtual = row_elements.clone();
                 let active_for_range = active_idx;
                 let metas_for_keys = item_row_metas.clone();
                 let metas_for_rows = item_row_metas.clone();
@@ -3466,12 +3477,47 @@ impl CommandPalette {
                         if active_idx.is_some_and(|active_idx| active_idx == idx) {
                             active_row_for_virtual.set(Some(row.id));
                         }
+                        row_elements_for_virtual
+                            .borrow_mut()
+                            .insert((meta.key.clone(), meta.occurrence), row.id);
                         row
                     },
                 );
 
+                let mut list_children = vec![virtual_list];
+                if active_row_element.get().is_none()
+                    && let Some(active_idx) = active_idx
+                    && let Some(item) = item_row_data.get(active_idx).cloned()
+                    && let Some(meta) = item_row_metas.get(active_idx)
+                {
+                    let row = command_palette_render_item_row(
+                        cx,
+                        item,
+                        Vec::new(),
+                        active_idx,
+                        item_count,
+                        meta,
+                        &navigation,
+                        Some(active_idx),
+                        active.clone(),
+                        pending_dispatch.clone(),
+                        disable_pointer_selection,
+                        a11y_selected_mode,
+                        query_for_render.clone(),
+                        &metrics,
+                    );
+                    active_row_element.set(Some(row.id));
+                    row_elements
+                        .borrow_mut()
+                        .insert((meta.key.clone(), meta.occurrence), row.id);
+                    list_children.push(fret_ui_kit::declarative::visually_hidden::visually_hidden(
+                        cx,
+                        |_cx| vec![row],
+                    ));
+                }
+
                 let list_body =
-                    command_palette_list_body(cx, vec![virtual_list], group_pad_x, group_pad_y);
+                    command_palette_list_body(cx, list_children, group_pad_x, group_pad_y);
 
                 let mut scroll_area = ScrollArea::new(vec![list_body])
                     .scroll_handle(scroll_handle.base_handle().clone())
@@ -3487,6 +3533,7 @@ impl CommandPalette {
                 let use_static_single_item =
                     command_palette_static_single_item(&render_rows).is_some();
                 let active_row_for_full = active_row_element.clone();
+                let row_elements_for_full = row_elements.clone();
                 let rows: Vec<AnyElement> = render_rows
                     .into_iter()
                     .map(|row| match row {
@@ -3576,6 +3623,9 @@ impl CommandPalette {
                             if active_idx.is_some_and(|active_idx| active_idx == idx) {
                                 active_row_for_full.set(Some(row.id));
                             }
+                            row_elements_for_full
+                                .borrow_mut()
+                                .insert((meta.key.clone(), meta.occurrence), row.id);
                             row
                         }
                     })
@@ -3642,10 +3692,12 @@ impl CommandPalette {
             };
 
             let active_row_element = active_row_element.get();
+            let active_row_element_for_semantics =
+                active_row_element.or(active_row_element_for_semantics);
             if let fret_ui::element::ElementKind::TextInput(props) = &mut input.kind {
-                props.active_descendant =
-                    active_row_element.and_then(|element| cx.live_node_for_element(element));
-                props.active_descendant_element = active_row_element.map(|id| id.0);
+                props.active_descendant = active_row_element_for_semantics
+                    .and_then(|element| cx.live_node_for_element(element));
+                props.active_descendant_element = active_row_element_for_semantics.map(|id| id.0);
             }
 
             let icon_fg = theme.color_token("muted-foreground");
@@ -3677,14 +3729,15 @@ impl CommandPalette {
                 },
             );
 
+            let navigation_for_key_handler_init = navigation.clone();
             let key_handler = cx.slot_state(
-                || {
+                move || {
                     let navigation_cell =
-                        Rc::new(RefCell::new(CommandPaletteNavigationSnapshot::default()));
+                        Rc::new(RefCell::new(navigation_for_key_handler_init.clone()));
                     let navigation_read = navigation_cell.clone();
-                    let disabled_cell = Rc::new(Cell::new(false));
-                    let wrap_cell = Rc::new(Cell::new(true));
-                    let vim_bindings_cell = Rc::new(Cell::new(true));
+                    let disabled_cell = Rc::new(Cell::new(disabled));
+                    let wrap_cell = Rc::new(Cell::new(wrap));
+                    let vim_bindings_cell = Rc::new(Cell::new(vim_bindings));
 
                     let disabled_read = disabled_cell.clone();
                     let wrap_read = wrap_cell.clone();
@@ -3730,7 +3783,7 @@ impl CommandPalette {
                                 Option<usize>,
                             )| {
                                 let next_idx = cmdk_selection::next_active_index(
-                                    &navigation_disabled_flags,
+                                    navigation_disabled_flags,
                                     current_idx,
                                     forward,
                                     wrap_read.get(),
@@ -3743,9 +3796,9 @@ impl CommandPalette {
                                 Option<usize>,
                             )| {
                                 let next_idx = if forward {
-                                    cmdk_selection::last_enabled(&navigation_disabled_flags)
+                                    cmdk_selection::last_enabled(navigation_disabled_flags)
                                 } else {
-                                    cmdk_selection::first_enabled(&navigation_disabled_flags)
+                                    cmdk_selection::first_enabled(navigation_disabled_flags)
                                 };
                                 set_active_by_idx(next_idx);
                             };
@@ -3831,20 +3884,20 @@ impl CommandPalette {
                                 }
                                 KeyCode::Home => {
                                     let next_idx =
-                                        cmdk_selection::first_enabled(&navigation_disabled_flags);
+                                        cmdk_selection::first_enabled(navigation_disabled_flags);
                                     set_active_by_idx(next_idx);
                                     true
                                 }
                                 KeyCode::End => {
                                     let next_idx =
-                                        cmdk_selection::last_enabled(&navigation_disabled_flags);
+                                        cmdk_selection::last_enabled(navigation_disabled_flags);
                                     set_active_by_idx(next_idx);
                                     true
                                 }
                                 KeyCode::PageDown | KeyCode::PageUp => {
                                     let forward = down.key == KeyCode::PageDown;
                                     let next_idx = cmdk_selection::advance_active_index(
-                                        &navigation_disabled_flags,
+                                        navigation_disabled_flags,
                                         current_idx,
                                         forward,
                                         wrap_read.get(),
@@ -3855,7 +3908,7 @@ impl CommandPalette {
                                 }
                                 KeyCode::Enter | KeyCode::NumpadEnter => {
                                     let Some(idx) = cmdk_selection::clamp_active_index(
-                                        &navigation_disabled_flags,
+                                        navigation_disabled_flags,
                                         current_idx,
                                     ) else {
                                         return false;
@@ -3920,7 +3973,8 @@ impl CommandPalette {
             // Capture navigation keys before the text input's own caret handling can consume
             // them. cmdk-style palettes need Arrow/Home/End/Page keys to move the active row
             // while focus stays in the input.
-            cx.key_on_key_down_capture_for(input_id, key_handler);
+            cx.key_on_key_down_capture_for(input_id, key_handler.clone());
+            cx.key_on_key_down_focused_for(input_id, key_handler);
 
             if disabled {
                 input = cx.opacity(0.5, move |_cx| vec![input]);
@@ -6218,6 +6272,121 @@ mod tests {
             options[0].flags.selected,
             "auto-highlighted static option should stay selected"
         );
+    }
+
+    #[test]
+    fn command_palette_virtualized_list_preserves_active_descendant_semantics_on_first_frame() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let query = app.models_mut().insert(String::from("Item 000"));
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices;
+        let build_items = || {
+            (0..COMMAND_PALETTE_VIRTUALIZE_ITEM_THRESHOLD)
+                .map(|i| {
+                    CommandItem::new(format!("Item {i:03}"))
+                        .test_id(format!("cmdk-virtual-a11y-option-{i:03}"))
+                })
+                .collect::<Vec<_>>()
+        };
+
+        let render = |ui: &mut UiTree<App>, app: &mut App, services: &mut FakeServices| {
+            let next_frame = fret_runtime::FrameId(app.frame_id().0.saturating_add(1));
+            app.set_frame_id(next_frame);
+
+            fret_ui_kit::OverlayController::begin_frame(app, window);
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "cmdk-virtual-a11y",
+                |cx| {
+                    vec![
+                        CommandPalette::new(query.clone(), build_items())
+                            .test_id_prefix("cmdk-virtual-a11y")
+                            .refine_scroll_layout(LayoutRefinement::default().max_h(Px(160.0)))
+                            .into_element(cx),
+                    ]
+                },
+            );
+            ui.set_root(root);
+            ui.request_semantics_snapshot();
+            ui.layout_all(app, services, bounds, 1.0);
+            root
+        };
+
+        let root = render(&mut ui, &mut app, &mut services);
+        let input = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable text input");
+        ui.set_focus(Some(input));
+
+        let _ = app.models_mut().update(&query, |value| value.clear());
+        let _ = render(&mut ui, &mut app, &mut services);
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let input_node = snap
+            .nodes
+            .iter()
+            .find(|node| node.test_id.as_deref() == Some("cmdk-virtual-a11y-input"))
+            .expect("virtualized command input node");
+        let first_active = input_node
+            .active_descendant
+            .expect("first virtual frame should preserve active_descendant");
+        let first_active = snap
+            .nodes
+            .iter()
+            .find(|node| node.id == first_active)
+            .expect("first virtual frame active_descendant should resolve");
+        assert_eq!(first_active.role, SemanticsRole::ListBoxOption);
+        assert_eq!(first_active.label.as_deref(), Some("Item 000"));
+        assert_eq!(first_active.pos_in_set, Some(1));
+        assert_eq!(
+            first_active.set_size,
+            Some(COMMAND_PALETTE_VIRTUALIZE_ITEM_THRESHOLD as u32)
+        );
+        assert!(first_active.flags.selected);
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: KeyCode::ArrowDown,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        let _ = render(&mut ui, &mut app, &mut services);
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let input_node = snap
+            .nodes
+            .iter()
+            .find(|node| node.test_id.as_deref() == Some("cmdk-virtual-a11y-input"))
+            .expect("virtualized command input node");
+        let second_active = input_node
+            .active_descendant
+            .expect("keyboard navigation should set active_descendant");
+        let second_active = snap
+            .nodes
+            .iter()
+            .find(|node| node.id == second_active)
+            .expect("keyboard active_descendant should resolve");
+        assert_eq!(second_active.role, SemanticsRole::ListBoxOption);
+        assert_eq!(second_active.label.as_deref(), Some("Item 001"));
+        assert_eq!(second_active.pos_in_set, Some(2));
+        assert_eq!(
+            second_active.set_size,
+            Some(COMMAND_PALETTE_VIRTUALIZE_ITEM_THRESHOLD as u32)
+        );
+        assert!(second_active.flags.selected);
     }
 
     #[test]

@@ -346,13 +346,14 @@ impl SceneChunkEncodingState {
                     stats.key_cache_misses = stats.key_cache_misses.saturating_add(1);
                 }
 
-                if self.payloads.contains_key(&key) {
-                    stats.payload_cache_hits = stats.payload_cache_hits.saturating_add(1);
-                } else {
+                if let std::collections::hash_map::Entry::Vacant(vacant) = self.payloads.entry(key)
+                {
                     let payload = build_payload(entry);
-                    self.payloads.insert(key, payload);
+                    vacant.insert(payload);
                     stats.payload_cache_misses = stats.payload_cache_misses.saturating_add(1);
                     stats.payload_chunks_encoded = stats.payload_chunks_encoded.saturating_add(1);
+                } else {
+                    stats.payload_cache_hits = stats.payload_cache_hits.saturating_add(1);
                 }
 
                 if let Some(payload) = self.payloads.get(&key) {

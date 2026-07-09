@@ -3209,7 +3209,7 @@ mod tests {
         );
 
         assert!(first.request_redraw);
-        assert!(service.active_scripts.get(&window).is_some());
+        assert!(service.active_scripts.contains_key(&window));
 
         let output = service.drive_script_for_window_no_frame(
             &mut app,
@@ -3223,7 +3223,7 @@ mod tests {
         );
 
         assert!(output.request_redraw);
-        assert!(service.active_scripts.get(&window).is_none());
+        assert!(!service.active_scripts.contains_key(&window));
         let result: UiScriptResultV1 =
             serde_json::from_slice(&std::fs::read(&script_result_path).unwrap()).unwrap();
         assert_eq!(result.reason.as_deref(), Some("wait_until_timeout"));

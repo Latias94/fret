@@ -96,7 +96,7 @@ pub(super) fn paint_line_plot_panel(
         x_scale,
         y_scale,
     );
-    paint_line_plot_grid_and_axes(painter, transform, style, &x_axis_labels, &y_axis_labels);
+    paint_line_plot_grid_and_axes(painter, transform, style, x_axis_labels, y_axis_labels);
     if let Some(heatmap) = &model.heatmap {
         paint_line_plot_heatmap(painter, transform, heatmap, style);
         paint_line_plot_heatmap_colorbar(painter, plot, heatmap, style);

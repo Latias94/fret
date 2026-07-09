@@ -414,11 +414,10 @@ fn histogram_series_from_bins(series: &crate::models::HistogramSeries) -> Series
         .iter()
         .copied()
         .enumerate()
-        .filter_map(|(index, count)| {
-            (count.is_finite() && count > 0.0).then(|| DataPoint {
-                x: bins.center_x(index),
-                y: count,
-            })
+        .filter(|&(_index, count)| count.is_finite() && count > 0.0)
+        .map(|(index, count)| DataPoint {
+            x: bins.center_x(index),
+            y: count,
         })
         .collect();
     Series::from_points_sorted(points, true)

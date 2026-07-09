@@ -72,6 +72,7 @@ pub(super) fn add_paint_perf_elapsed(us: &mut u64, ns: &mut u64, started: Instan
     *ns = ns.saturating_add(nanos);
 }
 
+#[allow(dead_code)]
 pub(super) fn row_requires_paint_time_preedit(st: &CodeEditorState, row: usize) -> bool {
     st.preedit.is_some()
         && st
@@ -226,7 +227,7 @@ pub(super) fn take_row_scene_replay_plan_hosted_resources_once(
     Some(plan.hosted_resources.clone())
 }
 
-#[allow(clippy::too_many_arguments)]
+#[allow(dead_code, clippy::too_many_arguments)]
 fn row_text_origin_and_constraints(
     st: &mut CodeEditorState,
     row_h: Px,
@@ -894,103 +895,101 @@ pub(super) fn paint_row(
                     drew_rich = true;
                 }
             }
-        } else {
-            if let Some(caret_overlay) = overlay.caret
-                && caret_overlay.row == row
-            {
-                let caret_local = caret_overlay.byte.saturating_sub(row_range.start);
-                let mut caret_in_line = caret_local.min(line.len());
-                if let Some(folds) = row_folds.as_ref() {
-                    caret_in_line = folds
-                        .buffer_local_to_display_local(caret_local)
-                        .min(line.len());
-                }
-                caret_in_line =
-                    fret_code_editor_view::clamp_to_char_boundary(line.as_ref(), caret_in_line);
+        } else if let Some(caret_overlay) = overlay.caret
+            && caret_overlay.row == row
+        {
+            let caret_local = caret_overlay.byte.saturating_sub(row_range.start);
+            let mut caret_in_line = caret_local.min(line.len());
+            if let Some(folds) = row_folds.as_ref() {
+                caret_in_line = folds
+                    .buffer_local_to_display_local(caret_local)
+                    .min(line.len());
+            }
+            caret_in_line =
+                fret_code_editor_view::clamp_to_char_boundary(line.as_ref(), caret_in_line);
 
-                let rich = materialize_preedit_rich_text(
-                    Arc::clone(&line),
-                    caret_in_line,
-                    &st.code_font_shaping_style,
-                    &preedit,
-                    fg,
-                    selection_bg,
+            let rich = materialize_preedit_rich_text(
+                Arc::clone(&line),
+                caret_in_line,
+                &st.code_font_shaping_style,
+                &preedit,
+                fg,
+                selection_bg,
+            );
+            let row_geom_key_started = perf_enabled.then(Instant::now);
+            row_geom_key = Some(geom::RowGeomKey::for_attributed(
+                &rich,
+                text_style,
+                (
+                    constraints.max_width,
+                    constraints.wrap,
+                    constraints.overflow,
+                    fret_core::TextAlign::Start,
+                    scale_factor,
+                ),
+                st.font_stack_key,
+            ));
+            if let Some(started) = row_geom_key_started {
+                add_paint_perf_elapsed(
+                    &mut st.paint_perf_frame.us_row_geom_key,
+                    &mut st.paint_perf_frame.ns_row_geom_key,
+                    started,
                 );
-                let row_geom_key_started = perf_enabled.then(Instant::now);
-                row_geom_key = Some(geom::RowGeomKey::for_attributed(
-                    &rich,
-                    text_style,
-                    (
-                        constraints.max_width,
-                        constraints.wrap,
-                        constraints.overflow,
-                        fret_core::TextAlign::Start,
-                        scale_factor,
-                    ),
-                    st.font_stack_key,
-                ));
-                if let Some(started) = row_geom_key_started {
+            }
+            let row_scene_key_started = perf_enabled.then(Instant::now);
+            row_scene_key = row_geom_key
+                .clone()
+                .map(|key| RowSceneKey::preedit(key, fg, selection_bg));
+            if let Some(started) = row_scene_key_started {
+                add_paint_perf_elapsed(
+                    &mut st.paint_perf_frame.us_row_scene_key,
+                    &mut st.paint_perf_frame.ns_row_scene_key,
+                    started,
+                );
+            }
+            row_scene_is_rich = true;
+            if let Some(scene_key) = row_scene_key.clone()
+                && let Some((geom, is_rich)) = scene::try_replay_row_scene_cache(
+                    painter,
+                    st,
+                    row,
+                    &scene_key,
+                    origin,
+                    text_cache_max_entries,
+                )
+            {
+                fresh_geom = Some(geom);
+                row_preedit = fresh_geom.as_ref().and_then(|g| g.preedit);
+                row_scene_replayed = true;
+                drew_rich = is_rich;
+            }
+            if !row_scene_replayed {
+                let key: u64 = painter.child_key(scope, &(row, 2u8)).into();
+                let started = perf_enabled.then(Instant::now);
+                let (blob, metrics) = painter.rich_text_with_blob(
+                    key,
+                    DrawOrder(2),
+                    origin,
+                    rich,
+                    text_style.clone(),
+                    fg,
+                    constraints,
+                    scale_factor,
+                );
+                if let Some(started) = started {
                     add_paint_perf_elapsed(
-                        &mut st.paint_perf_frame.us_row_geom_key,
-                        &mut st.paint_perf_frame.ns_row_geom_key,
+                        &mut st.paint_perf_frame.us_text_draw,
+                        &mut st.paint_perf_frame.ns_text_draw,
                         started,
                     );
                 }
-                let row_scene_key_started = perf_enabled.then(Instant::now);
-                row_scene_key = row_geom_key
-                    .clone()
-                    .map(|key| RowSceneKey::preedit(key, fg, selection_bg));
-                if let Some(started) = row_scene_key_started {
-                    add_paint_perf_elapsed(
-                        &mut st.paint_perf_frame.us_row_scene_key,
-                        &mut st.paint_perf_frame.ns_row_scene_key,
-                        started,
-                    );
-                }
-                row_scene_is_rich = true;
-                if let Some(scene_key) = row_scene_key.clone()
-                    && let Some((geom, is_rich)) = scene::try_replay_row_scene_cache(
-                        painter,
-                        st,
-                        row,
-                        &scene_key,
-                        origin,
-                        text_cache_max_entries,
-                    )
-                {
-                    fresh_geom = Some(geom);
-                    row_preedit = fresh_geom.as_ref().and_then(|g| g.preedit);
-                    row_scene_replayed = true;
-                    drew_rich = is_rich;
-                }
-                if !row_scene_replayed {
-                    let key: u64 = painter.child_key(scope, &(row, 2u8)).into();
-                    let started = perf_enabled.then(Instant::now);
-                    let (blob, metrics) = painter.rich_text_with_blob(
-                        key,
-                        DrawOrder(2),
-                        origin,
-                        rich,
-                        text_style.clone(),
-                        fg,
-                        constraints,
-                        scale_factor,
-                    );
-                    if let Some(started) = started {
-                        add_paint_perf_elapsed(
-                            &mut st.paint_perf_frame.us_text_draw,
-                            &mut st.paint_perf_frame.ns_text_draw,
-                            started,
-                        );
-                    }
-                    row_preedit = Some(RowPreeditMapping {
-                        insert_at: caret_in_line,
-                        preedit_len: preedit.text.len(),
-                    });
-                    row_blob = Some(blob);
-                    row_blob_metrics = Some(metrics);
-                    drew_rich = true;
-                }
+                row_preedit = Some(RowPreeditMapping {
+                    insert_at: caret_in_line,
+                    preedit_len: preedit.text.len(),
+                });
+                row_blob = Some(blob);
+                row_blob_metrics = Some(metrics);
+                drew_rich = true;
             }
         }
     }

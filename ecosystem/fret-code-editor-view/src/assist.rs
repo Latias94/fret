@@ -13,20 +13,15 @@ pub enum EditorAssistKind {
     CodeAction,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum EditorAssistTrigger {
+    #[default]
     Invoked,
     Character(Arc<str>),
     Hover,
     Diagnostics,
     SelectionChanged,
     Custom(Arc<str>),
-}
-
-impl Default for EditorAssistTrigger {
-    fn default() -> Self {
-        Self::Invoked
-    }
 }
 
 /// Revision-aware request facts for editor assist features.
@@ -331,11 +326,11 @@ pub fn validate_editor_assist_request(
     request: &EditorAssistRequest,
 ) -> Result<(), EditorAssistRequestError> {
     validate_buffer_range(buf, request.buffer_range.clone()).map_err(|err| match err {
-        RangeValidationError::RangeStartAfterEnd => EditorAssistRequestError::RangeStartAfterEnd,
-        RangeValidationError::RangeOutOfBounds { start, end, len } => {
+        RangeValidationError::StartAfterEnd => EditorAssistRequestError::RangeStartAfterEnd,
+        RangeValidationError::OutOfBounds { start, end, len } => {
             EditorAssistRequestError::RangeOutOfBounds { start, end, len }
         }
-        RangeValidationError::RangeNotCharBoundary { start, end } => {
+        RangeValidationError::NotCharBoundary { start, end } => {
             EditorAssistRequestError::RangeNotCharBoundary { start, end }
         }
     })?;
@@ -409,13 +404,13 @@ pub fn validate_completion_list(
         }
         if let Some(range) = &candidate.replace_range {
             validate_buffer_range(buf, range.clone()).map_err(|err| match err {
-                RangeValidationError::RangeStartAfterEnd => {
+                RangeValidationError::StartAfterEnd => {
                     CompletionListError::ReplaceRangeStartAfterEnd
                 }
-                RangeValidationError::RangeOutOfBounds { start, end, len } => {
+                RangeValidationError::OutOfBounds { start, end, len } => {
                     CompletionListError::ReplaceRangeOutOfBounds { start, end, len }
                 }
-                RangeValidationError::RangeNotCharBoundary { start, end } => {
+                RangeValidationError::NotCharBoundary { start, end } => {
                     CompletionListError::ReplaceRangeNotCharBoundary { start, end }
                 }
             })?;
@@ -428,12 +423,12 @@ pub fn validate_completion_list(
         }
     }
 
-    if let Some(active_id) = &list.active_id {
-        if !ids.contains(active_id) {
-            return Err(CompletionListError::ActiveCandidateMissing(
-                active_id.clone(),
-            ));
-        }
+    if let Some(active_id) = &list.active_id
+        && !ids.contains(active_id)
+    {
+        return Err(CompletionListError::ActiveCandidateMissing(
+            active_id.clone(),
+        ));
     }
 
     Ok(())
@@ -450,11 +445,11 @@ pub fn validate_hover_payload(
         return Err(HoverPayloadError::EmptyContents);
     }
     validate_buffer_range(buf, payload.range.clone()).map_err(|err| match err {
-        RangeValidationError::RangeStartAfterEnd => HoverPayloadError::RangeStartAfterEnd,
-        RangeValidationError::RangeOutOfBounds { start, end, len } => {
+        RangeValidationError::StartAfterEnd => HoverPayloadError::RangeStartAfterEnd,
+        RangeValidationError::OutOfBounds { start, end, len } => {
             HoverPayloadError::RangeOutOfBounds { start, end, len }
         }
-        RangeValidationError::RangeNotCharBoundary { start, end } => {
+        RangeValidationError::NotCharBoundary { start, end } => {
             HoverPayloadError::RangeNotCharBoundary { start, end }
         }
     })?;
@@ -472,11 +467,11 @@ pub fn validate_code_action_list(
         return Err(CodeActionListError::EmptyRequestId);
     }
     validate_buffer_range(buf, list.range.clone()).map_err(|err| match err {
-        RangeValidationError::RangeStartAfterEnd => CodeActionListError::RangeStartAfterEnd,
-        RangeValidationError::RangeOutOfBounds { start, end, len } => {
+        RangeValidationError::StartAfterEnd => CodeActionListError::RangeStartAfterEnd,
+        RangeValidationError::OutOfBounds { start, end, len } => {
             CodeActionListError::RangeOutOfBounds { start, end, len }
         }
-        RangeValidationError::RangeNotCharBoundary { start, end } => {
+        RangeValidationError::NotCharBoundary { start, end } => {
             CodeActionListError::RangeNotCharBoundary { start, end }
         }
     })?;
@@ -507,13 +502,13 @@ pub fn validate_code_action_list(
 }
 
 enum RangeValidationError {
-    RangeStartAfterEnd,
-    RangeOutOfBounds {
+    StartAfterEnd,
+    OutOfBounds {
         start: usize,
         end: usize,
         len: usize,
     },
-    RangeNotCharBoundary {
+    NotCharBoundary {
         start: usize,
         end: usize,
     },
@@ -525,17 +520,17 @@ fn validate_buffer_range(
 ) -> Result<(), RangeValidationError> {
     let len = buf.len_bytes();
     if range.start > range.end {
-        return Err(RangeValidationError::RangeStartAfterEnd);
+        return Err(RangeValidationError::StartAfterEnd);
     }
     if range.start > len || range.end > len {
-        return Err(RangeValidationError::RangeOutOfBounds {
+        return Err(RangeValidationError::OutOfBounds {
             start: range.start,
             end: range.end,
             len,
         });
     }
     if !buf.is_char_boundary(range.start) || !buf.is_char_boundary(range.end) {
-        return Err(RangeValidationError::RangeNotCharBoundary {
+        return Err(RangeValidationError::NotCharBoundary {
             start: range.start,
             end: range.end,
         });

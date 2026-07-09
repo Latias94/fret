@@ -44,6 +44,7 @@ pub(crate) fn legend_select_all_updates(model: &ChartModel) -> Vec<(SeriesId, bo
 }
 
 #[cfg(test)]
+#[allow(clippy::items_after_test_module)]
 mod tests {
     use super::*;
 

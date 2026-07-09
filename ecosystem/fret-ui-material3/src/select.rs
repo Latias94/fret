@@ -6,7 +6,7 @@
 //! - a minimal listbox overlay anchored to the trigger,
 //! - an ADR 0220-shaped `SelectStyle` override surface.
 
-use std::cell::Cell;
+use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 use std::sync::Arc;
 use std::sync::OnceLock;
@@ -222,6 +222,17 @@ impl SelectItem {
         self.test_id = Some(id.into());
         self
     }
+}
+
+fn select_initial_active_index(items: &[SelectItem], selected: Option<&Arc<str>>) -> usize {
+    selected
+        .and_then(|value| {
+            items
+                .iter()
+                .position(|it| it.value.as_ref() == value.as_ref() && !it.disabled)
+        })
+        .or_else(|| items.iter().position(|it| !it.disabled))
+        .unwrap_or(0)
 }
 
 #[derive(Debug, Clone, Default)]
@@ -477,6 +488,9 @@ struct SelectRuntimeModels {
     open: Model<bool>,
     scroll_handle: fret_ui::scroll::ScrollHandle,
     listbox_element_id: Rc<Cell<Option<GlobalElementId>>>,
+    option_elements: Rc<RefCell<Vec<GlobalElementId>>>,
+    scroll_viewport_id: Rc<Cell<Option<GlobalElementId>>>,
+    pending_initial_reveal: Rc<Cell<Option<usize>>>,
 }
 
 #[track_caller]
@@ -488,6 +502,13 @@ fn select_runtime_models<H: UiHost>(cx: &mut ElementContext<'_, H>) -> SelectRun
             || Rc::new(Cell::new(None::<GlobalElementId>)),
             |id| id.clone(),
         ),
+        option_elements: cx.slot_state(|| Rc::new(RefCell::new(Vec::new())), |els| els.clone()),
+        scroll_viewport_id: cx.slot_state(
+            || Rc::new(Cell::new(None::<GlobalElementId>)),
+            |id| id.clone(),
+        ),
+        pending_initial_reveal: cx
+            .slot_state(|| Rc::new(Cell::new(None::<usize>)), |idx| idx.clone()),
     }
 }
 
@@ -541,6 +562,9 @@ fn select_into_element<H: UiHost>(cx: &mut ElementContext<'_, H>, select: Select
 
         if !overlay_presence.present {
             runtime.listbox_element_id.set(None);
+            runtime.option_elements.borrow_mut().clear();
+            runtime.scroll_viewport_id.set(None);
+            runtime.pending_initial_reveal.set(None);
         }
 
         let selected = cx
@@ -549,15 +573,10 @@ fn select_into_element<H: UiHost>(cx: &mut ElementContext<'_, H>, select: Select
 
         let populated = selected.as_ref().is_some_and(|v| !v.is_empty());
 
-        if opening {
-            let selected_idx = selected.as_ref().and_then(|value| {
-                items
-                    .iter()
-                    .position(|it| it.value.as_ref() == value.as_ref() && !it.disabled)
-            });
-            let first_enabled_idx = items.iter().position(|it| !it.disabled);
-            let tab_stop_idx = selected_idx.or(first_enabled_idx).unwrap_or(0);
+        let tab_stop_idx = select_initial_active_index(&items, selected.as_ref());
 
+        if opening {
+            runtime.pending_initial_reveal.set(Some(tab_stop_idx));
             let item_height = {
                 let theme = Theme::global(&*cx.app);
                 select_tokens::menu_list_item_height(theme, variant)
@@ -644,6 +663,9 @@ fn select_into_element<H: UiHost>(cx: &mut ElementContext<'_, H>, select: Select
             let open_model = runtime.open.clone();
             let open_model_for_panel = open_model.clone();
             let listbox_element_id_out = runtime.listbox_element_id.clone();
+            let option_elements_out = runtime.option_elements.clone();
+            let scroll_viewport_id_out = runtime.scroll_viewport_id.clone();
+            let scroll_handle_for_panel = runtime.scroll_handle.clone();
             let overlay_root = popper_content::popper_wrapper_panel_at(
                 cx,
                 layout.rect,
@@ -663,8 +685,10 @@ fn select_into_element<H: UiHost>(cx: &mut ElementContext<'_, H>, select: Select
                             Some(anchor_id.0),
                             initial_focus_id_for_list,
                             listbox_element_id_out,
+                            option_elements_out,
+                            scroll_viewport_id_out,
                             layout.rect.size.width,
-                            runtime.scroll_handle.clone(),
+                            scroll_handle_for_panel.clone(),
                             typeahead_delay_ms,
                             layout_direction,
                             style.clone(),
@@ -697,6 +721,25 @@ fn select_into_element<H: UiHost>(cx: &mut ElementContext<'_, H>, select: Select
             request.initial_focus = initial_focus_id.get();
 
             OverlayController::request(cx, request);
+
+            if let Some(pending_idx) = runtime.pending_initial_reveal.get()
+                && let Some(viewport) = runtime.scroll_viewport_id.get()
+            {
+                let option_elements = runtime.option_elements.borrow();
+                if let Some(active_element) = option_elements.get(pending_idx).copied()
+                    && let (Some(viewport_bounds), Some(active_bounds)) = (
+                        cx.last_bounds_for_element(viewport),
+                        cx.last_bounds_for_element(active_element),
+                    )
+                {
+                    let _ = fret_ui_kit::primitives::active_descendant::scroll_handle_into_view_y(
+                        &runtime.scroll_handle,
+                        viewport_bounds,
+                        active_bounds,
+                    );
+                    runtime.pending_initial_reveal.set(None);
+                }
+            }
         }
 
         trigger
@@ -1717,6 +1760,7 @@ mod item_text_tests {
         let model = app.models_mut().insert(None);
         let open = app.models_mut().insert(true);
         let initial_focus = Rc::new(Cell::new(None));
+        let option_elements = Rc::new(RefCell::new(Vec::new()));
 
         let el = fret_ui::elements::with_element_cx(
             &mut app,
@@ -1741,6 +1785,7 @@ mod item_text_tests {
                     1,
                     LayoutDirection::Ltr,
                     initial_focus.clone(),
+                    option_elements.clone(),
                 )
             },
         );
@@ -1764,6 +1809,7 @@ mod item_text_tests {
         let model = app.models_mut().insert(Some(selected_value.clone()));
         let open = app.models_mut().insert(true);
         let initial_focus = Rc::new(Cell::new(None));
+        let option_elements = Rc::new(RefCell::new(Vec::new()));
 
         let el = fret_ui::elements::with_element_cx(
             &mut app,
@@ -1788,6 +1834,7 @@ mod item_text_tests {
                     1,
                     LayoutDirection::Ltr,
                     initial_focus.clone(),
+                    option_elements.clone(),
                 )
             },
         );
@@ -1828,6 +1875,7 @@ mod item_text_tests {
         let model = app.models_mut().insert(None);
         let open = app.models_mut().insert(true);
         let initial_focus = Rc::new(Cell::new(None));
+        let option_elements = Rc::new(RefCell::new(Vec::new()));
 
         let el = fret_ui::elements::with_element_cx(
             &mut app,
@@ -1854,6 +1902,7 @@ mod item_text_tests {
                     1,
                     LayoutDirection::Ltr,
                     initial_focus.clone(),
+                    option_elements.clone(),
                 )
             },
         );
@@ -1972,6 +2021,8 @@ fn select_listbox_panel<H: UiHost>(
     labelled_by_element: Option<u64>,
     initial_focus_id_out: Rc<Cell<Option<GlobalElementId>>>,
     listbox_element_id_out: Rc<Cell<Option<GlobalElementId>>>,
+    option_elements_out: Rc<RefCell<Vec<GlobalElementId>>>,
+    scroll_viewport_id_out: Rc<Cell<Option<GlobalElementId>>>,
     listbox_width: Px,
     scroll_handle: fret_ui::scroll::ScrollHandle,
     typeahead_delay_ms: u32,
@@ -2041,16 +2092,7 @@ fn select_listbox_panel<H: UiHost>(
         )
     });
 
-    let tab_stop_idx = selected
-        .as_ref()
-        .and_then(|value| {
-            items
-                .iter()
-                .position(|it| it.value.as_ref() == value.as_ref())
-        })
-        .filter(|&idx| !items.get(idx).is_some_and(|it| it.disabled))
-        .or_else(|| disabled.iter().position(|&d| !d))
-        .unwrap_or(0);
+    let tab_stop_idx = select_initial_active_index(&items, selected.as_ref());
 
     let mut roving = RovingFlexProps::default();
     roving.flex.direction = Axis::Vertical;
@@ -2085,6 +2127,134 @@ fn select_listbox_panel<H: UiHost>(
 
     cx.semantics_with_id(sem, move |cx, listbox_id| {
         listbox_element_id_out.set(Some(listbox_id));
+        option_elements_out.borrow_mut().clear();
+        scroll_viewport_id_out.set(None);
+
+        let scroll = cx.scroll(
+            ScrollProps {
+                layout: {
+                    let mut l = fret_ui::element::LayoutStyle::default();
+                    l.size.width = Length::Fill;
+                    l.size.height = Length::Fill;
+                    l.overflow = Overflow::Clip;
+                    l
+                },
+                scroll_handle: Some(scroll_handle.clone()),
+                ..Default::default()
+            },
+            move |cx| {
+                vec![cx.container(
+                    ContainerProps {
+                        padding: Edges {
+                            top: Px(8.0),
+                            right: Px(0.0),
+                            bottom: Px(8.0),
+                            left: Px(0.0),
+                        }
+                        .into(),
+                        layout: {
+                            let mut l = fret_ui::element::LayoutStyle::default();
+                            l.size.width = Length::Fill;
+                            l.size.height = Length::Auto;
+                            l.overflow = Overflow::Visible;
+                            l
+                        },
+                        ..Default::default()
+                    },
+                    move |cx| {
+                        vec![cx.roving_flex(roving, move |cx| {
+                            cx.roving_on_navigate(Arc::new(|_host, _cx, it| {
+                                use fret_ui::action::RovingNavigateResult;
+
+                                let is_disabled = |idx: usize| -> bool {
+                                    it.disabled.get(idx).copied().unwrap_or(false)
+                                };
+
+                                let forward = match it.key {
+                                    KeyCode::ArrowDown => Some(true),
+                                    KeyCode::ArrowUp => Some(false),
+                                    _ => None,
+                                };
+
+                                if it.key == KeyCode::Home {
+                                    let target = (0..it.len).find(|&i| !is_disabled(i));
+                                    return RovingNavigateResult::Handled { target };
+                                }
+                                if it.key == KeyCode::End {
+                                    let target = (0..it.len).rev().find(|&i| !is_disabled(i));
+                                    return RovingNavigateResult::Handled { target };
+                                }
+
+                                let Some(forward) = forward else {
+                                    return RovingNavigateResult::NotHandled;
+                                };
+
+                                let current = it
+                                    .current
+                                    .or_else(|| (0..it.len).find(|&i| !is_disabled(i)));
+                                let Some(current) = current else {
+                                    return RovingNavigateResult::Handled { target: None };
+                                };
+
+                                let len = it.len;
+                                let mut target: Option<usize> = None;
+                                if it.wrap {
+                                    for step in 1..=len {
+                                        let idx = if forward {
+                                            (current + step) % len
+                                        } else {
+                                            (current + len - (step % len)) % len
+                                        };
+                                        if !is_disabled(idx) {
+                                            target = Some(idx);
+                                            break;
+                                        }
+                                    }
+                                } else if forward {
+                                    target = ((current + 1)..len).find(|&i| !is_disabled(i));
+                                } else if current > 0 {
+                                    target = (0..current).rev().find(|&i| !is_disabled(i));
+                                }
+
+                                RovingNavigateResult::Handled { target }
+                            }));
+
+                            // Prefix typeahead (best-effort): matches `Menu` / `RadioGroup` behavior.
+                            fret_ui_kit::primitives::roving_focus_group::typeahead_prefix_arc_str_always_wrap(
+                                cx,
+                                typeahead_items.clone(),
+                                crate::motion::ms_to_frames(typeahead_delay_ms),
+                            );
+
+                            let mut out: Vec<AnyElement> = Vec::with_capacity(count);
+                            for (idx, item) in items.iter().cloned().enumerate() {
+                                let tab_stop = idx == tab_stop_idx;
+                                out.push(select_list_item(
+                                    cx,
+                                    variant,
+                                    item,
+                                    two_line,
+                                    model.clone(),
+                                    open.clone(),
+                                    selected.clone(),
+                                    selected_bg,
+                                    listbox_width,
+                                    tab_stop,
+                                    idx,
+                                    count,
+                                    layout_direction,
+                                    initial_focus_id_out.clone(),
+                                    option_elements_out.clone(),
+                                ));
+                            }
+                            out
+                        })]
+                    },
+                )]
+            },
+        );
+        scroll_viewport_id_out.set(Some(scroll.id));
+
         vec![cx.container(
             ContainerProps {
                 background: Some(surface.background),
@@ -2099,130 +2269,7 @@ fn select_listbox_panel<H: UiHost>(
                 },
                 ..Default::default()
             },
-            move |cx| {
-                vec![cx.scroll(
-                    ScrollProps {
-                        layout: {
-                            let mut l = fret_ui::element::LayoutStyle::default();
-                            l.size.width = Length::Fill;
-                            l.size.height = Length::Fill;
-                            l.overflow = Overflow::Clip;
-                            l
-                        },
-                        scroll_handle: Some(scroll_handle.clone()),
-                        ..Default::default()
-                    },
-                    move |cx| {
-                        vec![cx.container(
-                            ContainerProps {
-                                padding: Edges {
-                                    top: Px(8.0),
-                                    right: Px(0.0),
-                                    bottom: Px(8.0),
-                                    left: Px(0.0),
-                                }
-                                .into(),
-                                layout: {
-                                    let mut l = fret_ui::element::LayoutStyle::default();
-                                    l.size.width = Length::Fill;
-                                    l.size.height = Length::Auto;
-                                    l.overflow = Overflow::Visible;
-                                    l
-                                },
-                                ..Default::default()
-                            },
-                            move |cx| {
-                                vec![cx.roving_flex(roving, move |cx| {
-                                    cx.roving_on_navigate(Arc::new(|_host, _cx, it| {
-                                        use fret_ui::action::RovingNavigateResult;
-
-                                        let is_disabled = |idx: usize| -> bool {
-                                            it.disabled.get(idx).copied().unwrap_or(false)
-                                        };
-
-                                        let forward = match it.key {
-                                            KeyCode::ArrowDown => Some(true),
-                                            KeyCode::ArrowUp => Some(false),
-                                            _ => None,
-                                        };
-
-                                        if it.key == KeyCode::Home {
-                                            let target = (0..it.len).find(|&i| !is_disabled(i));
-                                            return RovingNavigateResult::Handled { target };
-                                        }
-                                        if it.key == KeyCode::End {
-                                            let target = (0..it.len).rev().find(|&i| !is_disabled(i));
-                                            return RovingNavigateResult::Handled { target };
-                                        }
-
-                                        let Some(forward) = forward else {
-                                            return RovingNavigateResult::NotHandled;
-                                        };
-
-                                        let current = it
-                                            .current
-                                            .or_else(|| (0..it.len).find(|&i| !is_disabled(i)));
-                                        let Some(current) = current else {
-                                            return RovingNavigateResult::Handled { target: None };
-                                        };
-
-                                        let len = it.len;
-                                        let mut target: Option<usize> = None;
-                                        if it.wrap {
-                                            for step in 1..=len {
-                                                let idx = if forward {
-                                                    (current + step) % len
-                                                } else {
-                                                    (current + len - (step % len)) % len
-                                                };
-                                                if !is_disabled(idx) {
-                                                    target = Some(idx);
-                                                    break;
-                                                }
-                                            }
-                                        } else if forward {
-                                            target = ((current + 1)..len).find(|&i| !is_disabled(i));
-                                        } else if current > 0 {
-                                            target = (0..current).rev().find(|&i| !is_disabled(i));
-                                        }
-
-                                        RovingNavigateResult::Handled { target }
-                                    }));
-
-                                    // Prefix typeahead (best-effort): matches `Menu` / `RadioGroup` behavior.
-                                    fret_ui_kit::primitives::roving_focus_group::typeahead_prefix_arc_str_always_wrap(
-                                        cx,
-                                        typeahead_items.clone(),
-                                        crate::motion::ms_to_frames(typeahead_delay_ms),
-                                    );
-
-                                    let mut out: Vec<AnyElement> = Vec::with_capacity(count);
-                                    for (idx, item) in items.iter().cloned().enumerate() {
-                                        let tab_stop = idx == tab_stop_idx;
-                                        out.push(select_list_item(
-                                            cx,
-                                            variant,
-                                            item,
-                                            two_line,
-                                            model.clone(),
-                                            open.clone(),
-                                            selected.clone(),
-                                            selected_bg,
-                                            listbox_width,
-                                            tab_stop,
-                                            idx,
-                                            count,
-                                            layout_direction,
-                                            initial_focus_id_out.clone(),
-                                        ));
-                                    }
-                                    out
-                                })]
-                            },
-                        )]
-                    },
-                )]
-            },
+            move |_cx| vec![scroll],
         )]
     })
 }
@@ -2242,6 +2289,7 @@ fn select_list_item<H: UiHost>(
     set_size: usize,
     layout_direction: LayoutDirection,
     initial_focus_id_out: Rc<Cell<Option<GlobalElementId>>>,
+    option_elements_out: Rc<RefCell<Vec<GlobalElementId>>>,
 ) -> AnyElement {
     let height = {
         let theme = Theme::global(&*cx.app);
@@ -2257,6 +2305,8 @@ fn select_list_item<H: UiHost>(
     let trailing_icon_test_id = part_test_ids.as_ref().map(|ids| ids.trailing_icon.clone());
 
     cx.pressable_with_id_props(move |cx, st, pressable_id| {
+        option_elements_out.borrow_mut().push(pressable_id);
+
         let enabled = !item.disabled;
 
         if enabled && tab_stop && initial_focus_id_out.get().is_none() {

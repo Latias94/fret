@@ -13,8 +13,7 @@ fn bounds_tree_supports_overflow_visible_ancestors() {
     let mut nodes: SlotMap<NodeId, Node<crate::test_host::TestHost>> = SlotMap::with_key();
     let layer_root = nodes.insert(Node::new(EmptyWidget));
 
-    let mut child_nodes: Vec<NodeId> = Vec::new();
-    child_nodes.reserve(255);
+    let mut child_nodes: Vec<NodeId> = Vec::with_capacity(255);
     for _ in 0..255 {
         let id = nodes.insert(Node::new(EmptyWidget));
         nodes.get_mut(id).unwrap().parent = Some(layer_root);
@@ -26,8 +25,7 @@ fn bounds_tree_supports_overflow_visible_ancestors() {
         Size::new(Px(100.0), Px(100.0)),
     );
 
-    let mut records: Vec<super::super::prepaint::InteractionRecord> = Vec::new();
-    records.reserve(256);
+    let mut records: Vec<super::super::prepaint::InteractionRecord> = Vec::with_capacity(256);
 
     records.push(super::super::prepaint::InteractionRecord {
         node: layer_root,
@@ -99,8 +97,7 @@ fn bounds_tree_clip_stack_uses_recorded_parent_under_stale_parent_pointers() {
     let mut nodes: SlotMap<NodeId, Node<crate::test_host::TestHost>> = SlotMap::with_key();
     let layer_root = nodes.insert(Node::new(EmptyWidget));
 
-    let mut child_nodes: Vec<NodeId> = Vec::new();
-    child_nodes.reserve(255);
+    let mut child_nodes: Vec<NodeId> = Vec::with_capacity(255);
     for _ in 0..255 {
         let id = nodes.insert(Node::new(EmptyWidget));
         child_nodes.push(id);
@@ -111,8 +108,7 @@ fn bounds_tree_clip_stack_uses_recorded_parent_under_stale_parent_pointers() {
         Size::new(Px(100.0), Px(100.0)),
     );
 
-    let mut records: Vec<super::super::prepaint::InteractionRecord> = Vec::new();
-    records.reserve(256);
+    let mut records: Vec<super::super::prepaint::InteractionRecord> = Vec::with_capacity(256);
     records.push(super::super::prepaint::InteractionRecord {
         node: layer_root,
         parent: None,
@@ -227,8 +223,7 @@ fn large_bounds_tree_fixture() -> (
     let mut nodes: SlotMap<NodeId, Node<crate::test_host::TestHost>> = SlotMap::with_key();
     let layer_root = nodes.insert(Node::new(EmptyWidget));
 
-    let mut child_nodes: Vec<NodeId> = Vec::new();
-    child_nodes.reserve(255);
+    let mut child_nodes: Vec<NodeId> = Vec::with_capacity(255);
     for _ in 0..255 {
         let id = nodes.insert(Node::new(EmptyWidget));
         nodes.get_mut(id).unwrap().parent = Some(layer_root);
@@ -240,8 +235,7 @@ fn large_bounds_tree_fixture() -> (
         Size::new(Px(100.0), Px(100.0)),
     );
 
-    let mut records: Vec<super::super::prepaint::InteractionRecord> = Vec::new();
-    records.reserve(256);
+    let mut records: Vec<super::super::prepaint::InteractionRecord> = Vec::with_capacity(256);
 
     records.push(super::super::prepaint::InteractionRecord {
         node: layer_root,

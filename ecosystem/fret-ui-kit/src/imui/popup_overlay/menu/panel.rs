@@ -26,11 +26,7 @@ pub(super) fn build_popup_menu<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
     f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
 ) -> Option<PopupMenuBuilt> {
     ui.with_cx_mut(|cx| {
-        let Some(panel_state) =
-            state::prepare_popup_menu_panel_state(cx, id, options.estimated_size)
-        else {
-            return None;
-        };
+        let panel_state = state::prepare_popup_menu_panel_state(cx, id, options.estimated_size)?;
         let layout = layout::popup_menu_panel_layout(
             cx,
             panel_state.anchor,

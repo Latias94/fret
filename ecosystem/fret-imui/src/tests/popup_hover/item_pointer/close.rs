@@ -1,9 +1,9 @@
 use super::*;
 
-fn hit_or_ancestor_test_id<'a>(
-    snap: &'a fret_core::SemanticsSnapshot,
+fn hit_or_ancestor_test_id(
+    snap: &fret_core::SemanticsSnapshot,
     mut id: fret_core::NodeId,
-) -> Option<&'a str> {
+) -> Option<&str> {
     loop {
         let node = snap.nodes.iter().find(|n| n.id == id)?;
         if let Some(test_id) = node.test_id.as_deref() {

@@ -2097,7 +2097,7 @@ fn load_suite_manifest_expansion(
         lint_policy: SuiteLintPolicy,
     }
 
-    let bytes = std::fs::read(&manifest_path).map_err(|e| e.to_string())?;
+    let bytes = std::fs::read(manifest_path).map_err(|e| e.to_string())?;
     let manifest: SuiteManifestV1 = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
     if manifest.schema_version != 1 {
         return Err(format!(

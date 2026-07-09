@@ -233,10 +233,10 @@ impl ResidentGeometryUploadState {
 
         let alignment_stats = payload_alignment.stats;
         let missing_payloads = alignment_stats.payload_plan_candidates_without_payload;
-        if missing_payloads > 0 {
-            if let Some(upload) = upload.as_deref_mut() {
-                upload.record_resident_full_upload_fallback_missing_payload(missing_payloads);
-            }
+        if missing_payloads > 0
+            && let Some(upload) = upload.as_deref_mut()
+        {
+            upload.record_resident_full_upload_fallback_missing_payload(missing_payloads);
         }
 
         let blocked_reassembly = alignment_stats
@@ -247,10 +247,10 @@ impl ResidentGeometryUploadState {
             .saturating_add(alignment_stats.payload_reassembly_blocked_by_non_quad_draws)
             .saturating_add(alignment_stats.payload_reassembly_blocked_by_side_tables)
             .saturating_add(alignment_stats.payload_reassembly_blocked_by_material_state);
-        if blocked_reassembly > 0 {
-            if let Some(upload) = upload.as_deref_mut() {
-                upload.record_resident_full_upload_fallback_reassembly_blocked(blocked_reassembly);
-            }
+        if blocked_reassembly > 0
+            && let Some(upload) = upload.as_deref_mut()
+        {
+            upload.record_resident_full_upload_fallback_reassembly_blocked(blocked_reassembly);
         }
 
         if payload_alignment.reassembly_plan.is_empty() {
@@ -329,7 +329,7 @@ impl ResidentGeometryUploadState {
             streams.path_vertices.len(),
             policies.path_vertices,
             estimate_range_bytes::<PathVertex>,
-            upload.as_deref_mut(),
+            upload,
         );
         write_plan
     }
@@ -564,16 +564,14 @@ impl ResidentGeometryUploadStreamState {
         }
 
         let covers_entire_stream = resident_stream_signatures_cover_stream(&signatures, stream_len);
-        if !covers_entire_stream {
-            if let Some(upload) = upload.as_deref_mut() {
-                upload.resident_stream_coverage_gaps =
-                    upload.resident_stream_coverage_gaps.saturating_add(1);
-            }
+        if !covers_entire_stream && let Some(upload) = upload.as_deref_mut() {
+            upload.resident_stream_coverage_gaps =
+                upload.resident_stream_coverage_gaps.saturating_add(1);
         }
 
         match self.slots[slot].as_ref() {
             Some(previous) if previous == &signatures => {
-                if let Some(upload) = upload.as_deref_mut() {
+                if let Some(upload) = upload {
                     upload.resident_stream_hits = upload.resident_stream_hits.saturating_add(1);
                 }
                 if covers_entire_stream {
@@ -589,7 +587,7 @@ impl ResidentGeometryUploadStreamState {
                 let partial_write_budget_exceeded = covers_entire_stream
                     && (changed_ranges.len() as u64 > max_partial_write_count
                         || dirty_bytes > max_partial_write_bytes);
-                if let Some(upload) = upload.as_deref_mut() {
+                if let Some(upload) = upload {
                     upload.record_resident_stream_miss(dirty_bytes);
                     upload.resident_stream_content_mismatches =
                         upload.resident_stream_content_mismatches.saturating_add(1);
@@ -614,7 +612,7 @@ impl ResidentGeometryUploadStreamState {
                 }
             }
             Some(_) => {
-                if let Some(upload) = upload.as_deref_mut() {
+                if let Some(upload) = upload {
                     upload.record_resident_stream_miss(estimate_signature_bytes(
                         &signatures,
                         estimate_bytes,
@@ -627,7 +625,7 @@ impl ResidentGeometryUploadStreamState {
                 ResidentGeometryUploadStreamWritePlan::Full
             }
             None => {
-                if let Some(upload) = upload.as_deref_mut() {
+                if let Some(upload) = upload {
                     upload.record_resident_stream_miss(estimate_signature_bytes(
                         &signatures,
                         estimate_bytes,

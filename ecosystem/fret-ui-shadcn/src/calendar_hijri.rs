@@ -109,7 +109,7 @@ fn solar_hijri_day_aria_label(date: Date, selected: bool) -> Arc<str> {
     ))
 }
 
-fn hijri_weekday_labels_visual_order(week_start: Weekday) -> Arc<[Arc<str>]> {
+fn hijri_weekday_labels_logical_order(week_start: Weekday) -> Arc<[Arc<str>]> {
     let week = [
         Weekday::Monday,
         Weekday::Tuesday,
@@ -128,8 +128,7 @@ fn hijri_weekday_labels_visual_order(week_start: Weekday) -> Arc<[Arc<str>]> {
         labels.push(solar_hijri_weekday_short(week[idx]));
     }
 
-    // Visual RTL order: left-to-right render should start with the last day of the week.
-    labels.into_iter().rev().collect::<Vec<_>>().into()
+    labels.into()
 }
 
 fn calendar_nav_icon_button<H: UiHost>(
@@ -388,7 +387,7 @@ impl CalendarHijri {
                     let test_id_prefix = self.test_id_prefix.clone();
 
                     let title = solar_hijri_month_title(month);
-                    let weekday_labels = hijri_weekday_labels_visual_order(week_start);
+                    let weekday_labels = hijri_weekday_labels_logical_order(week_start);
 
                     let weekday_text_px = theme
                         .metric_by_key(theme_tokens::metric::COMPONENT_TEXT_XS_PX)
@@ -441,7 +440,7 @@ impl CalendarHijri {
 
                         let header = ui::h_row(move |cx| {
                             let nav_enabled = !disable_navigation;
-                            let direction = crate::direction::use_direction(cx, None);
+                            let direction = crate::direction::LayoutDirection::Rtl;
                             let prev_icon = rtl::chevron_inline_start(direction);
                             let next_icon = rtl::chevron_inline_end(direction);
 
@@ -507,8 +506,6 @@ impl CalendarHijri {
                             title_props.layout.flex.basis = Length::Px(Px(0.0));
                             let title_el = cx.text_props(title_props);
 
-                            let (prev, next) =
-                                crate::rtl::inline_start_end_pair(direction, prev, next);
                             vec![prev, title_el, next]
                         })
                         .gap(Space::N2)
@@ -584,7 +581,7 @@ impl CalendarHijri {
 
                         let days_grid = cx.roving_flex(roving_props, move |cx| {
                             grid.chunks(7)
-                                .flat_map(|week| week.iter().rev())
+                                .flat_map(|week| week.iter())
                                 .map(|day| {
                                     let is_hidden = !day.in_month && !show_outside_days;
                                     if is_hidden {
@@ -718,11 +715,10 @@ mod tests {
     }
 
     #[test]
-    fn weekday_labels_match_rtl_visual_order_for_saturday_start() {
-        let labels = hijri_weekday_labels_visual_order(Weekday::Saturday);
+    fn weekday_labels_match_logical_order_for_saturday_start() {
+        let labels = hijri_weekday_labels_logical_order(Weekday::Saturday);
         let as_str = labels.iter().map(|s| &**s).collect::<Vec<_>>();
-        // Visual RTL order: left-to-right render begins with the last weekday (Friday).
-        assert_eq!(as_str, vec!["ج", "پ", "چ", "س", "د", "ی", "ش"]);
+        assert_eq!(as_str, vec!["ش", "ی", "د", "س", "چ", "پ", "ج"]);
     }
 
     #[test]

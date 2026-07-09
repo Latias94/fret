@@ -55,7 +55,7 @@ fn inspector_panel_query_matches_case_insensitively_without_allocating() {
         query_lower: None,
     };
 
-    assert!(panel_cx.is_query_empty() == false);
+    assert!(!panel_cx.is_query_empty());
     assert!(panel_cx.matches("Gradient editor"));
     assert!(panel_cx.matches("color gradient stop"));
     assert!(!panel_cx.matches("Material"));

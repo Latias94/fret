@@ -2091,6 +2091,7 @@ fn point_summary(point: UiPointV1) -> String {
 }
 
 #[cfg(test)]
+#[allow(clippy::items_after_test_module)]
 mod tests {
     use super::*;
 

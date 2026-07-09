@@ -59,7 +59,7 @@ pub(super) fn color_edit_root_layout<H: UiHost>(
         layout.size.height = row_height;
     }
 
-    let mut row_layout = layout.clone();
+    let mut row_layout = layout;
     row_layout.size.width = Length::Fill;
     row_layout.size.height = row_height;
 

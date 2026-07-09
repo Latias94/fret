@@ -113,7 +113,7 @@ pub fn plot3d_panel<H: UiHost>(
     let mut panel = ContainerProps::default();
     panel.layout.size.width = Length::Fill;
     panel.layout.size.height = Length::Fill;
-    panel.background = Some(background.into());
+    panel.background = Some(background);
     panel.border = Edges::all(props.style.border_width);
     panel.border_paint = Some(Paint::Solid(border));
 

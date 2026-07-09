@@ -876,17 +876,12 @@ struct ChartCanvasPanelLinkedState {
     domain_windows_model_revision: Option<u64>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum ChartCanvasPanelMode {
+    #[default]
     Full,
     GridView(delinea::GridId),
     Overlay,
-}
-
-impl Default for ChartCanvasPanelMode {
-    fn default() -> Self {
-        Self::Full
-    }
 }
 
 impl ChartCanvasPanelMode {

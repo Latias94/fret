@@ -38,6 +38,7 @@ pub(super) fn checkbox_checked_state<H: UiHost>(
     }
 }
 
+#[allow(clippy::arc_with_non_send_sync)]
 pub(super) fn checkbox_on_activate(model: CheckboxModel, enabled: bool) -> OnActivate {
     Arc::new(move |host, action_cx: ActionCx, _reason| {
         if !enabled {

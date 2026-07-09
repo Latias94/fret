@@ -6,8 +6,8 @@ use fret_core::{
 use fret_runtime::Model;
 use fret_ui::tree::UiTree;
 use fret_ui_headless::table::{ColumnDef, RowKey, TableState};
-use fret_ui_kit::OverlayController;
 use fret_ui_kit::declarative::table::PointerRowSelectionPolicy;
+use fret_ui_kit::{LayoutRefinement, OverlayController};
 use fret_ui_shadcn::facade as shadcn;
 use std::sync::Arc;
 
@@ -42,6 +42,7 @@ fn render_frame(
                 .row_click_selection(true)
                 .row_click_selection_policy(PointerRowSelectionPolicy::ListLike)
                 .single_row_selection(false)
+                .refine_layout(LayoutRefinement::default().w_full().h_px(Px(320.0)))
                 .debug_ids(fret_ui_kit::declarative::table::TableDebugIds {
                     row_test_id_prefix: Some(Arc::<str>::from("data-table-row/")),
                     ..Default::default()
@@ -82,7 +83,15 @@ fn find_by_test_id<'a>(
     snap.nodes
         .iter()
         .find(|n| n.test_id.as_deref() == Some(id))
-        .unwrap_or_else(|| panic!("missing semantics node test_id={id:?}"))
+        .unwrap_or_else(|| {
+            let sample = snap
+                .nodes
+                .iter()
+                .filter_map(|n| n.test_id.as_deref())
+                .take(24)
+                .collect::<Vec<_>>();
+            panic!("missing semantics node test_id={id:?}; sample={sample:?}")
+        })
 }
 
 fn click_at_with_modifiers(
@@ -140,6 +149,7 @@ fn data_table_row_click_selection_list_like_shift_click_selects_range() {
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
+    ui.set_debug_enabled(true);
     let mut services = FakeServices;
 
     for _ in 0..2 {

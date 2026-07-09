@@ -21,7 +21,7 @@ pub(super) fn radio_pressable_props(
     ));
     props.a11y = PressableA11y {
         role: Some(SemanticsRole::RadioButton),
-        label: options.a11y_label.clone().or_else(|| Some(label)),
+        label: options.a11y_label.clone().or(Some(label)),
         checked: Some(selected),
         test_id: options.test_id.clone(),
         ..Default::default()

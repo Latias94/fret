@@ -175,7 +175,8 @@ impl WgpuHelloWorldControlApp {
         if size.width == 0 || size.height == 0 {
             return;
         }
-        gpu.surface
+        let _ = gpu
+            .surface
             .resize(&gpu.context.device, size.width, size.height);
         let mut state = self
             .runtime_state

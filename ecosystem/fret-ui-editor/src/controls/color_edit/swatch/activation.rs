@@ -17,6 +17,7 @@ pub(super) struct ColorSwatchActivateInput {
     pub(super) popup_options: ColorEditPopupOptions,
 }
 
+#[allow(clippy::arc_with_non_send_sync)]
 pub(super) fn color_swatch_activate(input: ColorSwatchActivateInput) -> OnActivate {
     let ColorSwatchActivateInput {
         model,

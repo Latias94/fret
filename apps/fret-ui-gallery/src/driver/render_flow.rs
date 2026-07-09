@@ -669,6 +669,12 @@ mod tests {
         );
     }
 
+    fn settle_gallery_frames(rendered: &mut RenderedGalleryPage, frames: usize) {
+        for _ in 0..frames {
+            render_gallery_frame(rendered);
+        }
+    }
+
     #[cfg(any(feature = "gallery-dev", feature = "gallery-chart"))]
     fn paint_gallery_frame(rendered: &mut RenderedGalleryPage) {
         let mut scene = Scene::default();
@@ -738,6 +744,33 @@ mod tests {
             .debug_node_bounds(node.id)
             .or(Some(node.bounds))
             .unwrap_or_else(|| panic!("missing layout bounds for test_id={test_id}"))
+    }
+
+    fn wait_until_test_id_layout_height_at_least(
+        rendered: &mut RenderedGalleryPage,
+        target_test_id: &str,
+        min_height: f32,
+        max_frames: usize,
+    ) {
+        for _ in 0..=max_frames {
+            let snapshot = rendered
+                .state
+                .ui
+                .semantics_snapshot()
+                .expect("expected semantics snapshot while waiting for target layout height");
+            if let Some(node) = find_node_by_test_id(snapshot, target_test_id) {
+                let bounds = rendered
+                    .state
+                    .ui
+                    .debug_node_bounds(node.id)
+                    .or(Some(node.bounds))
+                    .expect("expected layout bounds for target");
+                if bounds.size.height.0 >= min_height {
+                    return;
+                }
+            }
+            render_gallery_frame(rendered);
+        }
     }
 
     fn visual_bounds_by_test_id_if_present(
@@ -1557,8 +1590,8 @@ mod tests {
         let mut moved = false;
         let mut stable_frames = 0usize;
 
-        for _ in 0..48 {
-            wheel_gallery_viewport(rendered, Px(-2000.0));
+        for _ in 0..96 {
+            scroll_gallery_viewport_by(rendered, Px(2000.0));
 
             let page_bounds = visual_bounds_by_test_id(&rendered, tracked_test_id);
             let snapshot = rendered
@@ -1571,6 +1604,7 @@ mod tests {
                 .scroll;
             let current_gallery_scroll_y = gallery_scroll.y.unwrap_or(0.0);
             let current_gallery_scroll_y_max = gallery_scroll.y_max.unwrap_or(0.0);
+            let gallery_at_bottom = current_gallery_scroll_y + 0.5 >= current_gallery_scroll_y_max;
             let page_moved = page_bounds.origin.y.0 < last_page_y - 0.5;
             let scroll_changed = last_gallery_scroll_y
                 .is_some_and(|last| (current_gallery_scroll_y - last).abs() > 0.5)
@@ -1582,6 +1616,8 @@ mod tests {
                 stable_frames = 0;
             } else if moved && scroll_changed {
                 stable_frames = 0;
+            } else if moved && !gallery_at_bottom {
+                stable_frames = 0;
             } else {
                 stable_frames += 1;
             }
@@ -1589,17 +1625,82 @@ mod tests {
             last_gallery_scroll_y = Some(current_gallery_scroll_y);
             last_gallery_scroll_y_max = Some(current_gallery_scroll_y_max);
 
-            if moved && stable_frames >= 3 {
+            if moved && gallery_at_bottom && stable_frames >= 3 {
                 break;
             }
         }
 
+        let mut settled_frames = 0usize;
+        let mut last_settle_page_bounds = visual_bounds_by_test_id(&rendered, tracked_test_id);
+        let mut last_settle_scroll = rendered
+            .state
+            .ui
+            .semantics_snapshot()
+            .and_then(|snapshot| {
+                find_node_by_test_id(snapshot, "ui-gallery-content-viewport")
+                    .map(|node| node.extra.scroll)
+            });
+        for _ in 0..12 {
+            render_gallery_frame(rendered);
+
+            let page_bounds = visual_bounds_by_test_id(&rendered, tracked_test_id);
+            let gallery_scroll = rendered
+                .state
+                .ui
+                .semantics_snapshot()
+                .and_then(|snapshot| {
+                    find_node_by_test_id(snapshot, "ui-gallery-content-viewport")
+                        .map(|node| node.extra.scroll)
+                });
+            let page_stable =
+                (page_bounds.origin.y.0 - last_settle_page_bounds.origin.y.0).abs() <= 0.01
+                    && (page_bounds.size.height.0 - last_settle_page_bounds.size.height.0).abs()
+                        <= 0.01;
+            let scroll_stable = match (gallery_scroll, last_settle_scroll) {
+                (Some(current), Some(last)) => {
+                    (current.y.unwrap_or(0.0) - last.y.unwrap_or(0.0)).abs() <= 0.01
+                        && (current.y_max.unwrap_or(0.0) - last.y_max.unwrap_or(0.0)).abs()
+                            <= 0.01
+                }
+                (None, None) => true,
+                _ => false,
+            };
+
+            if page_stable && scroll_stable {
+                settled_frames += 1;
+                if settled_frames >= 3 {
+                    break;
+                }
+            } else {
+                settled_frames = 0;
+            }
+            last_settle_page_bounds = page_bounds;
+            last_settle_scroll = gallery_scroll;
+        }
+
+        for _ in 0..16 {
+            let scroll = gallery_viewport_scroll(rendered);
+            let y = scroll.y.unwrap_or(0.0);
+            let y_max = scroll.y_max.unwrap_or(0.0);
+            if y + 0.5 >= y_max {
+                break;
+            }
+            let delta_y = ((y_max - y).max(1.0).min(4000.0)) as f32;
+            scroll_gallery_viewport_by(rendered, Px(delta_y));
+        }
+
         let viewport_bounds = visual_bounds_by_test_id(&rendered, "ui-gallery-content-viewport");
         let page_bounds = visual_bounds_by_test_id(&rendered, tracked_test_id);
+        let final_gallery_scroll = gallery_viewport_scroll(rendered);
 
         assert!(
             moved,
             "expected wheel scrolling to move the gallery page for page={page}: initial_page={initial_page_bounds:?} final_page={page_bounds:?} viewport={viewport_bounds:?}"
+        );
+        assert!(
+            final_gallery_scroll.y.unwrap_or(0.0) + 0.5
+                >= final_gallery_scroll.y_max.unwrap_or(0.0),
+            "expected gallery page scroll helper to reach the bottom before bottom-clamp assertions: page={page} tracked_test_id={tracked_test_id} scroll={final_gallery_scroll:?} initial_page={initial_page_bounds:?} final_page={page_bounds:?} viewport={viewport_bounds:?}"
         );
 
         (initial_page_bounds, viewport_bounds, page_bounds)
@@ -1759,6 +1860,31 @@ mod tests {
         render_gallery_frame(rendered);
     }
 
+    fn scroll_gallery_viewport_by(rendered: &mut RenderedGalleryPage, delta_y: Px) {
+        let snapshot = rendered
+            .state
+            .ui
+            .semantics_snapshot()
+            .expect("expected semantics snapshot before direct gallery scroll");
+        let viewport = node_by_test_id(snapshot, "ui-gallery-content-viewport").id;
+        rendered
+            .state
+            .ui
+            .scroll_by(&mut rendered.app, viewport, Point::new(Px(0.0), delta_y));
+        render_gallery_frame(rendered);
+    }
+
+    fn gallery_viewport_scroll(rendered: &RenderedGalleryPage) -> fret_core::SemanticsScroll {
+        let snapshot = rendered
+            .state
+            .ui
+            .semantics_snapshot()
+            .expect("expected semantics snapshot for gallery viewport scroll");
+        node_by_test_id(snapshot, "ui-gallery-content-viewport")
+            .extra
+            .scroll
+    }
+
     fn scroll_test_id_into_gallery_viewport(
         rendered: &mut RenderedGalleryPage,
         target_test_id: &str,
@@ -1798,6 +1924,7 @@ mod tests {
                 let visible_bottom = visible_top + gallery_viewport.size.height.0;
 
                 if target_center_y >= visible_top + 4.0 && target_center_y <= visible_bottom - 4.0 {
+                    settle_gallery_frames(rendered, 2);
                     return;
                 }
 
@@ -1817,6 +1944,8 @@ mod tests {
                         .extra
                         .scroll;
                 let current_gallery_scroll_y = after_gallery_scroll.y.unwrap_or(0.0);
+                let gallery_scroll_changed = last_gallery_scroll_y
+                    .is_none_or(|last| (current_gallery_scroll_y - last).abs() > 0.01);
                 if let Some(last) = last_gallery_scroll_y {
                     if (current_gallery_scroll_y - last).abs() <= 0.01 {
                         stable_frames += 1;
@@ -1826,25 +1955,13 @@ mod tests {
                 }
                 last_gallery_scroll_y = Some(current_gallery_scroll_y);
 
-                if did_scroll {
+                if did_scroll && gallery_scroll_changed {
                     continue;
                 }
 
                 let scroll_down = target_center_y > visible_bottom;
-                let wheel_pos = gallery_steering_wheel_position(gallery_viewport, scroll_down);
                 let delta_y = if scroll_down { Px(-480.0) } else { Px(480.0) };
-                rendered.state.ui.dispatch_event(
-                    &mut rendered.app,
-                    &mut rendered.services,
-                    &Event::Pointer(PointerEvent::Wheel {
-                        position: wheel_pos,
-                        delta: Point::new(Px(0.0), delta_y),
-                        modifiers: Modifiers::default(),
-                        pointer_id: PointerId(0),
-                        pointer_type: PointerType::Mouse,
-                    }),
-                );
-                render_gallery_frame(rendered);
+                wheel_gallery_viewport(rendered, delta_y);
                 continue;
             }
 
@@ -2336,6 +2453,27 @@ mod tests {
         );
     }
 
+    fn wait_until_test_id_scroll_y_max_exceeds(
+        rendered: &mut RenderedGalleryPage,
+        target_test_id: &str,
+        min_y_max: f64,
+        max_frames: usize,
+    ) {
+        for _ in 0..=max_frames {
+            let snapshot = rendered
+                .state
+                .ui
+                .semantics_snapshot()
+                .expect("expected semantics snapshot while waiting for scroll extent");
+            if let Some(node) = find_node_by_test_id(snapshot, target_test_id)
+                && node.extra.scroll.y_max.unwrap_or(0.0) > min_y_max
+            {
+                return;
+            }
+            render_gallery_frame(rendered);
+        }
+    }
+
     fn wait_until_test_id_absent(
         rendered: &mut RenderedGalleryPage,
         target_test_id: &str,
@@ -2684,6 +2822,7 @@ mod tests {
         scroll_test_id_into_gallery_viewport(&mut rendered, trigger_test_id);
         click_test_id_center(&mut rendered, trigger_test_id);
         wait_until_test_id_exists(&mut rendered, viewport_test_id, 12);
+        wait_until_test_id_scroll_y_max_exceeds(&mut rendered, viewport_test_id, 0.01, 12);
 
         let before_snapshot = rendered
             .state
@@ -2744,6 +2883,7 @@ mod tests {
         scroll_test_id_into_gallery_viewport(&mut rendered, trigger_test_id);
         click_test_id_center(&mut rendered, trigger_test_id);
         wait_until_test_id_exists(&mut rendered, viewport_test_id, 12);
+        wait_until_test_id_scroll_y_max_exceeds(&mut rendered, viewport_test_id, 0.01, 12);
 
         let before_snapshot = rendered
             .state
@@ -3234,6 +3374,18 @@ mod tests {
         ] {
             scroll_test_id_into_gallery_viewport(&mut rendered, target);
         }
+        wait_until_test_id_layout_height_at_least(
+            &mut rendered,
+            "ui-gallery-progress-label-row",
+            10.0,
+            8,
+        );
+        wait_until_test_id_layout_height_at_least(
+            &mut rendered,
+            "ui-gallery-progress-rtl-row",
+            10.0,
+            8,
+        );
 
         let ltr_row = layout_bounds_by_test_id(&rendered, "ui-gallery-progress-label-row");
         let ltr_title = layout_bounds_by_test_id(&rendered, "ui-gallery-progress-label-title");
@@ -4075,6 +4227,12 @@ mod tests {
     fn gallery_separator_menu_example_keeps_docs_copy_within_row_bounds() {
         let mut rendered = render_gallery_page(PAGE_SEPARATOR);
         scroll_test_id_into_gallery_viewport(&mut rendered, "ui-gallery-separator-menu");
+        wait_until_test_id_layout_height_at_least(
+            &mut rendered,
+            "ui-gallery-separator-menu",
+            39.0,
+            8,
+        );
 
         let row_layout = layout_bounds_by_test_id(&rendered, "ui-gallery-separator-menu");
         let epsilon = 1.0;

@@ -19,7 +19,7 @@ pub(in super::super) fn wrap_table_row<H: UiHost>(
     options: &TableOptions,
     scroll_x: Option<ScrollHandle>,
 ) -> AnyElement {
-    let background = background.or_else(|| {
+    let background = background.or({
         if header {
             Some(palette.header_bg)
         } else if striped {

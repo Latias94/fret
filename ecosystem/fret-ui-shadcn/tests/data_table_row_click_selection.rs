@@ -3,7 +3,7 @@ use fret_core::{AppWindowId, FrameId, Point, Px, Rect, Size as CoreSize};
 use fret_runtime::Model;
 use fret_ui::tree::UiTree;
 use fret_ui_headless::table::{ColumnDef, RowKey, TableState};
-use fret_ui_kit::OverlayController;
+use fret_ui_kit::{LayoutRefinement, OverlayController};
 use fret_ui_shadcn::facade as shadcn;
 use std::sync::Arc;
 
@@ -47,6 +47,7 @@ fn render_frame(
         move |cx| {
             let table = shadcn::DataTable::new()
                 .row_click_selection(row_click_selection)
+                .refine_layout(LayoutRefinement::default().w_full().h_px(Px(320.0)))
                 .debug_ids(fret_ui_kit::declarative::table::TableDebugIds {
                     row_test_id_prefix: Some(Arc::<str>::from("data-table-row/")),
                     ..Default::default()
@@ -135,6 +136,7 @@ fn data_table_row_click_selection_toggles_single_row_by_default() {
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
+    ui.set_debug_enabled(true);
     let mut services = FakeServices;
 
     render_frame(

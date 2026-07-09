@@ -37,7 +37,7 @@ pub(super) fn request_tooltip_overlay<H: UiHost>(
             trigger_id,
             trigger_rect,
             panel_size,
-            placement: options.placement.clone(),
+            placement: options.placement,
             window_margin: options.window_margin,
             panel_id_model: models.panel_id,
             panel_test_id: options.test_id.clone(),

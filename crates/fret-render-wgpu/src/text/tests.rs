@@ -514,11 +514,11 @@ fn cluster_residency_signature_changes_with_fallback_font_identity() {
             .map(|glyph| glyph.key.font)
             .collect::<std::collections::HashSet<_>>();
 
-        let expected_cjk_faces = include_cjk
-            .then(|| {
-                face_keys_for_explicit_family(&mut text, "你", family_cjk, Px(24.0), constraints)
-            })
-            .unwrap_or_default();
+        let expected_cjk_faces = if include_cjk {
+            face_keys_for_explicit_family(&mut text, "你", family_cjk, Px(24.0), constraints)
+        } else {
+            Default::default()
+        };
         let used_cjk_fallback = used_faces
             .iter()
             .any(|face| expected_cjk_faces.contains(face));

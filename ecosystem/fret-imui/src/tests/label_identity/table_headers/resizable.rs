@@ -101,8 +101,10 @@ fn table_resizable_header_reports_drag_response() {
     pointer_down_at(&mut ui, &mut app, &mut services, handle);
 
     let drag_to = Point::new(Px(handle.x.0 + 48.0), handle.y);
-    let mut buttons = MouseButtons::default();
-    buttons.left = true;
+    let buttons = MouseButtons {
+        left: true,
+        ..MouseButtons::default()
+    };
     pointer_move_at(&mut ui, &mut app, &mut services, drag_to, buttons);
 
     let _root = advance_and_run_frame(

@@ -1,5 +1,42 @@
 use super::*;
 
+fn assert_history_active_descendant(
+    ui: &mut UiTree<TestHost>,
+    app: &mut TestHost,
+    services: &mut FakeTextService,
+    bounds: Rect,
+    expected_option_test_id: &str,
+) {
+    ui.request_semantics_snapshot();
+    ui.layout_all(app, services, bounds, 1.0);
+    let snap = ui.semantics_snapshot().expect("semantics snapshot");
+    let input_node = snap
+        .nodes
+        .iter()
+        .find(|node| {
+            node.test_id.as_deref() == Some("imui-input-text-history-picker-keyboard.input")
+        })
+        .expect("expected history picker input semantics node");
+    let active_option = snap
+        .nodes
+        .iter()
+        .find(|node| node.test_id.as_deref() == Some(expected_option_test_id))
+        .expect("expected active history picker option semantics node");
+    let popup_panel = snap
+        .nodes
+        .iter()
+        .find(|node| {
+            node.test_id.as_deref()
+                == Some("imui-popup-imui-input-text-history-picker-keyboard.popup")
+        })
+        .expect("expected history picker popup panel semantics node");
+
+    assert_eq!(input_node.role, SemanticsRole::ComboBox);
+    assert!(input_node.flags.expanded);
+    assert_eq!(input_node.active_descendant, Some(active_option.id));
+    assert!(input_node.controls.contains(&popup_panel.id));
+}
+
 #[test]
 fn input_text_history_picker_keyboard_navigation_wraps_up_to_last_candidate() {
     let window = AppWindowId::default();
@@ -78,14 +115,6 @@ fn input_text_history_picker_keyboard_navigation_wraps_up_to_last_candidate() {
         "imui-input-text-history-picker-keyboard",
         |cx| render(cx, &picked_index_out, &picked_out),
     );
-    assert!(has_test_id(
-        &mut ui,
-        &mut app,
-        &mut services,
-        bounds,
-        "imui-input-text-history-picker-keyboard.option.2",
-    ));
-
     key_down(
         &mut ui,
         &mut app,
@@ -117,14 +146,13 @@ fn input_text_history_picker_keyboard_navigation_wraps_up_to_last_candidate() {
         "imui-input-text-history-picker-keyboard",
         |cx| render(cx, &picked_index_out, &picked_out),
     );
-    assert!(picker_option_active(
+    assert_history_active_descendant(
         &mut ui,
         &mut app,
         &mut services,
         bounds,
         "imui-input-text-history-picker-keyboard.option.0",
-    ));
-
+    );
     key_down(
         &mut ui,
         &mut app,
@@ -156,14 +184,13 @@ fn input_text_history_picker_keyboard_navigation_wraps_up_to_last_candidate() {
         "imui-input-text-history-picker-keyboard",
         |cx| render(cx, &picked_index_out, &picked_out),
     );
-    assert!(picker_option_active(
+    assert_history_active_descendant(
         &mut ui,
         &mut app,
         &mut services,
         bounds,
         "imui-input-text-history-picker-keyboard.option.2",
-    ));
-
+    );
     key_down(
         &mut ui,
         &mut app,

@@ -13,6 +13,7 @@ use super::streaming_images::{
 use super::{WinitAppDriver, WinitRunner};
 
 impl<D: WinitAppDriver> WinitRunner<D> {
+    #[allow(clippy::too_many_arguments)]
     pub(super) fn handle_image_register_rgba8(
         &mut self,
         window: AppWindowId,
@@ -120,6 +121,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub(super) fn handle_image_update_rgba8(
         &mut self,
         stats: &mut StreamingUploadStats,
@@ -153,6 +155,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         );
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub(super) fn handle_image_update_nv12(
         &mut self,
         stats: &mut StreamingUploadStats,
@@ -248,6 +251,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub(super) fn handle_image_update_i420(
         &mut self,
         stats: &mut StreamingUploadStats,

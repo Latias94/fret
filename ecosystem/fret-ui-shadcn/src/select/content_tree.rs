@@ -236,8 +236,8 @@ mod tests {
 
         assert_eq!(rows.len(), 6);
         assert_eq!(rows.item_count(), 3);
-        assert_eq!(rows.disabled(), &[true, false, true, true, false, false]);
-        assert_eq!(rows.disabled_at(99), true);
+        assert_eq!(rows.disabled(), &[true, false, true, true, true, false]);
+        assert!(rows.disabled_at(99));
         assert_eq!(rows.selected_row_index("apple"), Some(1));
         assert_eq!(rows.selected_row_index("lemon"), Some(5));
         assert_eq!(rows.selected_row_index("missing"), None);

@@ -121,10 +121,10 @@ impl TextLayoutCacheState {
             let Some((evict, generation)) = self.shape_cache_lru.pop_front() else {
                 break;
             };
-            if !self
+            if self
                 .shape_cache
                 .get(&evict)
-                .is_some_and(|entry| entry.generation == generation)
+                .is_none_or(|entry| entry.generation != generation)
             {
                 continue;
             }

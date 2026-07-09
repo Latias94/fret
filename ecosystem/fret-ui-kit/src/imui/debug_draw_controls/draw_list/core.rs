@@ -23,12 +23,3 @@ impl ImUiDebugDrawList {
         self.command_count() == 0
     }
 }
-
-impl Default for ImUiDebugDrawList {
-    fn default() -> Self {
-        Self {
-            commands: Vec::new(),
-            channel_split: None,
-        }
-    }
-}

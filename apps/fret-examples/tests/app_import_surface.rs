@@ -225,7 +225,7 @@ fn app_state_demos_use_app_local_state_imports() {
         (
             "components_gallery",
             include_str!("../src/components_gallery.rs"),
-            "usefret::app::TrackedStateExtas_;",
+            "usefret::app::{TrackedStateExtas_,text};",
         ),
     ] {
         let compact = compact(source);

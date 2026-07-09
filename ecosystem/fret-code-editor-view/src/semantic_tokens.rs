@@ -116,7 +116,10 @@ mod tests {
         let buf = buffer("abc");
 
         assert_eq!(
-            validate_semantic_tokens(&buf, &[SemanticToken::new(2..1, "bad")]),
+            validate_semantic_tokens(
+                &buf,
+                &[SemanticToken::new(Range { start: 2, end: 1 }, "bad")]
+            ),
             Err(SemanticTokenError::RangeStartAfterEnd)
         );
         assert_eq!(

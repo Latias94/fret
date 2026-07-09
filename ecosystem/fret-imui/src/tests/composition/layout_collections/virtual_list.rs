@@ -214,7 +214,7 @@ fn virtual_list_fixed_rows_clip_oversized_row_content() {
             window,
             bounds,
             "imui-virtual-list-fixed-clip",
-            &render,
+            render,
         );
         app.advance_frame();
     }

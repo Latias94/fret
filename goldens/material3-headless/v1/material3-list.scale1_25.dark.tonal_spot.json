@@ -304,10 +304,6 @@
           "kind": "push_clip_r_rect"
         },
         {
-          "kind": "quad",
-          "order": 0
-        },
-        {
           "kind": "push_clip_rect"
         },
         {
@@ -424,33 +420,6 @@
             58,
             98,
             1000
-          ],
-          "border": [
-            0,
-            0,
-            0,
-            0
-          ],
-          "corner_radii": [
-            160,
-            160,
-            160,
-            160
-          ]
-        },
-        {
-          "order": 0,
-          "rect": [
-            240,
-            960,
-            480,
-            720
-          ],
-          "background": [
-            791,
-            745,
-            815,
-            80
           ],
           "border": [
             0,

@@ -9,18 +9,13 @@ use fret_code_editor_buffer::TextBuffer;
 /// The derived ordering intentionally treats `Error` as the most severe value and `Hint` as the
 /// least severe value. This mirrors the filter/order vocabulary used by editor references such as
 /// Zed/LSP without taking a dependency on an LSP crate in the view layer.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum DiagnosticSeverity {
+    #[default]
     Error,
     Warning,
     Information,
     Hint,
-}
-
-impl Default for DiagnosticSeverity {
-    fn default() -> Self {
-        Self::Error
-    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
@@ -232,7 +227,11 @@ mod tests {
         assert_eq!(
             validate_diagnostic_spans(
                 &buf,
-                &[DiagnosticSpan::new(2..1, DiagnosticSeverity::Error, "bad")]
+                &[DiagnosticSpan::new(
+                    Range { start: 2, end: 1 },
+                    DiagnosticSeverity::Error,
+                    "bad"
+                )]
             ),
             Err(DiagnosticSpanError::RangeStartAfterEnd)
         );

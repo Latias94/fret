@@ -8,6 +8,7 @@ use fret_ui_kit::primitives::combobox as kit_combobox;
 #[cfg(test)]
 mod tests;
 
+#[allow(clippy::arc_with_non_send_sync)]
 pub(super) fn enum_select_trigger_open_keys(
     enabled: bool,
     open: Model<bool>,

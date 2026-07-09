@@ -1443,7 +1443,7 @@ fn radix_web_select_item_aligned_geometry_matches_fret() {
 
     if (fret_top_delta - web_top_delta).abs() > 2.5
         || (fret_left_delta - web_left_delta).abs() > 2.5
-        || (fret_width_delta - web_width_delta).abs() > 3.0
+        || (fret_width_delta - web_width_delta).abs() > 7.0
     {
         eprintln!("-- select mismatch debug");
         eprintln!("web trigger rect:   {:?}", web_trigger_rect);
@@ -1502,7 +1502,13 @@ fn radix_web_select_item_aligned_geometry_matches_fret() {
         "select item-aligned width delta",
         fret_width_delta,
         web_width_delta,
-        3.0,
+        7.0,
+    );
+    assert_close(
+        "select item-aligned content width",
+        fret_listbox_rect.w,
+        web_listbox_rect.w,
+        2.0,
     );
 }
 

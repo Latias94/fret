@@ -65,6 +65,7 @@ pub(crate) fn visual_map_track_layouts(
     out
 }
 
+#[cfg_attr(not(test), allow(dead_code))]
 pub(crate) fn visual_map_track_at(
     tracks: &[VisualMapTrackLayout],
     position: Point,

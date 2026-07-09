@@ -6,6 +6,7 @@ use crate::editor::syntax::ensure_syntax_row_cache_fresh;
 use super::*;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[allow(dead_code)]
 pub(super) enum RowSceneStoreSource {
     Paint,
     PrepaintEdge,
@@ -272,6 +273,7 @@ pub(super) fn row_scene_cached_entry_matches_syntax(
 }
 
 #[cfg(not(feature = "syntax"))]
+#[allow(clippy::too_many_arguments)]
 pub(super) fn replay_row_scene_plan_candidates_for_frame(
     st: &mut CodeEditorState,
     frame: WindowedRowsPaintFrame,
@@ -1069,6 +1071,7 @@ pub(super) fn store_row_scene_cache(
 }
 
 #[cfg(not(feature = "syntax"))]
+#[allow(clippy::too_many_arguments)]
 pub(super) fn store_row_scene_cache(
     st: &mut CodeEditorState,
     row: usize,

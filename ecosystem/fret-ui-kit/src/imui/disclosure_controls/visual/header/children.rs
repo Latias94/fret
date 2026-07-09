@@ -45,11 +45,11 @@ pub(super) fn header_children<H: UiHost>(
             ..Default::default()
         },
         move |cx| {
-            let mut out = Vec::new();
-            out.push(indicator_slot(cx, indicator, foreground));
-            out.push(disclosure_label_text(cx, label, foreground));
-            out.push(cx.spacer(SpacerProps::default()));
-            out
+            vec![
+                indicator_slot(cx, indicator, foreground),
+                disclosure_label_text(cx, label, foreground),
+                cx.spacer(SpacerProps::default()),
+            ]
         },
     )]
 }

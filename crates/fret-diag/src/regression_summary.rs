@@ -131,7 +131,7 @@ pub fn regression_bundle_followup_commands<'a>(
         .map(str::trim)
         .filter(|dir| !dir.is_empty())
         .fold(Vec::<&str>::new(), |mut dirs, dir| {
-            if !dirs.iter().any(|existing| *existing == dir) {
+            if !dirs.contains(&dir) {
                 dirs.push(dir);
             }
             dirs
@@ -273,7 +273,7 @@ pub fn regression_bundle_followup_command_lines<'a>(
         .map(str::trim)
         .filter(|dir| !dir.is_empty())
         .fold(Vec::<&str>::new(), |mut dirs, dir| {
-            if !dirs.iter().any(|existing| *existing == dir) {
+            if !dirs.contains(&dir) {
                 dirs.push(dir);
             }
             dirs

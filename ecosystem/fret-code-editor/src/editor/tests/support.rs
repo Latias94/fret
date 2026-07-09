@@ -1,5 +1,6 @@
 use super::*;
 
+#[allow(dead_code)]
 pub(super) fn render_code_editor_frame(
     ui: &mut UiTree<App>,
     app: &mut App,

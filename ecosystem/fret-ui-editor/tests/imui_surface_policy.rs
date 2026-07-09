@@ -505,7 +505,7 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_POPUP_PREVIEW_FILL_CHECKERBOARD_RS.contains("fn checkerboard_grid<"));
     assert!(COLOR_EDIT_POPUP_PREVIEW_FILL_CHECKERBOARD_RS.contains("fn checkerboard_cell_color("));
     assert!(COLOR_EDIT_POPUP_PREVIEW_FILL_CHECKERBOARD_RS.contains("CHECKERBOARD_LIGHT_RGB"));
-    assert!(COLOR_EDIT_POPUP_PREVIEW_FILL_CHECKERBOARD_RS.contains("GridProps"));
+    assert!(COLOR_EDIT_POPUP_PREVIEW_FILL_CHECKERBOARD_RS.contains("CanvasProps"));
     assert!(COLOR_EDIT_POPUP_PREVIEW_SIDE_RS.contains("mod cell;"));
     assert!(COLOR_EDIT_POPUP_PREVIEW_SIDE_RS.contains("mod original;"));
     assert!(COLOR_EDIT_POPUP_PREVIEW_SIDE_RS.contains("use cell::current_preview_cell;"));
@@ -796,7 +796,8 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(!COLOR_EDIT_OPTIONS_RS.contains("pub enum ColorEditAlphaPreview"));
     assert!(!COLOR_EDIT_OPTIONS_RS.contains("pub struct ColorEditDragDropOptions"));
     assert!(COLOR_EDIT_OPTIONS_POLICIES_RS.contains("pub enum ColorEditAlphaPreview"));
-    assert!(COLOR_EDIT_OPTIONS_POLICIES_RS.contains("impl Default for ColorEditAlphaPreview"));
+    assert!(COLOR_EDIT_OPTIONS_POLICIES_RS.contains("#[derive(Debug, Clone, Copy, Default"));
+    assert!(COLOR_EDIT_OPTIONS_POLICIES_RS.contains("#[default]"));
     assert!(COLOR_EDIT_OPTIONS_POLICIES_RS.contains("pub struct ColorEditDragDropOptions"));
     assert!(COLOR_EDIT_OPTIONS_POLICIES_RS.contains("impl Default for ColorEditDragDropOptions"));
     assert!(COLOR_EDIT_RECORDS_DRAG_DROP_RS.contains("pub enum ColorEditDragDropComponents"));

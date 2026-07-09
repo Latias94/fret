@@ -1693,6 +1693,14 @@ fn combobox_with_patch<H: UiHost>(
         } else {
             cx.local_model_keyed("query", String::new)
         };
+        let command_active_model =
+            cx.local_model_keyed("command_active", || None::<Arc<str>>);
+        if !is_open {
+            let _ = cx
+                .app
+                .models_mut()
+                .update(&command_active_model, |value| *value = None);
+        }
         let content_test_id = content_test_id.or_else(|| {
             test_id_prefix
                 .as_ref()
@@ -1905,6 +1913,7 @@ fn combobox_with_patch<H: UiHost>(
             let focus_restore_target_for_trigger = focus_restore_target.clone();
             let model_for_trigger = model.clone();
             let query_model_for_trigger = query_model.clone();
+            let command_active_model_for_content = command_active_model.clone();
             let selected_for_trigger = selected.clone();
             let show_trigger_for_trigger = show_trigger;
             let items_for_content = items;
@@ -2294,6 +2303,7 @@ fn combobox_with_patch<H: UiHost>(
                     move |cx| {
                         let test_id_prefix = test_id_prefix_for_content.clone();
                         let open_change_reason_model = open_change_reason_model_for_content.clone();
+                        let command_active_model = command_active_model_for_content.clone();
                         let items = items_for_content;
                         let groups = groups_for_content;
                         let theme_max_list_h = theme
@@ -2360,6 +2370,7 @@ fn combobox_with_patch<H: UiHost>(
                                         .input_role(SemanticsRole::ComboBox)
                                         .input_required(required)
                                         .input_expanded(true)
+                                        .value(Some(command_active_model.clone()))
                                         .a11y_selected_mode(
                                             crate::command::CommandPaletteA11ySelectedMode::Checked,
                                         )
@@ -2513,6 +2524,7 @@ fn combobox_with_patch<H: UiHost>(
         let focus_restore_target_for_trigger = focus_restore_target.clone();
         let model_for_trigger = model.clone();
         let query_model_for_trigger = query_model.clone();
+        let command_active_model_for_content = command_active_model.clone();
         let selected_for_trigger = selected.clone();
 
         let search_input_id = search_enabled.then(|| Rc::new(Cell::new(None)));
@@ -2893,12 +2905,13 @@ fn combobox_with_patch<H: UiHost>(
                     })
                 })
             },
-                move |cx, anchor| {
+            move |cx, anchor| {
                 let test_id_prefix = test_id_prefix_for_content.clone();
                 let open_change_reason_model = open_change_reason_model_for_content.clone();
+                let command_active_model = command_active_model_for_content.clone();
                 let search_input_id = search_input_id_for_content.clone();
                 let listbox_id_for_diag = listbox_id_for_diag_for_content.clone();
-	                let theme_max_list_h = theme
+                let theme_max_list_h = theme
 	                    .metric_by_key("component.combobox.max_list_height")
 	                    .or_else(|| theme.metric_by_key("component.select.max_list_height"))
 	                    .unwrap_or(Px(280.0));
@@ -2979,6 +2992,7 @@ fn combobox_with_patch<H: UiHost>(
                                 "combobox search-enabled popover should provide input-id cell",
                             ))
                             .list_id_out_cell(listbox_id_for_diag.clone())
+                            .value(Some(command_active_model.clone()))
                             .a11y_selected_mode(
                                 crate::command::CommandPaletteA11ySelectedMode::Checked,
                             )
@@ -4494,7 +4508,14 @@ mod tests {
             window,
             bounds,
             "combobox",
-            |cx| vec![Combobox::new(model, open).items(items).into_element(cx)],
+            |cx| {
+                vec![
+                    Combobox::new(model, open)
+                        .test_id_prefix("combobox")
+                        .items(items)
+                        .into_element(cx),
+                ]
+            },
         );
         ui.set_root(root);
         fret_ui_kit::OverlayController::render(ui, app, services, window, bounds);
@@ -5051,7 +5072,7 @@ mod tests {
         let input = snap
             .nodes
             .iter()
-            .find(|n| n.role == SemanticsRole::ComboBox && n.value.is_some())
+            .find(|n| n.test_id.as_deref() == Some("combobox-input"))
             .expect("combobox search input node");
         assert!(
             input.flags.expanded,
@@ -5062,7 +5083,7 @@ mod tests {
         let list = snap
             .nodes
             .iter()
-            .find(|n| n.role == SemanticsRole::ListBox)
+            .find(|n| n.test_id.as_deref() == Some("combobox-listbox"))
             .expect("listbox node");
         assert!(
             list.labelled_by.contains(&input.id),
@@ -5075,6 +5096,16 @@ mod tests {
 
         let input_id = input.id;
         ui.set_focus(Some(input_id));
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items(),
+        );
         ui.dispatch_event(
             &mut app,
             &mut services,
@@ -5118,7 +5149,7 @@ mod tests {
         let input = snap
             .nodes
             .iter()
-            .find(|n| n.id == input_id)
+            .find(|n| n.test_id.as_deref() == Some("combobox-input"))
             .expect("combobox search input node after ArrowDown");
         let active = input
             .active_descendant

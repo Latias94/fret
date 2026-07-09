@@ -129,16 +129,13 @@ impl AssetRefField {
         let AssetRefField { value, options } = self;
 
         let has_value = value.is_some();
-        let value_icon = value
-            .as_ref()
-            .and_then(|v| v.icon.clone())
-            .unwrap_or_else(|| {
-                if has_value {
-                    fret_icons::ids::ui::FILE
-                } else {
-                    fret_icons::ids::ui::FOLDER_OPEN
-                }
-            });
+        let value_icon = value.as_ref().and_then(|v| v.icon.clone()).unwrap_or({
+            if has_value {
+                fret_icons::ids::ui::FILE
+            } else {
+                fret_icons::ids::ui::FOLDER_OPEN
+            }
+        });
         let value_text = value
             .as_ref()
             .map(AssetRefFieldValue::display_text)

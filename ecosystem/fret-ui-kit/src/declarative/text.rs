@@ -236,6 +236,34 @@ pub fn text_table_cell<H: UiHost>(
     })
 }
 
+/// Declarative text helper for table header labels.
+///
+/// Header labels inherit the compact table typography from a scoped text role so table chrome can
+/// refine the foreground independently while retaining single-line ellipsis behavior.
+pub fn text_table_header_label<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    let refinement = {
+        let theme = Theme::global(&*cx.app);
+        text_sm_refinement(theme)
+    };
+
+    ui_typography::scope_text_style(
+        cx.text_props(TextProps {
+            layout: fill_shrinkable_single_line_layout(),
+            text: text.into(),
+            style: None,
+            color: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Ellipsis,
+            align: TextAlign::Start,
+            ink_overflow: TextInkOverflow::None,
+        }),
+        refinement,
+    )
+}
+
 /// Declarative text helper for emphasized dense table cells.
 ///
 /// Use this for row-identifying cells that need medium emphasis while retaining table-cell
@@ -266,14 +294,19 @@ pub fn text_list_row_label<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     text: impl Into<Arc<str>>,
 ) -> AnyElement {
-    let refinement = {
+    let (refinement, line_height) = {
         let theme = Theme::global(&*cx.app);
-        text_sm_refinement(theme)
+        let style = text_sm_style(theme);
+        let line_height = style.line_height.unwrap_or(style.size);
+        (
+            ui_typography::composable_refinement_from_style(&style),
+            line_height,
+        )
     };
 
     ui_typography::scope_text_style(
         cx.text_props(TextProps {
-            layout: fill_growing_zero_min_layout(),
+            layout: fill_growing_single_line_layout_with_height(line_height),
             text: text.into(),
             style: None,
             color: None,
@@ -295,14 +328,19 @@ pub fn text_list_row_label_attributed<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     rich: AttributedText,
 ) -> AnyElement {
-    let refinement = {
+    let (refinement, line_height) = {
         let theme = Theme::global(&*cx.app);
-        text_sm_refinement(theme)
+        let style = text_sm_style(theme);
+        let line_height = style.line_height.unwrap_or(style.size);
+        (
+            ui_typography::composable_refinement_from_style(&style),
+            line_height,
+        )
     };
 
     ui_typography::scope_text_style(
         cx.styled_text_props(StyledTextProps {
-            layout: fill_growing_zero_min_layout(),
+            layout: fill_growing_single_line_layout_with_height(line_height),
             rich,
             style: None,
             color: None,
@@ -1586,6 +1624,29 @@ mod tests {
     }
 
     #[test]
+    fn table_header_label_text_uses_shared_table_cell_text_role() {
+        let window = AppWindowId::default();
+        let mut app = test_app();
+        let bounds = test_bounds();
+
+        let el = elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            text_table_header_label(cx, "Very long table header")
+        });
+
+        let ElementKind::Text(props) = &el.kind else {
+            panic!("expected text_table_header_label(...) to build a Text element");
+        };
+
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        assert!(el.inherited_text_style.is_some());
+    }
+
+    #[test]
     fn table_cell_emphasis_text_keeps_single_line_truncation_and_medium_weight() {
         let window = AppWindowId::default();
         let mut app = test_app();
@@ -1668,6 +1729,11 @@ mod tests {
         assert_eq!(props.layout.flex.shrink, 1.0);
         assert_eq!(props.layout.flex.basis, Length::Px(Px(0.0)));
         assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        let expected_style = text_sm_style(&theme);
+        assert_eq!(
+            props.layout.size.height,
+            Length::Px(expected_style.line_height.unwrap_or(expected_style.size))
+        );
         assert_eq!(props.wrap, TextWrap::None);
         assert_eq!(props.overflow, TextOverflow::Ellipsis);
         assert_eq!(el.inherited_text_style, Some(text_sm_refinement(&theme)));

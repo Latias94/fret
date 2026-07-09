@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("scrollable_content.rs");
 
 // region: example
 use fret::{AppComponentCx, UiChild};
-use fret_core::Px;
+use fret_core::{Px, Size};
 use fret_ui::Theme;
 use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::declarative::style as decl_style;
@@ -59,6 +59,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                         .min_h_0(),
                 )
                 .viewport_test_id("ui-gallery-drawer-scrollable-viewport")
+                .viewport_known_content_size(Size::new(Px(360.0), Px(420.0)))
                 .into_element(cx);
 
                 let padded = {

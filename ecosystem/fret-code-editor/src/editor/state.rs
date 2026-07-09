@@ -304,6 +304,7 @@ pub(super) struct RowSceneReplayPlanEntry {
 }
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub(super) struct RowSceneReplayPlanCacheEntry {
     pub(super) row: usize,
     pub(super) retained: Arc<RowSceneRetainedFragment>,

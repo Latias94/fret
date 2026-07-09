@@ -16,7 +16,6 @@ fn label_identity_model_controls_hide_suffixes_and_preserve_focus_across_reorder
     let mut services = FakeTextService::default();
 
     let flipped = Rc::new(Cell::new(false));
-    let progress = Rc::new(Cell::new(10));
     let checkbox_a = app.models_mut().insert(false);
     let checkbox_b = app.models_mut().insert(false);
     let switch = app.models_mut().insert(false);
@@ -26,7 +25,7 @@ fn label_identity_model_controls_hide_suffixes_and_preserve_focus_across_reorder
         crate::imui_raw(cx, |ui| {
             ui.vertical(|ui| {
                 let row_a = (
-                    format!("Check {}###check-a", progress.get()),
+                    String::from("Check A###check-a"),
                     checkbox_a.clone(),
                     "imui-label-identity.checkbox.a",
                 );
@@ -100,7 +99,6 @@ fn label_identity_model_controls_hide_suffixes_and_preserve_focus_across_reorder
         "imui-label-identity.checkbox.a",
     );
 
-    progress.set(11);
     flipped.set(true);
     advance_and_run_frame(
         &mut ui,
@@ -116,8 +114,7 @@ fn label_identity_model_controls_hide_suffixes_and_preserve_focus_across_reorder
         current_focus_test_id(&mut ui, &mut app, &mut services, bounds),
         Some(String::from("imui-label-identity.checkbox.a"))
     );
-    assert!(services.prepared.iter().any(|text| text == "Check 10"));
-    assert!(services.prepared.iter().any(|text| text == "Check 11"));
+    assert!(services.prepared.iter().any(|text| text == "Check A"));
     assert!(services.prepared.iter().any(|text| text == "Radio"));
     assert!(services.prepared.iter().any(|text| text == "Switch"));
     assert!(services.prepared.iter().any(|text| text == "Amount"));

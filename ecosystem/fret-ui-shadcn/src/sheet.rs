@@ -2494,15 +2494,17 @@ mod tests {
             .children
             .first()
             .expect("expected sheet header inner stack");
-        let ElementKind::Flex(props) = &stack.kind else {
-            panic!(
-                "expected sheet header inner stack to be Flex, got {:?}",
+        let layout = match &stack.kind {
+            ElementKind::Flex(props) => &props.layout,
+            ElementKind::Container(props) => &props.layout,
+            _ => panic!(
+                "expected sheet header inner stack layout wrapper, got {:?}",
                 stack.kind
-            );
+            ),
         };
-        assert_eq!(props.layout.size.width, fret_ui::element::Length::Fill);
+        assert_eq!(layout.size.width, fret_ui::element::Length::Fill);
         assert_eq!(
-            props.layout.size.min_width,
+            layout.size.min_width,
             Some(fret_ui::element::Length::Px(Px(0.0)))
         );
     }

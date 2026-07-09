@@ -37,12 +37,30 @@ fn advanced_raw_slice() -> &'static str {
     &advanced[raw_start..raw_start + driver_start]
 }
 
+fn module_block_slice(source: &'static str, marker: &str) -> &'static str {
+    let start = source.find(marker).expect("module marker should exist");
+    let open = source[start..]
+        .find('{')
+        .map(|idx| start + idx)
+        .expect("module block should have an opening brace");
+    let mut depth = 0usize;
+    for (idx, byte) in source[open..].bytes().enumerate() {
+        match byte {
+            b'{' => depth += 1,
+            b'}' => {
+                depth = depth.saturating_sub(1);
+                if depth == 0 {
+                    return &source[start..open + idx + 1];
+                }
+            }
+            _ => {}
+        }
+    }
+    panic!("module block should have a closing brace");
+}
+
 fn advanced_prelude_slice() -> &'static str {
-    let advanced = advanced_public_slice();
-    let prelude_start = advanced
-        .find("pub mod prelude {")
-        .expect("advanced prelude marker should exist");
-    &advanced[prelude_start..]
+    module_block_slice(advanced_public_slice(), "pub mod prelude {")
 }
 
 #[test]
@@ -50,6 +68,7 @@ fn raw_state_hook_is_exposed_on_the_advanced_surface() {
     let advanced_slice = advanced_public_slice();
     let advanced_raw = advanced_raw_slice();
     let advanced_prelude = advanced_prelude_slice();
+    let advanced_prelude_without_raw = advanced_prelude;
     assert!(!advanced_slice.contains("AppUiRawStateExt"));
     for raw_symbol in [
         "AppUiRawModelExt",
@@ -64,16 +83,16 @@ fn raw_state_hook_is_exposed_on_the_advanced_surface() {
             "`{raw_symbol}` should live on the explicit advanced raw surface"
         );
         assert!(
-            !advanced_prelude.contains(raw_symbol),
+            !advanced_prelude_without_raw.contains(raw_symbol),
             "`{raw_symbol}` should stay out of the advanced wildcard prelude"
         );
     }
     assert!(advanced_raw.contains("pub use fret_runtime::{Model, ModelStore, ModelUpdateError};"));
     assert!(advanced_raw.contains("pub use fret_ui::UiTree;"));
     assert!(advanced_raw.contains("pub fn local_state_in<T>("));
-    assert!(!advanced_prelude.contains("UiTree"));
-    assert!(!advanced_prelude.contains("ModelStore"));
-    assert!(!advanced_prelude.contains("TrackedModelExt"));
+    assert!(!advanced_prelude_without_raw.contains("UiTree"));
+    assert!(!advanced_prelude_without_raw.contains("ModelStore"));
+    assert!(!advanced_prelude_without_raw.contains("TrackedModelExt"));
     assert!(!app_prelude_slice().contains("AppUiRawModelExt"));
     assert!(!app_prelude_slice().contains("AppUiRawActionNotifyExt"));
     assert!(!app_prelude_slice().contains("LocalStateRawModelExt"));

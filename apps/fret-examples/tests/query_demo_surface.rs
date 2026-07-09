@@ -6,13 +6,14 @@ fn assert_query_text_roles(source: &str, label: &str) {
     let source = compact(source);
 
     for needle in [
-        "usefret_ui_kit::declarative::textasdecl_text;",
-        "fnquery_readout_text<H:UiHost>(",
-        "fnquery_readout_text_with_color<H:UiHost>(",
-        "fnquery_data_text<H:UiHost>(",
-        "decl_text::text_control_readout(cx,text)",
-        "query_readout_text(cx,text).inherit_foreground(foreground)",
-        "decl_text::text_code_label(cx,text)",
+        "usefret::app::prelude::*;",
+        "fnquery_readout_text<'a,Cx,T>(",
+        "fnquery_readout_text_with_color<'a,Cx,T>(",
+        "fnquery_data_text<'a,Cx,T>(",
+        "Cx:AppRenderContext<'a>,",
+        "text::control_readout(cx,text)",
+        "text::control_readout(cx,text).inherit_foreground(foreground)",
+        "text::code_label(cx,text)",
         "query_readout_text(cx,info_line)",
         "query_data_text(cx,data_line)",
         "query_readout_text_with_color(cx,error_line,error_color)",

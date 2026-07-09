@@ -94,14 +94,18 @@ fn progress_snippets_stay_copyable_and_docs_aligned() {
     let normalized_rtl = normalize_ws(rtl);
     assert!(
         normalized_rtl.contains(&normalize_ws(
-            "shadcn::FieldLabel::new(\"تقدم الرفع\") .refine_layout(LayoutRefinement::default().order(1)) .test_id(\"ui-gallery-progress-rtl-title\")"
+            "shadcn::FieldLabel::new(\"تقدم الرفع\") .test_id(\"ui-gallery-progress-rtl-title\")"
         )),
-        "progress RTL snippet should keep the localized label in source order while moving it to the visual inline end",
+        "progress RTL snippet should keep the localized label first in source order",
     );
     assert!(
         normalized_rtl.contains(&normalize_ws(
-            "shadcn::FieldLabel::new(\"٦٦%\") .refine_layout(LayoutRefinement::default().order(0).mr_auto()) .test_id(\"ui-gallery-progress-rtl-value\")"
+            "shadcn::FieldLabel::new(\"٦٦%\") .test_id(\"ui-gallery-progress-rtl-value\")"
         )),
-        "progress RTL snippet should keep the localized percentage on the visual inline start lane",
+        "progress RTL snippet should keep the localized percentage as a visible value label",
+    );
+    assert!(
+        normalized_rtl.contains(".justify_between()"),
+        "progress RTL snippet should use two-ended layout instead of physical auto-margin tricks",
     );
 }

@@ -697,7 +697,7 @@ fn retained_table_render_row_visuals<H: UiHost + 'static, TData: 'static>(
         table_wrap_horizontal_scroll(cx, scroll_x_for_group, known_content_width, row)
     };
 
-    let row_content = if table_has_single_center_group(
+    if table_has_single_center_group(
         left_col_indices.len(),
         center_col_indices.len(),
         right_col_indices.len(),
@@ -724,9 +724,7 @@ fn retained_table_render_row_visuals<H: UiHost + 'static, TData: 'static>(
             .items_stretch()
             .layout(LayoutRefinement::default().w_full())
             .into_element(cx)
-    };
-
-    row_content
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -7087,7 +7085,7 @@ where
                                 key_at,
                                 row,
                             );
-                            let body = if table_has_single_center_group(
+                            if table_has_single_center_group(
                                 left_col_indices.len(),
                                 center_col_indices.len(),
                                 right_col_indices.len(),
@@ -7112,15 +7110,11 @@ where
                                 } else {
                                     body
                                 }
+                            } else if let Some(test_id) = debug_body_test_id.clone() {
+                                body_list.test_id(test_id)
                             } else {
-                                if let Some(test_id) = debug_body_test_id.clone() {
-                                    body_list.test_id(test_id)
-                                } else {
-                                    body_list
-                                }
-                            };
-
-                            body
+                                body_list
+                            }
                         };
 
                         let body = if let Some(hovered_row) = hovered_row.as_ref() {
@@ -9987,6 +9981,8 @@ where
                                                                                                             data_row.key.0,
                                                                                                             col.id.as_ref(),
                                                                                                         );
+                                                                                                        let wrapper_test_id =
+                                                                                                            explicit_test_id.clone();
                                                                                                         let cell =
                                                                                                             cx.container(
                                                                                                             ContainerProps {
@@ -10037,7 +10033,11 @@ where
                                                                                                             },
                                                                                                         );
                                                                                                         if let Some(test_id) =
-                                                                                                            hoisted_test_id.borrow_mut().take()
+                                                                                                            wrapper_test_id.or_else(|| {
+                                                                                                                hoisted_test_id
+                                                                                                                    .borrow_mut()
+                                                                                                                    .take()
+                                                                                                            })
                                                                                                         {
                                                                                                             cell.test_id(test_id)
                                                                                                         } else {
@@ -10080,6 +10080,8 @@ where
                                                                                                 data_row.key.0,
                                                                                                 col.id.as_ref(),
                                                                                             );
+                                                                                            let wrapper_test_id =
+                                                                                                explicit_test_id.clone();
                                                                                             let cell = cx.container(
                                                                                                 ContainerProps {
                                                                                                     padding: Edges::symmetric(
@@ -10141,7 +10143,11 @@ where
                                                                                             },
                                                                                         );
                                                                                             if let Some(test_id) =
-                                                                                                hoisted_test_id.borrow_mut().take()
+                                                                                                wrapper_test_id.or_else(|| {
+                                                                                                    hoisted_test_id
+                                                                                                        .borrow_mut()
+                                                                                                        .take()
+                                                                                                })
                                                                                             {
                                                                                                 cell.test_id(test_id)
                                                                                             } else {
@@ -10149,12 +10155,25 @@ where
                                                                                             }
                                                                             })
                                                                             .collect::<Vec<_>>();
-                                                                        table_fixed_row_group(
-                                                                            cx,
-                                                                            col_widths,
-                                                                            cells,
-                                                                            None,
-                                                                        )
+                                                                        if debug_row_cell_test_ids
+                                                                            && matches!(
+                                                                                props.row_measure_mode,
+                                                                                TableRowMeasureMode::Measured
+                                                                            )
+                                                                        {
+                                                                            ui::h_row(move |_cx| cells)
+                                                                                .gap(Space::N0)
+                                                                                .justify_start()
+                                                                                .items_center()
+                                                                                .into_element(cx)
+                                                                        } else {
+                                                                            table_fixed_row_group(
+                                                                                cx,
+                                                                                col_widths,
+                                                                                cells,
+                                                                                None,
+                                                                            )
+                                                                        }
                                                                     };
 
                                                                     let known_content_width = scroll_x

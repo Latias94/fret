@@ -140,6 +140,7 @@ fn transform_section_presentation(
     presentation
 }
 
+#[allow(clippy::arc_with_non_send_sync)]
 fn map_section_outcome(
     section: TransformEditSection,
     on_axis_outcome: Option<OnTransformEditAxisOutcome>,

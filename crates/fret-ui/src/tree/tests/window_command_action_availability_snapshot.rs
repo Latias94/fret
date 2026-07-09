@@ -1490,7 +1490,7 @@ fn action_availability_no_focus_subtree_fallback_reuses_subtree_interest_across_
 
     assert_eq!(
         crate::tree::take_command_availability_subtree_interest_probe_count(),
-        (depth + 1) as usize,
+        depth + 1,
         "subtree interest should be computed once per node in the fallback subtree"
     );
 

@@ -315,6 +315,7 @@ fn ui_gallery_nav_to_select_page() -> ScriptV2Builder {
             padding_px: 24.0,
             padding_insets_px: None,
             timeout_frames: 1200,
+            motion_check: None,
         })
         .wait_exists(test_id("ui-gallery-select-trigger"), 600)
 }
@@ -342,6 +343,7 @@ fn ui_gallery_nav_to_select_page_no_escape() -> ScriptV2Builder {
             padding_px: 24.0,
             padding_insets_px: None,
             timeout_frames: 1200,
+            motion_check: None,
         })
         .wait_exists(test_id("ui-gallery-select-trigger"), 600)
 }
@@ -754,6 +756,7 @@ fn ui_gallery_combobox_flip_tight_window_v2() -> UiActionScriptV2 {
             padding_px: 2.0,
             padding_insets_px: None,
             timeout_frames: 240,
+            motion_check: None,
         })
         .click_stable(rtl_trigger.clone())
         .wait_exists(test_id("ui-gallery-combobox-rtl-input"), 240)
@@ -877,6 +880,7 @@ fn ui_gallery_combobox_long_list_scroll_select_last_v2() -> UiActionScriptV2 {
             padding_px: 2.0,
             padding_insets_px: None,
             timeout_frames: 240,
+            motion_check: None,
         })
         .click_stable(trigger.clone())
         .wait_exists(test_id("ui-gallery-combobox-long-list-input"), 240)
@@ -903,6 +907,7 @@ fn ui_gallery_combobox_long_list_scroll_select_last_v2() -> UiActionScriptV2 {
             padding_px: 2.0,
             padding_insets_px: None,
             timeout_frames: 600,
+            motion_check: None,
         })
         .click_stable(last_item.clone())
         .wait_not_exists(listbox.clone(), 240)
@@ -920,6 +925,7 @@ fn ui_gallery_combobox_long_list_scroll_select_last_v2() -> UiActionScriptV2 {
             padding_px: 2.0,
             padding_insets_px: None,
             timeout_frames: 600,
+            motion_check: None,
         })
         .push(UiActionStepV2::WaitUntil {
             window: None,
@@ -972,6 +978,7 @@ fn ui_gallery_select_open_jitter_click_stable_v2() -> UiActionScriptV2 {
             padding_px: 24.0,
             padding_insets_px: None,
             timeout_frames: 1200,
+            motion_check: None,
         })
         .wait_exists(test_id("ui-gallery-select-trigger"), 600)
         .click_stable(test_id("ui-gallery-select-trigger"))

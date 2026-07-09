@@ -1272,14 +1272,13 @@ impl<H: UiHost> UiTree<H> {
                 // bounds without forcing a full ancestor relayout.
                 if let Some(scroll_ancestor) =
                     self.nearest_scrollable_ancestor_via_child_edges(root)
+                    && scheduled_followups.insert(scroll_ancestor)
                 {
-                    if scheduled_followups.insert(scroll_ancestor) {
-                        self.schedule_barrier_relayout_with_source_and_detail(
-                            scroll_ancestor,
-                            UiDebugInvalidationSource::Other,
-                            UiDebugInvalidationDetail::BarrierFollowupRelayout,
-                        );
-                    }
+                    self.schedule_barrier_relayout_with_source_and_detail(
+                        scroll_ancestor,
+                        UiDebugInvalidationSource::Other,
+                        UiDebugInvalidationDetail::BarrierFollowupRelayout,
+                    );
                 }
 
                 self.flush_viewport_roots_after_root(
@@ -2088,14 +2087,14 @@ impl<H: UiHost> UiTree<H> {
             // ancestor that inferred its content extent earlier in the frame can be left with a
             // stale range. Re-run the nearest scrollable ancestor in the same frame so scroll
             // extents track the reconciled cache-root bounds immediately.
-            if let Some(scroll_ancestor) = self.nearest_scrollable_ancestor_via_child_edges(root) {
-                if scheduled_followups.insert(scroll_ancestor) {
-                    self.schedule_barrier_relayout_with_source_and_detail(
-                        scroll_ancestor,
-                        UiDebugInvalidationSource::Other,
-                        UiDebugInvalidationDetail::BarrierFollowupRelayout,
-                    );
-                }
+            if let Some(scroll_ancestor) = self.nearest_scrollable_ancestor_via_child_edges(root)
+                && scheduled_followups.insert(scroll_ancestor)
+            {
+                self.schedule_barrier_relayout_with_source_and_detail(
+                    scroll_ancestor,
+                    UiDebugInvalidationSource::Other,
+                    UiDebugInvalidationDetail::BarrierFollowupRelayout,
+                );
             }
         }
 

@@ -16,6 +16,7 @@ pub(super) struct PresetSwatchActivateArgs {
     pub(super) show_alpha: bool,
 }
 
+#[allow(clippy::arc_with_non_send_sync)]
 pub(super) fn preset_swatch_on_activate(args: PresetSwatchActivateArgs) -> OnActivate {
     let PresetSwatchActivateArgs {
         model,

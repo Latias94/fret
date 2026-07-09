@@ -1628,7 +1628,9 @@ fn shell_quote_for_display(value: &str) -> String {
 }
 
 fn short_artifact_result_path(path: &str) -> String {
-    Path::new(path)
+    let path = path.trim();
+    let normalized = path.replace('\\', "/");
+    Path::new(&normalized)
         .file_name()
         .and_then(|value| value.to_str())
         .filter(|value| !value.trim().is_empty())
@@ -1940,10 +1942,10 @@ fn selected_workflow_run_regression_index_path_from_state(
 }
 
 fn workflow_regression_index_parent_dir(index_path: &str) -> Option<String> {
-    Path::new(index_path.trim())
-        .parent()
-        .filter(|path| !path.as_os_str().is_empty())
-        .map(|path| path.to_string_lossy().to_string())
+    let index_path = index_path.trim();
+    let last_separator = index_path.rfind(['/', '\\'])?;
+    let parent = &index_path[..last_separator];
+    (!parent.trim().is_empty()).then(|| parent.to_string())
 }
 
 fn normalize_workflow_artifact_path(path: &str) -> String {

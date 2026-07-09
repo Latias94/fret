@@ -32,7 +32,7 @@ pub(crate) fn build_tooling_failure_script_result(
     note: Option<String>,
 ) -> UiScriptResultV1 {
     let now = now_unix_ms();
-    let mut result = prior_result.cloned().unwrap_or_else(|| UiScriptResultV1 {
+    let mut result = prior_result.cloned().unwrap_or(UiScriptResultV1 {
         schema_version: 1,
         run_id: 0,
         updated_unix_ms: now,

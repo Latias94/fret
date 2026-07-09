@@ -394,6 +394,13 @@ fn scroll_overflow_observation_needs_follow_up_probe(
         && !scroll_overflow_observation_is_authoritative(observation)
 }
 
+fn scroll_trusted_shrink_has_axis_evidence(trusted: Px, loose: Px, content: Px) -> bool {
+    trusted.0 > 0.0
+        && trusted.0 + 0.5 < content.0
+        && (loose.0 + 0.5 < content.0
+            || loose.0 > trusted.0 + SCROLL_OVERFLOW_NONLEAF_OVERSHOOT_TOLERANCE)
+}
+
 fn maybe_schedule_extent_probe_after_observation_budget_hit<H: UiHost>(
     app: &mut H,
     tree: &mut UiTree<H>,
@@ -3107,6 +3114,8 @@ impl ElementHostWidget {
             let authoritative_post_layout_observation = post_layout_authoritative_scan
                 && post_layout_observation_can_grow
                 && observation_authoritative;
+            let multi_child_post_layout_shrink_revalidation =
+                post_layout_shrink_revalidation && cx.children.len() > 1;
             let mut deferred_unbounded_growth_observed_but_not_authoritative = false;
             if authoritative_post_layout_observation {
                 // Move the post-layout path closer to GPUI's authoritative child-bounds union:
@@ -3120,12 +3129,36 @@ impl ElementHostWidget {
                         .max(viewport.0.max(0.0)))
                 };
                 let next_content_w = if props.axis.scroll_x() && observed.trusted.width.0 > 0.0 {
-                    round_scroll_extent(observed.trusted.width, desired.width)
+                    let observed_w = round_scroll_extent(observed.trusted.width, desired.width);
+                    if observed_w.0 + 0.5 < content_w.0
+                        && !multi_child_post_layout_shrink_revalidation
+                        && !scroll_trusted_shrink_has_axis_evidence(
+                            observed.trusted.width,
+                            observed.loose.width,
+                            content_w,
+                        )
+                    {
+                        content_w
+                    } else {
+                        observed_w
+                    }
                 } else {
                     content_w
                 };
                 let next_content_h = if props.axis.scroll_y() && observed.trusted.height.0 > 0.0 {
-                    round_scroll_extent(observed.trusted.height, desired.height)
+                    let observed_h = round_scroll_extent(observed.trusted.height, desired.height);
+                    if observed_h.0 + 0.5 < content_h.0
+                        && !multi_child_post_layout_shrink_revalidation
+                        && !scroll_trusted_shrink_has_axis_evidence(
+                            observed.trusted.height,
+                            observed.loose.height,
+                            content_h,
+                        )
+                    {
+                        content_h
+                    } else {
+                        observed_h
+                    }
                 } else {
                     content_h
                 };
@@ -3323,24 +3356,44 @@ impl ElementHostWidget {
                         && observed.loose.height.0 + 0.5 < content_h.0;
                     let authoritative_trusted_shrink_evidence_x = post_layout_shrink_revalidation
                         && observation_authoritative
-                        && observed.trusted.width.0 > 0.0
-                        && observed.trusted.width.0 + 0.5 < content_w.0;
+                        && scroll_trusted_shrink_has_axis_evidence(
+                            observed.trusted.width,
+                            observed.loose.width,
+                            content_w,
+                        );
                     let authoritative_trusted_shrink_evidence_y = post_layout_shrink_revalidation
                         && observation_authoritative
-                        && observed.trusted.height.0 > 0.0
-                        && observed.trusted.height.0 + 0.5 < content_h.0;
-                    let multi_child_post_layout_shrink_revalidation =
-                        post_layout_shrink_revalidation && cx.children.len() > 1;
+                        && scroll_trusted_shrink_has_axis_evidence(
+                            observed.trusted.height,
+                            observed.loose.height,
+                            content_h,
+                        );
+                    let trusted_overflow_shrink_evidence_x = observed.trusted.width.0
+                        > desired.width.0 + 0.5
+                        && (!post_layout_shrink_revalidation
+                            || scroll_trusted_shrink_has_axis_evidence(
+                                observed.trusted.width,
+                                observed.loose.width,
+                                content_w,
+                            ));
+                    let trusted_overflow_shrink_evidence_y = observed.trusted.height.0
+                        > desired.height.0 + 0.5
+                        && (!post_layout_shrink_revalidation
+                            || scroll_trusted_shrink_has_axis_evidence(
+                                observed.trusted.height,
+                                observed.loose.height,
+                                content_h,
+                            ));
                     let can_shrink_x = defer_this_frame
                         || post_layout_shrink_has_layout_evidence_x
                         || authoritative_trusted_shrink_evidence_x
                         || multi_child_post_layout_shrink_revalidation
-                        || observed.trusted.width.0 > desired.width.0 + 0.5;
+                        || trusted_overflow_shrink_evidence_x;
                     let can_shrink_y = defer_this_frame
                         || post_layout_shrink_has_layout_evidence_y
                         || authoritative_trusted_shrink_evidence_y
                         || multi_child_post_layout_shrink_revalidation
-                        || observed.trusted.height.0 > desired.height.0 + 0.5;
+                        || trusted_overflow_shrink_evidence_y;
                     let mut changed = false;
                     if props.axis.scroll_x()
                         && can_shrink_x
@@ -3744,6 +3797,22 @@ mod budget_probe_tests {
             deep_scan_budget_hit,
             deep_scan_skipped_absolute: 0,
         }
+    }
+
+    #[test]
+    fn trusted_shrink_requires_loose_shrink_or_substantial_wrapper_delta() {
+        assert!(
+            scroll_trusted_shrink_has_axis_evidence(Px(600.0), Px(600.0), Px(800.0)),
+            "loose observation shrink is enough evidence to clamp"
+        );
+        assert!(
+            scroll_trusted_shrink_has_axis_evidence(Px(200.0), Px(800.0), Px(800.0)),
+            "large trusted-vs-loose delta indicates stale wrapper extent"
+        );
+        assert!(
+            !scroll_trusted_shrink_has_axis_evidence(Px(775.0), Px(800.0), Px(800.0)),
+            "small trusted-vs-loose deltas are wrapper noise and must not shrink"
+        );
     }
 
     #[test]

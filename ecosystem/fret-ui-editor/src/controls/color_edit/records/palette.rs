@@ -3,7 +3,7 @@ use std::sync::Arc;
 const COLOR_PRESETS: [(&str, u32); 12] = [
     ("Slate", 0x0f_17_2a),
     ("Red", 0xef_44_44),
-    ("Orange", 0xf9_73_16),
+    ("Orange", 0xf97316),
     ("Amber", 0xf5_9e_0b),
     ("Yellow", 0xea_d3_08),
     ("Green", 0x22_c5_5e),

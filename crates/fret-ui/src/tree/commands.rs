@@ -1232,7 +1232,7 @@ impl<H: UiHost> UiTree<H> {
         input_ctx: &InputContext,
         node_id: NodeId,
         command: &CommandId,
-        mut publication_cache: Option<&mut CommandAvailabilityPublicationCache>,
+        publication_cache: Option<&mut CommandAvailabilityPublicationCache>,
     ) -> CommandAvailability {
         self.command_availability_at_node_with_interest_route(
             app,
@@ -1240,7 +1240,7 @@ impl<H: UiHost> UiTree<H> {
             node_id,
             command,
             CommandAvailabilityInterestRoute::DispatchPath,
-            publication_cache.as_deref_mut(),
+            publication_cache,
         )
     }
 
@@ -1273,7 +1273,7 @@ impl<H: UiHost> UiTree<H> {
         #[cfg(test)]
         super::record_command_availability_widget_probe();
 
-        let availability = self.with_widget_mut(node_id, |widget, tree| {
+        self.with_widget_mut(node_id, |widget, tree| {
             let window = tree.window;
             let focus = tree.focus;
             let mut cx = CommandAvailabilityCx {
@@ -1285,9 +1285,7 @@ impl<H: UiHost> UiTree<H> {
                 focus,
             };
             widget.command_availability(&mut cx, command)
-        });
-
-        availability
+        })
     }
 
     fn declarative_node_may_handle_command_availability(
@@ -2300,7 +2298,7 @@ impl<H: UiHost> UiTree<H> {
                 }
 
                 let Some(parent) = Self::dispatch_snapshot_parent_for_node(
-                    &dispatch_snapshot,
+                    dispatch_snapshot,
                     node_id,
                     "command dispatch bubble",
                 ) else {

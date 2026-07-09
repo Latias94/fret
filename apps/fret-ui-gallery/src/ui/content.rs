@@ -199,8 +199,9 @@ pub(crate) fn content_view(
                     .min_w_0(),
             )
             .viewport_test_id("ui-gallery-content-viewport")
-            .viewport_intrinsic_measure_mode(fret_ui::element::ScrollIntrinsicMeasureMode::Viewport)
-            .viewport_probe_unbounded(false);
+            .viewport_intrinsic_measure_mode(
+                fret_ui::element::ScrollIntrinsicMeasureMode::Viewport,
+            );
         #[cfg(feature = "gallery-dev")]
         if selected == PAGE_CODE_VIEW_TORTURE {
             scroll = scroll.viewport_focus_ring(false);
@@ -221,8 +222,9 @@ pub(crate) fn content_view(
                     .min_h_0(),
             )
             .viewport_test_id("ui-gallery-content-viewport")
-            .viewport_intrinsic_measure_mode(fret_ui::element::ScrollIntrinsicMeasureMode::Viewport)
-            .viewport_probe_unbounded(false);
+            .viewport_intrinsic_measure_mode(
+                fret_ui::element::ScrollIntrinsicMeasureMode::Viewport,
+            );
         #[cfg(feature = "gallery-dev")]
         if selected == PAGE_VIRTUAL_LIST_TORTURE {
             scroll = scroll.viewport_test_id("ui-gallery-content-viewport-virtual_list_torture");

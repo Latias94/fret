@@ -79,7 +79,7 @@ mod tests {
             window,
             Rect::default(),
             "checkerboard-grid",
-            |cx| checkerboard_grid(cx),
+            checkerboard_grid,
         );
 
         assert!(matches!(element.kind, ElementKind::Canvas(_)));

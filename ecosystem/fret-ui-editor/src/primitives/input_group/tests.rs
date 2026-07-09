@@ -118,9 +118,9 @@ fn editor_clear_button_segment_multiline_remains_segment_wrapped() {
     assert!(matches!(el.children[0].kind, ElementKind::Container(_)));
 }
 
-fn unwrap_joined_frame_content<'a>(
-    root: &'a fret_ui::element::AnyElement,
-) -> &'a fret_ui::element::AnyElement {
+fn unwrap_joined_frame_content(
+    root: &fret_ui::element::AnyElement,
+) -> &fret_ui::element::AnyElement {
     let pointer = &root.children[0];
     let frame = &pointer.children[0];
     &frame.children[0]

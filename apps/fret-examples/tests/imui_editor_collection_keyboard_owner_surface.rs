@@ -209,8 +209,8 @@ fn imui_editor_proof_demo_keeps_collection_keyboard_owner_app_owned_and_explicit
         "proof_collection_keyboard_apply_navigation(",
         "host.notify(acx);",
         "host.request_focus(acx.target);",
-        "state.active_id = next_selection.first_selected().cloned();",
-        "state.active_id = None;",
+        "active_id: next_selection.first_selected().cloned(),",
+        "ProofCollectionKeyboardState::default(),",
         "\"Active tile: none. Click background to focus the collection scope, then use Arrow/Home/End to drive selection app-locally.\"",
         "\"Active tile: {}. Shift+Arrow/Home/End extends from the current anchor; Escape clears the selection without widening shared IMUI helper ownership.\"",
     ] {

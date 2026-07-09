@@ -39,15 +39,13 @@ pub(super) fn begin_window_redraw_diag_screenshot_capture(
     };
 
     let window_ffi = app_window.data().as_ffi();
-    let Some((cmd, inflight)) = diag.begin_capture_for_window(
+    let (cmd, inflight) = diag.begin_capture_for_window(
         device,
         window_ffi,
         &frame.texture,
         surface_format,
         surface_size,
-    ) else {
-        return None;
-    };
+    )?;
     cmd_buffers.push(cmd);
     Some(inflight)
 }
@@ -84,11 +82,8 @@ pub(super) fn begin_window_redraw_bundle_screenshot_readback(
     let (Some(dir), Some((frame, _view))) = (screenshot_dir, frame_view) else {
         return None;
     };
-    let Some((pending, copy_cmd)) =
-        diag.begin_readback(device, &frame.texture, surface_format, surface_size)
-    else {
-        return None;
-    };
+    let (pending, copy_cmd) =
+        diag.begin_readback(device, &frame.texture, surface_format, surface_size)?;
 
     cmd_buffers.push(copy_cmd);
     Some(WindowRedrawBundleScreenshotReadback { pending, dir })

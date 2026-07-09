@@ -2,9 +2,10 @@
 ///
 /// Dear ImGui exposes this as `AlphaOpaque`, `AlphaNoBg`, and `AlphaPreviewHalf` flags on
 /// `ColorButton` / `ColorEdit`. Fret keeps it as explicit per-control editor policy.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum ColorEditAlphaPreview {
     /// Show transparent colors over a checkerboard background.
+    #[default]
     Checkerboard,
     /// Show the current RGB channels as fully opaque in preview only.
     Opaque,
@@ -12,12 +13,6 @@ pub enum ColorEditAlphaPreview {
     NoBackground,
     /// Split the preview between opaque RGB and transparent checkerboard-backed RGB.
     Half,
-}
-
-impl Default for ColorEditAlphaPreview {
-    fn default() -> Self {
-        Self::Checkerboard
-    }
 }
 
 /// Per-control color drag/drop policy for editor `ColorEdit`.

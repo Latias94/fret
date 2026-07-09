@@ -442,6 +442,7 @@ mod source_policy_tests {
     const DECLARATIVE_PIXELATE_RS: &str = include_str!("declarative/pixelate.rs");
     const IMUI_RS: &str = include_str!("imui.rs");
     const IMUI_FACADE_SUPPORT_RS: &str = include_str!("imui/facade_support.rs");
+    const IMUI_FACADE_SUPPORT_UI_WRITER_RS: &str = include_str!("imui/facade_support/ui_writer.rs");
     const PRIMITIVES_DISMISSABLE_LAYER_RS: &str = include_str!("primitives/dismissable_layer.rs");
     const PRIMITIVES_ALERT_DIALOG_RS: &str = include_str!("primitives/alert_dialog.rs");
     const PRIMITIVES_DIALOG_RS: &str = include_str!("primitives/dialog.rs");
@@ -458,7 +459,8 @@ mod source_policy_tests {
     const PRIMITIVES_TOGGLE_RS: &str = include_str!("primitives/toggle.rs");
     const PRIMITIVES_TOOLBAR_RS: &str = include_str!("primitives/toolbar.rs");
     const PRIMITIVES_TOOLTIP_RS: &str = include_str!("primitives/tooltip.rs");
-    const RECIPES_SORTABLE_DND_RS: &str = include_str!("recipes/sortable_dnd.rs");
+    const RECIPES_SORTABLE_DND_REORDER_LIST_RS: &str =
+        include_str!("recipes/sortable_dnd/reorder_list.rs");
     const STATE_RS: &str = include_str!("state.rs");
     const UI_RS: &str = include_str!("ui.rs");
     const UI_BUILDER_RS: &str = include_str!("ui_builder.rs");
@@ -551,7 +553,8 @@ mod source_policy_tests {
         assert!(
             LIB_RS.contains("crate::ui_builder::IntoUiElement::into_element(child, cx.elements())")
         );
-        assert!(IMUI_FACADE_SUPPORT_RS.contains("B: IntoUiElement<H>"));
+        assert!(IMUI_FACADE_SUPPORT_RS.contains("pub use ui_writer::UiWriterUiKitExt;"));
+        assert!(IMUI_FACADE_SUPPORT_UI_WRITER_RS.contains("B: IntoUiElement<H>"));
     }
 
     #[test]
@@ -733,8 +736,8 @@ mod source_policy_tests {
                 "roving_focus_group::roving_focus_group_apg(",
             ),
             (
-                "recipes/sortable_dnd.rs",
-                RECIPES_SORTABLE_DND_RS,
+                "recipes/sortable_dnd/reorder_list.rs",
+                RECIPES_SORTABLE_DND_REORDER_LIST_RS,
                 "collect_children(cx, items)",
             ),
         ] {

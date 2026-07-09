@@ -2177,7 +2177,7 @@ mod tests {
         let table = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
             Table::new([TableBody::new([TableRow::new(
                 1,
-                [TableCell::new(decl_text::text_table_cell(cx, label)).into_element(cx)],
+                [TableCell::new(decl_text::text_list_row_label(cx, label)).into_element(cx)],
             )
             .into_element(cx)])
             .into_element(cx)])
@@ -2237,7 +2237,8 @@ mod tests {
         );
 
         let head = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
-            TableHead::new_children([decl_text::text_table_cell(cx, "Status")]).into_element(cx)
+            TableHead::new_children([decl_text::text_table_header_label(cx, "Status")])
+                .into_element(cx)
         });
 
         let text = find_text_element(&head, "Status").expect("expected table head text node");

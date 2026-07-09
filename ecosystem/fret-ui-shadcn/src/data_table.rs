@@ -162,17 +162,12 @@ fn parse_column_action(command: &str) -> Option<(ColumnAction, &str)> {
 /// `Auto` keeps the public recipe ergonomic while allowing the component to choose the lower-cost
 /// retained host for business tables. Use `Declarative` when validating the legacy
 /// pure declarative path or when validating a custom integration against the legacy surface.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum DataTableVirtualizationStrategy {
+    #[default]
     Auto,
     Declarative,
     Retained,
-}
-
-impl Default for DataTableVirtualizationStrategy {
-    fn default() -> Self {
-        Self::Auto
-    }
 }
 
 fn wire_column_actions_command_handler<H: UiHost>(
@@ -1517,7 +1512,7 @@ mod tests {
             let theme = Theme::global(&*cx.app).snapshot();
             let table_style = table_text_style(&theme);
             let cell = apply_default_text_style_recursive(
-                decl_text::text_table_cell(cx, label),
+                decl_text::text_list_row_label(cx, label),
                 &table_style,
             );
             let text = find_text_element(&cell, label).expect("expected data-table cell text node");

@@ -58,7 +58,7 @@ fn docking_demo_uses_dock_surface_for_common_docking_assembly() {
         "surface.install_panel_registry",
         "surface.install_viewport_overlay_hooks",
         "surface.ensure_panel",
-        "surface.import_layout_for_windows",
+        "surface.try_import_layout_for_windows",
         "surface.export_layout",
         "surface.host",
         "surface.host_lifecycle().on_dock_op",

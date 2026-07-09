@@ -1419,6 +1419,7 @@ fn overlay_rect_summary(rect: &UiRectV1) -> String {
 }
 
 #[cfg(test)]
+#[allow(clippy::items_after_test_module)]
 mod tests {
     use super::*;
     use crate::ui_diagnostics::script_engine::overlay_placement_trace_entry_matches_query_any_step;

@@ -314,23 +314,12 @@ pub(super) struct HitTestBoundsTreeQueryStats {
     pub(super) nodes_pushed: u32,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub(in crate::tree) struct BoundaryHitTestBoundsState {
     frame_id: Option<FrameId>,
     product_initialized: bool,
     enabled: bool,
     tree: BoundsTree,
-}
-
-impl Default for BoundaryHitTestBoundsState {
-    fn default() -> Self {
-        Self {
-            frame_id: None,
-            product_initialized: false,
-            enabled: false,
-            tree: BoundsTree::default(),
-        }
-    }
 }
 
 impl BoundaryHitTestBoundsState {

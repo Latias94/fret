@@ -5571,6 +5571,7 @@ mod authoring_surface_policy_tests {
             "integration",
             "overlay",
             "pointer",
+            "scroll",
             "semantics",
             "style",
             "time",
@@ -6179,7 +6180,14 @@ mod authoring_surface_policy_tests {
             .cloned()
             .collect::<Vec<_>>();
 
-        assert_eq!(overlap, vec!["Px".to_string(), "ui".to_string()]);
+        assert_eq!(
+            overlap,
+            vec![
+                "Invalidation".to_string(),
+                "Px".to_string(),
+                "ui".to_string()
+            ]
+        );
     }
 
     #[test]

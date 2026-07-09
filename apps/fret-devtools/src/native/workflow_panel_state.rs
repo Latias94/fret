@@ -12,6 +12,7 @@ use super::{
 };
 
 pub(super) struct WorkflowPanelState {
+    #[allow(dead_code)]
     pub(super) selected_workflow_id: Arc<str>,
     pub(super) commands: Vec<workflow_run::DevtoolsWorkflowRunCommandV1>,
     pub(super) selected_command_label: String,

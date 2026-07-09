@@ -130,7 +130,10 @@ mod tests {
         let buf = buffer("abc");
 
         assert_eq!(
-            validate_range_decorations(&buf, &[RangeDecoration::new(2..1, "bad")]),
+            validate_range_decorations(
+                &buf,
+                &[RangeDecoration::new(Range { start: 2, end: 1 }, "bad")]
+            ),
             Err(RangeDecorationError::RangeStartAfterEnd)
         );
         assert_eq!(

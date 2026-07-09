@@ -1242,7 +1242,7 @@ impl FretDevtoolsMcp {
 impl ServerHandler for FretDevtoolsMcp {
     fn get_info(&self) -> ServerInfo {
         ServerInfo {
-            instructions: Some(mcp_server_instructions().into()),
+            instructions: Some(mcp_server_instructions()),
             capabilities: ServerCapabilities::builder()
                 .enable_tools()
                 .enable_resources_with(ResourcesCapability {

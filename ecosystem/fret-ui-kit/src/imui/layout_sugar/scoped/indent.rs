@@ -16,7 +16,7 @@ pub(in crate::imui) fn indent_element<H: UiHost>(
     f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
 ) -> AnyElement {
     let theme = Theme::global(&*cx.app);
-    let indent_width = options.width.resolve(&*theme);
+    let indent_width = options.width.resolve(theme);
     let spacer = dummy_element(
         cx,
         Size::new(indent_width, Px(0.0)),

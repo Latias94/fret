@@ -2,6 +2,7 @@ pub const SOURCE: &str = include_str!("menu.rs");
 
 // region: example
 use fret::{AppComponentCx, UiChild};
+use fret_core::Px;
 use fret_ui::Invalidation;
 use fret_ui_kit::{
     IntoUiElement,
@@ -65,7 +66,12 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     })
     .gap(if is_md { Space::N4 } else { Space::N2 })
     .items_center()
-    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .layout(
+        LayoutRefinement::default()
+            .w_full()
+            .min_w_0()
+            .min_h(Px(40.0)),
+    )
     .into_element(cx)
     .test_id("ui-gallery-separator-menu")
 }

@@ -19,6 +19,7 @@ use crate::{
 };
 use fret_diag::devtools_gate_profile_lines;
 
+#[allow(clippy::too_many_arguments)]
 pub(super) fn devtools_first_open_next_action_lines(
     has_session: bool,
     session_count: usize,

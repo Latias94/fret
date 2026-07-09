@@ -324,7 +324,7 @@ pub(super) fn paint_line_plot_linked_cursor_readout(
     );
 }
 
-fn line_plot_readout_rows<'a>(
+fn line_plot_readout_rows(
     model: &PlotPanelModel,
     x: f64,
     plot_size: Size,
@@ -332,7 +332,7 @@ fn line_plot_readout_rows<'a>(
     x_scale: AxisScale,
     y_scale: AxisScale,
     scale_factor: f32,
-    hidden_series: &'a [SeriesId],
+    hidden_series: &[SeriesId],
 ) -> Vec<PlotCursorReadoutRow> {
     let hidden: std::collections::HashSet<SeriesId> = hidden_series.iter().copied().collect();
     let mut readout_series: Vec<PlotCursorReadoutSeries<'_>> = Vec::new();
@@ -392,7 +392,7 @@ fn format_line_plot_readout_text(
         let y_text = row
             .y
             .filter(|y| y.is_finite())
-            .map(|y| axis_tick_label_text(y_scale, &formatter, y, 1.0))
+            .map(|y| axis_tick_label_text(y_scale, formatter, y, 1.0))
             .unwrap_or_else(|| "NA".to_string());
         text.push_str(&format!("\n{}: {axis_label}={y_text}", row.label));
     }

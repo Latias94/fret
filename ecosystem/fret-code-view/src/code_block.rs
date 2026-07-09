@@ -1668,7 +1668,7 @@ fn render_code_block_line_row<H: UiHost>(
     rich: AttributedText,
     line_count: usize,
 ) -> AnyElement {
-    let code = cx.styled_text_props(StyledTextProps {
+    cx.styled_text_props(StyledTextProps {
         layout: {
             let mut layout = LayoutStyle::default();
             layout.size.width = Length::Fill;
@@ -1683,9 +1683,7 @@ fn render_code_block_line_row<H: UiHost>(
         overflow: TextOverflow::Clip,
         align: fret_core::TextAlign::Start,
         ink_overflow: TextInkOverflow::None,
-    });
-
-    code
+    })
 }
 
 #[allow(clippy::too_many_arguments)]

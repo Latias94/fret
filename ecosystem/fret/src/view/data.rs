@@ -322,9 +322,7 @@ fn take_mutation_completion_state_in<H: UiHost, TIn: 'static, TOut: 'static>(
         return None;
     }
 
-    let Some(completion_token) = completion_token else {
-        return None;
-    };
+    let completion_token = completion_token?;
 
     let fresh = cx.keyed_slot_state(
         (effect_key, handle.model().id()),

@@ -38,7 +38,7 @@ pub(in crate::controls::color_edit::popup) fn color_side_preview<H: UiHost>(
 ) -> AnyElement {
     let original_cell = mode
         .shows_original()
-        .then(|| original)
+        .then_some(original)
         .flatten()
         .map(|original| {
             original::original_reference_preview_cell(

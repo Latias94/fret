@@ -48,7 +48,7 @@ fn container_queries_docking_demo_uses_dock_surface_for_common_docking_assembly(
         "DockSurface::new",
         "surface.install_panel_registry",
         "surface.ensure_panel",
-        "surface.import_layout_for_windows",
+        "surface.try_import_layout_for_windows",
         "surface.host",
         "surface.host_lifecycle().on_dock_op",
         ".host_lifecycle()",

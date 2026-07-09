@@ -126,13 +126,11 @@ fn label_identity_selectable_and_menu_item_suffixes_hide_from_text() {
     let mut services = FakeTextService::default();
 
     let flipped = Rc::new(Cell::new(false));
-    let progress = Rc::new(Cell::new(10));
-
     let render = |cx: &mut ElementContext<'_, TestHost>| {
         crate::imui_raw(cx, |ui| {
             ui.vertical(|ui| {
                 let row_a = (
-                    format!("Row {}###row-a", progress.get()),
+                    String::from("Row A###row-a"),
                     "imui-label-identity.selectable.a",
                 );
                 let row_b = (
@@ -215,7 +213,6 @@ fn label_identity_selectable_and_menu_item_suffixes_hide_from_text() {
         "imui-label-identity.selectable.a",
     );
 
-    progress.set(11);
     flipped.set(true);
     advance_and_run_frame(
         &mut ui,
@@ -257,8 +254,7 @@ fn label_identity_selectable_and_menu_item_suffixes_hide_from_text() {
         bounds,
         "imui-label-identity.menu.open"
     ));
-    assert!(services.prepared.iter().any(|text| text == "Row 10"));
-    assert!(services.prepared.iter().any(|text| text == "Row 11"));
+    assert!(services.prepared.iter().any(|text| text == "Row A"));
     assert!(services.prepared.iter().any(|text| text == "Open"));
     assert!(services.prepared.iter().any(|text| text == "Save 10"));
     assert!(

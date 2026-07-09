@@ -18,7 +18,7 @@ pub(super) fn slider_pressable_props(
 
     props.a11y = PressableA11y {
         role: Some(SemanticsRole::Slider),
-        label: options.a11y_label.clone().or_else(|| Some(label)),
+        label: options.a11y_label.clone().or(Some(label)),
         test_id: options.test_id.clone(),
         ..Default::default()
     };

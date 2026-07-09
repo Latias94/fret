@@ -21,17 +21,16 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                 let label_row = ui::h_flex(|cx| {
                     vec![
                         shadcn::FieldLabel::new("تقدم الرفع")
-                            .refine_layout(LayoutRefinement::default().order(1))
                             .test_id("ui-gallery-progress-rtl-title")
                             .into_element(cx),
                         shadcn::FieldLabel::new("٦٦%")
-                            .refine_layout(LayoutRefinement::default().order(0).mr_auto())
                             .test_id("ui-gallery-progress-rtl-value")
                             .into_element(cx),
                     ]
                 })
                 .layout(LayoutRefinement::default().w_full())
                 .items_center()
+                .justify_between()
                 .test_id("ui-gallery-progress-rtl-row")
                 .into_element(cx);
 

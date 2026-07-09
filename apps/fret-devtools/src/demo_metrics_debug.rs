@@ -85,6 +85,7 @@ pub(crate) fn devtools_demo_metrics_debug_lines_with_state(
     )
 }
 
+#[allow(clippy::too_many_arguments)]
 fn devtools_demo_metrics_debug_lines_with_runtime_state(
     artifacts_root: &str,
     selected_bundle_count: usize,
