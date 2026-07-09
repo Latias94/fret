@@ -1,0 +1,111 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "Docking arbitration demo: reset default layout cleans up a tear-off window",
+    "tags": ["docking", "multiwindow", "tearoff", "reset", "placement", "gate"],
+    "required_capabilities": ["diag.script_v2", "diag.multi_window"],
+    "env_defaults": {
+      "FRET_DOCK_ALLOW_MULTI_WINDOW_TEAR_OFF": "1"
+    },
+    "target_hints": [
+      "Tears one viewport into a second OS window, then clicks the demo reset button.",
+      "Expected behavior: auxiliary tear-off windows close and the main dock graph returns to the canonical default placement layout."
+    ]
+  },
+  "steps": [
+    { "type": "press_key", "window": { "kind": "first_seen" }, "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+
+    { "type": "set_window_outer_position", "window": { "kind": "first_seen" }, "x_px": 120.0, "y_px": 120.0 },
+    { "type": "set_window_inner_size", "window": { "kind": "first_seen" }, "width_px": 1600.0, "height_px": 900.0 },
+    { "type": "wait_frames", "n": 2 },
+
+    {
+      "type": "wait_until",
+      "window": { "kind": "first_seen" },
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-dock-space" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "window": { "kind": "first_seen" },
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-reset-default-layout" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_bounds_stable",
+      "window": { "kind": "first_seen" },
+      "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-left" },
+      "stable_frames": 12,
+      "max_move_px": 0.5,
+      "timeout_frames": 240
+    },
+    {
+      "type": "drag_pointer_until",
+      "window": { "kind": "first_seen" },
+      "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-left" },
+      "release_on_success": false,
+      "delta_x": -1400.0,
+      "delta_y": 0.0,
+      "steps": 90,
+      "predicate": { "kind": "known_window_count_ge", "n": 2 },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "known_window_count_ge", "n": 2 },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "dock_drag_current_window_is", "window": { "kind": "last_seen" } },
+      "timeout_frames": 240
+    },
+    { "type": "pointer_up", "window": { "kind": "last_seen" } },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "dock_drag_active_is", "active": false },
+      "timeout_frames": 240
+    },
+    { "type": "raise_window", "window": { "kind": "first_seen" } },
+    {
+      "type": "click_stable",
+      "window": { "kind": "first_seen" },
+      "target": { "kind": "test_id", "id": "dock-arb-reset-default-layout" },
+      "button": "left",
+      "stable_frames": 10,
+      "max_move_px": 0.5,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "known_window_count_is", "n": 1 },
+      "timeout_frames": 900
+    },
+    {
+      "type": "wait_until",
+      "window": { "kind": "first_seen" },
+      "predicate": {
+        "kind": "dock_graph_signature_is",
+        "signature": "dock(root=split(v,[split(h,[tabs([demo.viewport.left]),tabs([demo.viewport.right])]),tabs([demo.controls])]);floatings=[])"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "assert",
+      "window": { "kind": "first_seen" },
+      "predicate": { "kind": "dock_graph_canonical_is", "canonical": true }
+    },
+    {
+      "type": "assert",
+      "window": { "kind": "first_seen" },
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-viewport-left" } }
+    },
+    {
+      "type": "assert",
+      "window": { "kind": "first_seen" },
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-viewport-right" } }
+    },
+    { "type": "capture_bundle", "label": "docking-arbitration-demo-multiwindow-tearoff-reset-default-layout" }
+  ]
+}

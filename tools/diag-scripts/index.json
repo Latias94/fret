@@ -1509,6 +1509,32 @@
       ]
     },
     {
+      "id": "docking-arbitration-demo-multiwindow-tearoff-reset-default-layout",
+      "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-tearoff-reset-default-layout.json",
+      "required_capabilities": [
+        "diag.multi_window",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "diag-hardening-smoke-docking",
+        "docking-arbitration",
+        "docking-arbitration/common"
+      ],
+      "tags": [
+        "docking",
+        "gate",
+        "multiwindow",
+        "placement",
+        "reset",
+        "tearoff"
+      ],
+      "target_hints": [
+        "Tears one viewport into a second OS window, then clicks the demo reset button.",
+        "Expected behavior: auxiliary tear-off windows close and the main dock graph returns to the canonical default placement layout."
+      ]
+    },
+    {
       "id": "docking-arbitration-demo-multiwindow-tearoff-tabs-group-two-tabs-merge-back",
       "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-tearoff-tabs-group-two-tabs-merge-back.json",
       "required_capabilities": [

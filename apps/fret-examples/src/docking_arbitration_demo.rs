@@ -46,6 +46,7 @@ const DOCKING_ARBITRATION_DRAG_ANCHOR_SIZE: Px = Px(12.0);
 const DOCKING_ARBITRATION_SPLIT_HANDLE_ANCHOR_SIZE: Px = Px(12.0);
 
 const DEV_STATE_DOCKING_LAYOUT_KEY: &str = "docking_arbitration.layout";
+const CMD_DOCK_ARB_RESET_DEFAULT_LAYOUT: &str = "docking_arbitration_demo.reset_default_layout";
 const PANEL_KIND_VIEWPORT_LEFT: &str = "demo.viewport.left";
 const PANEL_KIND_VIEWPORT_RIGHT: &str = "demo.viewport.right";
 const PANEL_KIND_VIEWPORT_EXTRA: &str = "demo.viewport.extra";
@@ -283,6 +284,46 @@ fn controls_panel_key() -> fret_core::PanelKey {
 
 fn dummy_overflow_panel_key() -> fret_core::PanelKey {
     fret_core::PanelKey::new(PANEL_KIND_DUMMY_OVERFLOW)
+}
+
+fn docking_arbitration_default_panel_placements() -> Vec<fret_core::DockPanelPlacement> {
+    vec![
+        fret_core::DockPanelPlacement::center(viewport_left_panel_key()).selected(),
+        fret_core::DockPanelPlacement::right_rail(viewport_right_panel_key()).fraction(0.5),
+        fret_core::DockPanelPlacement::bottom_rail(controls_panel_key()).fraction(0.3),
+    ]
+}
+
+fn ensure_docking_arbitration_base_panels(dock: &mut DockManager) {
+    let viewport_left = viewport_left_panel_key();
+    let viewport_right = viewport_right_panel_key();
+    let controls_panel = controls_panel_key();
+
+    dock.ensure_panel(&viewport_left, || DockPanel {
+        title: "Viewport Left".to_string(),
+        color: Color::TRANSPARENT,
+        viewport: Some(fret_docking::ViewportPanel {
+            target: RenderTargetId::from(KeyData::from_ffi(1)),
+            target_px_size: (960, 540),
+            fit: fret_core::ViewportFit::Stretch,
+            context_menu_enabled: true,
+        }),
+    });
+    dock.ensure_panel(&viewport_right, || DockPanel {
+        title: "Viewport Right".to_string(),
+        color: Color::TRANSPARENT,
+        viewport: Some(fret_docking::ViewportPanel {
+            target: RenderTargetId::from(KeyData::from_ffi(2)),
+            target_px_size: (960, 540),
+            fit: fret_core::ViewportFit::Stretch,
+            context_menu_enabled: true,
+        }),
+    });
+    dock.ensure_panel(&controls_panel, || DockPanel {
+        title: "Controls".to_string(),
+        color: Color::TRANSPARENT,
+        viewport: None,
+    });
 }
 
 fn dock_panel_debug_name(panel: &fret_core::PanelKey) -> String {
@@ -1767,6 +1808,15 @@ fn render_controls_panel(
 	                            vec![
 	                                ui::v_flex(|cx| {
 	                                        vec![
+	                                            cx.keyed("dock-arb-action-reset-default", |cx| {
+	                                                shadcn::Button::new("Reset default layout")
+	                                                    .variant(shadcn::ButtonVariant::Outline)
+	                                                    .test_id("dock-arb-reset-default-layout")
+	                                                    .on_click(CommandId::new(
+	                                                        CMD_DOCK_ARB_RESET_DEFAULT_LAYOUT,
+	                                                    ))
+	                                                    .into_element(cx)
+	                                            }),
 	                                            cx.keyed("dock-arb-action-close-left", |cx| {
 	                                                shadcn::Button::new("Close viewport left (panel)")
 	                                                    .variant(shadcn::ButtonVariant::Outline)
@@ -2371,35 +2421,11 @@ impl DockingArbitrationDriver {
         }
 
         app.with_global_mut(DockManager::default, |dock, _app| {
+            ensure_docking_arbitration_base_panels(dock);
+
             let viewport_left = viewport_left_panel_key();
             let viewport_right = viewport_right_panel_key();
             let controls_panel = controls_panel_key();
-
-            dock.ensure_panel(&viewport_left, || DockPanel {
-                title: "Viewport Left".to_string(),
-                color: Color::TRANSPARENT,
-                viewport: Some(fret_docking::ViewportPanel {
-                    target: RenderTargetId::from(KeyData::from_ffi(1)),
-                    target_px_size: (960, 540),
-                    fit: fret_core::ViewportFit::Stretch,
-                    context_menu_enabled: true,
-                }),
-            });
-            dock.ensure_panel(&viewport_right, || DockPanel {
-                title: "Viewport Right".to_string(),
-                color: Color::TRANSPARENT,
-                viewport: Some(fret_docking::ViewportPanel {
-                    target: RenderTargetId::from(KeyData::from_ffi(2)),
-                    target_px_size: (960, 540),
-                    fit: fret_core::ViewportFit::Stretch,
-                    context_menu_enabled: true,
-                }),
-            });
-            dock.ensure_panel(&controls_panel, || DockPanel {
-                title: "Controls".to_string(),
-                color: Color::TRANSPARENT,
-                viewport: None,
-            });
 
             // Diagnostics scripts assume a stable baseline dock graph. When diagnostics are enabled,
             // force the main window to start from the selected preset even if a previous session
@@ -2446,20 +2472,10 @@ impl DockingArbitrationDriver {
 
             match layout_preset {
                 DockingArbitrationLayoutPreset::Default => {
-                    let tabs_left = tabs_for_panel(&mut dock.workspace.graph, viewport_left);
-                    let tabs_right = tabs_for_panel(&mut dock.workspace.graph, viewport_right);
-                    let viewport_split = dock.workspace.graph.insert_node(DockNode::Split {
-                        axis: fret_core::Axis::Horizontal,
-                        children: vec![tabs_left, tabs_right],
-                        fractions: vec![0.5, 0.5],
-                    });
-                    let tabs_controls = tabs_for_panel(&mut dock.workspace.graph, controls_panel);
-                    let root = dock.workspace.graph.insert_node(DockNode::Split {
-                        axis: fret_core::Axis::Vertical,
-                        children: vec![viewport_split, tabs_controls],
-                        fractions: vec![0.7, 0.3],
-                    });
-                    dock.workspace.graph.set_window_root(window, root);
+                    dock.set_panel_placements(
+                        window,
+                        docking_arbitration_default_panel_placements(),
+                    );
                 }
                 DockingArbitrationLayoutPreset::Large => {
                     let extra_viewports: Vec<PanelKey> =
@@ -2577,6 +2593,41 @@ impl DockingArbitrationDriver {
                 }
             }
         });
+    }
+
+    fn reset_default_layout(&mut self, app: &mut App) {
+        let Some(main_window) = self.main_window else {
+            return;
+        };
+
+        self.pending_layout = None;
+        self.restore = None;
+
+        let windows_to_close: Vec<AppWindowId> = self
+            .logical_windows
+            .keys()
+            .copied()
+            .filter(|window| *window != main_window)
+            .collect();
+
+        let invalidated_windows = app.with_global_mut(DockManager::default, |dock, _app| {
+            ensure_docking_arbitration_base_panels(dock);
+            dock.set_panel_placements(main_window, docking_arbitration_default_panel_placements())
+        });
+
+        request_dock_invalidation(app, invalidated_windows.iter().copied());
+        for window in invalidated_windows {
+            app.request_redraw(window);
+        }
+
+        for window in windows_to_close {
+            app.push_effect(Effect::Window(WindowRequest::Close(window)));
+        }
+
+        app.request_redraw(main_window);
+        self.sync_dev_state_models(app);
+        Self::mark_dev_state_export_ready(app);
+        DevStateHooks::export_all(app);
     }
 
     fn apply_layout_if_ready(&mut self, app: &mut App) {
@@ -2944,6 +2995,10 @@ fn handle_command(
     } = context;
     if state.ui.dispatch_command(app, services, &command) {
         return;
+    }
+
+    if command.as_str() == CMD_DOCK_ARB_RESET_DEFAULT_LAYOUT {
+        driver.reset_default_layout(app);
     }
 }
 
@@ -3892,6 +3947,77 @@ mod tests {
         fn next_share_sheet_token(&mut self) -> fret_runtime::ShareSheetToken {
             self.app.next_share_sheet_token()
         }
+    }
+
+    #[test]
+    fn docking_arbitration_reset_default_layout_closes_aux_windows_and_rebuilds_default_graph() {
+        let mut app = App::new();
+        let main_window = AppWindowId::from(KeyData::from_ffi(1));
+        let aux_window = AppWindowId::from(KeyData::from_ffi(2));
+        let mut driver = DockingArbitrationDriver {
+            main_window: Some(main_window),
+            ..Default::default()
+        };
+        driver.logical_windows.insert(
+            main_window,
+            DockingArbitrationDriver::MAIN_LOGICAL_WINDOW_ID.to_string(),
+        );
+        driver
+            .logical_windows
+            .insert(aux_window, "floating-1".to_string());
+
+        app.with_global_mut(DockManager::default, |dock, _app| {
+            ensure_docking_arbitration_base_panels(dock);
+            dock.set_panel_placements(
+                aux_window,
+                [fret_core::DockPanelPlacement::center(
+                    viewport_right_panel_key(),
+                )],
+            );
+        });
+
+        driver.reset_default_layout(&mut app);
+
+        let dock = app
+            .global::<DockManager>()
+            .expect("reset should keep a DockManager global");
+        assert_eq!(dock.workspace.graph.windows(), vec![main_window]);
+
+        let layout = dock.workspace.graph.export_layout(&[(
+            main_window,
+            DockingArbitrationDriver::MAIN_LOGICAL_WINDOW_ID.to_string(),
+        )]);
+        assert_eq!(layout.windows.len(), 1);
+        assert!(layout.windows[0].floatings.is_empty());
+
+        let panels: std::collections::HashSet<_> = layout
+            .nodes
+            .iter()
+            .filter_map(|node| match node {
+                fret_core::DockLayoutNode::Tabs { tabs, .. } => Some(tabs.as_slice()),
+                _ => None,
+            })
+            .flatten()
+            .cloned()
+            .collect();
+        assert_eq!(
+            panels,
+            [
+                viewport_left_panel_key(),
+                viewport_right_panel_key(),
+                controls_panel_key()
+            ]
+            .into_iter()
+            .collect()
+        );
+
+        let effects = app.flush_effects();
+        assert!(
+            effects
+                .iter()
+                .any(|effect| matches!(effect, Effect::Window(WindowRequest::Close(window)) if *window == aux_window)),
+            "reset should close auxiliary tear-off windows, got: {effects:?}"
+        );
     }
 
     #[test]
