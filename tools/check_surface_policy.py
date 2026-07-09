@@ -53,6 +53,8 @@ class CompactSourceBoundary:
     forbidden_message_template: str
 
 
+DATATABLE_OWNER = "examples-datatable"
+
 DEFAULT_AUTHORING_SURFACES: tuple[SurfacePath, ...] = (
     SurfacePath(
         "README.md",
@@ -173,6 +175,7 @@ DEFAULT_AUTHORING_SURFACES: tuple[SurfacePath, ...] = (
         "apps/fret-examples/src/datatable_demo.rs",
         "default_app_clean",
         "datatable demo should stay on the FretApp ui harness and shadcn DataTable recipe",
+        owner=DATATABLE_OWNER,
     ),
     SurfacePath(
         "apps/fret-cookbook/examples/commands_keymap_basics.rs",
@@ -285,13 +288,6 @@ WORKSPACE_SHELL_GPUI_RETIREMENT = (
     f"{GPUI_ERGONOMICS_BOUNDARY_PLAN}; retire once WorkspaceApp, the app-facing frame harness, "
     "and typed workspace commands own command routing, dirty-close blocking, diagnostics, and "
     "window lifecycle flows."
-)
-
-DATATABLE_GPUI_RETIREMENT = (
-    "Temporary real-app probe allowance tracked by "
-    f"{GPUI_ERGONOMICS_BOUNDARY_PLAN}; retire once the DataTable recipe owns output state, "
-    "columns, toolbar, pagination, row selection, sorting, and stable debug-id wiring without "
-    "FnDriver/UiTree at the app call site."
 )
 
 CLASSIFIED_RAW_SURFACE_CATEGORIES = frozenset(
@@ -2491,10 +2487,8 @@ CANVAS_DATAGRID_STRESS_FORBIDDEN_RAW_WRITE_PATTERNS: tuple[
     ),
 )
 
-DATATABLE_OWNER = "examples-datatable"
-
 DATATABLE_REQUIRED_COMPACT_MARKERS = (
-    "usefret::app::{self,App,AppLocalStateExtas_,LocalState,text};",
+    "usefret::app::{self,App,AppLocalStateExtas_,LocalState,RenderContextAccessas_,text};",
     "table_output:LocalState<shadcn::DataTableViewOutput>,",
     "table_recipe:shadcn::DataTableRecipe<DemoRow>,",
     "lettable_output=app.local_state(shadcn::DataTableViewOutput::default());",
@@ -5487,7 +5481,7 @@ def _scan_datatable_output_boundary(root: Path, spec: SurfacePath) -> list[Surfa
         if missing_markers:
             violations.append(
                 SurfaceViolation(
-                    rule="advanced-surface-datatable-output-boundary",
+                    rule="surface-datatable-output-boundary",
                     path=path,
                     line_no=1,
                     message=(
@@ -5502,7 +5496,7 @@ def _scan_datatable_output_boundary(root: Path, spec: SurfacePath) -> list[Surfa
                 continue
             violations.append(
                 SurfaceViolation(
-                    rule="advanced-surface-datatable-output-boundary",
+                    rule="surface-datatable-output-boundary",
                     path=path,
                     line_no=1,
                     message=(

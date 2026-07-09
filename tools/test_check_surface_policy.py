@@ -217,7 +217,6 @@ class SurfacePolicyTests(unittest.TestCase):
         specs = {spec.path: spec for spec in POLICY.ADVANCED_MANUAL_SURFACES}
         probe_paths = {
             "apps/fret-examples/src/workspace_shell_demo",
-            "apps/fret-examples/src/datatable_demo.rs",
         }
 
         for path in probe_paths:
@@ -229,17 +228,17 @@ class SurfacePolicyTests(unittest.TestCase):
 
         workspace_spec = specs["apps/fret-examples/src/workspace_shell_demo"]
         self.assertEqual(POLICY.WORKSPACE_SHELL_OWNER, workspace_spec.owner)
-        self.assertIn("FnDriver", workspace_spec.allowed_raw_seams)
+        self.assertNotIn("FnDriver", workspace_spec.allowed_raw_seams)
         self.assertIn("UiTree", workspace_spec.allowed_raw_seams)
+        self.assertIn("WorkspaceApp", workspace_spec.retirement)
         self.assertIn("typed workspace commands", workspace_spec.retirement)
 
-        datatable_spec = specs["apps/fret-examples/src/datatable_demo.rs"]
+        default_specs = {spec.path: spec for spec in POLICY.DEFAULT_AUTHORING_SURFACES}
+        datatable_spec = default_specs["apps/fret-examples/src/datatable_demo.rs"]
         self.assertEqual(POLICY.DATATABLE_OWNER, datatable_spec.owner)
-        self.assertIn("FnDriver", datatable_spec.allowed_raw_seams)
-        self.assertIn("UiTree", datatable_spec.allowed_raw_seams)
-        self.assertNotIn("AnyElement", datatable_spec.allowed_raw_seams)
-        self.assertNotIn("ElementContext", datatable_spec.allowed_raw_seams)
-        self.assertIn("DataTable recipe", datatable_spec.retirement)
+        self.assertFalse(datatable_spec.allowed_raw_seams)
+        self.assertFalse(datatable_spec.retirement)
+        self.assertNotIn("apps/fret-examples/src/datatable_demo.rs", specs)
 
     def test_advanced_manual_surface_rejects_unlisted_raw_seam(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1611,16 +1610,16 @@ class SurfacePolicyTests(unittest.TestCase):
         self.assertTrue(
             any(
                 spec.path == "apps/fret-examples/src/datatable_demo.rs"
-                for spec in POLICY.ADVANCED_MANUAL_SURFACES
+                for spec in POLICY.DEFAULT_AUTHORING_SURFACES
             )
         )
         datatable_spec = next(
             spec
-            for spec in POLICY.ADVANCED_MANUAL_SURFACES
+            for spec in POLICY.DEFAULT_AUTHORING_SURFACES
             if spec.path == "apps/fret-examples/src/datatable_demo.rs"
         )
-        self.assertNotIn("AnyElement", datatable_spec.allowed_raw_seams)
-        self.assertNotIn("ElementContext", datatable_spec.allowed_raw_seams)
+        self.assertEqual(POLICY.DATATABLE_OWNER, datatable_spec.owner)
+        self.assertFalse(datatable_spec.allowed_raw_seams)
         table_demo_spec = next(
             spec
             for spec in POLICY.ADVANCED_MANUAL_SURFACES
@@ -8327,17 +8326,12 @@ class SurfacePolicyTests(unittest.TestCase):
                 }
 
                 fn build_ui(app: &mut App, window_layout: WorkspaceWindowLayout, items_value: Vec<TreeItem>, state_value: TreeState) {
-                    let models = WorkspaceShellModelBundle::new(
-                        app.models_mut(),
-                        window_layout,
-                        items_value,
-                        state_value,
-                    );
+                    let models = WorkspaceShellModelBundle::new(app.models_mut(), window_layout, items_value, state_value);
                     let _ = models;
                 }
 
                 fn on_close(host: &mut dyn Host, prompt_model: Model<Option<WorkspaceShellDirtyClosePrompt>>, open_model: Model<bool>) {
-                    workspace_shell_host_clear_dirty_close_prompt(host, &prompt_model, &open_model,);
+                    workspace_shell_host_clear_dirty_close_prompt(host, &prompt_model, &open_model);
                 }
 
                 fn open_prompt(app: &mut App, state: &WorkspaceShellWindowState, req: Request) {
@@ -8465,17 +8459,12 @@ class SurfacePolicyTests(unittest.TestCase):
                 }
 
                 fn build_ui(app: &mut App, window_layout: WorkspaceWindowLayout, items_value: Vec<TreeItem>, state_value: TreeState) {
-                    let models = WorkspaceShellModelBundle::new(
-                        app.models_mut(),
-                        window_layout,
-                        items_value,
-                        state_value,
-                    );
+                    let models = WorkspaceShellModelBundle::new(app.models_mut(), window_layout, items_value, state_value);
                     let _ = models;
                 }
 
                 fn on_close(host: &mut dyn Host, prompt_model: Model<Option<WorkspaceShellDirtyClosePrompt>>, open_model: Model<bool>) {
-                    workspace_shell_host_clear_dirty_close_prompt(host, &prompt_model, &open_model,);
+                    workspace_shell_host_clear_dirty_close_prompt(host, &prompt_model, &open_model);
                 }
 
                 fn open_prompt(app: &mut App, state: &WorkspaceShellWindowState, req: Request) {
@@ -9953,10 +9942,13 @@ class SurfacePolicyTests(unittest.TestCase):
             write(
                 root / "apps/fret-examples/src/datatable_demo.rs",
                 """
+                use fret::app::{self, App, AppLocalStateExt as _, LocalState, RenderContextAccess as _, text};
                 use fret_app::{App, CommandId, Effect, Model, WindowRequest};
 
                 struct DemoWindowState {
-                    table_output: Model<shadcn::DataTableViewOutput>,
+                    table_output: LocalState<shadcn::DataTableViewOutput>,
+                    table_recipe: shadcn::DataTableRecipe<DemoRow>,
+                    legacy_output: Model<shadcn::DataTableViewOutput>,
                 }
 
                 fn build_ui(app: &mut App) {
@@ -9966,37 +9958,37 @@ class SurfacePolicyTests(unittest.TestCase):
 
                 fn render(cx: &mut ElementContext<'_, App>, state: &DemoWindowState) {
                     let table_output = state.table_output.clone();
-                    cx.observe_model(&table_output, Invalidation::Layout);
+                    let table_recipe = state.table_recipe.clone();
+                    cx.observe_model(&table_output,Invalidation::Layout);
                     let _ = table_output.layout_value(cx);
+                    let table_output = app.local_state(shadcn::DataTableViewOutput::default());
+                    let table_state = app.local_state(shadcn::TableState::default());
+                    let table_recipe = shadcn::DataTableRecipe::new(&table_state, &table_output, columns, |row, _i, _parent| shadcn::RowKey(row.id));
+                    let table_output = state.table_output.clone();
+                    let table_recipe = state.table_recipe.clone();
+                    let _ = table_output.layout_value(cx);
+                    let table_parts = table_recipe.into_elements(cx, rows, 1, |cx, col, row| text::table_cell(cx, Arc::from("")));
                     shadcn::DataTablePagination::new(&table_state, table_output.clone());
                     shadcn::DataTable::new(rows, columns).output_model(table_output.clone());
+                }
+
+                fn run() {
+                    fret::FretApp::new("datatable-demo").ui(create_window_state, render_datatable_demo)?;
                 }
                 """,
             )
 
             violations = check_fixture_policy(
                 root,
-                default_surfaces=[],
-                advanced_manual_surfaces=[
+                default_surfaces=[
                     POLICY.SurfacePath(
                         "apps/fret-examples/src/datatable_demo.rs",
-                        "advanced_manual",
+                        "default_app_clean",
                         "fixture datatable demo surface",
                         owner="examples-datatable",
-                        allowed_raw_seams=(
-                            "fret_app",
-                            "fret_core",
-                            "fret_launch",
-                            "fret_runtime",
-                            "fret_ui",
-                            "AnyElement",
-                            "ElementContext",
-                            "FnDriver",
-                            "UiTree",
-                        ),
-                        retirement=POLICY.FRET_EXAMPLES_ADVANCED_RETIREMENT,
                     )
                 ],
+                advanced_manual_surfaces=[],
                 policy_recipe_surfaces=[],
                 mechanism_root_surfaces=[],
             )
@@ -10004,9 +9996,9 @@ class SurfacePolicyTests(unittest.TestCase):
             owner_violations = [
                 violation
                 for violation in violations
-                if violation.rule == "advanced-surface-datatable-output-boundary"
+                if violation.rule == "surface-datatable-output-boundary"
             ]
-            self.assertEqual(5, len(owner_violations))
+            self.assertEqual(4, len(owner_violations))
             messages = "\n".join(violation.message for violation in owner_violations)
             self.assertIn("legacy-output-model", messages)
             self.assertIn("legacy-output-model-insert", messages)
@@ -10019,50 +10011,46 @@ class SurfacePolicyTests(unittest.TestCase):
             write(
                 root / "apps/fret-examples/src/datatable_demo.rs",
                 """
-                use fret::app::AppLocalStateExt as _;
-                use fret::app::LocalState;
+                use fret::app::{self, App, AppLocalStateExt as _, LocalState, RenderContextAccess as _, text};
 
                 struct DemoWindowState {
                     table_output: LocalState<shadcn::DataTableViewOutput>,
+                    table_recipe: shadcn::DataTableRecipe<DemoRow>,
                 }
 
                 fn build_ui(app: &mut App) {
                     let table_output = app.local_state(shadcn::DataTableViewOutput::default());
+                    let table_state = app.local_state(shadcn::TableState::default());
+                    let columns = datatable_columns();
+                    let table_recipe = shadcn::DataTableRecipe::new(&table_state, &table_output, columns, |row, _i, _parent| shadcn::RowKey(row.id));
                     let _ = table_output;
+                    let _ = table_recipe;
                 }
 
                 fn render(cx: &mut ElementContext<'_, App>, state: &DemoWindowState) {
                     let table_output = state.table_output.clone();
+                    let table_recipe = state.table_recipe.clone();
                     let _ = table_output.layout_value(cx);
-                    shadcn::DataTablePagination::new(&table_state, table_output.clone());
-                    shadcn::DataTable::new(rows, columns).output_model(table_output.clone());
+                    let table_parts = table_recipe.into_elements(cx, rows, 1, |cx, col, row| text::table_cell(cx, Arc::from("")));
+                }
+
+                fn run() {
+                    fret::FretApp::new("datatable-demo").ui(create_window_state, render_datatable_demo)?;
                 }
                 """,
             )
 
             violations = check_fixture_policy(
                 root,
-                default_surfaces=[],
-                advanced_manual_surfaces=[
+                default_surfaces=[
                     POLICY.SurfacePath(
                         "apps/fret-examples/src/datatable_demo.rs",
-                        "advanced_manual",
+                        "default_app_clean",
                         "fixture datatable demo surface",
                         owner="examples-datatable",
-                        allowed_raw_seams=(
-                            "fret_app",
-                            "fret_core",
-                            "fret_launch",
-                            "fret_runtime",
-                            "fret_ui",
-                            "AnyElement",
-                            "ElementContext",
-                            "FnDriver",
-                            "UiTree",
-                        ),
-                        retirement=POLICY.FRET_EXAMPLES_ADVANCED_RETIREMENT,
                     )
                 ],
+                advanced_manual_surfaces=[],
                 policy_recipe_surfaces=[],
                 mechanism_root_surfaces=[],
             )
@@ -10071,7 +10059,7 @@ class SurfacePolicyTests(unittest.TestCase):
                 [
                     violation
                     for violation in violations
-                    if violation.rule == "advanced-surface-datatable-output-boundary"
+                    if violation.rule == "surface-datatable-output-boundary"
                 ]
             )
 
