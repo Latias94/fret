@@ -1737,6 +1737,10 @@ impl<TData> DataTableRecipe<TData> {
         self.page_sizes.clone()
     }
 
+    pub fn toolbar_test_id_prefix_model(&self) -> Option<Arc<str>> {
+        self.toolbar_test_id_prefix.clone()
+    }
+
     pub fn row_key_for(&self, row: &TData, index: usize, parent: Option<&RowKey>) -> RowKey {
         (self.row_key)(row, index, parent)
     }
@@ -2347,6 +2351,10 @@ mod tests {
         assert_eq!(
             recipe.debug_ids_model().row_test_id_prefix.as_deref(),
             Some("orders-row-")
+        );
+        assert_eq!(
+            recipe.toolbar_test_id_prefix_model().as_deref(),
+            Some("orders-table")
         );
         assert!(!recipe.debug_ids_model().row_cell_test_ids);
 

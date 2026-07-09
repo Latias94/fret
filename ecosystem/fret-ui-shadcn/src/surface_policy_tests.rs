@@ -2321,6 +2321,8 @@ fn selected_public_model_backed_seams_stay_on_audited_allowlist() {
             DATA_TABLE_RECIPES_RS,
             &[
                 "pub fn faceted_filter_counts(mut self, counts: Model<HashMap<Arc<str>, usize>>) -> Self",
+                "pub fn state_model(&self) -> Model<TableState>",
+                "pub fn output_model(&self) -> Model<TableViewOutput>",
             ][..],
         ),
         (
