@@ -106,6 +106,7 @@ material3 = []
 # Discoverability alias only. Intentionally does not proxy `fret-ui-ai` into the `fret`
 # release/publish closure until a stable root AI UI story exists.
 ui-ai = []
+workspace = ["dep:fret-workspace"]
 ui-assets = [
     "dep:fret-bootstrap",
     "dep:fret-ui-assets",
@@ -153,6 +154,7 @@ fret-ui-assets = { version = "0.1.0", path = "../fret-ui-assets", optional = tru
 fret-ui-headless = { version = "0.1.0", path = "../fret-ui-headless" }
 fret-ui-shadcn = { version = "0.1.0", path = "../fret-ui-shadcn", optional = true, features = ["app-integration"] }
 fret-ui-kit = { version = "0.1.0", path = "../fret-ui-kit" }
+fret-workspace = { version = "0.1.0", path = "../fret-workspace", optional = true }
 time.workspace = true
 
 # Used by the public signatures and error types.

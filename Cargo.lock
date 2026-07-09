@@ -1841,6 +1841,7 @@ dependencies = [
  "fret-ui-headless",
  "fret-ui-kit",
  "fret-ui-shadcn",
+ "fret-workspace",
  "slotmap",
  "thiserror 2.0.18",
  "time",

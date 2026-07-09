@@ -40,6 +40,9 @@ type EventHookFn<S> =
 type CommandHookFn<S> =
     fn(&mut App, &mut dyn UiServices, AppWindowId, &mut UiTree<App>, &mut S, &CommandId);
 
+type CommandBeforeUiHookFn<S> =
+    fn(&mut App, &mut dyn UiServices, AppWindowId, &mut UiTree<App>, &mut S, &CommandId) -> bool;
+
 type PreferencesHookFn<S> =
     fn(&mut App, &mut dyn UiServices, AppWindowId, &mut UiTree<App>, &mut S);
 
@@ -147,6 +150,7 @@ pub struct UiAppDriver<S> {
     drive_ui_assets: bool,
 
     on_event: Option<EventHookFn<S>>,
+    on_command_before_ui: Option<CommandBeforeUiHookFn<S>>,
     on_command: Option<CommandHookFn<S>>,
     on_preferences: Option<PreferencesHookFn<S>>,
     on_hot_reload_window: Option<HotReloadHookFn<S>>,
@@ -187,6 +191,7 @@ impl<S> UiAppDriver<S> {
             #[cfg(feature = "ui-assets")]
             drive_ui_assets: true,
             on_event: None,
+            on_command_before_ui: None,
             on_command: None,
             on_preferences: None,
             on_hot_reload_window: None,
@@ -249,6 +254,16 @@ impl<S> UiAppDriver<S> {
     /// disable it and implement custom close flows (e.g. unsaved-changes prompts) in `on_event`.
     pub fn close_on_window_close_requested(mut self, enabled: bool) -> Self {
         self.close_on_window_close_requested = enabled;
+        self
+    }
+
+    /// Run a command hook before the retained UI tree receives the command.
+    ///
+    /// This is for app-facing harnesses that own a model transaction first (for example a
+    /// workspace dirty-close policy) while still using `UiAppDriver` for frame/diagnostics
+    /// ownership. Return `true` when the hook handled the command.
+    pub fn on_command_before_ui(mut self, f: CommandBeforeUiHookFn<S>) -> Self {
+        self.on_command_before_ui = Some(f);
         self
     }
 
@@ -1635,6 +1650,37 @@ fn ui_app_handle_command<S>(
             );
         },
     );
+
+    if let Some(on_command_before_ui) = driver.on_command_before_ui {
+        #[cfg(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32")))]
+        {
+            let mut hot = subsecond::HotFn::current(on_command_before_ui);
+            if hot.call((
+                app,
+                services,
+                window,
+                &mut state.ui,
+                &mut state.state,
+                &command,
+            )) {
+                return;
+            }
+        }
+
+        #[cfg(not(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32"))))]
+        {
+            if on_command_before_ui(
+                app,
+                services,
+                window,
+                &mut state.ui,
+                &mut state.state,
+                &command,
+            ) {
+                return;
+            }
+        }
+    }
 
     if state.ui.dispatch_command(app, services, &command) {
         return;

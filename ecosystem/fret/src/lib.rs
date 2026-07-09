@@ -619,6 +619,8 @@ pub(crate) enum AssetMount {
 }
 
 pub mod actions;
+#[cfg(feature = "workspace")]
+pub mod workspace;
 
 /// Explicit command and keybinding vocabulary for app code.
 ///
@@ -2097,6 +2099,21 @@ impl<S> UiAppDriver<S> {
         ),
     ) -> Self {
         self.inner = self.inner.on_event(f);
+        self
+    }
+
+    pub fn on_command_before_ui(
+        mut self,
+        f: fn(
+            &mut KernelApp,
+            &mut dyn fret_core::UiServices,
+            fret_core::AppWindowId,
+            &mut fret_ui::UiTree<KernelApp>,
+            &mut S,
+            &fret_runtime::CommandId,
+        ) -> bool,
+    ) -> Self {
+        self.inner = self.inner.on_command_before_ui(f);
         self
     }
 
@@ -5525,10 +5542,11 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
-    fn root_surface_omits_workspace_shell_from_the_fret_facade() {
+    fn root_surface_keeps_workspace_on_the_explicit_lane() {
         let root_header = root_surface_header_source();
         let public_surface = crate_public_surface_source();
 
+        assert!(root_header.contains("pub mod workspace;"));
         assert!(!root_header.contains(
             "pub use workspace_shell::{workspace_shell_model, workspace_shell_model_default_menu};"
         ));
@@ -5577,6 +5595,7 @@ mod authoring_surface_policy_tests {
             "time",
             "virtual_list",
             "in_window_menubar",
+            "workspace",
         ]
         .into_iter()
         .map(str::to_owned)

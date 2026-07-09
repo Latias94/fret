@@ -1,10 +1,9 @@
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use fret::app::App;
 use fret_app::CommandId;
+use fret_ui::VirtualListScrollHandle;
 use fret_ui::elements::GlobalElementId;
-use fret_ui::{UiTree, VirtualListScrollHandle};
 use fret_ui_kit::{TreeItem, TreeState};
 use fret_workspace::close_policy::{
     WorkspaceCloseReason, WorkspaceDirtyCloseDecision, WorkspaceDirtyClosePolicy,
@@ -54,7 +53,6 @@ pub(crate) fn build_file_tree_items() -> (Vec<TreeItem>, TreeState) {
 }
 
 pub struct WorkspaceShellWindowState {
-    pub(crate) ui: UiTree<App>,
     pub(crate) view_cache_shell: bool,
     pub(crate) window_layout: fret_app::Model<WorkspaceWindowLayout>,
     pub(crate) dirty_close_prompt_open: fret_app::Model<bool>,
@@ -64,9 +62,6 @@ pub struct WorkspaceShellWindowState {
     pub(crate) file_tree_state: fret_app::Model<TreeState>,
     pub(crate) file_tree_scroll: VirtualListScrollHandle,
 }
-
-#[derive(Default)]
-pub struct WorkspaceShellDemoDriver;
 
 pub(crate) const CMD_WORKSPACE_SHELL_DEMO_SET_ACTIVE_DIRTY: &str =
     "workspace.shell_demo.set_active_dirty";

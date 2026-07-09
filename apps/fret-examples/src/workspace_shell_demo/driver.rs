@@ -1,27 +1,19 @@
-use anyhow::Context as _;
 use fret::advanced::view::AppRenderDataExt as _;
 use fret::app::{AppRenderContext, text};
 use fret::imui::{UiWriterImUiFacadeExt as _, imui_build, kit};
 use fret::{shadcn, shadcn::themes::ShadcnColorScheme};
 use fret_app::{App, CommandId, Effect, Model, WindowRequest};
-use fret_bootstrap::ui_diagnostics::UiDiagnosticsService;
-use fret_core::{AppWindowId, Axis, Edges, Event, Px, Rect, SemanticsRole};
-use fret_launch::{
-    FnDriver, WinitCommandContext, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
-    WinitWindowContext,
-};
+use fret_core::{AppWindowId, Axis, Edges, Event, Px, SemanticsRole};
 use fret_runtime::{
     CommandDispatchDecisionV1, CommandDispatchSourceV1, CommandScope, ModelStore,
-    PlatformCapabilities, WindowCommandDispatchDiagnosticsStore,
-    WindowPendingCommandDispatchSourceService,
+    WindowCommandDispatchDiagnosticsStore, WindowPendingCommandDispatchSourceService,
 };
-use fret_ui::declarative;
 use fret_ui::element::{
     ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow, PressableA11y,
     PressableProps, SemanticsProps, ViewCacheProps,
 };
 use fret_ui::elements::GlobalElementId;
-use fret_ui::{Invalidation, UiTree, VirtualListScrollHandle};
+use fret_ui::{Invalidation, VirtualListScrollHandle};
 use fret_ui_editor::composites::{
     InspectorPanel, InspectorPanelOptions, PropertyGrid, PropertyGroup, PropertyGroupOptions,
 };
@@ -54,7 +46,7 @@ use state::{
     CMD_WORKSPACE_SHELL_DEMO_DIRTY_CLOSE_SAVE_AND_CLOSE, CMD_WORKSPACE_SHELL_DEMO_SET_ACTIVE_DIRTY,
     CMD_WORKSPACE_SHELL_DEMO_SET_PANE_B_ACTIVE_DIRTY,
     CMD_WORKSPACE_SHELL_DEMO_TOGGLE_TABSTRIP_TWO_ROW_PINNED, CMD_WORKSPACE_SHELL_DEMO_WINDOW_CLOSE,
-    DIRTY_CLOSE_PROMPT_OVERLAY_ID, WorkspaceShellDemoDirtyClosePolicy, WorkspaceShellDemoDriver,
+    DIRTY_CLOSE_PROMPT_OVERLAY_ID, WorkspaceShellDemoDirtyClosePolicy,
     WorkspaceShellDirtyClosePrompt, WorkspaceShellWindowState, build_file_tree_items,
 };
 
@@ -82,6 +74,17 @@ fn env_usize(name: &str) -> Option<usize> {
 fn selected_workspace_shell_editor_theme_preset()
 -> Option<fret_ui_editor::theme::EditorThemePresetV1> {
     crate::editor_theme_preset_from_env(ENV_WORKSPACE_SHELL_EDITOR_PRESET)
+}
+
+fn install_workspace_shell_theme(app: &mut App) {
+    if let Some(preset) = selected_workspace_shell_editor_theme_preset() {
+        shadcn::themes::apply_shadcn_new_york(
+            app,
+            WORKSPACE_SHELL_HOST_BASE_COLOR,
+            WORKSPACE_SHELL_HOST_DEFAULT_SCHEME,
+        );
+        fret_ui_editor::theme::install_editor_theme_preset_v1(app, preset);
+    }
 }
 
 fn fill_layout() -> LayoutStyle {
@@ -634,142 +637,123 @@ where
     .into_element(cx)
 }
 
-impl WorkspaceShellDemoDriver {
-    fn build_ui(app: &mut App, window: AppWindowId) -> WorkspaceShellWindowState {
-        let view_cache_enabled = env_bool("FRET_EXAMPLES_VIEW_CACHE", false);
-        let view_cache_shell = env_bool("FRET_EXAMPLES_VIEW_CACHE_SHELL", false);
-        // Diagnostics scripts set `FRET_DIAG=1` and should stay lightweight. Opt into expensive
-        // UI debug hotspots explicitly.
-        let ui_debug_enabled = env_bool("FRET_UI_DEBUG", false);
+fn create_window_state(app: &mut App, _window: AppWindowId) -> WorkspaceShellWindowState {
+    let view_cache_shell = env_bool("FRET_EXAMPLES_VIEW_CACHE_SHELL", false);
 
-        let mut ui: UiTree<App> = UiTree::new();
-        ui.set_window(window);
-        ui.set_view_cache_enabled(view_cache_enabled);
-        ui.set_debug_enabled(ui_debug_enabled);
+    let mut window_layout = WorkspaceWindowLayout::new("window-1", "pane-a");
+    window_layout.pane_tree = WorkspacePaneTree::split(
+        Axis::Horizontal,
+        0.62,
+        WorkspacePaneTree::leaf("pane-a"),
+        WorkspacePaneTree::leaf("pane-b"),
+    );
+    window_layout.active_pane = Some(Arc::from("pane-a"));
 
-        let mut window_layout = WorkspaceWindowLayout::new("window-1", "pane-a");
-        window_layout.pane_tree = WorkspacePaneTree::split(
-            Axis::Horizontal,
-            0.62,
-            WorkspacePaneTree::leaf("pane-a"),
-            WorkspacePaneTree::leaf("pane-b"),
-        );
-        window_layout.active_pane = Some(Arc::from("pane-a"));
-
-        if let Some(pane) = window_layout.pane_tree.find_pane_mut("pane-a") {
-            pane.tabs.open_and_activate(Arc::from("doc-a-0"));
-            pane.tabs.open_and_activate(Arc::from("doc-a-1"));
-            pane.tabs.open_and_activate(Arc::from("doc-a-2"));
-        }
-        if let Some(pane) = window_layout.pane_tree.find_pane_mut("pane-b") {
-            pane.tabs.open_and_activate(Arc::from("doc-b-0"));
-            pane.tabs.open_and_activate(Arc::from("doc-b-1"));
-        }
-
-        let (items_value, state_value) = build_file_tree_items();
-        let models = WorkspaceShellModelBundle::new(
-            app.models_mut(),
-            window_layout,
-            items_value,
-            state_value,
-        );
-
-        WorkspaceShellWindowState {
-            ui,
-            view_cache_shell,
-            window_layout: models.window_layout,
-            dirty_close_prompt_open: models.dirty_close_prompt_open,
-            dirty_close_prompt: models.dirty_close_prompt,
-            tabstrip_two_row_pinned: models.tabstrip_two_row_pinned,
-            file_tree_items: models.file_tree_items,
-            file_tree_state: models.file_tree_state,
-            file_tree_scroll: VirtualListScrollHandle::new(),
-        }
+    if let Some(pane) = window_layout.pane_tree.find_pane_mut("pane-a") {
+        pane.tabs.open_and_activate(Arc::from("doc-a-0"));
+        pane.tabs.open_and_activate(Arc::from("doc-a-1"));
+        pane.tabs.open_and_activate(Arc::from("doc-a-2"));
+    }
+    if let Some(pane) = window_layout.pane_tree.find_pane_mut("pane-b") {
+        pane.tabs.open_and_activate(Arc::from("doc-b-0"));
+        pane.tabs.open_and_activate(Arc::from("doc-b-1"));
     }
 
-    fn render_ui(
-        app: &mut App,
-        services: &mut dyn fret_core::UiServices,
-        window: AppWindowId,
-        state: &mut WorkspaceShellWindowState,
-        bounds: Rect,
-    ) {
-        let view_cache_shell = state.view_cache_shell;
-        let window_layout = state.window_layout.clone();
-        let dirty_close_prompt_open = state.dirty_close_prompt_open.clone();
-        let dirty_close_prompt = state.dirty_close_prompt.clone();
-        let tabstrip_two_row_pinned = state.tabstrip_two_row_pinned.clone();
-        let file_tree_items = state.file_tree_items.clone();
-        let file_tree_state = state.file_tree_state.clone();
-        let file_tree_scroll = state.file_tree_scroll.clone();
+    let (items_value, state_value) = build_file_tree_items();
+    let models =
+        WorkspaceShellModelBundle::new(app.models_mut(), window_layout, items_value, state_value);
 
-        let _root =
-            declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
-                .render_root("workspace-shell-demo", move |cx| {
-                    cx.observe_model(&window_layout, Invalidation::Layout);
-                    cx.observe_model(&dirty_close_prompt_open, Invalidation::Layout);
-                    cx.observe_model(&dirty_close_prompt, Invalidation::Layout);
-                    cx.observe_model(&tabstrip_two_row_pinned, Invalidation::Layout);
-                    cx.observe_model(&file_tree_items, Invalidation::Layout);
-                    cx.observe_model(&file_tree_state, Invalidation::Layout);
+    WorkspaceShellWindowState {
+        view_cache_shell,
+        window_layout: models.window_layout,
+        dirty_close_prompt_open: models.dirty_close_prompt_open,
+        dirty_close_prompt: models.dirty_close_prompt,
+        tabstrip_two_row_pinned: models.tabstrip_two_row_pinned,
+        file_tree_items: models.file_tree_items,
+        file_tree_state: models.file_tree_state,
+        file_tree_scroll: VirtualListScrollHandle::new(),
+    }
+}
 
-                    let theme = cx.theme_snapshot();
-                    let bg = Some(theme.color_token("background"));
-                    let (prompt_open, prompt): (bool, Option<WorkspaceShellDirtyClosePrompt>) =
-                        cx.data().selector_model_layout(
-                            (&dirty_close_prompt_open, &dirty_close_prompt),
-                            |(prompt_open, prompt)| (prompt_open, prompt),
-                        );
-                    if prompt_open {
-                        let (reason, dirty_list, active_tab, close_count) = prompt
-                            .as_ref()
-                            .map(|p| {
-                                let reason = Arc::<str>::from(format!("{:?}", p.request.reason));
-                                let dirty_list = Arc::<str>::from(
-                                    p.request
-                                        .dirty_tabs_in_order
-                                        .iter()
-                                        .map(|t| t.as_ref())
-                                        .collect::<Vec<_>>()
-                                        .join(", "),
-                                );
-                                let active_tab = p
-                                    .request
-                                    .active_tab_id
-                                    .as_ref()
-                                    .map(|t| Arc::<str>::from(t.as_ref()))
-                                    .unwrap_or_else(|| Arc::from("<none>"));
-                                let close_count = p.request.target_tabs_in_order.len();
-                                (reason, dirty_list, active_tab, close_count)
-                            })
-                            .unwrap_or_else(|| {
-                                (
-                                    Arc::from("<unknown>"),
-                                    Arc::from("<unknown>"),
-                                    Arc::from("<none>"),
-                                    0,
-                                )
-                            });
-                        let prompt_label = Arc::<str>::from(format!(
-                            "Dirty close confirmation reason={reason} active={active_tab} close_count={close_count} dirty=[{dirty_list}]"
-                        ));
+fn render_workspace_shell(
+    cx: &mut fret::AppRenderCx<'_>,
+    state: &mut WorkspaceShellWindowState,
+) -> fret::Ui {
+    let view_cache_shell = state.view_cache_shell;
+    let window_layout = state.window_layout.clone();
+    let dirty_close_prompt_open = state.dirty_close_prompt_open.clone();
+    let dirty_close_prompt = state.dirty_close_prompt.clone();
+    let tabstrip_two_row_pinned = state.tabstrip_two_row_pinned.clone();
+    let file_tree_items = state.file_tree_items.clone();
+    let file_tree_state = state.file_tree_state.clone();
+    let file_tree_scroll = state.file_tree_scroll.clone();
 
-                        let dim_bg = Some(theme.color_token("muted"));
-                        let dialog_bg = Some(theme.color_token("card"));
-                        let border = Some(theme.color_token("border"));
+    cx.observe_model(&window_layout, Invalidation::Layout);
+    cx.observe_model(&dirty_close_prompt_open, Invalidation::Layout);
+    cx.observe_model(&dirty_close_prompt, Invalidation::Layout);
+    cx.observe_model(&tabstrip_two_row_pinned, Invalidation::Layout);
+    cx.observe_model(&file_tree_items, Invalidation::Layout);
+    cx.observe_model(&file_tree_state, Invalidation::Layout);
 
-                        let open_model = dirty_close_prompt_open.clone();
-                        let prompt_model = dirty_close_prompt.clone();
+    let theme = cx.theme_snapshot();
+    let bg = Some(theme.color_token("background"));
+    let (prompt_open, prompt): (bool, Option<WorkspaceShellDirtyClosePrompt>) =
+        cx.data().selector_model_layout(
+            (&dirty_close_prompt_open, &dirty_close_prompt),
+            |(prompt_open, prompt)| (prompt_open, prompt),
+        );
+    if prompt_open {
+        let (reason, dirty_list, active_tab, close_count) = prompt
+            .as_ref()
+            .map(|p| {
+                let reason = Arc::<str>::from(format!("{:?}", p.request.reason));
+                let dirty_list = Arc::<str>::from(
+                    p.request
+                        .dirty_tabs_in_order
+                        .iter()
+                        .map(|t| t.as_ref())
+                        .collect::<Vec<_>>()
+                        .join(", "),
+                );
+                let active_tab = p
+                    .request
+                    .active_tab_id
+                    .as_ref()
+                    .map(|t| Arc::<str>::from(t.as_ref()))
+                    .unwrap_or_else(|| Arc::from("<none>"));
+                let close_count = p.request.target_tabs_in_order.len();
+                (reason, dirty_list, active_tab, close_count)
+            })
+            .unwrap_or_else(|| {
+                (
+                    Arc::from("<unknown>"),
+                    Arc::from("<unknown>"),
+                    Arc::from("<none>"),
+                    0,
+                )
+            });
+        let prompt_label = Arc::<str>::from(format!(
+            "Dirty close confirmation reason={reason} active={active_tab} close_count={close_count} dirty=[{dirty_list}]"
+        ));
 
-                        let cancel_cmd =
-                            CommandId::new(Arc::<str>::from(CMD_WORKSPACE_SHELL_DEMO_DIRTY_CLOSE_CANCEL));
-                        let discard_cmd =
-                            CommandId::new(Arc::<str>::from(CMD_WORKSPACE_SHELL_DEMO_DIRTY_CLOSE_DISCARD));
-                        let save_cmd = CommandId::new(Arc::<str>::from(
-                            CMD_WORKSPACE_SHELL_DEMO_DIRTY_CLOSE_SAVE_AND_CLOSE,
-                        ));
+        let dim_bg = Some(theme.color_token("muted"));
+        let dialog_bg = Some(theme.color_token("card"));
+        let border = Some(theme.color_token("border"));
 
-                        let overlay_root = cx.container(
+        let open_model = dirty_close_prompt_open.clone();
+        let prompt_model = dirty_close_prompt.clone();
+
+        let cancel_cmd = CommandId::new(Arc::<str>::from(
+            CMD_WORKSPACE_SHELL_DEMO_DIRTY_CLOSE_CANCEL,
+        ));
+        let discard_cmd = CommandId::new(Arc::<str>::from(
+            CMD_WORKSPACE_SHELL_DEMO_DIRTY_CLOSE_DISCARD,
+        ));
+        let save_cmd = CommandId::new(Arc::<str>::from(
+            CMD_WORKSPACE_SHELL_DEMO_DIRTY_CLOSE_SAVE_AND_CLOSE,
+        ));
+
+        let overlay_root = cx.container(
                             ContainerProps {
                                 layout: fill_layout(),
                                 ..Default::default()
@@ -898,102 +882,93 @@ impl WorkspaceShellDemoDriver {
                             },
                         );
 
-                        let dismiss_handler: fret_ui_kit::primitives::dismissable_layer::OnDismissRequest =
-                            Arc::new(move |host, _acx, _req| {
-                                workspace_shell_host_clear_dirty_close_prompt(
-                                    host,
-                                    &prompt_model,
-                                    &open_model,
-                                );
-                            });
+        let dismiss_handler: fret_ui_kit::primitives::dismissable_layer::OnDismissRequest =
+            Arc::new(move |host, _acx, _req| {
+                workspace_shell_host_clear_dirty_close_prompt(host, &prompt_model, &open_model);
+            });
 
-                        let mut req = OverlayRequest::modal(
-                            DIRTY_CLOSE_PROMPT_OVERLAY_ID,
-                            None,
-                            dirty_close_prompt_open.clone(),
-                            OverlayPresence::instant(true),
-                            vec![overlay_root],
-                        );
-                        req.root_name = Some(OverlayController::modal_root_name(
-                            DIRTY_CLOSE_PROMPT_OVERLAY_ID,
-                        ));
-                        req.dismissible_on_dismiss_request = Some(dismiss_handler);
-                        OverlayController::request(cx, req);
-                    }
+        let mut req = OverlayRequest::modal(
+            DIRTY_CLOSE_PROMPT_OVERLAY_ID,
+            None,
+            dirty_close_prompt_open.clone(),
+            OverlayPresence::instant(true),
+            vec![overlay_root],
+        );
+        req.root_name = Some(OverlayController::modal_root_name(
+            DIRTY_CLOSE_PROMPT_OVERLAY_ID,
+        ));
+        req.dismissible_on_dismiss_request = Some(dismiss_handler);
+        OverlayController::request(cx, req);
+    }
 
-                    let theme_for_left = theme.clone();
-                    let left = cx.keyed("workspace_shell.left", move |cx| {
-                        let mut props = FileTreeViewProps::default();
-                        props.layout = fill_layout();
-                        props.layout.overflow = Overflow::Clip;
-                        props.debug_root_test_id =
-                            Some(Arc::<str>::from("workspace-shell-file-tree-root"));
-                        props.debug_row_test_id_prefix =
-                            Some(Arc::<str>::from("workspace-shell-file-tree-node"));
-                        props.keep_alive = env_usize("FRET_WORKSPACE_SHELL_FILE_TREE_KEEP_ALIVE")
-                            .filter(|v| *v > 0);
+    let theme_for_left = theme.clone();
+    let left = cx.keyed("workspace_shell.left", move |cx| {
+        let mut props = FileTreeViewProps::default();
+        props.layout = fill_layout();
+        props.layout.overflow = Overflow::Clip;
+        props.debug_root_test_id = Some(Arc::<str>::from("workspace-shell-file-tree-root"));
+        props.debug_row_test_id_prefix = Some(Arc::<str>::from("workspace-shell-file-tree-node"));
+        props.keep_alive =
+            env_usize("FRET_WORKSPACE_SHELL_FILE_TREE_KEEP_ALIVE").filter(|v| *v > 0);
 
-                        cx.container(
-                            ContainerProps {
-                                layout: fixed_width_fill_height(Px(280.0)),
-                                background: Some(theme_for_left.color_token("card")),
-                                border: Edges::all(Px(1.0)),
-                                border_color: Some(theme_for_left.color_token("border")),
-                                ..Default::default()
-                            },
-                            move |cx| {
-                                vec![file_tree_view_retained_v0(
-                                    cx,
-                                    file_tree_items.clone(),
-                                    file_tree_state.clone(),
-                                    &file_tree_scroll,
-                                    props.clone(),
-                                )]
-                            },
-                        )
-                    });
+        cx.container(
+            ContainerProps {
+                layout: fixed_width_fill_height(Px(280.0)),
+                background: Some(theme_for_left.color_token("card")),
+                border: Edges::all(Px(1.0)),
+                border_color: Some(theme_for_left.color_token("border")),
+                ..Default::default()
+            },
+            move |cx| {
+                vec![file_tree_view_retained_v0(
+                    cx,
+                    file_tree_items.clone(),
+                    file_tree_state.clone(),
+                    &file_tree_scroll,
+                    props.clone(),
+                )]
+            },
+        )
+    });
 
-                    let two_row_pinned = cx
-                        .data()
-                        .selector_model_layout(&tabstrip_two_row_pinned, |two_row_pinned| {
-                            two_row_pinned
-                        });
-                    let (
-                        active_pane_label,
-                        active_tab_label,
-                        active_tab_count,
-                        active_dirty_count,
-                    ): (Arc<str>, Arc<str>, usize, usize) =
-                        cx.data().selector_model_layout(&window_layout, |layout| {
-                            let active_pane_label = layout
-                                .active_pane
-                                .clone()
-                                .unwrap_or_else(|| Arc::from("<none>"));
-                            let (active_tab_label, active_tab_count, active_dirty_count) = layout
-                                .active_pane
-                                .as_ref()
-                                .and_then(|pane_id| layout.pane_tree.find_pane(pane_id.as_ref()))
-                                .map(|pane| {
-                                    let active_tab_label = pane
-                                        .tabs
-                                        .active()
-                                        .cloned()
-                                        .unwrap_or_else(|| Arc::from("<none>"));
-                                    let active_tab_count = pane.tabs.tabs().len();
-                                    let active_dirty_count = pane.tabs.dirty_in_tab_order().len();
-                                    (active_tab_label, active_tab_count, active_dirty_count)
-                                })
-                                .unwrap_or_else(|| (Arc::from("<none>"), 0, 0));
-                            (
-                                active_pane_label,
-                                active_tab_label,
-                                active_tab_count,
-                                active_dirty_count,
-                            )
-                        });
-                    let theme_for_center = theme.clone();
-                    let window_layout_for_center = window_layout.clone();
-                    let center = cx.keyed("workspace_shell.center", move |cx| {
+    let two_row_pinned = cx
+        .data()
+        .selector_model_layout(&tabstrip_two_row_pinned, |two_row_pinned| two_row_pinned);
+    let (active_pane_label, active_tab_label, active_tab_count, active_dirty_count): (
+        Arc<str>,
+        Arc<str>,
+        usize,
+        usize,
+    ) = cx.data().selector_model_layout(&window_layout, |layout| {
+        let active_pane_label = layout
+            .active_pane
+            .clone()
+            .unwrap_or_else(|| Arc::from("<none>"));
+        let (active_tab_label, active_tab_count, active_dirty_count) = layout
+            .active_pane
+            .as_ref()
+            .and_then(|pane_id| layout.pane_tree.find_pane(pane_id.as_ref()))
+            .map(|pane| {
+                let active_tab_label = pane
+                    .tabs
+                    .active()
+                    .cloned()
+                    .unwrap_or_else(|| Arc::from("<none>"));
+                let active_tab_count = pane.tabs.tabs().len();
+                let active_dirty_count = pane.tabs.dirty_in_tab_order().len();
+                (active_tab_label, active_tab_count, active_dirty_count)
+            })
+            .unwrap_or_else(|| (Arc::from("<none>"), 0, 0));
+        (
+            active_pane_label,
+            active_tab_label,
+            active_tab_count,
+            active_dirty_count,
+        )
+    });
+    let theme_for_center = theme.clone();
+    let window_layout_for_center = window_layout.clone();
+    let center = cx.keyed("workspace_shell.center", move |cx| {
                         let mut render_pane =
                             move |cx: &mut fret_ui::ElementContext<'_, App>,
                                   pane: &fret_workspace::layout::WorkspacePaneLayout,
@@ -1346,69 +1321,50 @@ impl WorkspaceShellDemoDriver {
                             &mut render_pane,
                         )
                     });
-                    let right = cx.keyed("workspace_shell.right", move |cx| {
-                        workspace_shell_editor_rail(
-                            cx,
-                            WorkspaceShellEditorRailState {
-                                active_pane_label,
-                                active_tab_label,
-                                active_tab_count,
-                                active_dirty_count,
-                                two_row_pinned,
-                                prompt_open,
-                            },
-                        )
-                    });
+    let right = cx.keyed("workspace_shell.right", move |cx| {
+        workspace_shell_editor_rail(
+            cx,
+            WorkspaceShellEditorRailState {
+                active_pane_label,
+                active_tab_label,
+                active_tab_count,
+                active_dirty_count,
+                two_row_pinned,
+                prompt_open,
+            },
+        )
+    });
 
-                    let frame = WorkspaceFrame::new(center)
-                        .left(left)
-                        .right(right)
-                        .background(bg)
-                        .into_element(cx);
+    let frame = WorkspaceFrame::new(center)
+        .left(left)
+        .right(right)
+        .background(bg)
+        .into_element(cx);
 
-                    let out = if view_cache_shell {
-                        let mut props = ViewCacheProps::default();
-                        props.layout = fill_layout();
-                        props = props.contain_layout_when_bounds_known(true);
-                        cx.view_cache(props, move |_cx| vec![frame])
-                    } else {
-                        frame
-                    };
+    let out = if view_cache_shell {
+        let mut props = ViewCacheProps::default();
+        props.layout = fill_layout();
+        props = props.contain_layout_when_bounds_known(true);
+        cx.view_cache(props, move |_cx| vec![frame])
+    } else {
+        frame
+    };
 
-                    vec![
-                        WorkspaceCommandScope::new(window_layout.clone(), out)
-                            .apply_workspace_model_commands(false)
-                            .into_element(cx),
-                    ]
-                });
-    }
-}
-
-fn create_window_state(
-    _driver: &mut WorkspaceShellDemoDriver,
-    app: &mut App,
-    window: AppWindowId,
-) -> WorkspaceShellWindowState {
-    WorkspaceShellDemoDriver::build_ui(app, window)
-}
-
-fn handle_model_changes(
-    _driver: &mut WorkspaceShellDemoDriver,
-    context: WinitWindowContext<'_, WorkspaceShellWindowState>,
-    changed: &[fret_app::ModelId],
-) {
-    let WinitWindowContext { app, state, .. } = context;
-    state.ui.propagate_model_changes(app, changed);
+    vec![
+        WorkspaceCommandScope::new(window_layout.clone(), out)
+            .apply_workspace_model_commands(false)
+            .into_element(cx),
+    ]
+    .into()
 }
 
 fn handle_global_changes(
-    _driver: &mut WorkspaceShellDemoDriver,
-    context: WinitWindowContext<'_, WorkspaceShellWindowState>,
+    app: &mut App,
+    window: AppWindowId,
+    _ui: &mut fret_ui::UiTree<App>,
+    _state: &mut WorkspaceShellWindowState,
     changed: &[std::any::TypeId],
 ) {
-    let WinitWindowContext {
-        app, state, window, ..
-    } = context;
     if selected_workspace_shell_editor_theme_preset().is_some() {
         let _ = crate::sync_shadcn_host_theme_then_reapply_editor_preset_on_window_metrics_change(
             app,
@@ -1418,7 +1374,6 @@ fn handle_global_changes(
             WORKSPACE_SHELL_HOST_DEFAULT_SCHEME,
         );
     }
-    state.ui.propagate_global_changes(app, changed);
 }
 
 fn request_workspace_shell_window_close(
@@ -1503,18 +1458,14 @@ fn record_workspace_shell_driver_handled_command_dispatch(
     );
 }
 
-fn handle_command(
-    _driver: &mut WorkspaceShellDemoDriver,
-    context: WinitCommandContext<'_, WorkspaceShellWindowState>,
-    command: CommandId,
-) {
-    let WinitCommandContext {
-        app,
-        services,
-        window,
-        state,
-    } = context;
-
+fn handle_command_before_ui(
+    app: &mut App,
+    services: &mut dyn fret_core::UiServices,
+    window: AppWindowId,
+    ui: &mut fret_ui::UiTree<App>,
+    state: &mut WorkspaceShellWindowState,
+    command: &CommandId,
+) -> bool {
     if matches!(
         command.as_str(),
         state::CMD_WORKSPACE_SHELL_DEMO_DIRTY_CLOSE_CANCEL
@@ -1574,20 +1525,20 @@ fn handle_command(
 
         workspace_shell_clear_dirty_close_prompt(app, state);
         app.request_redraw(window);
-        return;
+        return true;
     }
 
     if command.as_str() == CMD_WORKSPACE_SHELL_DEMO_WINDOW_CLOSE {
         let pending_source =
-            consume_workspace_shell_pending_command_dispatch_source(app, window, &command);
+            consume_workspace_shell_pending_command_dispatch_source(app, window, command);
         request_workspace_shell_window_close(app, window, state);
         record_workspace_shell_driver_handled_command_dispatch(
             app,
             window,
-            &command,
+            command,
             pending_source,
         );
-        return;
+        return true;
     }
 
     if matches!(
@@ -1626,14 +1577,14 @@ fn handle_command(
         if did_apply {
             app.request_redraw(window);
         }
-        return;
+        return true;
     }
 
     if command.as_str() == CMD_WORKSPACE_SHELL_DEMO_TOGGLE_TABSTRIP_TWO_ROW_PINNED {
         let _ = WorkspaceShellModelOwner::new(app.models_mut())
             .toggle_tabstrip_two_row_pinned(&state.tabstrip_two_row_pinned);
         app.request_redraw(window);
-        return;
+        return true;
     }
 
     if command.as_str() == CMD_WORKSPACE_SHELL_DEMO_DEBUG_CLOSE_ACTIVE_PANE_A {
@@ -1672,7 +1623,11 @@ fn handle_command(
         if outcome.applied || outcome.blocked_dirty_close.is_some() {
             app.request_redraw(window);
         }
-        return;
+        return true;
+    }
+
+    if !command.as_str().starts_with("workspace.") {
+        return false;
     }
 
     // Important: for "app model" commands (e.g. workspace tab operations), we still want to
@@ -1684,7 +1639,7 @@ fn handle_command(
     // pending source metadata up front so we can still emit a stable command dispatch trace
     // entry for the driver-applied outcome (ADR 0307).
     let pending_source =
-        consume_workspace_shell_pending_command_dispatch_source(app, window, &command);
+        consume_workspace_shell_pending_command_dispatch_source(app, window, command);
     let pending_source_for_ui = pending_source.clone();
     app.with_global_mut(
         WindowPendingCommandDispatchSourceService::default,
@@ -1706,7 +1661,7 @@ fn handle_command(
         workspace_shell_update_window_layout(app, state, |layout: &mut WorkspaceWindowLayout| {
             let active_pane_id = layout.active_pane.clone();
             (
-                layout.apply_command_with_close_policy(&command, Some(&mut dirty_close_policy)),
+                layout.apply_command_with_close_policy(command, Some(&mut dirty_close_policy)),
                 active_pane_id,
             )
         });
@@ -1718,12 +1673,12 @@ fn handle_command(
         None,
     ));
 
-    let did_dispatch_ui = state.ui.dispatch_command(app, services, &command);
+    let did_dispatch_ui = ui.dispatch_command(app, services, command);
     if (outcome.applied || outcome.blocked_dirty_close.is_some()) && !did_dispatch_ui {
         record_workspace_shell_driver_handled_command_dispatch(
             app,
             window,
-            &command,
+            command,
             pending_source.clone(),
         );
     }
@@ -1741,167 +1696,30 @@ fn handle_command(
     if outcome.applied || outcome.blocked_dirty_close.is_some() || did_dispatch_ui {
         app.request_redraw(window);
     }
+    outcome.applied || outcome.blocked_dirty_close.is_some() || did_dispatch_ui
 }
 
 fn handle_event(
-    _driver: &mut WorkspaceShellDemoDriver,
-    context: WinitEventContext<'_, WorkspaceShellWindowState>,
+    app: &mut App,
+    _services: &mut dyn fret_core::UiServices,
+    window: AppWindowId,
+    _ui: &mut fret_ui::UiTree<App>,
+    state: &mut WorkspaceShellWindowState,
     event: &Event,
 ) {
-    let WinitEventContext {
-        app,
-        services,
-        window,
-        state,
-    } = context;
     if matches!(event, Event::WindowCloseRequested) {
         request_workspace_shell_window_close(app, window, state);
-        return;
     }
-    state.ui.dispatch_event(app, services, event);
 }
 
-fn render(
-    driver: &mut WorkspaceShellDemoDriver,
-    context: WinitRenderContext<'_, WorkspaceShellWindowState>,
-) {
-    let WinitRenderContext {
-        app,
-        services,
-        window,
-        state,
-        bounds,
-        scale_factor,
-        scene,
-    } = context;
-
-    OverlayController::begin_frame(app, window);
-    WorkspaceShellDemoDriver::render_ui(app, services, window, state, bounds);
-    OverlayController::render(&mut state.ui, app, services, window, bounds);
-
-    state.ui.request_semantics_snapshot();
-    state.ui.ingest_paint_cache_source(scene);
-
-    let inspection_active = app
-        .with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
-            svc.wants_inspection_active(window)
-        });
-    state.ui.set_inspection_active(inspection_active);
-
-    scene.clear();
-    let mut frame =
-        fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
-    frame.layout_all();
-
-    let semantics_snapshot = state.ui.semantics_snapshot_arc();
-    let drive = app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
-        svc.drive_script_for_window(
-            app,
-            services,
-            window,
-            bounds,
-            scale_factor,
-            Some(&mut state.ui),
-            semantics_snapshot.as_deref(),
-        )
-    });
-
-    if drive.request_redraw {
-        app.request_redraw(window);
-        app.push_effect(Effect::RequestAnimationFrame(window));
-    }
-
-    let mut injected_any = false;
-    for event in drive.events {
-        injected_any = true;
-        state.ui.dispatch_event(app, services, &event);
-    }
-
-    if injected_any {
-        let mut deferred_effects: Vec<Effect> = Vec::new();
-        loop {
-            let effects = app.flush_effects();
-            if effects.is_empty() {
-                break;
-            }
-
-            let mut applied_any_command = false;
-            for effect in effects {
-                match effect {
-                    Effect::Command { window: w, command } => {
-                        if w.is_none() || w == Some(window) {
-                            handle_command(
-                                driver,
-                                WinitCommandContext {
-                                    app,
-                                    services,
-                                    window,
-                                    state,
-                                },
-                                command,
-                            );
-                            applied_any_command = true;
-                        } else {
-                            deferred_effects.push(Effect::Command { window: w, command });
-                        }
-                    }
-                    other => deferred_effects.push(other),
-                }
-            }
-
-            if !applied_any_command {
-                break;
-            }
-        }
-        for effect in deferred_effects {
-            app.push_effect(effect);
-        }
-
-        state.ui.request_semantics_snapshot();
-        let mut frame =
-            fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
-        frame.layout_all();
-    }
-
-    let mut frame =
-        fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
-    frame.paint_all(scene);
-
-    app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
-        let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
-        svc.record_snapshot(
-            app,
-            window,
-            bounds,
-            scale_factor,
-            &mut state.ui,
-            element_runtime,
-            None,
-            scene,
-        );
-        let _ = svc.maybe_dump_if_triggered();
-        if svc.is_enabled() {
-            app.push_effect(Effect::RequestAnimationFrame(window));
-        }
-    });
-}
-
-fn configure_fn_driver_hooks(
-    hooks: &mut fret_launch::FnDriverHooks<WorkspaceShellDemoDriver, WorkspaceShellWindowState>,
-) {
-    hooks.handle_model_changes = Some(handle_model_changes);
-    hooks.handle_global_changes = Some(handle_global_changes);
-    hooks.handle_command = Some(handle_command);
-}
-
-pub fn build_fn_driver() -> FnDriver<WorkspaceShellDemoDriver, WorkspaceShellWindowState> {
-    FnDriver::new(
-        WorkspaceShellDemoDriver::default(),
-        create_window_state,
-        handle_event,
-        render,
-    )
-    .with_hooks(configure_fn_driver_hooks)
+fn configure_workspace_shell_driver(
+    driver: fret::UiAppDriver<WorkspaceShellWindowState>,
+) -> fret::UiAppDriver<WorkspaceShellWindowState> {
+    driver
+        .close_on_window_close_requested(false)
+        .on_event(handle_event)
+        .on_global_changes(handle_global_changes)
+        .on_command_before_ui(handle_command_before_ui)
 }
 
 pub fn run() -> anyhow::Result<()> {
@@ -1914,35 +1732,16 @@ pub fn run() -> anyhow::Result<()> {
         )
         .try_init();
 
-    let mut app = App::new();
-    app.set_global(PlatformCapabilities::default());
-    fret_workspace::commands::register_workspace_commands(app.commands_mut());
-    fret_app::install_command_default_keybindings_into_keymap(&mut app);
-    if let Some(preset) = selected_workspace_shell_editor_theme_preset() {
-        shadcn::themes::apply_shadcn_new_york(
-            &mut app,
-            WORKSPACE_SHELL_HOST_BASE_COLOR,
-            WORKSPACE_SHELL_HOST_DEFAULT_SCHEME,
-        );
-        fret_ui_editor::theme::install_editor_theme_preset_v1(&mut app, preset);
-    }
-
-    let config = WinitRunnerConfig {
-        main_window_title: "fret-demo workspace_shell_demo".to_string(),
-        main_window_size: fret_launch::WindowLogicalSize::new(1280.0, 720.0),
-        ..Default::default()
-    };
-
-    crate::run_native_with_fn_driver_with_hooks(
-        config,
-        app,
-        WorkspaceShellDemoDriver::default(),
-        create_window_state,
-        handle_event,
-        render,
-        configure_fn_driver_hooks,
-    )
-    .context("run workspace_shell_demo app")
+    fret::workspace::WorkspaceApp::new("workspace-shell-demo")
+        .window("fret-demo workspace_shell_demo", (1280.0, 720.0))
+        .setup(install_workspace_shell_theme)
+        .ui_with_hooks(
+            create_window_state,
+            render_workspace_shell,
+            configure_workspace_shell_driver,
+        )?
+        .run()
+        .map_err(anyhow::Error::from)
 }
 
 #[cfg(test)]

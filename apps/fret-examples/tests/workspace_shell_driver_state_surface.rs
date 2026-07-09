@@ -15,7 +15,7 @@ fn workspace_shell_driver_model_writes_stay_behind_owner_helpers() {
     for needle in [
         "structWorkspaceShellModelBundle{",
         "fnnew(models:&mutModelStore,window_layout:WorkspaceWindowLayout,file_tree_items:Vec<TreeItem>,file_tree_state:TreeState,)->Self{",
-        "letmodels=WorkspaceShellModelBundle::new(app.models_mut(),window_layout,items_value,state_value,);",
+        "letmodels=WorkspaceShellModelBundle::new(app.models_mut(),window_layout,items_value,state_value);",
         "structWorkspaceShellModelOwner<'a>{",
         "models:&'amutModelStore,",
         "fnupdate<T:Any,R>(&mutself,model:&Model<T>,f:implFnOnce(&mutT)->R)->Option<R>{",
@@ -28,7 +28,7 @@ fn workspace_shell_driver_model_writes_stay_behind_owner_helpers() {
         "fnworkspace_shell_open_dirty_close_prompt(",
         "fnworkspace_shell_clear_dirty_close_prompt(",
         "fnworkspace_shell_host_clear_dirty_close_prompt(",
-        "workspace_shell_host_clear_dirty_close_prompt(host,&prompt_model,&open_model,);",
+        "workspace_shell_host_clear_dirty_close_prompt(host,&prompt_model,&open_model);",
         "workspace_shell_open_dirty_close_prompt(app,state,WorkspaceShellDirtyClosePrompt::window_close(req),);",
         "workspace_shell_clear_dirty_close_prompt(app,state);",
         "WorkspaceShellModelOwner::new(app.models_mut()).toggle_tabstrip_two_row_pinned(&state.tabstrip_two_row_pinned);",

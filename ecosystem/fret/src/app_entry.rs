@@ -321,6 +321,50 @@ impl FretApp {
         )
     }
 
+    pub(crate) fn ui_driver_with_hooks<S: 'static>(
+        self,
+        init_window: fn(&mut crate::app::App, crate::WindowId) -> S,
+        view: for<'a> fn(&mut crate::AppRenderCx<'a>, &mut S) -> crate::Ui,
+        configure: fn(UiAppDriver<S>) -> UiAppDriver<S>,
+    ) -> Result<UiAppBuilder<S>> {
+        let FretApp {
+            root_name,
+            main_window,
+            defaults,
+            command_palette,
+            asset_mounts,
+            setup_hooks,
+            install_hooks,
+        } = self;
+
+        let driver = fret_bootstrap::ui_app_driver::UiAppDriver::new(root_name, init_window, view)
+            .on_preferences(fret_bootstrap::ui_app_driver::default_on_preferences::<S>);
+        #[cfg(feature = "shadcn")]
+        let driver = driver.on_global_changes_middleware(
+            crate::shadcn_sync_theme_from_environment_on_global_changes::<S>,
+        );
+        let mut driver = UiAppDriver::new(driver);
+        driver = configure(driver);
+        #[cfg(feature = "command-palette")]
+        {
+            if command_palette {
+                driver = driver.command_palette(true);
+            }
+        }
+        #[cfg(not(feature = "command-palette"))]
+        let _ = command_palette;
+
+        finish_builder(
+            root_name,
+            main_window,
+            defaults,
+            asset_mounts,
+            setup_hooks,
+            install_hooks,
+            driver,
+        )
+    }
+
     pub(crate) fn install_services(
         mut self,
         install: fn(&mut crate::app::App, &mut dyn fret_core::UiServices),
