@@ -99,7 +99,7 @@ impl DockGraph {
                     return Some(next_children[0]);
                 }
 
-                normalize_shares(&mut next_fractions);
+                next_fractions = normalize_split_fractions(next_fractions, next_children.len());
                 debug_assert_eq!(next_children.len(), next_fractions.len());
 
                 if let Some(DockNode::Split {
@@ -152,7 +152,7 @@ impl DockGraph {
                 changed = true;
 
                 let mut grand_shares = grand_fractions.clone();
-                normalize_shares(&mut grand_shares);
+                grand_shares = normalize_split_fractions(grand_shares, grand_children.len());
                 debug_assert_eq!(grand_children.len(), grand_shares.len());
 
                 for (&gc, &gs) in grand_children.iter().zip(grand_shares.iter()) {
@@ -1012,35 +1012,6 @@ impl DockGraph {
         // Kept for compatibility with older call sites; the canonical simplifier already prunes
         // empty floatings.
         self.simplify_window_forest(window);
-    }
-}
-
-fn normalize_shares(shares: &mut Vec<f32>) {
-    for f in shares.iter_mut() {
-        if !f.is_finite() {
-            *f = 0.0;
-        }
-        if *f < 0.0 {
-            *f = 0.0;
-        }
-    }
-
-    let sum: f32 = shares.iter().sum();
-    if !sum.is_finite() || sum <= f32::EPSILON {
-        let n = shares.len().max(1);
-        *shares = vec![1.0 / n as f32; n];
-        return;
-    }
-
-    for f in shares.iter_mut() {
-        *f /= sum;
-    }
-
-    // Clamp drift on the last element to keep sum stable.
-    let len = shares.len();
-    if len >= 1 {
-        let rest: f32 = shares.iter().take(len.saturating_sub(1)).sum();
-        shares[len - 1] = (1.0 - rest).clamp(0.0, 1.0);
     }
 }
 

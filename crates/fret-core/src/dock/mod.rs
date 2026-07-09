@@ -3,6 +3,7 @@ pub(super) mod layout;
 mod mutate;
 pub(super) mod op;
 mod persistence;
+pub(super) mod placement;
 mod query;
 use self::op::DockOp;
 use crate::{
@@ -70,7 +71,7 @@ pub enum EdgeDockDecision {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DockPanelPlacement {
+pub enum DockPanelLocationKind {
     Docked,
     Floating,
 }
@@ -78,7 +79,7 @@ pub enum DockPanelPlacement {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DockPanelLocation {
     pub window: AppWindowId,
-    pub placement: DockPanelPlacement,
+    pub placement: DockPanelLocationKind,
     pub tab_index: usize,
     pub tab_count: usize,
     pub active: bool,
@@ -179,6 +180,34 @@ impl DockGraph {
 
     // DockOp application lives in `apply.rs` to keep the main dock graph module focused on the
     // runtime tree and core mutation primitives.
+}
+
+pub(super) fn normalize_split_fractions(mut fractions: Vec<f32>, count: usize) -> Vec<f32> {
+    if count == 0 {
+        return Vec::new();
+    }
+    if fractions.len() != count {
+        return vec![1.0 / count as f32; count];
+    }
+
+    for fraction in &mut fractions {
+        if !fraction.is_finite() || *fraction < 0.0 {
+            *fraction = 0.0;
+        }
+    }
+
+    let sum: f32 = fractions.iter().sum();
+    if !sum.is_finite() || sum <= f32::EPSILON {
+        return vec![1.0 / count as f32; count];
+    }
+
+    for fraction in &mut fractions {
+        *fraction /= sum;
+    }
+
+    let rest: f32 = fractions.iter().take(count.saturating_sub(1)).sum();
+    fractions[count - 1] = (1.0 - rest).clamp(0.0, 1.0);
+    fractions
 }
 
 #[cfg(test)]

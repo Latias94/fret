@@ -1,11 +1,12 @@
 use fret_core::{AppWindowId, Color, PanelKey};
 use fret_docking::{
-    DockHostOptions, DockPanel, DockSurface, DockSurfaceChange, DockSurfaceHostSession,
-    DockSurfacePanelError, DockSurfacePanelLocation, DockSurfacePanelOutcome,
-    DockSurfacePanelPlacement, DockSurfacePanelSnapshot, DockSurfaceSnapshot,
-    DockSurfaceViewportCloseOutcome, DockSurfaceViewportError, DockSurfaceViewportOpenOutcome,
-    DockSurfaceViewportOpenStatus, DockSurfaceViewportPlatformReadiness,
-    DockSurfaceViewportReadiness, DockSurfaceViewportReadinessStatus, DockSurfaceViewportSession,
+    DockHostOptions, DockPanel, DockPanelPlacement, DockPanelPlacementTarget, DockSurface,
+    DockSurfaceChange, DockSurfaceHostSession, DockSurfacePanelError, DockSurfacePanelLocation,
+    DockSurfacePanelOutcome, DockSurfacePanelPlacement, DockSurfacePanelSnapshot,
+    DockSurfaceSnapshot, DockSurfaceViewportCloseOutcome, DockSurfaceViewportError,
+    DockSurfaceViewportOpenOutcome, DockSurfaceViewportOpenStatus,
+    DockSurfaceViewportPlatformReadiness, DockSurfaceViewportReadiness,
+    DockSurfaceViewportReadinessStatus, DockSurfaceViewportSession,
     DockSurfaceViewportUnsupportedReason,
 };
 use slotmap::KeyData;
@@ -29,6 +30,11 @@ fn public_root_consumer_constructs_dock_surface_without_internal_runtime_helpers
 
     let panel_key = PanelKey::new("external.inspector");
     assert_eq!(panel_key.kind.0.as_str(), "external.inspector");
+    let placement = DockPanelPlacement::left_rail(panel_key.clone())
+        .fraction(0.24)
+        .fallback(DockPanelPlacementTarget::center())
+        .selected();
+    assert_eq!(placement.panel(), &panel_key);
 
     assert!(!DockSurfaceChange::Unchanged.changed());
     assert!(DockSurfaceChange::Changed.changed());

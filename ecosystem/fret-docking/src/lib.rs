@@ -28,6 +28,7 @@ pub use facade::{
     DockSurfaceViewportReadinessStatus, DockSurfaceViewportSession,
     DockSurfaceViewportUnsupportedReason,
 };
+pub use fret_core::{DockPanelPlacement, DockPanelPlacementTarget};
 
 /// Explicit low-level docking access for framework tests and advanced first-party integrations.
 ///

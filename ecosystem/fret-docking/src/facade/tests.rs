@@ -3,9 +3,9 @@ use crate::dock::{DockManager, DockPanel, DockViewportLayout};
 use crate::runtime::DockRuntimeCommand;
 use crate::test_host::TestHost;
 use fret_core::{
-    AppWindowId, DockLayout, DockLayoutNode, DockLayoutWindow, DockNode, DockOp,
-    DockWindowPlacement, DropZone, PanelKey, Point, Px, Rect, RenderTargetId, Size, ViewportFit,
-    ViewportMapping,
+    AppWindowId, DockFloatingWindow, DockLayout, DockLayoutNode, DockLayoutWindow, DockNode,
+    DockOp, DockWindowPlacement, DropZone, PanelKey, Point, Px, Rect, RenderTargetId, Size,
+    ViewportFit, ViewportMapping,
 };
 use fret_runtime::{CreateWindowKind, Effect, PlatformCapabilities, WindowRequest};
 use slotmap::KeyData;
@@ -762,6 +762,63 @@ fn dock_surface_viewport_readiness_reports_panel_not_open() {
         DockSurfaceViewportReadinessStatus::PanelNotOpen
     );
     assert_eq!(readiness.source_window, other_window);
+    assert!(
+        app.take_effects().is_empty(),
+        "readiness checks must not emit host effects"
+    );
+}
+
+#[test]
+fn dock_surface_viewport_readiness_reports_missing_manager_and_capabilities() {
+    let window = AppWindowId::from(KeyData::from_ffi(1));
+    let panel = PanelKey::new("test.panel");
+    let surface = DockSurface::new(window);
+
+    let app = TestHost::new();
+
+    let readiness = surface.viewports().readiness(&app, &panel);
+
+    assert_eq!(
+        readiness.status,
+        DockSurfaceViewportReadinessStatus::DockManagerUnavailable
+    );
+    assert!(!readiness.platform.platform_capabilities_available);
+    assert!(readiness.has_unsupported_platform_reason(
+        DockSurfaceViewportUnsupportedReason::PlatformCapabilitiesUnavailable
+    ));
+}
+
+#[test]
+fn dock_surface_viewport_readiness_reports_tearoff_and_hover_degradation() {
+    let window = AppWindowId::from(KeyData::from_ffi(1));
+    let panel = PanelKey::new("test.panel");
+    let surface = DockSurface::new(window);
+
+    let mut caps = PlatformCapabilities::default();
+    caps.ui.window_tear_off = false;
+    caps.ui.window_hover_detection = fret_runtime::WindowHoverDetectionQuality::None;
+
+    let mut app = TestHost::new();
+    app.set_global(caps);
+    app.set_global(DockManager::default());
+    surface
+        .register_panel(&mut app, panel.clone(), test_panel("Panel"))
+        .expect("panel registers");
+    surface.open_panel(&mut app, &panel).expect("open panel");
+    app.take_effects();
+
+    let readiness = surface.viewports().readiness(&app, &panel);
+
+    assert_eq!(
+        readiness.status,
+        DockSurfaceViewportReadinessStatus::InWindowFallback
+    );
+    assert!(readiness.has_unsupported_platform_reason(
+        DockSurfaceViewportUnsupportedReason::WindowTearOffDisabled
+    ));
+    assert!(readiness.has_unsupported_platform_reason(
+        DockSurfaceViewportUnsupportedReason::WindowHoverDetectionUnavailable
+    ));
     assert!(
         app.take_effects().is_empty(),
         "readiness checks must not emit host effects"
@@ -1601,6 +1658,276 @@ fn dock_surface_request_float_panel_does_not_emit_host_effects_before_flush() {
             .filter(|command| matches!(command, DockRuntimeCommand::CreateWindow(_)))
             .count(),
         1
+    );
+}
+
+#[test]
+fn dock_surface_set_panel_placements_builds_main_window_layout() {
+    let window = AppWindowId::from(KeyData::from_ffi(1));
+    let hierarchy = PanelKey::new("test.hierarchy");
+    let scene = PanelKey::new("test.scene");
+    let inspector = PanelKey::new("test.inspector");
+    let surface = DockSurface::new(window);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    app.set_global(DockManager::default());
+    surface
+        .register_panel(&mut app, scene.clone(), test_panel("Scene"))
+        .expect("scene registers");
+
+    let change = surface.set_panel_placements(
+        &mut app,
+        [
+            DockPanelPlacement::left_rail(hierarchy.clone()),
+            DockPanelPlacement::center(scene.clone()).selected(),
+            DockPanelPlacement::right_rail(inspector.clone()),
+        ],
+    );
+
+    assert_eq!(change, DockSurfaceChange::Changed);
+    assert!(surface.has_window_root(&app, window));
+    assert_eq!(
+        surface
+            .panel_location(&app, &scene)
+            .map(|location| location.active),
+        Some(true)
+    );
+    assert_eq!(
+        surface
+            .panel_location(&app, &hierarchy)
+            .map(|location| location.placement),
+        Some(DockSurfacePanelPlacement::Docked)
+    );
+
+    let snapshots = surface.registered_panels(&app);
+    assert!(
+        snapshots
+            .iter()
+            .any(|snapshot| snapshot.key == scene && !snapshot.descriptor_only)
+    );
+    assert!(
+        snapshots
+            .iter()
+            .any(|snapshot| snapshot.key == hierarchy && snapshot.descriptor_only)
+    );
+    assert!(
+        snapshots
+            .iter()
+            .any(|snapshot| snapshot.key == inspector && snapshot.descriptor_only)
+    );
+    assert!(
+        app.take_redraws().contains(&window),
+        "setting panel placements should request redraw for the host window"
+    );
+}
+
+#[test]
+fn dock_surface_set_panel_placements_descriptor_panels_can_be_promoted() {
+    let window = AppWindowId::from(KeyData::from_ffi(1));
+    let registered = PanelKey::new("test.promote.register");
+    let ensured = PanelKey::new("test.promote.ensure");
+    let surface = DockSurface::new(window);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    app.set_global(DockManager::default());
+
+    assert_eq!(
+        surface.set_panel_placements(
+            &mut app,
+            [
+                DockPanelPlacement::center(registered.clone()),
+                DockPanelPlacement::right_rail(ensured.clone()),
+            ],
+        ),
+        DockSurfaceChange::Changed
+    );
+    let snapshots = surface.registered_panels(&app);
+    assert!(
+        snapshots
+            .iter()
+            .any(|snapshot| snapshot.key == registered && snapshot.descriptor_only)
+    );
+    assert!(
+        snapshots
+            .iter()
+            .any(|snapshot| snapshot.key == ensured && snapshot.descriptor_only)
+    );
+
+    surface
+        .register_panel(&mut app, registered.clone(), test_panel("Registered"))
+        .expect("descriptor-only registered panel should be promotable");
+    surface.ensure_panel(&mut app, &ensured, || test_panel("Ensured"));
+
+    let snapshots = surface.registered_panels(&app);
+    assert!(snapshots.iter().any(|snapshot| snapshot.key == registered
+        && !snapshot.descriptor_only
+        && snapshot.title == "Registered"));
+    assert!(snapshots.iter().any(|snapshot| snapshot.key == ensured
+        && !snapshot.descriptor_only
+        && snapshot.title == "Ensured"));
+}
+
+#[test]
+fn dock_surface_set_panel_placements_invalidates_replaced_windows() {
+    let main_window = AppWindowId::from(KeyData::from_ffi(1));
+    let other_window = AppWindowId::from(KeyData::from_ffi(2));
+    let old_panel = PanelKey::new("test.old");
+    let scene = PanelKey::new("test.scene");
+    let surface = DockSurface::new(main_window);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    app.set_global(DockManager::default());
+    surface
+        .register_panel(&mut app, old_panel.clone(), test_panel("Old"))
+        .expect("old panel registers");
+    surface
+        .register_panel(&mut app, scene.clone(), test_panel("Scene"))
+        .expect("scene panel registers");
+    surface
+        .open_panel_with_preferred_window(&mut app, other_window, &old_panel)
+        .expect("old panel opens in other window");
+    let main_target = render_target(300);
+    let other_target = render_target(301);
+    app.with_global_mut(DockManager::default, |dock, _app| {
+        dock.set_viewport_layout(
+            main_window,
+            main_target,
+            viewport_layout(rect(20.0, 20.0, 480.0, 270.0)),
+        );
+        dock.set_viewport_layout(
+            other_window,
+            other_target,
+            viewport_layout(rect(10.0, 10.0, 320.0, 240.0)),
+        );
+    });
+    app.take_redraws();
+
+    let change =
+        surface.set_panel_placements(&mut app, [DockPanelPlacement::center(scene.clone())]);
+
+    assert_eq!(change, DockSurfaceChange::Changed);
+    assert_eq!(surface.panel_location(&app, &old_panel), None);
+    assert_eq!(
+        surface
+            .panel_location(&app, &scene)
+            .map(|location| location.window),
+        Some(main_window)
+    );
+    let redraws = app.take_redraws();
+    assert!(
+        redraws.contains(&main_window),
+        "new placement layout should redraw the main window"
+    );
+    assert!(
+        redraws.contains(&other_window),
+        "replacing the graph should redraw windows removed by the reset"
+    );
+    let dock = app.global::<DockManager>().expect("dock manager exists");
+    assert_eq!(dock.viewport_layout(main_window, main_target), None);
+    assert_eq!(dock.viewport_layout(other_window, other_target), None);
+}
+
+#[test]
+fn dock_surface_set_panel_placements_resets_rootless_floating_windows() {
+    let main_window = AppWindowId::from(KeyData::from_ffi(1));
+    let floating_window = AppWindowId::from(KeyData::from_ffi(2));
+    let scene = PanelKey::new("test.scene");
+    let floating_panel = PanelKey::new("test.floating");
+    let surface = DockSurface::new(main_window);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    app.set_global(DockManager::default());
+    surface
+        .register_panel(&mut app, scene.clone(), test_panel("Scene"))
+        .expect("scene panel registers");
+    surface
+        .register_panel(&mut app, floating_panel.clone(), test_panel("Floating"))
+        .expect("floating panel registers");
+
+    assert_eq!(
+        surface.set_panel_placements(&mut app, [DockPanelPlacement::center(scene.clone())]),
+        DockSurfaceChange::Changed
+    );
+    let floating_target = render_target(302);
+    app.with_global_mut(DockManager::default, |dock, _app| {
+        let tabs = dock.workspace.graph.insert_node(DockNode::Tabs {
+            tabs: vec![floating_panel.clone()],
+            active: 0,
+        });
+        let floating = dock
+            .workspace
+            .graph
+            .insert_node(DockNode::Floating { child: tabs });
+        dock.workspace
+            .graph
+            .floating_windows_mut(floating_window)
+            .push(DockFloatingWindow {
+                floating,
+                rect: rect(10.0, 10.0, 300.0, 200.0),
+            });
+        dock.set_viewport_layout(
+            floating_window,
+            floating_target,
+            viewport_layout(rect(10.0, 10.0, 300.0, 200.0)),
+        );
+    });
+    app.take_redraws();
+
+    let change =
+        surface.set_panel_placements(&mut app, [DockPanelPlacement::center(scene.clone())]);
+
+    assert_eq!(change, DockSurfaceChange::Changed);
+    assert_eq!(surface.panel_location(&app, &floating_panel), None);
+    let redraws = app.take_redraws();
+    assert!(redraws.contains(&main_window));
+    assert!(redraws.contains(&floating_window));
+    let dock = app.global::<DockManager>().expect("dock manager exists");
+    assert_eq!(dock.viewport_layout(floating_window, floating_target), None);
+    assert!(
+        dock.workspace
+            .graph
+            .floating_windows(floating_window)
+            .is_empty()
+    );
+}
+
+#[test]
+fn dock_surface_set_panel_placements_reports_unchanged_for_same_layout() {
+    let window = AppWindowId::from(KeyData::from_ffi(1));
+    let hierarchy = PanelKey::new("test.hierarchy");
+    let scene = PanelKey::new("test.scene");
+    let surface = DockSurface::new(window);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    app.set_global(DockManager::default());
+
+    let first_change = surface.set_panel_placements(
+        &mut app,
+        [
+            DockPanelPlacement::left_rail(hierarchy.clone()),
+            DockPanelPlacement::center(scene.clone()).selected(),
+        ],
+    );
+    assert_eq!(first_change, DockSurfaceChange::Changed);
+    app.take_redraws();
+
+    let second_change = surface.set_panel_placements(
+        &mut app,
+        [
+            DockPanelPlacement::left_rail(hierarchy.clone()),
+            DockPanelPlacement::center(scene.clone()).selected(),
+        ],
+    );
+
+    assert_eq!(second_change, DockSurfaceChange::Unchanged);
+    assert!(
+        app.take_redraws().is_empty(),
+        "same placement layout should not request redundant redraws"
     );
 }
 

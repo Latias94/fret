@@ -4,7 +4,7 @@ use crate::{AppWindowId, Axis, DockGraph, DockNode, DockNodeId, PanelKey};
 
 pub const DOCK_LAYOUT_VERSION: u32 = 2;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DockLayout {
     pub layout_version: u32,
     pub windows: Vec<DockLayoutWindow>,
@@ -253,7 +253,7 @@ impl std::fmt::Display for DockLayoutValidationError {
 
 impl std::error::Error for DockLayoutValidationError {}
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DockLayoutWindow {
     pub logical_window_id: String,
     pub root: u32,
@@ -263,7 +263,7 @@ pub struct DockLayoutWindow {
     pub floatings: Vec<DockLayoutFloatingWindow>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DockLayoutFloatingWindow {
     /// Root node id within `nodes` for the floating dock tree (tabs/splits).
     pub root: u32,
@@ -271,7 +271,7 @@ pub struct DockLayoutFloatingWindow {
     pub rect: DockRect,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct DockRect {
     pub x: f32,
     pub y: f32,
@@ -297,7 +297,7 @@ impl DockRect {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DockWindowPlacement {
     pub width: u32,
     pub height: u32,
@@ -309,7 +309,7 @@ pub struct DockWindowPlacement {
     pub monitor_hint: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "kind")]
 pub enum DockLayoutNode {
     #[serde(rename = "split")]
@@ -414,6 +414,20 @@ impl DockLayoutBuilder {
 
     pub fn set_window_root(&mut self, window: AppWindowId, root: DockNodeId) {
         self.graph.set_window_root(window, root);
+    }
+
+    pub(super) fn split(
+        &mut self,
+        axis: Axis,
+        children: Vec<DockNodeId>,
+        fractions: Vec<f32>,
+    ) -> DockNodeId {
+        let count = children.len();
+        self.graph.insert_node(DockNode::Split {
+            axis,
+            children,
+            fractions: super::normalize_split_fractions(fractions, count),
+        })
     }
 
     /// Builds a Unity-like editor default layout:

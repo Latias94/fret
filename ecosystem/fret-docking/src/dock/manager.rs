@@ -37,19 +37,19 @@ impl DockPanelCatalog {
         key: PanelKey,
         panel: DockPanel,
     ) -> Result<(), DockPanelCatalogError> {
-        if self.panels.contains_key(&key) {
+        let replacing_descriptor = self.descriptor_only_panels.remove(&key);
+        if self.panels.contains_key(&key) && !replacing_descriptor {
             return Err(DockPanelCatalogError::DuplicatePanelKey { key });
         }
-        self.descriptor_only_panels.remove(&key);
         self.panels.insert(key, panel);
         Ok(())
     }
 
     pub fn ensure_panel(&mut self, key: &PanelKey, make: impl FnOnce() -> DockPanel) -> bool {
-        if self.panels.contains_key(key) {
+        let replacing_descriptor = self.descriptor_only_panels.remove(key);
+        if self.panels.contains_key(key) && !replacing_descriptor {
             return false;
         }
-        self.descriptor_only_panels.remove(key);
         self.panels.insert(key.clone(), make());
         true
     }
@@ -157,6 +157,34 @@ impl DockWorkspace {
             )
     }
 
+    pub fn set_panel_placements(
+        &mut self,
+        window: fret_core::AppWindowId,
+        placements: impl IntoIterator<Item = fret_core::DockPanelPlacement>,
+    ) -> Vec<fret_core::AppWindowId> {
+        let placements: Vec<fret_core::DockPanelPlacement> = placements.into_iter().collect();
+        let mut descriptor_changed = false;
+        for placement in &placements {
+            descriptor_changed |= self.panel_catalog.ensure_descriptor_only(placement.panel());
+        }
+        let next_graph = fret_core::DockGraph::from_panel_placements(window, placements);
+        if !descriptor_changed
+            && self.graph.windows() == next_graph.windows()
+            && exported_graph_layout(&self.graph) == exported_graph_layout(&next_graph)
+        {
+            return Vec::new();
+        }
+
+        let mut invalidated_windows = self.graph.windows();
+        for window in next_graph.windows() {
+            if !invalidated_windows.contains(&window) {
+                invalidated_windows.push(window);
+            }
+        }
+        self.graph = next_graph;
+        invalidated_windows
+    }
+
     fn reconcile_panel_descriptors_from_layout(&mut self, layout: &fret_core::DockLayout) {
         for node in &layout.nodes {
             let fret_core::DockLayoutNode::Tabs { tabs, .. } = node else {
@@ -167,6 +195,15 @@ impl DockWorkspace {
             }
         }
     }
+}
+
+fn exported_graph_layout(graph: &fret_core::DockGraph) -> fret_core::DockLayout {
+    let windows: Vec<(fret_core::AppWindowId, String)> = graph
+        .windows()
+        .into_iter()
+        .map(|window| (window, format!("{window:?}")))
+        .collect();
+    graph.export_layout(&windows)
 }
 
 #[derive(Default)]
@@ -287,6 +324,18 @@ impl DockManager {
 
     pub fn ensure_panel(&mut self, key: &PanelKey, make: impl FnOnce() -> DockPanel) {
         self.workspace.ensure_panel(key, make);
+    }
+
+    pub fn set_panel_placements(
+        &mut self,
+        window: fret_core::AppWindowId,
+        placements: impl IntoIterator<Item = fret_core::DockPanelPlacement>,
+    ) -> Vec<fret_core::AppWindowId> {
+        let invalidated_windows = self.workspace.set_panel_placements(window, placements);
+        for window in &invalidated_windows {
+            self.clear_viewport_layout_for_window(*window);
+        }
+        invalidated_windows
     }
 
     pub fn panel(&self, key: &PanelKey) -> Option<&DockPanel> {
@@ -498,6 +547,35 @@ mod tests {
             .expect_err("duplicate panel keys should fail fast");
 
         assert_eq!(err, DockPanelCatalogError::DuplicatePanelKey { key });
+    }
+
+    #[test]
+    fn panel_catalog_promotes_descriptor_only_entries() {
+        let mut catalog = DockPanelCatalog::default();
+        let register_key = PanelKey::new("test.register");
+        let ensure_key = PanelKey::new("test.ensure");
+
+        assert!(catalog.ensure_descriptor_only(&register_key));
+        assert!(
+            catalog
+                .register_panel(register_key.clone(), test_panel("Registered"))
+                .is_ok()
+        );
+        assert!(!catalog.is_descriptor_only(&register_key));
+        assert_eq!(
+            catalog
+                .panel(&register_key)
+                .map(|panel| panel.title.as_str()),
+            Some("Registered")
+        );
+
+        assert!(catalog.ensure_descriptor_only(&ensure_key));
+        assert!(catalog.ensure_panel(&ensure_key, || test_panel("Ensured")));
+        assert!(!catalog.is_descriptor_only(&ensure_key));
+        assert_eq!(
+            catalog.panel(&ensure_key).map(|panel| panel.title.as_str()),
+            Some("Ensured")
+        );
     }
 
     #[test]

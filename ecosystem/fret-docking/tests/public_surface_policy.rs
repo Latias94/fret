@@ -24,6 +24,8 @@ fn public_docking_surface_prefers_dock_surface_entry_points() {
         "DockSurfaceViewportReadinessStatus",
         "DockSurfaceViewportUnsupportedReason",
         "DockSurfaceViewportSession",
+        "DockPanelPlacement",
+        "DockPanelPlacementTarget",
         "DockPanel",
         "DockPanelElementRegistry",
         "DockViewportLayout",

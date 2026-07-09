@@ -262,7 +262,7 @@ impl DockGraph {
     ) -> Option<DockPanelLocation> {
         if let Some(root) = self.window_root(window)
             && let Some(location) =
-                self.panel_location_in_node(window, DockPanelPlacement::Docked, root, panel)
+                self.panel_location_in_node(window, DockPanelLocationKind::Docked, root, panel)
         {
             return Some(location);
         }
@@ -270,7 +270,7 @@ impl DockGraph {
         for floating in self.floating_windows(window) {
             if let Some(location) = self.panel_location_in_node(
                 window,
-                DockPanelPlacement::Floating,
+                DockPanelLocationKind::Floating,
                 floating.floating,
                 panel,
             ) {
@@ -385,7 +385,7 @@ impl DockGraph {
     fn panel_location_in_node(
         &self,
         window: AppWindowId,
-        placement: DockPanelPlacement,
+        placement: DockPanelLocationKind,
         node: DockNodeId,
         panel: &PanelKey,
     ) -> Option<DockPanelLocation> {
@@ -405,7 +405,7 @@ impl DockGraph {
                 .copied()
                 .find_map(|child| self.panel_location_in_node(window, placement, child, panel)),
             DockNode::Floating { child } => {
-                self.panel_location_in_node(window, DockPanelPlacement::Floating, *child, panel)
+                self.panel_location_in_node(window, DockPanelLocationKind::Floating, *child, panel)
             }
         }
     }

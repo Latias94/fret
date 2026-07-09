@@ -1824,7 +1824,7 @@ fn ensure_panel_visible_dedupes_existing_panel_in_floating_only_window() {
         g.panel_location(&panel_b),
         Some(DockPanelLocation {
             window: window_b,
-            placement: DockPanelPlacement::Floating,
+            placement: DockPanelLocationKind::Floating,
             tab_index: 0,
             tab_count: 1,
             active: true,
@@ -1833,7 +1833,7 @@ fn ensure_panel_visible_dedupes_existing_panel_in_floating_only_window() {
     assert_eq!(
         g.panel_location_in_window(window_b, &panel_b)
             .map(|location| location.placement),
-        Some(DockPanelPlacement::Floating)
+        Some(DockPanelLocationKind::Floating)
     );
     assert_eq!(g.selected_panel_in_window(window_b), Some(panel_b.clone()));
     assert_eq!(g.selected_panel_in_window(window(99)), None);
@@ -1869,7 +1869,7 @@ fn panel_location_and_selected_panel_report_docked_and_floating_tabs() {
         g.panel_location(&panel_a),
         Some(DockPanelLocation {
             window: w,
-            placement: DockPanelPlacement::Docked,
+            placement: DockPanelLocationKind::Docked,
             tab_index: 0,
             tab_count: 2,
             active: false,
@@ -1879,7 +1879,7 @@ fn panel_location_and_selected_panel_report_docked_and_floating_tabs() {
         g.panel_location(&panel_b),
         Some(DockPanelLocation {
             window: w,
-            placement: DockPanelPlacement::Docked,
+            placement: DockPanelLocationKind::Docked,
             tab_index: 1,
             tab_count: 2,
             active: true,
@@ -1889,7 +1889,7 @@ fn panel_location_and_selected_panel_report_docked_and_floating_tabs() {
         g.panel_location(&panel_c),
         Some(DockPanelLocation {
             window: w,
-            placement: DockPanelPlacement::Floating,
+            placement: DockPanelLocationKind::Floating,
             tab_index: 0,
             tab_count: 1,
             active: true,
@@ -1937,7 +1937,7 @@ fn ensure_panel_visible_raises_existing_floating_owner_to_front() {
         g.panel_location(&panel_a),
         Some(DockPanelLocation {
             window: w,
-            placement: DockPanelPlacement::Floating,
+            placement: DockPanelLocationKind::Floating,
             tab_index: 0,
             tab_count: 1,
             active: true,

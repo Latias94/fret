@@ -1,7 +1,8 @@
 use std::sync::Arc;
 
 use fret_core::{
-    AppWindowId, DockLayout, DockLayoutValidationError, DockOp, DockWindowPlacement, PanelKey,
+    AppWindowId, DockLayout, DockLayoutValidationError, DockOp, DockPanelPlacement,
+    DockWindowPlacement, PanelKey,
 };
 use fret_runtime::UiHost;
 use fret_ui::ElementContext;
@@ -139,6 +140,22 @@ impl DockSurface {
             );
         }
         Ok(changed)
+    }
+
+    pub fn set_panel_placements<H: UiHost>(
+        &self,
+        app: &mut H,
+        placements: impl IntoIterator<Item = DockPanelPlacement>,
+    ) -> DockSurfaceChange {
+        let invalidated_windows = app.with_global_mut(DockManager::default, |dock, _app| {
+            dock.set_panel_placements(self.main_window, placements)
+        });
+        if invalidated_windows.is_empty() {
+            DockSurfaceChange::Unchanged
+        } else {
+            invalidate_imported_layout_windows(app, invalidated_windows);
+            DockSurfaceChange::Changed
+        }
     }
 
     pub fn export_layout<H: UiHost>(

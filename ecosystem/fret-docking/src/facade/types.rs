@@ -1,4 +1,4 @@
-use fret_core::{AppWindowId, DockLayout, DockPanelLocation, DockPanelPlacement, PanelKey};
+use fret_core::{AppWindowId, DockLayout, DockPanelLocation, DockPanelLocationKind, PanelKey};
 use fret_runtime::WindowHoverDetectionQuality;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -29,11 +29,11 @@ pub enum DockSurfacePanelPlacement {
     Floating,
 }
 
-impl From<DockPanelPlacement> for DockSurfacePanelPlacement {
-    fn from(placement: DockPanelPlacement) -> Self {
+impl From<DockPanelLocationKind> for DockSurfacePanelPlacement {
+    fn from(placement: DockPanelLocationKind) -> Self {
         match placement {
-            DockPanelPlacement::Docked => Self::Docked,
-            DockPanelPlacement::Floating => Self::Floating,
+            DockPanelLocationKind::Docked => Self::Docked,
+            DockPanelLocationKind::Floating => Self::Floating,
         }
     }
 }
