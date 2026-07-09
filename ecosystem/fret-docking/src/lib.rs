@@ -24,7 +24,9 @@ pub use facade::{
     DockSurfacePanelLocation, DockSurfacePanelOutcome, DockSurfacePanelPlacement,
     DockSurfacePanelSnapshot, DockSurfaceSnapshot, DockSurfaceViewportCloseOutcome,
     DockSurfaceViewportError, DockSurfaceViewportOpenOutcome, DockSurfaceViewportOpenStatus,
-    DockSurfaceViewportSession,
+    DockSurfaceViewportPlatformReadiness, DockSurfaceViewportReadiness,
+    DockSurfaceViewportReadinessStatus, DockSurfaceViewportSession,
+    DockSurfaceViewportUnsupportedReason,
 };
 
 /// Explicit low-level docking access for framework tests and advanced first-party integrations.

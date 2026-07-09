@@ -29,7 +29,9 @@ pub use types::{
     DockSurfaceChange, DockSurfacePanelError, DockSurfacePanelLocation, DockSurfacePanelOutcome,
     DockSurfacePanelPlacement, DockSurfacePanelSnapshot, DockSurfaceSnapshot,
     DockSurfaceViewportCloseOutcome, DockSurfaceViewportError, DockSurfaceViewportOpenOutcome,
-    DockSurfaceViewportOpenStatus,
+    DockSurfaceViewportOpenStatus, DockSurfaceViewportPlatformReadiness,
+    DockSurfaceViewportReadiness, DockSurfaceViewportReadinessStatus,
+    DockSurfaceViewportUnsupportedReason,
 };
 pub use viewport::DockSurfaceViewportSession;
 

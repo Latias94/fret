@@ -7,6 +7,8 @@ use super::query::panel_location_in_window;
 use super::{
     DockSurface, DockSurfaceChange, DockSurfaceDriver, DockSurfaceViewportCloseOutcome,
     DockSurfaceViewportError, DockSurfaceViewportOpenOutcome, DockSurfaceViewportOpenStatus,
+    DockSurfaceViewportPlatformReadiness, DockSurfaceViewportReadiness,
+    DockSurfaceViewportReadinessStatus, DockSurfaceViewportUnsupportedReason,
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -15,6 +17,64 @@ pub struct DockSurfaceViewportSession {
 }
 
 impl DockSurfaceViewportSession {
+    pub fn check_open_readiness<H: UiHost>(
+        &self,
+        app: &H,
+        panel: &PanelKey,
+    ) -> DockSurfaceViewportReadiness {
+        let source_window = self
+            .surface
+            .panel_location(app, panel)
+            .map(|location| location.window)
+            .unwrap_or(self.surface.main_window);
+        self.check_open_readiness_from_window(app, source_window, panel)
+    }
+
+    pub fn readiness<H: UiHost>(&self, app: &H, panel: &PanelKey) -> DockSurfaceViewportReadiness {
+        self.check_open_readiness(app, panel)
+    }
+
+    pub fn check_open_readiness_from_window<H: UiHost>(
+        &self,
+        app: &H,
+        source_window: AppWindowId,
+        panel: &PanelKey,
+    ) -> DockSurfaceViewportReadiness {
+        let (platform, unsupported_reasons) =
+            viewport_platform_readiness(app.global::<PlatformCapabilities>());
+
+        let status = match app.global::<DockManager>() {
+            None => DockSurfaceViewportReadinessStatus::DockManagerUnavailable,
+            Some(dock)
+                if panel_location_in_window(&dock.workspace.graph, source_window, panel)
+                    .is_none() =>
+            {
+                DockSurfaceViewportReadinessStatus::PanelNotOpen
+            }
+            Some(_) if unsupported_reasons.is_empty() => {
+                DockSurfaceViewportReadinessStatus::Openable
+            }
+            Some(_) => DockSurfaceViewportReadinessStatus::InWindowFallback,
+        };
+
+        DockSurfaceViewportReadiness {
+            panel: panel.clone(),
+            source_window,
+            status,
+            platform,
+            unsupported_reasons,
+        }
+    }
+
+    pub fn readiness_from_window<H: UiHost>(
+        &self,
+        app: &H,
+        source_window: AppWindowId,
+        panel: &PanelKey,
+    ) -> DockSurfaceViewportReadiness {
+        self.check_open_readiness_from_window(app, source_window, panel)
+    }
+
     pub fn open_panel<H: UiHost>(
         &self,
         app: &mut H,
@@ -116,4 +176,42 @@ impl DockSurfaceViewportSession {
             window_requests: 0,
         })
     }
+}
+
+fn viewport_platform_readiness(
+    caps: Option<&PlatformCapabilities>,
+) -> (
+    DockSurfaceViewportPlatformReadiness,
+    Vec<DockSurfaceViewportUnsupportedReason>,
+) {
+    let Some(caps) = caps else {
+        return (
+            DockSurfaceViewportPlatformReadiness {
+                platform_capabilities_available: false,
+                multi_window: false,
+                window_tear_off: false,
+                window_hover_detection: fret_runtime::WindowHoverDetectionQuality::None,
+            },
+            vec![DockSurfaceViewportUnsupportedReason::PlatformCapabilitiesUnavailable],
+        );
+    };
+
+    let platform = DockSurfaceViewportPlatformReadiness {
+        platform_capabilities_available: true,
+        multi_window: caps.ui.multi_window,
+        window_tear_off: caps.ui.window_tear_off,
+        window_hover_detection: caps.ui.window_hover_detection,
+    };
+    let mut reasons = Vec::new();
+    if !platform.multi_window {
+        reasons.push(DockSurfaceViewportUnsupportedReason::MultiWindowDisabled);
+    }
+    if !platform.window_tear_off {
+        reasons.push(DockSurfaceViewportUnsupportedReason::WindowTearOffDisabled);
+    }
+    if platform.window_hover_detection == fret_runtime::WindowHoverDetectionQuality::None {
+        reasons.push(DockSurfaceViewportUnsupportedReason::WindowHoverDetectionUnavailable);
+    }
+
+    (platform, reasons)
 }

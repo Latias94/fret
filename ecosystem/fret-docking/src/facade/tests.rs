@@ -664,6 +664,111 @@ fn dock_surface_viewport_session_reports_already_pending() {
 }
 
 #[test]
+fn dock_surface_viewport_readiness_reports_openable_without_effects() {
+    let window = AppWindowId::from(KeyData::from_ffi(1));
+    let panel = PanelKey::new("test.panel");
+    let surface = DockSurface::new(window);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    app.set_global(DockManager::default());
+    surface
+        .register_panel(&mut app, panel.clone(), test_panel("Panel"))
+        .expect("panel registers");
+    surface.open_panel(&mut app, &panel).expect("open panel");
+    app.take_effects();
+
+    let readiness = surface.viewports().readiness(&app, &panel);
+
+    assert_eq!(readiness.panel, panel);
+    assert_eq!(readiness.source_window, window);
+    assert_eq!(
+        readiness.status,
+        DockSurfaceViewportReadinessStatus::Openable
+    );
+    assert!(readiness.can_open_platform_viewport());
+    assert!(!readiness.will_use_in_window_fallback());
+    assert!(readiness.unsupported_reasons.is_empty());
+    assert_eq!(
+        readiness.platform.window_hover_detection,
+        fret_runtime::WindowHoverDetectionQuality::Reliable
+    );
+    assert!(
+        app.take_effects().is_empty(),
+        "readiness checks must not emit host effects"
+    );
+}
+
+#[test]
+fn dock_surface_viewport_readiness_reports_fallback_reasons() {
+    let window = AppWindowId::from(KeyData::from_ffi(1));
+    let panel = PanelKey::new("test.panel");
+    let surface = DockSurface::new(window);
+
+    let mut caps = PlatformCapabilities::default();
+    caps.ui.multi_window = false;
+    caps.ui.window_tear_off = true;
+
+    let mut app = TestHost::new();
+    app.set_global(caps);
+    app.set_global(DockManager::default());
+    surface
+        .register_panel(&mut app, panel.clone(), test_panel("Panel"))
+        .expect("panel registers");
+    surface.open_panel(&mut app, &panel).expect("open panel");
+    app.take_effects();
+
+    let readiness = surface.viewports().readiness(&app, &panel);
+
+    assert_eq!(
+        readiness.status,
+        DockSurfaceViewportReadinessStatus::InWindowFallback
+    );
+    assert!(!readiness.can_open_platform_viewport());
+    assert!(readiness.will_use_in_window_fallback());
+    assert!(readiness.platform.platform_capabilities_available);
+    assert!(!readiness.platform.multi_window);
+    assert!(readiness.has_unsupported_platform_reason(
+        DockSurfaceViewportUnsupportedReason::MultiWindowDisabled
+    ));
+    assert!(
+        app.take_effects().is_empty(),
+        "readiness checks must not emit host effects"
+    );
+}
+
+#[test]
+fn dock_surface_viewport_readiness_reports_panel_not_open() {
+    let main_window = AppWindowId::from(KeyData::from_ffi(1));
+    let other_window = AppWindowId::from(KeyData::from_ffi(2));
+    let panel = PanelKey::new("test.panel");
+    let surface = DockSurface::new(main_window);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    app.set_global(DockManager::default());
+    surface
+        .register_panel(&mut app, panel.clone(), test_panel("Panel"))
+        .expect("panel registers");
+    surface.open_panel(&mut app, &panel).expect("open panel");
+    app.take_effects();
+
+    let readiness = surface
+        .viewports()
+        .readiness_from_window(&app, other_window, &panel);
+
+    assert_eq!(
+        readiness.status,
+        DockSurfaceViewportReadinessStatus::PanelNotOpen
+    );
+    assert_eq!(readiness.source_window, other_window);
+    assert!(
+        app.take_effects().is_empty(),
+        "readiness checks must not emit host effects"
+    );
+}
+
+#[test]
 fn dock_surface_viewport_session_reports_in_window_fallback() {
     let window = AppWindowId::from(KeyData::from_ffi(1));
     let panel = PanelKey::new("test.panel");

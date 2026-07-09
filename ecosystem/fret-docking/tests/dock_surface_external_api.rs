@@ -4,7 +4,9 @@ use fret_docking::{
     DockSurfacePanelError, DockSurfacePanelLocation, DockSurfacePanelOutcome,
     DockSurfacePanelPlacement, DockSurfacePanelSnapshot, DockSurfaceSnapshot,
     DockSurfaceViewportCloseOutcome, DockSurfaceViewportError, DockSurfaceViewportOpenOutcome,
-    DockSurfaceViewportOpenStatus, DockSurfaceViewportSession,
+    DockSurfaceViewportOpenStatus, DockSurfaceViewportPlatformReadiness,
+    DockSurfaceViewportReadiness, DockSurfaceViewportReadinessStatus, DockSurfaceViewportSession,
+    DockSurfaceViewportUnsupportedReason,
 };
 use slotmap::KeyData;
 
@@ -68,6 +70,21 @@ fn public_root_consumer_constructs_dock_surface_without_internal_runtime_helpers
         DockSurfaceViewportError::DockManagerUnavailable,
         DockSurfaceViewportError::DockManagerUnavailable
     );
+    assert_eq!(
+        DockSurfaceViewportReadinessStatus::Openable,
+        DockSurfaceViewportReadinessStatus::Openable
+    );
+    assert_eq!(
+        DockSurfaceViewportUnsupportedReason::MultiWindowDisabled,
+        DockSurfaceViewportUnsupportedReason::MultiWindowDisabled
+    );
+    let platform_readiness = DockSurfaceViewportPlatformReadiness {
+        platform_capabilities_available: true,
+        multi_window: true,
+        window_tear_off: true,
+        window_hover_detection: fret_runtime::WindowHoverDetectionQuality::Reliable,
+    };
+    assert!(platform_readiness.multi_window);
 
     fn accepts_panel_outcome_type(_: Option<DockSurfacePanelOutcome>) {}
     accepts_panel_outcome_type(None);
@@ -83,4 +100,7 @@ fn public_root_consumer_constructs_dock_surface_without_internal_runtime_helpers
 
     fn accepts_viewport_open_outcome_type(_: Option<DockSurfaceViewportOpenOutcome>) {}
     accepts_viewport_open_outcome_type(None);
+
+    fn accepts_viewport_readiness_type(_: Option<DockSurfaceViewportReadiness>) {}
+    accepts_viewport_readiness_type(None);
 }
