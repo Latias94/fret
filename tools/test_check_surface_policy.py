@@ -213,6 +213,34 @@ class SurfacePolicyTests(unittest.TestCase):
                 {violation.rule for violation in violations},
             )
 
+    def test_gpui_real_app_probes_have_plan_tracked_retirements(self) -> None:
+        specs = {spec.path: spec for spec in POLICY.ADVANCED_MANUAL_SURFACES}
+        probe_paths = {
+            "apps/fret-examples/src/workspace_shell_demo",
+            "apps/fret-examples/src/datatable_demo.rs",
+        }
+
+        for path in probe_paths:
+            spec = specs[path]
+            self.assertIn("Temporary real-app probe allowance", spec.retirement)
+            self.assertIn(POLICY.GPUI_ERGONOMICS_BOUNDARY_PLAN, spec.retirement)
+            self.assertTrue(spec.owner)
+            self.assertTrue(spec.allowed_raw_seams)
+
+        workspace_spec = specs["apps/fret-examples/src/workspace_shell_demo"]
+        self.assertEqual(POLICY.WORKSPACE_SHELL_OWNER, workspace_spec.owner)
+        self.assertIn("FnDriver", workspace_spec.allowed_raw_seams)
+        self.assertIn("UiTree", workspace_spec.allowed_raw_seams)
+        self.assertIn("typed workspace commands", workspace_spec.retirement)
+
+        datatable_spec = specs["apps/fret-examples/src/datatable_demo.rs"]
+        self.assertEqual(POLICY.DATATABLE_OWNER, datatable_spec.owner)
+        self.assertIn("FnDriver", datatable_spec.allowed_raw_seams)
+        self.assertIn("UiTree", datatable_spec.allowed_raw_seams)
+        self.assertNotIn("AnyElement", datatable_spec.allowed_raw_seams)
+        self.assertNotIn("ElementContext", datatable_spec.allowed_raw_seams)
+        self.assertIn("DataTable recipe", datatable_spec.retirement)
+
     def test_advanced_manual_surface_rejects_unlisted_raw_seam(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

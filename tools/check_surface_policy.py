@@ -19,6 +19,9 @@ from typing import Iterable, Sequence
 
 WORKSPACE_ROOT = Path(__file__).resolve().parent.parent
 GATE_NAME = "surface responsibility policy"
+GPUI_ERGONOMICS_BOUNDARY_PLAN = (
+    "docs/plans/2026-07-09-002-refactor-gpui-ergonomics-boundary-plan.md"
+)
 
 
 @dataclass(frozen=True)
@@ -272,6 +275,20 @@ FRET_EXAMPLES_ADVANCED_RETIREMENT = (
     "runner/test harness glue or moves the remaining raw seams behind explicit public wrappers."
 )
 
+WORKSPACE_SHELL_GPUI_RETIREMENT = (
+    "Temporary real-app probe allowance tracked by "
+    f"{GPUI_ERGONOMICS_BOUNDARY_PLAN}; retire once WorkspaceApp, the app-facing frame harness, "
+    "and typed workspace commands own command routing, dirty-close blocking, diagnostics, and "
+    "window lifecycle flows."
+)
+
+DATATABLE_GPUI_RETIREMENT = (
+    "Temporary real-app probe allowance tracked by "
+    f"{GPUI_ERGONOMICS_BOUNDARY_PLAN}; retire once the DataTable recipe owns output state, "
+    "columns, toolbar, pagination, row selection, sorting, and stable debug-id wiring without "
+    "FnDriver/UiTree at the app call site."
+)
+
 CLASSIFIED_RAW_SURFACE_CATEGORIES = frozenset(
     {"advanced_manual", "comparison_surface", "internal_harness", "renderer_lab"}
 )
@@ -316,6 +333,7 @@ def _fret_examples_advanced_surface(
     allowed_raw_seams: tuple[str, ...],
     *,
     owner: str,
+    retirement: str = FRET_EXAMPLES_ADVANCED_RETIREMENT,
 ) -> SurfacePath:
     return SurfacePath(
         f"apps/fret-examples/src/{filename}",
@@ -323,7 +341,7 @@ def _fret_examples_advanced_surface(
         f"{filename} remains classified as an advanced examples surface because {reason}",
         owner=owner,
         allowed_raw_seams=allowed_raw_seams,
-        retirement=FRET_EXAMPLES_ADVANCED_RETIREMENT,
+        retirement=retirement,
     )
 
 
@@ -3061,10 +3079,7 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
             "ModelStore",
             "UiTree",
         ),
-        retirement=(
-            "Replace with a public workspace-shell starter once AppUi wrappers own command, "
-            "overlay, virtual-list, diagnostics, and window lifecycle flows"
-        ),
+        retirement=WORKSPACE_SHELL_GPUI_RETIREMENT,
     ),
     _fret_examples_advanced_surface(
         "components_gallery.rs",
@@ -3099,6 +3114,7 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
             "UiTree",
         ),
         owner=DATATABLE_OWNER,
+        retirement=DATATABLE_GPUI_RETIREMENT,
     ),
     *(
         _fret_examples_manual_chart_surface(filename)

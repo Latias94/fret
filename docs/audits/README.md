@@ -26,6 +26,7 @@ For current priorities and milestones, prefer:
 ### Other audits
 
 - API ergonomics: `docs/audits/api-ergonomics-audit.md`
+- GPUI ergonomics and boundary audit: `docs/audits/gpui-ergonomics-boundary-audit-2026-07.md`
 - Action availability coverage: `docs/audits/action-availability-coverage.md`
 - Examples raw-model boundary audit: `docs/audits/examples-authoring-surface-raw-model-audit.md`
 - Charts: `docs/audits/echarts-alignment.md`, `docs/delinea-echarts-alignment.md`

@@ -82,6 +82,20 @@ To keep the core contract stable, the ergonomics work should focus on (2) while 
 - Contract philosophy: lock hard-to-change runtime contracts first, then iterate policy-heavy
   component surfaces in `ecosystem/`.
 
+### 2026-07 GPUI audit verdict
+
+The current audit conclusion is that Fret's default app Interface is directionally good, while its
+real app probes still expose advanced runtime seams too early. `FretApp`, `View`, `AppUi`,
+`LocalState`, typed actions, and the curated `fret::app::prelude::*` are the right first-contact
+Module shape. The weak spots are editor-grade and data-heavy surfaces that still require callers to
+understand `FnDriver`, `UiTree`, frame ordering, raw model-store ownership, string command routing,
+and manual diagnostics.
+
+The next ergonomics work should deepen app-facing Modules around workspace shells, frame driving,
+data-table recipes, and editor-inspector state binding instead of widening the core root surface.
+See `docs/audits/gpui-ergonomics-boundary-audit-2026-07.md` for the evidence register and
+`docs/plans/2026-07-09-002-refactor-gpui-ergonomics-boundary-plan.md` for the implementation plan.
+
 ## Interop Recommendation: Tiered Embedding (Not “Same Tree” Mixing)
 
 Trying to directly “mix” two full UI runtimes in the same widget tree tends to fail on:

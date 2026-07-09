@@ -101,6 +101,23 @@ one generic `AppShell` mental model.
   If an example needs one, it should import `fret::in_window_menubar::*` explicitly rather than
   treating it as a synonym for workspace shell ownership.
 
+## 0.3) Real app probes
+
+Use these probes to evaluate framework ergonomics after the default ladder. They are evidence
+surfaces, not first-contact teaching surfaces.
+
+| Probe | Start from | What it proves | Do not copy first |
+| --- | --- | --- | --- |
+| Editor notes workbench | `apps/fret-examples/src/editor_notes_demo.rs` | `FretApp` + `View`, workspace rails, inspector content, text-field draft policy, theme setup | Raw `ModelStore` owner helpers before learning `LocalState` and typed actions |
+| Workspace shell / IDE-lite | `apps/fret-examples/src/workspace_shell_demo/` | Pane layout, tab policy, dirty-close flow, command routing, diagnostics ownership | `FnDriver`, raw `UiTree`, manual `UiFrameCx`, and diagnostics frame plumbing |
+| Data-heavy admin surface | `apps/fret-examples/src/datatable_demo.rs` | 10k-row table state, toolbar, pagination, sorting/selection output, debug ids | Manual table output/column/debug-id wiring when a recipe is enough |
+| Node graph / canvas editor | `apps/fret-examples/src/node_graph_demo.rs` | Deep node-graph surface mounting, graph model setup, optional diagnostics hooks | Treating the current paint-oriented demo as proof of command/searcher authoring |
+
+For the current GPUI comparison and refactor register, see
+[docs/audits/gpui-ergonomics-boundary-audit-2026-07.md](../audits/gpui-ergonomics-boundary-audit-2026-07.md).
+The temporary advanced/raw allowances for workspace shell and datatable probes are tracked by
+[docs/plans/2026-07-09-002-refactor-gpui-ergonomics-boundary-plan.md](../plans/2026-07-09-002-refactor-gpui-ergonomics-boundary-plan.md).
+
 ## 1) In-tree Cookbook (small, focused lessons)
 
 Cookbook examples live under [apps/fret-cookbook/examples/](../../apps/fret-cookbook/examples/).
