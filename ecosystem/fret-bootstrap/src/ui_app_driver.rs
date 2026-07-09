@@ -3,8 +3,8 @@ use fret_app::CommandId;
 use fret_app::Effect;
 use fret_app::Model;
 use fret_core::{
-    AppWindowId, Color, Corners, Edges, Event, NodeId, Px, TextOverflow, TextWrap, UiServices,
-    ViewportInputEvent,
+    AppWindowId, Color, Corners, Edges, Event, NodeId, Px, Rect, TextOverflow, TextWrap,
+    UiServices, ViewportInputEvent,
 };
 use fret_launch::{
     EngineFrameUpdate, FnDriver, WindowCreateSpec, WinitCommandContext, WinitEventContext,
@@ -70,6 +70,51 @@ type RendererPerfSampleHookFn<S> = fn(
     Option<fret_render::RendererPerfFrameSample>,
 );
 
+type FrameStageHookFn<S> = fn(&mut App, AppWindowId, &mut S, UiAppFrameObservation);
+
+/// Ordered checkpoints emitted by the `UiAppDriver` frame path.
+///
+/// These stages are an app-facing summary of the real driver pipeline. They intentionally do not
+/// expose `UiTree`, `UiFrameCx`, or runner contexts.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum UiAppFrameStage {
+    Begin,
+    View,
+    Overlay,
+    DiagnosticsOverlay,
+    Semantics,
+    Layout,
+    Paint,
+    DiagnosticsDriveScript,
+    DiagnosticsSnapshot,
+    End,
+}
+
+/// Lightweight frame observation passed to app-facing harnesses.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct UiAppFrameObservation {
+    pub stage: UiAppFrameStage,
+    pub window: AppWindowId,
+    pub bounds: Rect,
+    pub scale_factor: f32,
+    pub tick_id: TickId,
+    pub frame_id: FrameId,
+}
+
+/// App state can implement this to collect frame-stage observations without owning raw UI staging.
+pub trait UiAppFrameStageSink {
+    fn record_frame_stage(&mut self, observation: UiAppFrameObservation);
+}
+
+fn record_frame_stage_into_sink<S: UiAppFrameStageSink>(
+    _app: &mut App,
+    _window: AppWindowId,
+    state: &mut S,
+    observation: UiAppFrameObservation,
+) {
+    state.record_frame_stage(observation);
+}
+
 #[cfg(feature = "ui-app-command-palette")]
 pub type CommandPaletteOverlayFn =
     for<'a> fn(&mut ElementContext<'a, App>, CommandPaletteOverlayCx, &mut ViewElements);
@@ -120,6 +165,7 @@ pub struct UiAppDriver<S> {
     dock_op: Option<fn(&mut App, fret_core::DockOp)>,
     record_engine_frame: Option<RecordEngineFrameHookFn<S>>,
     renderer_perf_sample: Option<RendererPerfSampleHookFn<S>>,
+    on_frame_stage: Option<FrameStageHookFn<S>>,
 
     #[cfg(feature = "ui-app-command-palette")]
     command_palette_enabled: bool,
@@ -155,6 +201,7 @@ impl<S> UiAppDriver<S> {
             dock_op: None,
             record_engine_frame: None,
             renderer_perf_sample: None,
+            on_frame_stage: None,
 
             #[cfg(feature = "ui-app-command-palette")]
             command_palette_enabled: true,
@@ -286,6 +333,12 @@ impl<S> UiAppDriver<S> {
         self
     }
 
+    /// Observe the app-facing frame pipeline without taking ownership of raw UI staging.
+    pub fn on_frame_stage(mut self, f: FrameStageHookFn<S>) -> Self {
+        self.on_frame_stage = Some(f);
+        self
+    }
+
     pub fn into_fn_driver(self) -> FnDriver<Self, UiAppWindowState<S>> {
         FnDriver::new(
             self,
@@ -325,6 +378,13 @@ impl<S> UiAppDriver<S> {
             hooks.renderer_perf_sample = Some(ui_app_renderer_perf_sample::<S>);
             hooks.scene_chunk_manifest = Some(ui_app_scene_chunk_manifest::<S>);
         })
+    }
+}
+
+impl<S: UiAppFrameStageSink> UiAppDriver<S> {
+    /// Record driver frame stages into the app state.
+    pub fn record_frame_stages(self) -> Self {
+        self.on_frame_stage(record_frame_stage_into_sink::<S>)
     }
 }
 
@@ -2078,6 +2138,39 @@ fn measure_ui_driver_phase_for_frame<T>(
     measure_ui_driver_phase_for_frame_with_capture(capture, phase, time_enabled, |_| f())
 }
 
+fn ui_app_observe_frame_stage<S>(
+    driver: &mut UiAppDriver<S>,
+    app: &mut App,
+    window: AppWindowId,
+    state: &mut UiAppWindowState<S>,
+    bounds: Rect,
+    scale_factor: f32,
+    stage: UiAppFrameStage,
+) {
+    let Some(f) = driver.on_frame_stage else {
+        return;
+    };
+    let observation = UiAppFrameObservation {
+        stage,
+        window,
+        bounds,
+        scale_factor,
+        tick_id: app.tick_id(),
+        frame_id: app.frame_id(),
+    };
+
+    #[cfg(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32")))]
+    {
+        let mut hot = subsecond::HotFn::current(f);
+        hot.call((app, window, &mut state.state, observation));
+    }
+
+    #[cfg(not(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32"))))]
+    {
+        f(app, window, &mut state.state, observation);
+    }
+}
+
 fn ui_app_render<S>(
     driver: &mut UiAppDriver<S>,
     context: WinitRenderContext<'_, UiAppWindowState<S>>,
@@ -2136,6 +2229,15 @@ fn ui_app_render<S>(
     hotpatch_trace_log(&format!(
         "ui_app_render: begin window={window:?} depth={render_depth}"
     ));
+    ui_app_observe_frame_stage(
+        driver,
+        app,
+        window,
+        state,
+        bounds,
+        scale_factor,
+        UiAppFrameStage::Begin,
+    );
 
     OverlayController::begin_frame(app, window);
     hotpatch_trace_log(&format!(
@@ -2367,6 +2469,15 @@ fn ui_app_render<S>(
         "ui_app_render: after render_root window={window:?} root={root:?}"
     ));
     hotpatch_trace_log(&format!("ui_app_render: after set_root window={window:?}"));
+    ui_app_observe_frame_stage(
+        driver,
+        app,
+        window,
+        state,
+        bounds,
+        scale_factor,
+        UiAppFrameStage::View,
+    );
 
     let (_, overlay_elapsed) = measure_ui_driver_phase_for_frame(
         &mut perf_span_capture,
@@ -2382,6 +2493,15 @@ fn ui_app_render<S>(
     hotpatch_trace_log(&format!(
         "ui_app_render: after overlay render window={window:?}"
     ));
+    ui_app_observe_frame_stage(
+        driver,
+        app,
+        window,
+        state,
+        bounds,
+        scale_factor,
+        UiAppFrameStage::Overlay,
+    );
 
     #[cfg(feature = "diagnostics")]
     {
@@ -2392,6 +2512,15 @@ fn ui_app_render<S>(
             window,
             bounds,
             diag_inspection_active,
+        );
+        ui_app_observe_frame_stage(
+            driver,
+            app,
+            window,
+            state,
+            bounds,
+            scale_factor,
+            UiAppFrameStage::DiagnosticsOverlay,
         );
     }
     state.root = Some(root);
@@ -2415,6 +2544,15 @@ fn ui_app_render<S>(
         // frames can keep using the existing snapshot.
         state.ui.request_semantics_snapshot_if_dirty();
     }
+    ui_app_observe_frame_stage(
+        driver,
+        app,
+        window,
+        state,
+        bounds,
+        scale_factor,
+        UiAppFrameStage::Semantics,
+    );
     state.ui.ingest_paint_cache_source(scene);
     scene.clear();
 
@@ -2432,6 +2570,15 @@ fn ui_app_render<S>(
     hotpatch_trace_log(&format!(
         "ui_app_render: after layout_all window={window:?}"
     ));
+    ui_app_observe_frame_stage(
+        driver,
+        app,
+        window,
+        state,
+        bounds,
+        scale_factor,
+        UiAppFrameStage::Layout,
+    );
 
     let hitch_layout_ms = layout_total_ms;
 
@@ -2449,6 +2596,15 @@ fn ui_app_render<S>(
         hitch_paint_ms = Some(elapsed.as_millis() as u64);
     }
     hotpatch_trace_log(&format!("ui_app_render: after paint_all window={window:?}"));
+    ui_app_observe_frame_stage(
+        driver,
+        app,
+        window,
+        state,
+        bounds,
+        scale_factor,
+        UiAppFrameStage::Paint,
+    );
 
     #[cfg(feature = "diagnostics")]
     {
@@ -2562,6 +2718,15 @@ fn ui_app_render<S>(
                 }
             },
         );
+        ui_app_observe_frame_stage(
+            driver,
+            app,
+            window,
+            state,
+            bounds,
+            scale_factor,
+            UiAppFrameStage::DiagnosticsDriveScript,
+        );
 
         app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
             let real_perf_span_start_us = perf_span_capture
@@ -2600,6 +2765,15 @@ fn ui_app_render<S>(
                 }
             }
         });
+        ui_app_observe_frame_stage(
+            driver,
+            app,
+            window,
+            state,
+            bounds,
+            scale_factor,
+            UiAppFrameStage::DiagnosticsSnapshot,
+        );
     }
 
     if let (Some(cfg), Some(started)) = (hitch_config, hitch_total_started) {
@@ -2634,6 +2808,15 @@ fn ui_app_render<S>(
     hotpatch_trace_log(&format!(
         "ui_app_render: end window={window:?} depth={render_depth}"
     ));
+    ui_app_observe_frame_stage(
+        driver,
+        app,
+        window,
+        state,
+        bounds,
+        scale_factor,
+        UiAppFrameStage::End,
+    );
     RENDER_DEPTH.with(|d| d.set(d.get().saturating_sub(1)));
 }
 
@@ -3054,6 +3237,170 @@ mod tests {
         ViewElements::default()
     }
 
+    #[derive(Default)]
+    struct FakeUiServices;
+
+    impl fret_core::TextService for FakeUiServices {
+        fn prepare(
+            &mut self,
+            _input: &fret_core::TextInput,
+            _constraints: fret_core::TextConstraints,
+        ) -> (fret_core::TextBlobId, fret_core::TextMetrics) {
+            (
+                fret_core::TextBlobId::default(),
+                fret_core::TextMetrics {
+                    size: fret_core::Size::new(Px(10.0), Px(10.0)),
+                    baseline: Px(8.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: fret_core::TextBlobId) {}
+    }
+
+    impl fret_core::PathService for FakeUiServices {
+        fn prepare(
+            &mut self,
+            _commands: &[fret_core::PathCommand],
+            _style: fret_core::PathStyle,
+            _constraints: fret_core::PathConstraints,
+        ) -> (fret_core::PathId, fret_core::PathMetrics) {
+            (
+                fret_core::PathId::default(),
+                fret_core::PathMetrics::default(),
+            )
+        }
+
+        fn release(&mut self, _path: fret_core::PathId) {}
+    }
+
+    impl fret_core::SvgService for FakeUiServices {
+        fn register_svg(&mut self, _bytes: &[u8]) -> fret_core::SvgId {
+            fret_core::SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: fret_core::SvgId) -> bool {
+            false
+        }
+    }
+
+    impl fret_core::MaterialService for FakeUiServices {
+        fn register_material(
+            &mut self,
+            _desc: fret_core::MaterialDescriptor,
+        ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+            Err(fret_core::MaterialRegistrationError::Unsupported)
+        }
+
+        fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+            false
+        }
+    }
+
+    #[derive(Default)]
+    struct FrameHarnessSmokeState {
+        observations: Vec<UiAppFrameObservation>,
+        rendered: bool,
+        dirty: bool,
+        dirty_close_blocked: bool,
+        commands: Vec<String>,
+    }
+
+    impl UiAppFrameStageSink for FrameHarnessSmokeState {
+        fn record_frame_stage(&mut self, observation: UiAppFrameObservation) {
+            self.observations.push(observation);
+        }
+    }
+
+    fn frame_harness_init(_app: &mut App, _window: AppWindowId) -> FrameHarnessSmokeState {
+        FrameHarnessSmokeState {
+            dirty: true,
+            ..Default::default()
+        }
+    }
+
+    fn frame_harness_view(
+        _cx: &mut ElementContext<'_, App>,
+        state: &mut FrameHarnessSmokeState,
+    ) -> ViewElements {
+        state.rendered = true;
+        ViewElements::default()
+    }
+
+    fn frame_harness_on_command(
+        _app: &mut App,
+        _services: &mut dyn UiServices,
+        _window: AppWindowId,
+        _ui: &mut UiTree<App>,
+        state: &mut FrameHarnessSmokeState,
+        command: &CommandId,
+    ) {
+        state.commands.push(command.as_str().to_owned());
+    }
+
+    fn frame_harness_on_event(
+        _app: &mut App,
+        _services: &mut dyn UiServices,
+        _window: AppWindowId,
+        _ui: &mut UiTree<App>,
+        state: &mut FrameHarnessSmokeState,
+        event: &Event,
+    ) {
+        if matches!(event, Event::WindowCloseRequested) && state.dirty {
+            state.dirty_close_blocked = true;
+        }
+    }
+
+    fn frame_harness_bounds() -> Rect {
+        Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(640.0), Px(480.0)),
+        )
+    }
+
+    fn expected_frame_stages() -> Vec<UiAppFrameStage> {
+        let mut stages = vec![
+            UiAppFrameStage::Begin,
+            UiAppFrameStage::View,
+            UiAppFrameStage::Overlay,
+            UiAppFrameStage::Semantics,
+            UiAppFrameStage::Layout,
+            UiAppFrameStage::Paint,
+        ];
+
+        #[cfg(feature = "diagnostics")]
+        {
+            stages.insert(3, UiAppFrameStage::DiagnosticsOverlay);
+            stages.push(UiAppFrameStage::DiagnosticsDriveScript);
+            stages.push(UiAppFrameStage::DiagnosticsSnapshot);
+        }
+
+        stages.push(UiAppFrameStage::End);
+        stages
+    }
+
+    fn render_smoke_frame(
+        driver: &mut UiAppDriver<FrameHarnessSmokeState>,
+        app: &mut App,
+        services: &mut FakeUiServices,
+        window: AppWindowId,
+        state: &mut UiAppWindowState<FrameHarnessSmokeState>,
+    ) {
+        let mut scene = fret_core::Scene::default();
+        ui_app_render(
+            driver,
+            WinitRenderContext {
+                app,
+                services,
+                window,
+                state,
+                bounds: frame_harness_bounds(),
+                scale_factor: 1.0,
+                scene: &mut scene,
+            },
+        );
+    }
+
     fn middleware(
         app: &mut App,
         window: AppWindowId,
@@ -3113,6 +3460,112 @@ mod tests {
         assert_ne!(middleware_seq, 0);
         assert_ne!(user_seq, 0);
         assert!(middleware_seq < user_seq);
+    }
+
+    #[test]
+    fn frame_stage_sink_observes_ui_app_render_order() {
+        let mut app = App::new();
+        let window = AppWindowId::default();
+        let mut services = FakeUiServices;
+        let mut driver = UiAppDriver::new(
+            "frame-harness-smoke",
+            frame_harness_init,
+            frame_harness_view,
+        )
+        .record_frame_stages();
+        let mut state = ui_app_create_window_state(&mut driver, &mut app, window);
+
+        render_smoke_frame(&mut driver, &mut app, &mut services, window, &mut state);
+
+        let stages = state
+            .state
+            .observations
+            .iter()
+            .map(|observation| observation.stage)
+            .collect::<Vec<_>>();
+        assert_eq!(stages, expected_frame_stages());
+        assert!(state.state.rendered);
+        for observation in &state.state.observations {
+            assert_eq!(observation.window, window);
+            assert_eq!(observation.bounds, frame_harness_bounds());
+            assert_eq!(observation.scale_factor, 1.0);
+            assert_eq!(observation.tick_id, app.tick_id());
+            assert_eq!(observation.frame_id, app.frame_id());
+        }
+    }
+
+    #[test]
+    fn frame_harness_workspace_smoke_covers_command_close_diagnostics_and_sequence() {
+        let mut app = App::new();
+        let window = AppWindowId::default();
+        let mut services = FakeUiServices;
+        let mut driver = UiAppDriver::new(
+            "workspace-frame-smoke",
+            frame_harness_init,
+            frame_harness_view,
+        )
+        .close_on_window_close_requested(false)
+        .on_command(frame_harness_on_command)
+        .on_event(frame_harness_on_event)
+        .record_frame_stages();
+        let mut state = ui_app_create_window_state(&mut driver, &mut app, window);
+
+        ui_app_handle_command(
+            &mut driver,
+            WinitCommandContext {
+                app: &mut app,
+                services: &mut services,
+                window,
+                state: &mut state,
+            },
+            CommandId::new("workspace.smoke.toggle"),
+        );
+        ui_app_handle_event(
+            &mut driver,
+            WinitEventContext {
+                app: &mut app,
+                services: &mut services,
+                window,
+                state: &mut state,
+            },
+            &Event::WindowCloseRequested,
+        );
+        let effects_after_close = app.flush_effects();
+        assert!(
+            !effects_after_close.iter().any(|effect| {
+                matches!(
+                    effect,
+                    Effect::Window(fret_app::WindowRequest::Close(close_window))
+                        if *close_window == window
+                )
+            }),
+            "dirty close smoke should not emit a close-window effect"
+        );
+
+        render_smoke_frame(&mut driver, &mut app, &mut services, window, &mut state);
+
+        assert_eq!(
+            state.state.commands,
+            vec!["workspace.smoke.toggle".to_owned()]
+        );
+        assert!(state.state.dirty_close_blocked);
+        assert!(state.state.rendered);
+        let stages = state
+            .state
+            .observations
+            .iter()
+            .map(|observation| observation.stage)
+            .collect::<Vec<_>>();
+        assert_eq!(stages, expected_frame_stages());
+        assert!(
+            stages
+                .windows(2)
+                .any(|pair| pair[0] == UiAppFrameStage::Layout
+                    && pair[1] == UiAppFrameStage::Paint)
+        );
+
+        #[cfg(feature = "diagnostics")]
+        assert!(stages.contains(&UiAppFrameStage::DiagnosticsSnapshot));
     }
 
     #[cfg(feature = "diagnostics")]
