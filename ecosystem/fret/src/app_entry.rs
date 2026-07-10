@@ -271,16 +271,7 @@ impl FretApp {
             UiAppDriver<crate::view::ViewWindowState<V>>,
         ) -> UiAppDriver<crate::view::ViewWindowState<V>>,
     ) -> Result<UiAppBuilder<crate::view::ViewWindowState<V>>> {
-        let FretApp {
-            root_name,
-            main_window,
-            defaults,
-            command_palette,
-            asset_mounts,
-            setup_hooks,
-            install_hooks,
-        } = self;
-
+        let root_name = self.root_name;
         let driver =
             fret_bootstrap::ui_app_driver::UiAppDriver::new(
                 root_name,
@@ -294,58 +285,37 @@ impl FretApp {
             );
         #[cfg(feature = "shadcn")]
         let driver = driver.on_global_changes_middleware(
-            crate::shadcn_sync_theme_from_environment_on_global_changes::<
+            crate::builder::shadcn_sync_theme_from_environment_on_global_changes::<
                 crate::view::ViewWindowState<V>,
             >,
         );
         let mut driver = UiAppDriver::new(driver)
             .record_engine_frame(crate::view::view_record_engine_frame::<V>);
         driver = configure(driver);
-        #[cfg(feature = "command-palette")]
-        {
-            if command_palette {
-                driver = driver.command_palette(true);
-            }
-        }
-        #[cfg(not(feature = "command-palette"))]
-        let _ = command_palette;
-
-        finish_builder(
-            root_name,
-            main_window,
-            defaults,
-            asset_mounts,
-            setup_hooks,
-            install_hooks,
-            driver,
-        )
+        self.finish_with_driver(driver)
     }
 
-    /// Build a retained-state UI app without exposing raw launch/frame ownership.
-    pub fn ui<S: 'static>(
-        self,
-        init_window: fn(&mut crate::app::App, crate::WindowId) -> S,
-        view: for<'a> fn(&mut crate::AppRenderCx<'a>, &mut S) -> crate::Ui,
-    ) -> Result<UiAppBuilder<S>> {
-        self.ui_with_hooks(init_window, view, |driver| driver)
-    }
-
-    /// Same as [`ui`](Self::ui), with driver hook configuration.
-    pub fn ui_with_hooks<S: 'static>(
-        self,
-        init_window: fn(&mut crate::app::App, crate::WindowId) -> S,
-        view: for<'a> fn(&mut crate::AppRenderCx<'a>, &mut S) -> crate::Ui,
-        configure: fn(UiAppDriver<S>) -> UiAppDriver<S>,
-    ) -> Result<UiAppBuilder<S>> {
-        self.ui_driver_with_hooks(init_window, view, configure)
-    }
-
+    /// Internal retained-state bridge for app-facing domain builders such as `WorkspaceApp`.
+    #[cfg(feature = "workspace")]
     pub(crate) fn ui_driver_with_hooks<S: 'static>(
         self,
         init_window: fn(&mut crate::app::App, crate::WindowId) -> S,
         view: for<'a> fn(&mut crate::AppRenderCx<'a>, &mut S) -> crate::Ui,
         configure: fn(UiAppDriver<S>) -> UiAppDriver<S>,
     ) -> Result<UiAppBuilder<S>> {
+        let root_name = self.root_name;
+        let driver = fret_bootstrap::ui_app_driver::UiAppDriver::new(root_name, init_window, view)
+            .on_preferences(fret_bootstrap::ui_app_driver::default_on_preferences::<S>);
+        #[cfg(feature = "shadcn")]
+        let driver = driver.on_global_changes_middleware(
+            crate::builder::shadcn_sync_theme_from_environment_on_global_changes::<S>,
+        );
+        let mut driver = UiAppDriver::new(driver);
+        driver = configure(driver);
+        self.finish_with_driver(driver)
+    }
+
+    fn finish_with_driver<S: 'static>(self, driver: UiAppDriver<S>) -> Result<UiAppBuilder<S>> {
         let FretApp {
             root_name,
             main_window,
@@ -356,22 +326,17 @@ impl FretApp {
             install_hooks,
         } = self;
 
-        let driver = fret_bootstrap::ui_app_driver::UiAppDriver::new(root_name, init_window, view)
-            .on_preferences(fret_bootstrap::ui_app_driver::default_on_preferences::<S>);
-        #[cfg(feature = "shadcn")]
-        let driver = driver.on_global_changes_middleware(
-            crate::shadcn_sync_theme_from_environment_on_global_changes::<S>,
-        );
-        let mut driver = UiAppDriver::new(driver);
-        driver = configure(driver);
         #[cfg(feature = "command-palette")]
-        {
-            if command_palette {
-                driver = driver.command_palette(true);
-            }
-        }
+        let driver = if command_palette {
+            driver.command_palette(true)
+        } else {
+            driver
+        };
         #[cfg(not(feature = "command-palette"))]
-        let _ = command_palette;
+        let driver = {
+            let _ = command_palette;
+            driver
+        };
 
         finish_builder(
             root_name,
@@ -408,7 +373,7 @@ fn finish_builder<S: 'static>(
         driver.into_inner().into_fn_driver(),
     );
 
-    let mut builder = crate::apply_desktop_defaults_stage_with(
+    let mut builder = crate::builder::apply_desktop_defaults_stage_with(
         builder,
         defaults,
         crate::DesktopDefaultsStage::Base,
@@ -422,7 +387,7 @@ fn finish_builder<S: 'static>(
         builder = builder.install(f);
     }
 
-    let builder = crate::apply_desktop_defaults_stage_with(
+    let builder = crate::builder::apply_desktop_defaults_stage_with(
         builder,
         defaults,
         crate::DesktopDefaultsStage::Runtime,
@@ -430,7 +395,7 @@ fn finish_builder<S: 'static>(
     .map_err(crate::BootstrapError::from)?;
     let mut builder = UiAppBuilder::from_bootstrap(builder);
     builder = apply_main_window(root_name, main_window, builder);
-    crate::apply_asset_mounts(builder, asset_mounts)
+    crate::builder::apply_asset_mounts(builder, asset_mounts)
 }
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]

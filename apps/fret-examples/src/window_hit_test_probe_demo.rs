@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use fret::advanced::KernelApp;
-use fret::advanced::interop::run_native_with_compat_driver;
+use fret::advanced::interop::run_native_with_driver;
 use fret::advanced::text;
 use fret_app::{CreateWindowKind, CreateWindowRequest, Effect, WindowRequest};
 use fret_bootstrap::ui_app_driver::{self, ViewElements};
@@ -59,7 +59,7 @@ pub fn run() -> anyhow::Result<()> {
     // Keep deterministic overlap: place restored windows relative to the anchor point.
     config.new_window_anchor_offset = (0.0, 0.0);
 
-    run_native_with_compat_driver(config, KernelApp::new(), driver)?;
+    run_native_with_driver(config, KernelApp::new(), driver)?;
     Ok(())
 }
 

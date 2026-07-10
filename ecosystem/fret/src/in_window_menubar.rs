@@ -1970,9 +1970,13 @@ impl Default for MenubarFromRuntimeOptions {
 mod tests {
     use super::*;
     use fret_app::App;
+    #[cfg(feature = "shadcn")]
     use fret_core::{Point, Px, Rect, Size};
-    use fret_runtime::{CommandId, Effect, Menu, MenuBar, MenuItem};
+    use fret_runtime::{CommandId, Effect};
+    #[cfg(feature = "shadcn")]
+    use fret_runtime::{Menu, MenuBar, MenuItem};
     use fret_ui::action::{ActionCx, UiActionHost, UiFocusActionHost};
+    #[cfg(feature = "shadcn")]
     use fret_ui::tree::UiTree;
     use std::cell::Cell;
 

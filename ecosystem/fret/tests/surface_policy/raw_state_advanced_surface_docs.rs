@@ -1,75 +1,35 @@
-const FRET_LIB_RS: &str = include_str!("../src/lib.rs");
-const DOCS_README: &str = include_str!("../../../docs/README.md");
-const ROADMAP: &str = include_str!("../../../docs/roadmap.md");
-const AUTHORING_GOLDEN_PATH: &str = include_str!("../../../docs/authoring-golden-path-v2.md");
-const FEARLESS_REFACTORING: &str = include_str!("../../../docs/fearless-refactoring.md");
-const FIRST_HOUR: &str = include_str!("../../../docs/first-hour.md");
-const TODO_APP_GOLDEN_PATH: &str = include_str!("../../../docs/examples/todo-app-golden-path.md");
+const ADVANCED_RS: &str = include_str!("../../src/advanced.rs");
+const APP_PRELUDE_RS: &str = include_str!("../../src/app/prelude.rs");
+const ADVANCED_PRELUDE_RS: &str = include_str!("../../src/advanced/prelude.rs");
+const ADVANCED_RAW_RS: &str = include_str!("../../src/advanced/raw.rs");
+const DOCS_README: &str = include_str!("../../../../docs/README.md");
+const ROADMAP: &str = include_str!("../../../../docs/roadmap.md");
+const AUTHORING_GOLDEN_PATH: &str = include_str!("../../../../docs/authoring-golden-path-v2.md");
+const FEARLESS_REFACTORING: &str = include_str!("../../../../docs/fearless-refactoring.md");
+const FIRST_HOUR: &str = include_str!("../../../../docs/first-hour.md");
+const TODO_APP_GOLDEN_PATH: &str =
+    include_str!("../../../../docs/examples/todo-app-golden-path.md");
 
 fn app_prelude_slice() -> &'static str {
-    let app_start = FRET_LIB_RS
-        .find("pub mod app {")
-        .expect("app module marker should exist");
-    let component_start = FRET_LIB_RS
-        .find("pub mod component {")
-        .expect("component module marker should exist");
-    &FRET_LIB_RS[app_start..component_start]
-}
-
-fn advanced_public_slice() -> &'static str {
-    let advanced_start = FRET_LIB_RS
-        .find("pub mod advanced {")
-        .expect("advanced module marker should exist");
-    let tests_start = FRET_LIB_RS
-        .find("#[cfg(test)]")
-        .unwrap_or(FRET_LIB_RS.len());
-    &FRET_LIB_RS[advanced_start..tests_start]
+    APP_PRELUDE_RS
 }
 
 fn advanced_raw_slice() -> &'static str {
-    let advanced = advanced_public_slice();
-    let raw_start = advanced
-        .find("pub mod raw {")
-        .expect("advanced raw module marker should exist");
-    let driver_start = advanced[raw_start..]
-        .find("\n    #[cfg(all(not(target_arch = \"wasm32\"), feature = \"desktop\"))]\n    pub use crate::{UiAppBuilder, UiAppDriver};")
-        .expect("advanced raw module end marker should exist");
-    &advanced[raw_start..raw_start + driver_start]
-}
-
-fn module_block_slice(source: &'static str, marker: &str) -> &'static str {
-    let start = source.find(marker).expect("module marker should exist");
-    let open = source[start..]
-        .find('{')
-        .map(|idx| start + idx)
-        .expect("module block should have an opening brace");
-    let mut depth = 0usize;
-    for (idx, byte) in source[open..].bytes().enumerate() {
-        match byte {
-            b'{' => depth += 1,
-            b'}' => {
-                depth = depth.saturating_sub(1);
-                if depth == 0 {
-                    return &source[start..open + idx + 1];
-                }
-            }
-            _ => {}
-        }
-    }
-    panic!("module block should have a closing brace");
+    ADVANCED_RAW_RS
 }
 
 fn advanced_prelude_slice() -> &'static str {
-    module_block_slice(advanced_public_slice(), "pub mod prelude {")
+    ADVANCED_PRELUDE_RS
 }
 
 #[test]
 fn raw_state_hook_is_exposed_on_the_advanced_surface() {
-    let advanced_slice = advanced_public_slice();
+    let advanced_slice = ADVANCED_RS;
     let advanced_raw = advanced_raw_slice();
     let advanced_prelude = advanced_prelude_slice();
     let advanced_prelude_without_raw = advanced_prelude;
     assert!(!advanced_slice.contains("AppUiRawStateExt"));
+    assert!(!advanced_raw.contains("AppUiRawStateExt"));
     for raw_symbol in [
         "AppUiRawModelExt",
         "AppUiRawActionNotifyExt",

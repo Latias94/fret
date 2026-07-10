@@ -1,34 +1,15 @@
-const FRET_LIB_RS: &str = include_str!("../src/lib.rs");
+const ADVANCED_RS: &str = include_str!("../../src/advanced.rs");
+const ADVANCED_PRELUDE_RS: &str = include_str!("../../src/advanced/prelude.rs");
+const ADVANCED_RAW_RS: &str = include_str!("../../src/advanced/raw.rs");
 const ASYNC_PLAYGROUND_DEMO: &str =
-    include_str!("../../../apps/fret-examples/src/async_playground_demo.rs");
+    include_str!("../../../../apps/fret-examples/src/async_playground_demo.rs");
 const IMUI_EDITOR_PROOF_DEMO: &str =
-    include_str!("../../../apps/fret-examples/src/imui_editor_proof_demo.rs");
+    include_str!("../../../../apps/fret-examples/src/imui_editor_proof_demo.rs");
 const ACTION_FIRST_VIEW: &str =
-    include_str!("../../../apps/fret-ui-gallery/src/ui/snippets/command/action_first_view.rs");
+    include_str!("../../../../apps/fret-ui-gallery/src/ui/snippets/command/action_first_view.rs");
 
 fn advanced_prelude_slice() -> &'static str {
-    let advanced_start = FRET_LIB_RS
-        .find("pub mod advanced {")
-        .expect("advanced module marker should exist");
-    let advanced_slice = &FRET_LIB_RS[advanced_start..];
-    let prelude_start = advanced_slice
-        .find("pub mod prelude {")
-        .expect("advanced prelude marker should exist");
-    let advanced_end = advanced_slice
-        .find("\n}\n\n#[derive(Debug, thiserror::Error)]")
-        .expect("advanced module end marker should exist");
-    &advanced_slice[prelude_start..advanced_end]
-}
-
-fn advanced_public_slice() -> &'static str {
-    let advanced_start = FRET_LIB_RS
-        .find("pub mod advanced {")
-        .expect("advanced module marker should exist");
-    let advanced_slice = &FRET_LIB_RS[advanced_start..];
-    let advanced_end = advanced_slice
-        .find("\n}\n\n#[derive(Debug, thiserror::Error)]")
-        .expect("advanced module end marker should exist");
-    &advanced_slice[..advanced_end]
+    ADVANCED_PRELUDE_RS
 }
 
 fn advanced_prelude_exports_symbol(symbol: &str) -> bool {
@@ -80,7 +61,6 @@ fn advanced_prelude_stays_advanced_only_instead_of_smuggling_component_surface()
 #[test]
 fn advanced_prelude_keeps_manual_assembly_seams_explicit() {
     let advanced_prelude = advanced_prelude_slice();
-    let advanced_public = advanced_public_slice();
     assert!(advanced_prelude.contains("pub use crate::AppRenderCx;"));
     assert!(advanced_prelude_exports_symbol("AppRenderCx"));
     assert!(advanced_prelude.contains("pub use crate::AppComponentCx;"));
@@ -89,9 +69,10 @@ fn advanced_prelude_keeps_manual_assembly_seams_explicit() {
     assert!(advanced_prelude.contains("pub use crate::advanced::driver::{"));
     assert!(advanced_prelude.contains("pub use crate::advanced::interop::embedded_viewport::{"));
     assert!(advanced_prelude.contains("pub use crate::advanced::kernel;"));
-    assert!(advanced_public.contains("LocalStateRawModelExt"));
-    assert!(advanced_public.contains("LocalStateModelStoreExt"));
-    assert!(advanced_public.contains("LocalStateElementContextExt"));
+    assert!(ADVANCED_RS.contains("pub mod raw;"));
+    assert!(ADVANCED_RAW_RS.contains("LocalStateRawModelExt"));
+    assert!(ADVANCED_RAW_RS.contains("LocalStateModelStoreExt"));
+    assert!(ADVANCED_RAW_RS.contains("LocalStateElementContextExt"));
     assert!(advanced_prelude.contains("pub use fret_app::Effect;"));
     assert!(advanced_prelude.contains("pub use fret_core::{AppWindowId, Event, UiServices};"));
     assert!(advanced_prelude.contains("pub use fret_runtime::{ActionId, TypedAction};"));

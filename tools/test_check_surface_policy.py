@@ -2981,7 +2981,7 @@ class SurfacePolicyTests(unittest.TestCase):
                 """
                 use fret::advanced::prelude::*;
                 use fret::advanced::KernelApp;
-                use fret::advanced::interop::run_native_with_compat_driver;
+                use fret::advanced::interop::run_native_with_driver;
                 use fret_app::{CreateWindowKind, CreateWindowRequest, Effect, WindowRequest};
                 use fret_bootstrap::ui_app_driver::{self, ViewElements};
                 use fret_runtime::Model;
@@ -2993,7 +2993,7 @@ class SurfacePolicyTests(unittest.TestCase):
                         view,
                     )
                     .into_fn_driver();
-                    run_native_with_compat_driver(config, KernelApp::new(), driver)?;
+                    run_native_with_driver(config, KernelApp::new(), driver)?;
                     Ok(())
                 }
                 """,
@@ -3035,7 +3035,7 @@ class SurfacePolicyTests(unittest.TestCase):
                 root / "apps/fret-examples/src/window_hit_test_probe_demo.rs",
                 """
                 use fret::advanced::KernelApp;
-                use fret::advanced::interop::run_native_with_compat_driver;
+                use fret::advanced::interop::run_native_with_driver;
                 use fret_app::{CreateWindowKind, CreateWindowRequest, Effect, WindowRequest};
                 use fret_bootstrap::ui_app_driver::{self, ViewElements};
                 use fret_runtime::Model;
@@ -3047,7 +3047,7 @@ class SurfacePolicyTests(unittest.TestCase):
                         view,
                     )
                     .into_fn_driver();
-                    run_native_with_compat_driver(config, KernelApp::new(), driver)?;
+                    run_native_with_driver(config, KernelApp::new(), driver)?;
                     Ok(())
                 }
                 """,
@@ -10022,8 +10022,18 @@ class SurfacePolicyTests(unittest.TestCase):
                     shadcn::DataTable::new(rows, columns).output_model(table_output.clone());
                 }
 
+                impl fret::app::View for DemoWindowState {
+                    fn init(app: &mut App, window: fret::WindowId) -> Self {
+                        create_window_state(app, window)
+                    }
+
+                    fn render(&mut self, cx: &mut fret::AppUi<'_, '_>) -> fret::Ui {
+                        render_datatable_demo(cx, self)
+                    }
+                }
+
                 fn run() {
-                    fret::FretApp::new("datatable-demo").ui(create_window_state, render_datatable_demo)?;
+                    fret::FretApp::new("datatable-demo").view::<DemoWindowState>()?;
                 }
                 """,
             )
@@ -10084,8 +10094,18 @@ class SurfacePolicyTests(unittest.TestCase):
                     let table_parts = table_recipe.into_elements(cx, rows, 1, |cx, col, row| text::table_cell(cx, Arc::from("")));
                 }
 
+                impl fret::app::View for DemoWindowState {
+                    fn init(app: &mut App, window: fret::WindowId) -> Self {
+                        create_window_state(app, window)
+                    }
+
+                    fn render(&mut self, cx: &mut fret::AppUi<'_, '_>) -> fret::Ui {
+                        render_datatable_demo(cx, self)
+                    }
+                }
+
                 fn run() {
-                    fret::FretApp::new("datatable-demo").ui(create_window_state, render_datatable_demo)?;
+                    fret::FretApp::new("datatable-demo").view::<DemoWindowState>()?;
                 }
                 """,
             )

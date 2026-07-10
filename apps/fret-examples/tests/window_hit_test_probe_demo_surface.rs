@@ -46,7 +46,7 @@ fn window_hit_test_probe_demo_uses_explicit_manual_driver_imports() {
 
     for needle in [
         "usefret::advanced::KernelApp;",
-        "usefret::advanced::interop::run_native_with_compat_driver;",
+        "usefret::advanced::interop::run_native_with_driver;",
         "usefret_app::{CreateWindowKind,CreateWindowRequest,Effect,WindowRequest};",
         "usefret_bootstrap::ui_app_driver::{self,ViewElements};",
         "usefret_runtime::Model;",
@@ -54,7 +54,7 @@ fn window_hit_test_probe_demo_uses_explicit_manual_driver_imports() {
         "usefret_ui_kit::declarative::{ElementContextThemeExtas_,UiElementTestIdExtas_};",
         "usefret_ui_kit::declarative::TrackedModelExtas_;",
         "ui_app_driver::UiAppDriver::new(\"window-hit-test-probe-demo\",init_window,view)",
-        "run_native_with_compat_driver(config,KernelApp::new(),driver)?;",
+        "run_native_with_driver(config,KernelApp::new(),driver)?;",
     ] {
         assert!(
             source_compact.contains(needle),

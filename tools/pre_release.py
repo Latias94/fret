@@ -156,7 +156,7 @@ def main(argv: list[str]) -> int:
     )
     _run_checked(
         "Compat runner default-surface policy",
-        [py, str(repo_root / "tools/gate_compat_runner_default_surface.py")],
+        [py, str(repo_root / "tools/gate_advanced_driver_default_surface.py")],
     )
     _run_checked(
         "Teaching surfaces policy (no legacy stack helpers)",

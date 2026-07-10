@@ -145,13 +145,17 @@ mod tests {
             "{view_api}\n{ACTIVATION_RS_SOURCE}\n{ACTIONS_RS_SOURCE}\n{ASYNC_WORK_RS_SOURCE}\n{BRIDGES_RS_SOURCE}\n{CONTEXT_RS_SOURCE}\n{DATA_RS_SOURCE}\n{DATA_RENDER_RS_SOURCE}\n{EFFECTS_RS_SOURCE}\n{LANE_BARRIERS_RS_SOURCE}\n{LAYOUT_QUERY_RS_SOURCE}\n{LOCAL_STATE_RS_SOURCE}\n{LOCAL_STATE_ADAPTERS_RS_SOURCE}\n{LOCAL_STATE_BRIDGES_RS_SOURCE}\n{POINTER_RS_SOURCE}\n{RAW_RS_SOURCE}\n{RUNTIME_RS_SOURCE}\n{SCHEDULING_RS_SOURCE}\n{SHELL_RS_SOURCE}\n{STATE_RS_SOURCE}"
         )
     }
+    #[cfg(all(feature = "shadcn", feature = "desktop"))]
+    use fret_core::WindowMetricsService;
     use fret_core::{
-        AppWindowId, FrameId, Modifiers, MouseButton, NodeId, Point, PointerEvent, PointerType, Px,
-        Rect, Size, TextConstraints, TextMetrics, WindowMetricsService,
+        AppWindowId, FrameId, NodeId, Point, Px, Rect, Size, TextConstraints, TextMetrics,
     };
+    #[cfg(feature = "shadcn")]
+    use fret_core::{Modifiers, MouseButton, PointerEvent, PointerType};
+    #[cfg(all(feature = "shadcn", feature = "desktop"))]
+    use fret_runtime::TickId;
     use fret_runtime::{
-        ActionId, CommandId, Effect, ModelStore, TickId, TimerToken,
-        WindowPendingActionPayloadService,
+        ActionId, CommandId, Effect, ModelStore, TimerToken, WindowPendingActionPayloadService,
     };
     #[cfg(feature = "state-mutation")]
     use fret_runtime::{
@@ -551,6 +555,7 @@ mod tests {
         root
     }
 
+    #[cfg(all(feature = "shadcn", feature = "desktop"))]
     fn seed_runtime_window_metrics(
         app: &mut crate::app::App,
         window: AppWindowId,
@@ -567,6 +572,7 @@ mod tests {
         });
     }
 
+    #[cfg(all(feature = "shadcn", feature = "desktop"))]
     fn render_runtime_view_semantics<V: View>(
         ui: &mut UiTree<crate::app::App>,
         app: &mut crate::app::App,
@@ -593,6 +599,7 @@ mod tests {
             .clone()
     }
 
+    #[cfg(all(feature = "shadcn", feature = "desktop"))]
     fn snapshot_test_ids(snapshot: &fret_core::SemanticsSnapshot) -> Vec<String> {
         let mut ids: Vec<String> = snapshot
             .nodes
@@ -603,6 +610,7 @@ mod tests {
         ids
     }
 
+    #[cfg(feature = "shadcn")]
     fn node_with_test_id(
         ui: &mut UiTree<crate::app::App>,
         test_id: &str,
@@ -617,11 +625,13 @@ mod tests {
         })
     }
 
+    #[cfg(all(feature = "shadcn", feature = "desktop"))]
     struct RuntimeToggleGroupFooterView {
         filter: fret_runtime::Model<Option<Arc<str>>>,
         action_flag: Option<LocalState<bool>>,
     }
 
+    #[cfg(all(feature = "shadcn", feature = "desktop"))]
     impl View for RuntimeToggleGroupFooterView {
         fn init(app: &mut crate::app::App, _window: crate::WindowId) -> Self {
             Self {
@@ -1364,6 +1374,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(all(feature = "shadcn", feature = "desktop"))]
     fn view_runtime_cache_enable_transition_keeps_toggle_group_footer_semantics_after_compact_resize()
      {
         let mut app = crate::app::App::new();

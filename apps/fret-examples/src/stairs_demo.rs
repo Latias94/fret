@@ -212,7 +212,7 @@ pub fn run() -> anyhow::Result<()> {
     let config = build_runner_config();
     let driver = build_fn_driver();
 
-    crate::run_native_with_compat_driver(config, app, driver).context("run stairs_demo app")
+    crate::run_native_with_driver(config, app, driver).context("run stairs_demo app")
 }
 
 #[cfg(target_arch = "wasm32")]

@@ -115,7 +115,8 @@ fn fill_layout() -> LayoutStyle {
     layout
 }
 
-fn render_datatable_demo(cx: &mut fret::AppRenderCx<'_>, state: &mut DemoWindowState) -> fret::Ui {
+fn render_datatable_demo(cx: &mut fret::AppUi<'_, '_>, state: &mut DemoWindowState) -> fret::Ui {
+    let cx = cx.elements();
     let frame_started = Instant::now();
     state.frame = state.frame.saturating_add(1);
 
@@ -243,6 +244,16 @@ fn render_datatable_demo(cx: &mut fret::AppRenderCx<'_>, state: &mut DemoWindowS
     .into()
 }
 
+impl fret::app::View for DemoWindowState {
+    fn init(app: &mut App, window: WindowId) -> Self {
+        create_window_state(app, window)
+    }
+
+    fn render(&mut self, cx: &mut fret::AppUi<'_, '_>) -> fret::Ui {
+        render_datatable_demo(cx, self)
+    }
+}
+
 pub fn run() -> anyhow::Result<()> {
     let _ = tracing_subscriber::fmt()
         .with_env_filter(
@@ -254,7 +265,7 @@ pub fn run() -> anyhow::Result<()> {
 
     fret::FretApp::new("datatable-demo")
         .window("fret-demo datatable_demo", (980.0, 720.0))
-        .ui(create_window_state, render_datatable_demo)?
+        .view::<DemoWindowState>()?
         .run()
         .map_err(anyhow::Error::from)
         .context("run datatable_demo app")

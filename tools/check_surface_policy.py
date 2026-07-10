@@ -2252,10 +2252,10 @@ WINDOW_HIT_TEST_PROBE_OWNER = "examples-window-hit-test-probe"
 
 WINDOW_HIT_TEST_PROBE_REQUIRED_MARKERS = (
     "use fret::advanced::KernelApp;",
-    "use fret::advanced::interop::run_native_with_compat_driver;",
+    "use fret::advanced::interop::run_native_with_driver;",
     "use fret_bootstrap::ui_app_driver::{self, ViewElements};",
     "ui_app_driver::UiAppDriver::new(",
-    "run_native_with_compat_driver(config, KernelApp::new(), driver)?;",
+    "run_native_with_driver(config, KernelApp::new(), driver)?;",
 )
 
 WINDOW_HIT_TEST_PROBE_FORBIDDEN_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
@@ -2498,7 +2498,8 @@ DATATABLE_REQUIRED_COMPACT_MARKERS = (
     "let_=table_output.layout_value(cx);",
     "lettable_parts=table_recipe.into_elements(cx,rows,1,",
     "fret::FretApp::new(\"datatable-demo\")",
-    ".ui(create_window_state,render_datatable_demo)?",
+    "implfret::app::ViewforDemoWindowState",
+    ".view::<DemoWindowState>()?",
 )
 
 DATATABLE_FORBIDDEN_COMPACT_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
@@ -3403,7 +3404,7 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
     ),
     _fret_examples_advanced_surface(
         "window_hit_test_probe_demo.rs",
-        "the hit-test passthrough probe owns manual compatibility-driver startup, explicit "
+        "the hit-test passthrough probe owns manual retained-driver startup, explicit "
         "KernelApp window creation, and runtime window-style diagnostics",
         (
             "fret::advanced",

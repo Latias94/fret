@@ -5,7 +5,7 @@ from pathlib import Path
 from _gate_lib import WORKSPACE_ROOT, fail, ok, scan_regexes
 
 
-GATE_NAME = "compat runner default-surface policy"
+GATE_NAME = "advanced retained-driver default-surface policy"
 
 FRET_README = WORKSPACE_ROOT / "ecosystem/fret/README.md"
 FRET_LIB = WORKSPACE_ROOT / "ecosystem/fret/src/lib.rs"
@@ -41,21 +41,21 @@ def main() -> None:
     for path, snippet in [
         (
             FRET_README,
-            "Advanced low-level interop driver path (compat seam, non-default): `fret::advanced::interop::run_native_with_compat_driver(...)`",
+            "Advanced low-level retained-driver path (non-default): `fret::advanced::interop::run_native_with_driver(...)`",
         ),
         (
             FRET_LIB,
-            "`fret::advanced::interop::run_native_with_compat_driver(...)` is an advanced low-level",
+            "Retained-driver interop: `fret::advanced::interop::run_native_with_driver(...)`",
         ),
     ]:
         problem = require_snippet(path, snippet)
         if problem is not None:
             problems.append(problem)
 
-    hits = scan_regexes(DEFAULT_PATH_FILES, [r"run_native_with_compat_driver\s*\("])
+    hits = scan_regexes(DEFAULT_PATH_FILES, [r"run_native_with_driver\s*\("])
     for hit in hits:
         problems.append(
-            "default-path surface unexpectedly mentions compat runner: "
+            "default-path surface unexpectedly mentions the advanced retained-driver runner: "
             f"{hit.path.resolve().relative_to(WORKSPACE_ROOT)}:{hit.line_no}"
         )
 

@@ -1,37 +1,22 @@
-const FRET_LIB_RS: &str = include_str!("../src/lib.rs");
-const VIEW_RS: &str = include_str!("../src/view.rs");
-const VIEW_BRIDGES_RS: &str = include_str!("../src/view/bridges.rs");
-const VIEW_CONTEXT_RS: &str = include_str!("../src/view/context.rs");
-const VIEW_LAYOUT_QUERY_RS: &str = include_str!("../src/view/layout_query.rs");
-const VIEW_SCHEDULING_RS: &str = include_str!("../src/view/scheduling.rs");
-const COOKBOOK_SCAFFOLD: &str = include_str!("../../../apps/fret-cookbook/src/scaffold.rs");
+const ROOT_RS: &str = include_str!("../../src/lib.rs");
+const APP_RS: &str = include_str!("../../src/app.rs");
+const APP_PRELUDE_RS: &str = include_str!("../../src/app/prelude.rs");
+const VIEW_RS: &str = include_str!("../../src/view.rs");
+const VIEW_BRIDGES_RS: &str = include_str!("../../src/view/bridges.rs");
+const VIEW_CONTEXT_RS: &str = include_str!("../../src/view/context.rs");
+const VIEW_LAYOUT_QUERY_RS: &str = include_str!("../../src/view/layout_query.rs");
+const VIEW_SCHEDULING_RS: &str = include_str!("../../src/view/scheduling.rs");
+const COOKBOOK_SCAFFOLD: &str = include_str!("../../../../apps/fret-cookbook/src/scaffold.rs");
 const DEFAULT_SNIPPET_GATE: &str =
-    include_str!("../../../tools/gate_no_raw_app_context_in_default_teaching_snippets.py");
-const PRE_RELEASE_PY: &str = include_str!("../../../tools/pre_release.py");
-
-fn app_module_slice() -> &'static str {
-    let app_start = FRET_LIB_RS
-        .find("pub mod app {")
-        .expect("app module marker should exist");
-    let component_start = FRET_LIB_RS
-        .find("pub mod component {")
-        .expect("component module marker should exist");
-    &FRET_LIB_RS[app_start..component_start]
-}
+    include_str!("../../../../tools/gate_no_raw_app_context_in_default_teaching_snippets.py");
+const PRE_RELEASE_PY: &str = include_str!("../../../../tools/pre_release.py");
 
 fn app_prelude_slice() -> &'static str {
-    let app_slice = app_module_slice();
-    let prelude_start = app_slice
-        .find("pub mod prelude {")
-        .expect("app prelude marker should exist");
-    &app_slice[prelude_start..]
+    APP_PRELUDE_RS
 }
 
 fn public_surface_slice() -> &'static str {
-    let tests_start = FRET_LIB_RS
-        .find("#[cfg(test)]")
-        .unwrap_or(FRET_LIB_RS.len());
-    &FRET_LIB_RS[..tests_start]
+    ROOT_RS
 }
 
 fn view_api_surface() -> String {
@@ -45,7 +30,7 @@ fn view_api_surface() -> String {
 #[test]
 fn app_lane_exports_explicit_render_authoring_capability_surface() {
     let public_surface = public_surface_slice();
-    let app_slice = app_module_slice();
+    let app_slice = APP_RS;
     let app_prelude = app_prelude_slice();
     let view_api = view_api_surface();
 

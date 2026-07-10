@@ -322,7 +322,7 @@ Related workstream: `docs/workstreams/fret-launch-app-surface-fearless-refactor-
 - Advanced integration with `fret` defaults: `fret::advanced::run_native_with_fn_driver(...)`
 - Advanced integration with `FnDriver` hooks preserved: `fret::advanced::run_native_with_fn_driver_with_hooks(...)`
 - Advanced integration with a preconfigured `FnDriver`: `fret::advanced::run_native_with_configured_fn_driver(...)`
-- Advanced low-level interop driver path (compat seam, non-default): `fret::advanced::interop::run_native_with_compat_driver(...)`
+- Advanced low-level retained-driver path (non-default): `fret::advanced::interop::run_native_with_driver(...)`
 - Advanced low-level runtime/render/viewport seams: `fret::advanced::{kernel::*, interop::*}`
 
 If advanced/manual-assembly code also wants the ordinary component authoring vocabulary
@@ -411,7 +411,7 @@ Mapping (rough):
 - `fret::advanced::run_native_with_fn_driver(...)` -> `fret_bootstrap::BootstrapBuilder::new_fn(...)`
 - `fret::advanced::run_native_with_fn_driver_with_hooks(...)` -> `fret_bootstrap::BootstrapBuilder::new_fn_with_hooks(...)`
 - `fret::advanced::run_native_with_configured_fn_driver(...)` -> `fret_bootstrap::BootstrapBuilder::new(...)` with a preconfigured `FnDriver`
-- `fret::advanced::interop::run_native_with_compat_driver(...)` -> `fret_bootstrap::BootstrapBuilder::new(...)` for advanced low-level interop / retained driver cases
+- `fret::advanced::interop::run_native_with_driver(...)` -> `fret_bootstrap::BootstrapBuilder::new(...)` for advanced low-level interop / retained driver cases
 - `fret::advanced::kernel::*` -> `fret-framework::*`
 
 The recommended manual-assembly entry point remains `fret-bootstrap`, keeping the underlying driver

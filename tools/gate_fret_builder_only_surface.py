@@ -9,6 +9,7 @@ from _gate_lib import WORKSPACE_ROOT, fail, ok
 GATE_NAME = "fret builder-only surface"
 
 LIB_RS = WORKSPACE_ROOT / "ecosystem/fret/src/lib.rs"
+BUILDER_RS = WORKSPACE_ROOT / "ecosystem/fret/src/builder.rs"
 APP_ENTRY_RS = WORKSPACE_ROOT / "ecosystem/fret/src/app_entry.rs"
 README_MD = WORKSPACE_ROOT / "ecosystem/fret/README.md"
 DOCS_README_MD = WORKSPACE_ROOT / "docs/README.md"
@@ -85,6 +86,7 @@ def forbid_regexes(path: Path, text: str, patterns: list[str]) -> list[str]:
 def main() -> None:
     lib_text = read_text(LIB_RS)
     lib_rustdoc_text = rustdoc_only(lib_text)
+    builder_text = read_text(BUILDER_RS)
     app_entry_text = read_text(APP_ENTRY_RS)
     readme_text = read_text(README_MD)
     docs_readme_text = read_text(DOCS_README_MD)
@@ -105,6 +107,40 @@ def main() -> None:
                 r"\bpub\s+fn\s+app\s*<",
                 r"\bpub\s+fn\s+run_with_hooks\s*<",
                 r"\bpub\s+fn\s+run\s*<",
+                r"\bpub\s+use\s+(?:crate::)?(?:app|advanced|builder|component|app_entry)::\*\s*;",
+                r"\bpub\s+use\s+(?:crate::)?(?:app|advanced|builder|component|app_entry)::[^;]*\b(?:app_with_hooks|app|run_with_hooks|run|ui_with_hooks|ui)\b[^;]*;",
+            ],
+        )
+    )
+    problems.extend(
+        forbid_regexes(
+            BUILDER_RS,
+            builder_text,
+            patterns=[
+                r"\bpub\s+fn\s+app_with_hooks\s*<",
+                r"\bpub\s+fn\s+app\s*<",
+                r"\bpub\s+fn\s+run_with_hooks\s*<",
+                r"\bpub\s+fn\s+run\s*<",
+            ],
+        )
+    )
+    problems.extend(
+        require_regexes(
+            BUILDER_RS,
+            builder_text,
+            patterns=[
+                r"\bpub\s+struct\s+UiAppBuilder\b",
+                r"\bpub\s+struct\s+UiAppDriver\b",
+            ],
+        )
+    )
+    problems.extend(
+        require_snippets(
+            LIB_RS,
+            lib_text,
+            snippets=[
+                "mod builder;",
+                "pub use builder::{UiAppBuilder, UiAppDriver};",
             ],
         )
     )
