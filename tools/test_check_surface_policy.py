@@ -616,6 +616,83 @@ class SurfacePolicyTests(unittest.TestCase):
 
             self.assertEqual([], violations)
 
+    def test_public_example_runtime_diagnostics_require_surface_classification(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-cookbook/examples/runtime_diag_demo.rs",
+                "use fret_runtime::RunnerPresentDiagnosticsStore;",
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+                public_example_scan_roots=["apps/fret-cookbook/examples"],
+            )
+
+            self.assertEqual(1, len(violations))
+            self.assertEqual("public-example-unclassified-raw-seam", violations[0].rule)
+            self.assertIn("runtime-crate", violations[0].message)
+
+    def test_public_example_runtime_aliases_require_surface_classification(self) -> None:
+        for declaration in [
+            "use fret_runtime as rt;\nuse rt::RunnerPresentDiagnosticsStore;",
+            "extern crate fret_runtime as rt;\nuse rt::RunnerPresentDiagnosticsStore;",
+            "use {fret_runtime as rt};\nuse rt::RunnerPresentDiagnosticsStore;",
+            "use {\n    fret_runtime as rt,\n};\nuse rt::RunnerPresentDiagnosticsStore;",
+        ]:
+            with self.subTest(declaration=declaration), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                write(
+                    root / "apps/fret-cookbook/examples/runtime_diag_demo.rs",
+                    declaration,
+                )
+
+                violations = check_fixture_policy(
+                    root,
+                    default_surfaces=[],
+                    advanced_manual_surfaces=[],
+                    policy_recipe_surfaces=[],
+                    mechanism_root_surfaces=[],
+                    public_example_scan_roots=["apps/fret-cookbook/examples"],
+                )
+
+                self.assertEqual(1, len(violations))
+                self.assertEqual("public-example-unclassified-raw-seam", violations[0].rule)
+                self.assertIn("runtime-crate", violations[0].message)
+
+    def test_classified_advanced_runtime_diagnostics_are_allowed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            path = "apps/fret-cookbook/examples/runtime_diag_demo.rs"
+            write(
+                root / path,
+                "use {\n    fret_runtime as rt,\n};\nuse rt::RunnerPresentDiagnosticsStore;",
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[
+                    POLICY.SurfacePath(
+                        path,
+                        "advanced_manual",
+                        "fixture advanced runtime diagnostics example",
+                        owner="fixture-cookbook",
+                        allowed_raw_seams=("fret_runtime",),
+                        retirement="fixture retires when diagnostics have an app-facing facade",
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+                public_example_scan_roots=["apps/fret-cookbook/examples"],
+            )
+
+            self.assertEqual([], violations)
+
     def test_comparison_surface_allows_classified_raw_seam_without_retirement(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

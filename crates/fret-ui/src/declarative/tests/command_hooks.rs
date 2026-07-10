@@ -555,7 +555,7 @@ fn owner_scoped_action_availability_for_command_coexists_with_text_input_interes
     ui.set_focus(Some(text_input));
 
     let target = CommandId::from("test.target");
-    let text_copy = CommandId::from("text.copy");
+    let text_copy = CommandId::from("edit.copy");
     let unrelated = CommandId::from("test.unrelated");
 
     assert_eq!(

@@ -41,17 +41,18 @@ Rationale:
 - We can improve movement algorithms (grapheme clusters, emoji sequences, Unicode word breaks) later without
   changing the stored representation.
 
-### 2) Core text editing commands are stable IDs
+### 2) Core editing commands use one cross-surface identity
 
-The `text.*` command namespace is reserved for focused text-editable widgets.
+Cross-surface edit intents use `edit.*`. The `text.*` namespace is reserved for operations whose
+meaning is specific to a text buffer, such as caret movement, selection expansion, and deletion.
 
 Baseline commands (single-line and multi-line widgets may share them):
 
 - Selection / clipboard:
-  - `text.select_all`
-  - `text.copy`
-  - `text.cut`
-  - `text.paste`
+  - `edit.select_all`
+  - `edit.copy`
+  - `edit.cut`
+  - `edit.paste`
 - Navigation:
   - `text.move_left`, `text.move_right`
   - `text.move_word_left`, `text.move_word_right`
@@ -69,7 +70,7 @@ Semantics:
 - Navigation commands collapse selection (set `selection_anchor = caret`).
 - Selection expansion commands keep `selection_anchor` and move `caret`.
 - Delete commands delete the selection if it is non-empty; otherwise delete by the unit implied by the command.
-- `text.paste` requests clipboard text via effects (ADR 0041) and inserts at the caret, replacing selection.
+- `edit.paste` requests clipboard text via effects (ADR 0041) and inserts at the caret, replacing selection.
 
 ### 3) Key repeat for editing is explicit and opt-in
 

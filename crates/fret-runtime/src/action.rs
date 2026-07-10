@@ -1,25 +1,43 @@
-use crate::{CommandId, CommandMeta, CommandRegistry};
+use crate::CommandId;
 
-/// Stable action identifier (v1).
+/// Canonical action identifier.
 ///
-/// v1 compatibility strategy (ADR 0307): `ActionId` is an alias over `CommandId` so we can adopt
-/// action-first authoring without keymap schema churn.
+/// Per ADR 0307, action identity shares the command identity used by keymaps, menus, and routing.
 pub type ActionId = CommandId;
 
-/// Action metadata (v1).
-///
-/// v1 strategy (ADR 0307): action metadata is the existing command metadata surface.
-pub type ActionMeta = CommandMeta;
-
-/// Action registry (v1).
-///
-/// v1 strategy (ADR 0307): action metadata is stored in the existing command registry.
-pub type ActionRegistry = CommandRegistry;
-
-/// Typed unit action marker type (v1).
+/// Typed unit action marker type.
 ///
 /// This trait is intentionally minimal: it maps a Rust marker type to a stable [`ActionId`].
-/// v1 standardizes on unit actions only (no structured payload).
+/// Structured payloads remain an explicit higher-level concern.
 pub trait TypedAction: 'static {
     fn action_id() -> ActionId;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{CommandMeta, CommandRegistry};
+
+    struct Save;
+
+    impl TypedAction for Save {
+        fn action_id() -> ActionId {
+            ActionId::from("tests.action.save")
+        }
+    }
+
+    #[test]
+    fn action_identity_uses_the_command_registry_contract() {
+        let action_id = Save::action_id();
+        let command_id: CommandId = action_id.clone();
+        let mut commands = CommandRegistry::default();
+
+        commands.register(action_id, CommandMeta::new("Save"));
+
+        assert_eq!(Save::action_id(), command_id);
+        assert_eq!(
+            commands.get(command_id).map(|meta| meta.title.as_ref()),
+            Some("Save")
+        );
+    }
 }

@@ -57,10 +57,10 @@ surface:
   - `CodeEditorHandle`
   - `CodeEditorInteractionOptions`
   - `CodeEditorCacheStats`
-  - `CodeEditorMemorySnapshotV1`
-  - `CodeEditorCacheSizeSnapshotV1`
+  - `CodeEditorMemorySnapshot`
+  - `CodeEditorCacheSizeSnapshot`
   - `CodeEditorPaintPerfFrame`
-  - `CodeEditorFeaturePayloadSnapshotV1`
+  - `CodeEditorFeaturePayloadSnapshot`
   - `CodeEditorTorture`
   - `PreeditState`
 - buffer / view contracts re-exported for app-facing signatures:

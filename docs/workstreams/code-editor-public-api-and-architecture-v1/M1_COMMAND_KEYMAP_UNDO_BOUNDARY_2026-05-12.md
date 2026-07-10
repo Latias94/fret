@@ -11,8 +11,8 @@ The code editor already has two paths:
 
 - direct `KeyDown` handling for baseline navigation, selection, insertion, deletion, copy, and
   paste fallback,
-- focused command handling for `text.undo`, `text.redo`, `edit.undo`, `edit.redo`,
-  `text.select_all`, `text.copy`, `text.cut`, `text.paste`, `text.move_word_left`,
+- focused command handling for `edit.undo`, `edit.redo`, `edit.select_all`, `edit.copy`, `edit.cut`,
+  `edit.paste`, `text.move_word_left`,
   `text.move_word_right`,
   `text.select_word_left`, and `text.select_word_right`.
 
@@ -24,9 +24,10 @@ the editor memory snapshot.
 
 ### Command Vocabulary
 
-- Baseline text editing intent uses ADR 0044 `text.*` command ids where semantics match.
-- Window/document level undo keeps accepting `edit.undo` / `edit.redo` because ADR 0127 reserves
-  those names for focused-surface or window/document routing.
+- Cross-surface editing intent uses ADR 0044 `edit.*` command ids.
+- Text-buffer-specific movement, selection expansion, and deletion remain under `text.*`.
+- Focused editor history and window/document fallback history share `edit.undo` / `edit.redo`;
+  focus routing selects the owner.
 - Future editor-only commands must use an `editor.*` namespace, for example comment toggles,
   folding actions, find references, or code-action entry points.
 - New editor features must not add hidden shortcut-only behavior. If a behavior should appear in a
@@ -61,11 +62,11 @@ the editor memory snapshot.
 - Availability should be queryable through command availability hooks for discoverable commands,
   not only enforced when a command executes.
 
-## Compatibility
+## Current Contract
 
-This is a boundary decision only. Current `edit.undo` / `edit.redo` and existing direct key handling
-remain valid during the transition. Future slices can add more `text.*` command coverage without
-breaking callers.
+The temporary `text.undo/redo/copy/cut/paste/select_all` compatibility route is retired. New
+commands may extend the text-specific vocabulary, but must not create a second identity for an
+existing `edit.*` intent.
 
 ## Evidence
 
@@ -81,9 +82,9 @@ breaking callers.
 
 1. Add focused command coverage for the remaining ADR 0044 baseline commands currently handled only
    by direct `KeyDown`.
-2. Decide whether the code editor should also accept `text.undo` / `text.redo` as local-history
-   aliases while preserving `edit.undo` / `edit.redo` for window/document routing. Completed in
-   `M1_TEXT_UNDO_REDO_ALIAS_2026-05-12.md`.
+2. The temporary `text.undo` / `text.redo` alias experiment landed in
+   `M1_TEXT_UNDO_REDO_ALIAS_2026-05-12.md` and was later superseded by the canonical `edit.*`
+   command surface.
 3. Extend command availability beyond `select_all` for undo, redo, cut, paste, copy, and movement
    commands. Completed in `M1_COMMAND_AVAILABILITY_COVERAGE_2026-05-12.md`.
 4. Define the first `editor.*` command only when a real editor-only behavior is implemented.

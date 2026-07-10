@@ -327,19 +327,8 @@ impl<H: UiHost> Widget<H> for BoundTextInput {
             return CommandAvailability::NotHandled;
         }
 
-        let cmd = match command.as_str() {
-            "edit.copy" => "text.copy",
-            "edit.cut" => "text.cut",
-            "edit.paste" => "text.paste",
-            "edit.select_all" => "text.select_all",
-            other => other,
-        };
-        if !cmd.starts_with("text.") {
-            return CommandAvailability::NotHandled;
-        }
-
-        match cmd {
-            "text.copy" => {
+        match command.as_str() {
+            "edit.copy" => {
                 if !cx.input_ctx.caps.clipboard.text.write {
                     return CommandAvailability::Blocked;
                 }
@@ -349,7 +338,7 @@ impl<H: UiHost> Widget<H> for BoundTextInput {
                     CommandAvailability::Blocked
                 }
             }
-            "text.cut" => {
+            "edit.cut" => {
                 if self.input.read_only || !cx.input_ctx.caps.clipboard.text.write {
                     return CommandAvailability::Blocked;
                 }
@@ -359,13 +348,13 @@ impl<H: UiHost> Widget<H> for BoundTextInput {
                     CommandAvailability::Blocked
                 }
             }
-            "text.paste" => {
+            "edit.paste" => {
                 if self.input.read_only || !cx.input_ctx.caps.clipboard.text.read {
                     return CommandAvailability::Blocked;
                 }
                 CommandAvailability::Available
             }
-            "text.select_all" => {
+            "edit.select_all" => {
                 if !self.input.text().is_empty() {
                     CommandAvailability::Available
                 } else {

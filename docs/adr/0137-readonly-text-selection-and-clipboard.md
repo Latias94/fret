@@ -13,7 +13,7 @@ Status: Proposed
 
 ## Context
 
-Fret already defines an editor-grade text command vocabulary (`text.*`, ADR 0044) and a text system boundary
+Fret already defines an editor-grade editing command vocabulary (ADR 0044) and a text system boundary
 (layout vs paint, ADR 0006). However, we also need a **read-only** text surface for:
 
 - Markdown rendering (articles, docs, chat transcripts, streaming LLM output).
@@ -40,15 +40,15 @@ Introduce a declarative element that renders `RichText` and supports:
 
 This element is **not** a text input (no IME, no insertion, no editing). It only participates in focus + commands.
 
-### 2) Extend `text.*` commands to cover selectable (not only editable) text surfaces
+### 2) Reuse cross-surface `edit.*` commands for selectable text
 
-ADR 0044 reserves the `text.*` namespace for focused text-editable widgets. We amend the interpretation:
+ADR 0044 reserves `text.*` for text-buffer-specific movement, selection expansion, and deletion.
+Read-only and editable text surfaces share the cross-surface edit commands:
 
-- `text.*` is reserved for **focused text surfaces**.
 - Editable widgets support the full command set.
 - Read-only `SelectableText` supports a strict subset:
-  - `text.copy`
-  - `text.select_all`
+  - `edit.copy`
+  - `edit.select_all`
 
 This keeps command routing consistent across editable and non-editable text, and matches user expectations
 (Ctrl/Cmd+C should “just work” when a text selection exists).
@@ -57,7 +57,7 @@ This keeps command routing consistent across editable and non-editable text, and
 
 The default keymap service should include platform-appropriate bindings for:
 
-- `text.copy`, `text.cut`, `text.paste`, `text.select_all`
+- `edit.copy`, `edit.cut`, `edit.paste`, `edit.select_all`
 
 Bindings should be safe to dispatch globally: if the focused element does not handle the command, nothing happens.
 Apps can override/unbind via `KeymapService` (last-wins semantics).
@@ -86,7 +86,8 @@ implemented by the renderer-backed text system (`crates/fret-render-wgpu/src/tex
 ## Consequences
 
 - Markdown/code preview can share the same selection/clipboard behavior as editable widgets.
-- Command routing remains unified (`text.*`) while keeping editing-specific behavior in editable widgets.
+- Command routing uses one `edit.*` identity across text and non-text surfaces while keeping
+  text-buffer-specific behavior in editable widgets.
 - We deliberately do **not** support cross-element selection in this baseline (consistent with Zed’s non-cross-buffer
   selection model). Future ADRs can define a selection host for cross-block selection if needed.
 

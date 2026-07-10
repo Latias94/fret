@@ -5,9 +5,9 @@ impl CodeEditorHandle {
         self.state.borrow().cache_stats
     }
 
-    pub fn cache_size_snapshot(&self) -> CodeEditorCacheSizeSnapshotV1 {
+    pub fn cache_size_snapshot(&self) -> CodeEditorCacheSizeSnapshot {
         let st = self.state.borrow();
-        let mut out = CodeEditorCacheSizeSnapshotV1 {
+        let mut out = CodeEditorCacheSizeSnapshot {
             schema_version: 2,
             row_text_cache_entries: st.row_text_cache.len() as u64,
             row_text_cache_queue_len: st.row_text_cache_queue.len() as u64,
@@ -40,7 +40,7 @@ impl CodeEditorHandle {
         out
     }
 
-    pub fn memory_snapshot(&self) -> CodeEditorMemorySnapshotV1 {
+    pub fn memory_snapshot(&self) -> CodeEditorMemorySnapshot {
         let st = self.state.borrow();
 
         let mut undo_text_bytes = 0u64;
@@ -59,7 +59,7 @@ impl CodeEditorHandle {
             redo_edit_count = redo_edit_count.saturating_add(edits);
         }
 
-        CodeEditorMemorySnapshotV1 {
+        CodeEditorMemorySnapshot {
             schema_version: 1,
             buffer_revision: st.buffer.revision().0,
             buffer_len_bytes: st.buffer.len_bytes() as u64,

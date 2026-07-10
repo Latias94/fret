@@ -12,7 +12,7 @@ use fret_core::{
 use fret_runtime::Effect;
 
 fn text_area_command_mutates_text(command: &str) -> bool {
-    matches!(command, "text.cut" | "text.paste" | "text.clear")
+    matches!(command, "edit.cut" | "edit.paste" | "text.clear")
         || command.starts_with("text.delete")
         || command.starts_with("text.insert")
 }
@@ -1251,13 +1251,7 @@ impl<H: UiHost> Widget<H> for TextArea {
             return false;
         }
 
-        let cmd = match command.as_str() {
-            "edit.copy" => "text.copy",
-            "edit.cut" => "text.cut",
-            "edit.paste" => "text.paste",
-            "edit.select_all" => "text.select_all",
-            other => other,
-        };
+        let cmd = command.as_str();
         if self.read_only && text_area_command_mutates_text(cmd) {
             return true;
         }
@@ -1269,14 +1263,14 @@ impl<H: UiHost> Widget<H> for TextArea {
             cmd,
             "text.move_home" | "text.move_end" | "text.select_home" | "text.select_end"
         );
-        if cmd != "text.copy" && !is_vertical {
+        if cmd != "edit.copy" && !is_vertical {
             self.preferred_x = None;
         }
         let had_preedit = !self.preedit.is_empty();
         if had_preedit && (is_vertical || is_line_home_end) {
             return true;
         }
-        if had_preedit && cmd != "text.copy" {
+        if had_preedit && cmd != "edit.copy" {
             self.clear_preedit();
             cx.invalidate_self(Invalidation::Layout);
             cx.request_redraw();
@@ -1309,7 +1303,7 @@ impl<H: UiHost> Widget<H> for TextArea {
                 self.apply_multiline_ui_delta(cx, Self::edit_layout_delta(true));
                 true
             }
-            "text.copy" => {
+            "edit.copy" => {
                 if !cx.input_ctx.caps.clipboard.text.write {
                     return true;
                 }
@@ -1331,7 +1325,7 @@ impl<H: UiHost> Widget<H> for TextArea {
                 }
                 true
             }
-            "text.cut" => {
+            "edit.cut" => {
                 if !cx.input_ctx.caps.clipboard.text.write {
                     return true;
                 }
@@ -1358,7 +1352,7 @@ impl<H: UiHost> Widget<H> for TextArea {
                 self.apply_multiline_ui_delta(cx, delta);
                 true
             }
-            "text.paste" => {
+            "edit.paste" => {
                 if !cx.input_ctx.caps.clipboard.text.read {
                     return true;
                 }
@@ -1445,24 +1439,13 @@ impl<H: UiHost> Widget<H> for TextArea {
             return CommandAvailability::NotHandled;
         }
 
-        let cmd = match command.as_str() {
-            "edit.copy" => "text.copy",
-            "edit.cut" => "text.cut",
-            "edit.paste" => "text.paste",
-            "edit.select_all" => "text.select_all",
-            other => other,
-        };
-        if !cmd.starts_with("text.") {
-            return CommandAvailability::NotHandled;
-        }
-
         let clipboard_read = cx.input_ctx.caps.clipboard.text.read;
         let clipboard_write = cx.input_ctx.caps.clipboard.text.write;
         let (start, end) = self.selection_range();
         let has_selection = start != end;
 
-        match cmd {
-            "text.copy" => {
+        match command.as_str() {
+            "edit.copy" => {
                 if !clipboard_write {
                     return CommandAvailability::Blocked;
                 }
@@ -1472,7 +1455,7 @@ impl<H: UiHost> Widget<H> for TextArea {
                     CommandAvailability::Blocked
                 }
             }
-            "text.cut" => {
+            "edit.cut" => {
                 if self.read_only || !clipboard_write {
                     return CommandAvailability::Blocked;
                 }
@@ -1482,13 +1465,13 @@ impl<H: UiHost> Widget<H> for TextArea {
                     CommandAvailability::Blocked
                 }
             }
-            "text.paste" => {
+            "edit.paste" => {
                 if self.read_only || !clipboard_read {
                     return CommandAvailability::Blocked;
                 }
                 CommandAvailability::Available
             }
-            "text.select_all" => {
+            "edit.select_all" => {
                 if !self.text().is_empty() {
                     CommandAvailability::Available
                 } else {

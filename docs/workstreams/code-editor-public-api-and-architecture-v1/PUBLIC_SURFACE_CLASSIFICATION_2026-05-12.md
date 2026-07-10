@@ -13,8 +13,8 @@ The first M1 code fix is a root re-export cleanup in `fret-code-editor`:
 
 - `CodeFontFeaturePolicy`
 - `CodeFontFeaturePreset`
-- `CodeEditorCacheSizeSnapshotV1`
-- `CodeEditorMemorySnapshotV1`
+- `CodeEditorCacheSizeSnapshot`
+- `CodeEditorMemorySnapshot`
 
 These types were already part of public method signatures on `CodeEditor` / `CodeEditorHandle`, but
 were not re-exported from `ecosystem/fret-code-editor/src/lib.rs`. The lane treats that as a public
@@ -193,10 +193,10 @@ Stable:
 Near-stable diagnostics/perf:
 
 - `CodeEditorCacheStats`
-- `CodeEditorCacheSizeSnapshotV1`
-- `CodeEditorMemorySnapshotV1`
+- `CodeEditorCacheSizeSnapshot`
+- `CodeEditorMemorySnapshot`
 - `CodeEditorPaintPerfFrame`
-- `CodeEditorFeaturePayloadSnapshotV1`
+- `CodeEditorFeaturePayloadSnapshot`
 
 Rationale: these are already consumed by diagnostics and perf workstreams. They are versioned or
 diagnostics-oriented, but still need root export and compatibility discipline because they are

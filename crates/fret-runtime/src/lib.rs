@@ -82,7 +82,7 @@ pub mod window_text_input_snapshot;
 // -----------------------------------------------------------------------------
 // Stable re-exports (portable runtime contract surface)
 // -----------------------------------------------------------------------------
-pub use action::{ActionId, ActionMeta, ActionRegistry, TypedAction};
+pub use action::{ActionId, TypedAction};
 pub use action_payload::WindowPendingActionPayloadService;
 pub use asset_reload::{
     AssetReloadBackendKind, AssetReloadEpoch, AssetReloadFallbackReason, AssetReloadStatus,

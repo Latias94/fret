@@ -1,15 +1,12 @@
 //! Typed action authoring sugar for the `fret` golden path.
 //!
-//! v1 constraints (see ADR 0307):
-//! - `ActionId` is compatible with existing `CommandId` strings (no keymap schema changes).
-//! - typed actions are unit marker types (no payload).
-//! - action metadata uses the existing command registry surface (`CommandRegistry` + `CommandMeta`).
+//! Per ADR 0307, `ActionId` shares command identity so keymaps, menus, and typed dispatch use one
+//! registry. Unit and payload marker types are both supported by the same dispatch path.
 //!
-//! v2 note (ADR 0312):
-//! - payload/parameterized actions are supported as an additive, best-effort mechanism via a
-//!   transient pending payload store keyed by `(window, ActionId)`.
+//! Payload actions follow ADR 0312 and use a transient pending payload store keyed by
+//! `(window, ActionId)`.
 
-pub use fret_runtime::{ActionId, ActionMeta, ActionRegistry, CommandId, TypedAction};
+pub use fret_runtime::{ActionId, CommandId, TypedAction};
 pub use fret_ui_kit::command::ElementCommandGatingExt;
 
 use std::any::Any;
@@ -36,9 +33,9 @@ type OnActionAvailability = std::sync::Arc<
         + 'static,
 >;
 
-/// Typed payload action marker type (v2 prototype).
+/// Typed payload action marker type.
 ///
-/// Payload actions are pointer/programmatic-only in v2:
+/// Payload actions are pointer/programmatic-only:
 /// - keymap/palette/menus remain unit-action surfaces (no payload schema changes),
 /// - payload is stored transiently via the UI host (ADR 0312).
 pub trait TypedPayloadAction: TypedAction {
@@ -47,7 +44,7 @@ pub trait TypedPayloadAction: TypedAction {
 
 /// Minimal handler table that dispatches stable [`ActionId`]s through the existing command hooks.
 ///
-/// v1 note: `ActionId` is `CommandId`-compatible, so this is implemented as a thin adapter over
+/// `ActionId` shares `CommandId` identity, so this is implemented as a thin adapter over
 /// `OnCommand` / `OnCommandAvailability`.
 #[derive(Default)]
 pub(crate) struct ActionHandlerTable {
@@ -229,8 +226,8 @@ mod action_handler_table_tests {
 
 /// Define typed unit actions with stable IDs.
 ///
-/// This macro intentionally requires explicit action ID strings in v1 to keep the mapping
-/// predictable for diagnostics and future data-driven frontends.
+/// This macro intentionally requires explicit action ID strings to keep the mapping predictable
+/// for diagnostics and data-driven frontends.
 ///
 /// Example:
 ///
@@ -296,7 +293,7 @@ macro_rules! actions {
     };
 }
 
-/// Define typed payload actions with stable IDs (v2 prototype).
+/// Define typed payload actions with stable IDs.
 ///
 /// This macro is intentionally additive: it does not change `actions!` and keeps explicit stable
 /// IDs to avoid refactor drift.

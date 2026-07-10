@@ -13,7 +13,7 @@ use crate::widget::{
 use crate::{Invalidation, UiHost};
 
 fn text_input_command_mutates_text(command: &str) -> bool {
-    matches!(command, "text.cut" | "text.paste" | "text.clear")
+    matches!(command, "edit.cut" | "edit.paste" | "text.clear")
         || command.starts_with("text.delete")
         || command.starts_with("text.insert")
 }
@@ -1236,13 +1236,7 @@ impl<H: UiHost> Widget<H> for TextInput {
             return false;
         }
 
-        let cmd = match command.as_str() {
-            "edit.copy" => "text.copy",
-            "edit.cut" => "text.cut",
-            "edit.paste" => "text.paste",
-            "edit.select_all" => "text.select_all",
-            other => other,
-        };
+        let cmd = command.as_str();
         if self.read_only && text_input_command_mutates_text(cmd) {
             return true;
         }
@@ -1257,7 +1251,7 @@ impl<H: UiHost> Widget<H> for TextInput {
         if self.is_ime_composing() && is_vertical {
             return true;
         }
-        if self.is_ime_composing() && cmd != "text.copy" && cmd != "text.clear" {
+        if self.is_ime_composing() && cmd != "edit.copy" && cmd != "text.clear" {
             self.clear_ime_composition();
             self.mark_text_blobs_dirty();
             cx.invalidate_self(Invalidation::Layout);
@@ -1276,7 +1270,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                 cx.request_redraw();
                 true
             }
-            "text.copy" => {
+            "edit.copy" => {
                 if !cx.input_ctx.caps.clipboard.text.write {
                     return true;
                 }
@@ -1298,7 +1292,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                 }
                 true
             }
-            "text.cut" => {
+            "edit.cut" => {
                 if !cx.input_ctx.caps.clipboard.text.write {
                     return true;
                 }
@@ -1326,7 +1320,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                 self.apply_singleline_ui_delta(cx, delta);
                 true
             }
-            "text.paste" => {
+            "edit.paste" => {
                 if !cx.input_ctx.caps.clipboard.text.read {
                     return true;
                 }
@@ -1421,21 +1415,10 @@ impl<H: UiHost> Widget<H> for TextInput {
             return CommandAvailability::NotHandled;
         }
 
-        let cmd = match command.as_str() {
-            "edit.copy" => "text.copy",
-            "edit.cut" => "text.cut",
-            "edit.paste" => "text.paste",
-            "edit.select_all" => "text.select_all",
-            other => other,
-        };
-        if !cmd.starts_with("text.") {
-            return CommandAvailability::NotHandled;
-        }
-
         let clipboard_read = cx.input_ctx.caps.clipboard.text.read;
         let clipboard_write = cx.input_ctx.caps.clipboard.text.write;
-        match cmd {
-            "text.copy" => {
+        match command.as_str() {
+            "edit.copy" => {
                 if !clipboard_write {
                     return CommandAvailability::Blocked;
                 }
@@ -1445,7 +1428,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                     CommandAvailability::Blocked
                 }
             }
-            "text.cut" => {
+            "edit.cut" => {
                 if self.read_only || !clipboard_write {
                     return CommandAvailability::Blocked;
                 }
@@ -1455,13 +1438,13 @@ impl<H: UiHost> Widget<H> for TextInput {
                     CommandAvailability::Blocked
                 }
             }
-            "text.paste" => {
+            "edit.paste" => {
                 if self.read_only || !clipboard_read {
                     return CommandAvailability::Blocked;
                 }
                 CommandAvailability::Available
             }
-            "text.select_all" => {
+            "edit.select_all" => {
                 if !self.text.is_empty() {
                     CommandAvailability::Available
                 } else {

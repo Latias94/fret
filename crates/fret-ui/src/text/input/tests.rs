@@ -1638,7 +1638,7 @@ fn copy_command_does_not_cancel_preedit() {
     assert!(input.is_ime_composing());
 
     let mut cx = command_cx(&mut app, &mut services, &mut tree, node, window);
-    let handled = input.command(&mut cx, &CommandId::new("text.copy"));
+    let handled = input.command(&mut cx, &CommandId::new("edit.copy"));
     assert!(handled);
     assert!(
         input.is_ime_composing(),

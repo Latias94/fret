@@ -930,8 +930,27 @@ fn docs_lock_query_reads_vs_mutation_submit_story() {
     assert!(INTEGRATING_TOKIO_AND_REQWEST.contains("`handle.submit(...)`"));
     assert!(INTEGRATING_SQLITE_AND_SQLX.contains("`cx.data().mutation_async(...)`"));
     assert!(INTEGRATING_SQLITE_AND_SQLX.contains("`cx.data().mutation_async_local(...)`"));
-    assert!(INTEGRATING_SQLITE_AND_SQLX.contains("`handle.submit(...)`"));
-    assert!(INTEGRATING_SQLITE_AND_SQLX.contains("`handle.submit_action(...)`"));
+    assert!(INTEGRATING_SQLITE_AND_SQLX.contains("`cx.actions().mutation_submit(...)`"));
+    let sqlite_default_lane = INTEGRATING_SQLITE_AND_SQLX
+        .split("## 3) Advanced/manual surfaces")
+        .next()
+        .expect("SQLite guide should keep an explicit advanced/manual boundary");
+    for raw_crate in [
+        "fret_app::",
+        "fret_runtime::",
+        "fret_core::",
+        "fret_ui::",
+        "fret_canvas::",
+        "fret_chart::",
+    ] {
+        assert!(
+            !sqlite_default_lane.contains(raw_crate),
+            "default SQLite lane leaked raw crate path `{raw_crate}`"
+        );
+    }
+    assert!(!sqlite_default_lane.contains("handle.submit(models"));
+    assert!(sqlite_default_lane.contains("fret::actions!([SaveTodo = \"todo.save\"]);"));
+    assert!(sqlite_default_lane.contains(".action(act::SaveTodo)"));
     assert!(
         INTEGRATING_SQLITE_AND_SQLX
             .contains("`cx.data().invalidate_query_namespace_after_mutation_success(...)`")
@@ -1867,9 +1886,9 @@ fn root_surface_omits_low_level_action_registry_aliases() {
     assert!(!root_header.contains("ActionRegistry"));
     assert!(root_header.contains("pub use fret_runtime::{ActionId, CommandId, TypedAction};"));
     assert!(ACTIONS_RS.contains("pub use fret_ui_kit::command::ElementCommandGatingExt;"));
-    assert!(ACTIONS_RS.contains(
-        "pub use fret_runtime::{ActionId, ActionMeta, ActionRegistry, CommandId, TypedAction};"
-    ));
+    assert!(ACTIONS_RS.contains("pub use fret_runtime::{ActionId, CommandId, TypedAction};"));
+    assert!(!ACTIONS_RS.contains("ActionMeta"));
+    assert!(!ACTIONS_RS.contains("ActionRegistry"));
     assert!(!ACTIONS_RS.contains("pub type OnAction"));
     assert!(!ACTIONS_RS.contains("pub type OnPayloadAction"));
     assert!(!ACTIONS_RS.contains("pub type OnActionAvailability"));

@@ -101,7 +101,7 @@ This workstream is now closed for the v1 action/view migration and default-path 
   - Evidence: `docs/adr/0307-action-registry-and-typed-action-dispatch-v1.md`
   - Status (as of 2026-03-03):
     - Implemented: `ActionId` portable identity (`crates/fret-runtime/src/action.rs`)
-    - Implemented: action metadata aliases (`ActionMeta` / `ActionRegistry`) reuse the command registry surface (`crates/fret-runtime/src/action.rs`)
+    - Implemented: action metadata uses `CommandMeta` / `CommandRegistry` directly; duplicate action registry aliases were removed (`crates/fret-runtime/src/action.rs`)
     - Implemented: command palette uses host command registry (`ecosystem/fret-ui-shadcn/src/command.rs`)
 - [x] AFA-actions-011 Provide an ecosystem macro for defining typed unit actions with stable IDs.
   - Goal: avoid stringly `"my.action.id"` constants in app code.

@@ -9,7 +9,7 @@ The editor feature payload store and its public diagnostics snapshot type moved 
 `ecosystem/fret-code-editor/src/editor/mod.rs` into
 `ecosystem/fret-code-editor/src/editor/feature_payloads.rs`.
 
-The public API stays unchanged: `CodeEditorFeaturePayloadSnapshotV1` remains exported from the crate
+The public API stays unchanged: `CodeEditorFeaturePayloadSnapshot` remains exported from the crate
 root through `fret-code-editor/src/lib.rs`. The split narrows the owner boundary for diagnostics,
 decorations, gutter markers, semantic tokens, display-map pruning, and payload epochs without
 changing handle methods or payload semantics.
@@ -18,7 +18,7 @@ changing handle methods or payload semantics.
 
 The new module owns:
 
-- `CodeEditorFeaturePayloadSnapshotV1`,
+- `CodeEditorFeaturePayloadSnapshot`,
 - `CodeEditorFeaturePayloadStore`,
 - payload epoch readout,
 - diagnostic line summary readout,

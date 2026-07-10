@@ -9,12 +9,12 @@ Extend the code editor focused command availability surface beyond `select_all`.
 
 The editor now reports availability for the commands it already handles:
 
-- `text.undo` / `edit.undo`
-- `text.redo` / `edit.redo`
-- `text.select_all` / `edit.select_all`
-- `text.copy` / `edit.copy`
-- `text.cut` / `edit.cut`
-- `text.paste` / `edit.paste`
+- `edit.undo`
+- `edit.redo`
+- `edit.select_all`
+- `edit.copy`
+- `edit.cut`
+- `edit.paste`
 - `text.move_word_left`
 - `text.move_word_right`
 - `text.select_word_left`
@@ -29,6 +29,7 @@ Availability is a pure query and considers:
 - clipboard read/write platform capabilities.
 
 Unknown commands remain `NotHandled` so workspace or app-level command owners can answer them.
+The retired `text.undo/redo/copy/cut/paste/select_all` aliases are also `NotHandled`.
 
 ## Must-Be-True Outcomes
 

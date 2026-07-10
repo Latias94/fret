@@ -149,11 +149,11 @@ fn command_availability_reports_selection_clipboard_and_navigation_state() {
     {
         let st = handle.state.borrow();
         assert_eq!(
-            input::command_availability(&st, &input_ctx, "text.select_all"),
+            input::command_availability(&st, &input_ctx, "edit.select_all"),
             fret_ui::CommandAvailability::Available
         );
         assert_eq!(
-            input::command_availability(&st, &input_ctx, "text.copy"),
+            input::command_availability(&st, &input_ctx, "edit.copy"),
             fret_ui::CommandAvailability::Blocked
         );
         assert_eq!(
@@ -173,15 +173,15 @@ fn command_availability_reports_selection_clipboard_and_navigation_state() {
     {
         let st = handle.state.borrow();
         assert_eq!(
-            input::command_availability(&st, &input_ctx, "text.copy"),
+            input::command_availability(&st, &input_ctx, "edit.copy"),
             fret_ui::CommandAvailability::Available
         );
         assert_eq!(
-            input::command_availability(&st, &input_ctx, "text.cut"),
+            input::command_availability(&st, &input_ctx, "edit.cut"),
             fret_ui::CommandAvailability::Available
         );
         assert_eq!(
-            input::command_availability(&st, &input_ctx, "text.paste"),
+            input::command_availability(&st, &input_ctx, "edit.paste"),
             fret_ui::CommandAvailability::Available
         );
     }
@@ -190,11 +190,11 @@ fn command_availability_reports_selection_clipboard_and_navigation_state() {
     {
         let st = handle.state.borrow();
         assert_eq!(
-            input::command_availability(&st, &input_ctx, "text.copy"),
+            input::command_availability(&st, &input_ctx, "edit.copy"),
             fret_ui::CommandAvailability::Blocked
         );
         assert_eq!(
-            input::command_availability(&st, &input_ctx, "text.cut"),
+            input::command_availability(&st, &input_ctx, "edit.cut"),
             fret_ui::CommandAvailability::Blocked
         );
     }
@@ -203,7 +203,7 @@ fn command_availability_reports_selection_clipboard_and_navigation_state() {
     {
         let st = handle.state.borrow();
         assert_eq!(
-            input::command_availability(&st, &input_ctx, "text.paste"),
+            input::command_availability(&st, &input_ctx, "edit.paste"),
             fret_ui::CommandAvailability::Blocked
         );
     }
@@ -218,10 +218,6 @@ fn command_availability_reports_undo_redo_and_read_only_state() {
         let st = handle.state.borrow();
         assert_eq!(
             input::command_availability(&st, &input_ctx, "edit.undo"),
-            fret_ui::CommandAvailability::Blocked
-        );
-        assert_eq!(
-            input::command_availability(&st, &input_ctx, "text.undo"),
             fret_ui::CommandAvailability::Blocked
         );
         assert_eq!(
@@ -242,10 +238,6 @@ fn command_availability_reports_undo_redo_and_read_only_state() {
         let st = handle.state.borrow();
         assert_eq!(
             input::command_availability(&st, &input_ctx, "edit.undo"),
-            fret_ui::CommandAvailability::Available
-        );
-        assert_eq!(
-            input::command_availability(&st, &input_ctx, "text.undo"),
             fret_ui::CommandAvailability::Available
         );
         assert_eq!(
@@ -264,10 +256,6 @@ fn command_availability_reports_undo_redo_and_read_only_state() {
             input::command_availability(&st, &input_ctx, "edit.redo"),
             fret_ui::CommandAvailability::Available
         );
-        assert_eq!(
-            input::command_availability(&st, &input_ctx, "text.redo"),
-            fret_ui::CommandAvailability::Available
-        );
     }
 
     handle.set_selection(Selection {
@@ -278,23 +266,19 @@ fn command_availability_reports_undo_redo_and_read_only_state() {
     {
         let st = handle.state.borrow();
         assert_eq!(
-            input::command_availability(&st, &input_ctx, "text.copy"),
+            input::command_availability(&st, &input_ctx, "edit.copy"),
             fret_ui::CommandAvailability::Available
         );
         assert_eq!(
-            input::command_availability(&st, &input_ctx, "text.cut"),
+            input::command_availability(&st, &input_ctx, "edit.cut"),
             fret_ui::CommandAvailability::Blocked
         );
         assert_eq!(
-            input::command_availability(&st, &input_ctx, "text.paste"),
+            input::command_availability(&st, &input_ctx, "edit.paste"),
             fret_ui::CommandAvailability::Blocked
         );
         assert_eq!(
             input::command_availability(&st, &input_ctx, "edit.undo"),
-            fret_ui::CommandAvailability::Blocked
-        );
-        assert_eq!(
-            input::command_availability(&st, &input_ctx, "text.undo"),
             fret_ui::CommandAvailability::Blocked
         );
         assert_eq!(
@@ -305,7 +289,7 @@ fn command_availability_reports_undo_redo_and_read_only_state() {
 }
 
 #[test]
-fn text_undo_redo_commands_use_editor_local_history() {
+fn edit_undo_redo_commands_use_editor_local_history() {
     let handle = CodeEditorHandle::new("hello");
     let mut host = TestHost::default();
     let action_cx = ActionCx {
@@ -322,14 +306,95 @@ fn text_undo_redo_commands_use_editor_local_history() {
         assert!(input::insert_text(&mut st, "!").is_some());
         assert_eq!(st.buffer.text_string(), "hello!");
 
-        let undo_result = input::handle_command(&mut host, action_cx, &mut st, "text.undo");
+        let undo_result = input::handle_command(&mut host, action_cx, &mut st, "edit.undo");
         assert!(undo_result.handled);
         assert!(undo_result.did);
         assert_eq!(st.buffer.text_string(), "hello");
 
-        let redo_result = input::handle_command(&mut host, action_cx, &mut st, "text.redo");
+        let redo_result = input::handle_command(&mut host, action_cx, &mut st, "edit.redo");
         assert!(redo_result.handled);
         assert!(redo_result.did);
         assert_eq!(st.buffer.text_string(), "hello!");
+    }
+}
+
+#[test]
+fn retired_text_edit_aliases_are_not_owned_by_code_editor() {
+    let handle = CodeEditorHandle::new("hello");
+    let input_ctx = input_context_with_clipboard(true, true);
+    let mut host = TestHost::default();
+    let action_cx = ActionCx {
+        window: fret_core::AppWindowId::default(),
+        target: fret_ui::GlobalElementId(0),
+    };
+    let mut st = handle.state.borrow_mut();
+
+    for command in [
+        "text.undo",
+        "text.redo",
+        "text.select_all",
+        "text.copy",
+        "text.cut",
+        "text.paste",
+    ] {
+        assert_eq!(
+            input::command_availability(&st, &input_ctx, command),
+            fret_ui::CommandAvailability::NotHandled,
+            "retired command `{command}` must not remain on the editor surface"
+        );
+        let result = input::handle_command(&mut host, action_cx, &mut st, command);
+        assert!(
+            !result.handled,
+            "retired command `{command}` was dispatched"
+        );
+        assert!(
+            !result.did,
+            "retired command `{command}` changed editor state"
+        );
+    }
+}
+
+#[test]
+fn core_edit_registry_commands_reach_editor_availability_and_dispatch() {
+    let mut registry = fret_runtime::CommandRegistry::default();
+    fret_app::core_commands::register_text_edit_commands(&mut registry);
+
+    let handle = CodeEditorHandle::new("hello");
+    let input_ctx = input_context_with_clipboard(true, true);
+    let mut host = TestHost::default();
+    let action_cx = ActionCx {
+        window: fret_core::AppWindowId::default(),
+        target: fret_ui::GlobalElementId(0),
+    };
+    let mut st = handle.state.borrow_mut();
+    st.selection = Selection {
+        anchor: 5,
+        focus: 5,
+    };
+    assert!(input::insert_text(&mut st, "!").is_some());
+
+    for command in [
+        "edit.undo",
+        "edit.redo",
+        "edit.select_all",
+        "edit.copy",
+        "edit.cut",
+        "edit.paste",
+    ] {
+        assert!(
+            registry
+                .get(fret_runtime::CommandId::from(command))
+                .is_some(),
+            "core registry is missing `{command}`"
+        );
+        assert_ne!(
+            input::command_availability(&st, &input_ctx, command),
+            fret_ui::CommandAvailability::NotHandled,
+            "editor availability does not own `{command}`"
+        );
+        assert!(
+            input::handle_command(&mut host, action_cx, &mut st, command).handled,
+            "editor dispatch does not own `{command}`"
+        );
     }
 }

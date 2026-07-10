@@ -3596,6 +3596,13 @@ MECHANISM_ROOT_SURFACES: tuple[SurfacePath, ...] = (
     ),
 )
 
+RUNTIME_CRATE_REFERENCE_PATTERN = (
+    r"\bfret_runtime::"
+    r"|\bfret_runtime\s+as\s+[A-Za-z_][A-Za-z0-9_]*"
+    r"|\bextern\s+crate\s+fret_runtime\b"
+)
+
+
 DEFAULT_FORBIDDEN_PATTERNS: tuple[tuple[str, str], ...] = (
     (
         r"\buse\s+fret_ui::",
@@ -3618,7 +3625,7 @@ DEFAULT_FORBIDDEN_PATTERNS: tuple[tuple[str, str], ...] = (
         "default app/tutorial surfaces must not import `fret_app`; use `fret::app` or `fret::commands` facade exports",
     ),
     (
-        r"\bfret_runtime::",
+        RUNTIME_CRATE_REFERENCE_PATTERN,
         "default app/tutorial surfaces must not import `fret_runtime`; use app-facing `LocalState`, actions, and data helpers",
     ),
     (
@@ -3868,7 +3875,7 @@ RAW_SEAM_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("fret_app", re.compile(r"\bfret_app::")),
     ("fret_core", re.compile(r"\bfret_core::")),
     ("fret_launch", re.compile(r"\bfret_launch::")),
-    ("fret_runtime", re.compile(r"\bfret_runtime::")),
+    ("fret_runtime", re.compile(RUNTIME_CRATE_REFERENCE_PATTERN)),
     ("fret_ui", re.compile(r"\bfret_ui::")),
     ("AnyElement", re.compile(r"\bAnyElement\b")),
     ("ElementContext", re.compile(r"\bElementContext\b")),
@@ -3983,6 +3990,11 @@ PUBLIC_EXAMPLE_CLASSIFICATION_PATTERNS: tuple[tuple[str, re.Pattern[str], str], 
         "retained-ui-tree",
         re.compile(r"\bUiTree\b"),
         "`UiTree` is a retained runtime mechanism and public examples must classify direct usage",
+    ),
+    (
+        "runtime-crate",
+        re.compile(RUNTIME_CRATE_REFERENCE_PATTERN),
+        "direct `fret_runtime` usage in public examples requires an explicit advanced/manual classification",
     ),
 )
 

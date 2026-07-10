@@ -11,7 +11,7 @@ use fret_code_editor_view::{
 /// The payloads are source/display facts owned by the editor surface; presentation policy and
 /// overlay behavior stay outside `fret-code-editor`.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
-pub struct CodeEditorFeaturePayloadSnapshotV1 {
+pub struct CodeEditorFeaturePayloadSnapshot {
     pub schema_version: u32,
 
     pub epoch: u64,
@@ -192,8 +192,8 @@ impl CodeEditorFeaturePayloadStore {
         true
     }
 
-    pub(super) fn snapshot(&self) -> CodeEditorFeaturePayloadSnapshotV1 {
-        CodeEditorFeaturePayloadSnapshotV1 {
+    pub(super) fn snapshot(&self) -> CodeEditorFeaturePayloadSnapshot {
+        CodeEditorFeaturePayloadSnapshot {
             schema_version: 1,
             epoch: self.epoch,
             buffer_revision: self.buffer_revision.0,

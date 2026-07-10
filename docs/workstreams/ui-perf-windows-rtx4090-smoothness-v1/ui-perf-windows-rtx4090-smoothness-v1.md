@@ -212,7 +212,7 @@ Bounded row-cache touch queues (2026-05-10):
   and syntax-rich rows. Diagnostic cache-size snapshots were bumped to schema `2` and now include queue lengths.
 - Implementation anchors:
   - `ecosystem/fret-code-editor/src/editor/paint/mod.rs` (`compact_row_lru_queue_if_needed` and row-cache call sites)
-  - `ecosystem/fret-code-editor/src/editor/mod.rs` (`CodeEditorCacheSizeSnapshotV1` queue-length fields)
+  - `ecosystem/fret-code-editor/src/editor/mod.rs` (`CodeEditorCacheSizeSnapshot` queue-length fields)
   - `apps/fret-ui-gallery/src/driver/diag_snapshot.rs` (queue lengths in `app_snapshot.code_editor.torture.cache_sizes`)
 - Verification:
   - `cargo fmt -p fret-code-editor -p fret-ui-gallery --check`

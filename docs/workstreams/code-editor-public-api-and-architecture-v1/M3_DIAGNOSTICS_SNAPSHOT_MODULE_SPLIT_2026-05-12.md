@@ -9,8 +9,8 @@ The editor diagnostics and paint-performance snapshot types moved out of
 `ecosystem/fret-code-editor/src/editor/mod.rs` into
 `ecosystem/fret-code-editor/src/editor/diagnostics.rs`.
 
-The public API stays unchanged. `CodeEditorCacheStats`, `CodeEditorCacheSizeSnapshotV1`,
-`CodeEditorMemorySnapshotV1`, and `CodeEditorPaintPerfFrame` remain exported from the
+The public API stays unchanged. `CodeEditorCacheStats`, `CodeEditorCacheSizeSnapshot`,
+`CodeEditorMemorySnapshot`, and `CodeEditorPaintPerfFrame` remain exported from the
 `fret-code-editor` crate root through `ecosystem/fret-code-editor/src/lib.rs`.
 
 ## Coverage

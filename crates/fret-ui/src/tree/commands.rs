@@ -73,10 +73,7 @@ impl DeclarativeCommandAvailabilityInterest {
         let command_name = command.as_str();
         (self.text_edit && (command_name.starts_with("text.") || command_name.starts_with("edit.")))
             || (self.selectable_text_edit
-                && matches!(
-                    command_name,
-                    "text.select_all" | "edit.select_all" | "text.copy" | "edit.copy"
-                ))
+                && matches!(command_name, "edit.select_all" | "edit.copy"))
             || (self.focus_traversal && matches!(command_name, "focus.next" | "focus.previous"))
             || self
                 .commands

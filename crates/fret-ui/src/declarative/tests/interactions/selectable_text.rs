@@ -1977,26 +1977,26 @@ fn selectable_text_copy_availability_requires_selection() {
     let selectable_node = ui.children(root)[0];
     ui.set_focus(Some(selectable_node));
 
-    let copy = CommandId::from("text.copy");
-    let select_all = CommandId::from("text.select_all");
+    let copy = CommandId::from("edit.copy");
+    let select_all = CommandId::from("edit.select_all");
 
     assert!(
         ui.is_command_available(&mut app, &select_all),
-        "expected text.select_all to be available for focused selectable text"
+        "expected edit.select_all to be available for focused selectable text"
     );
     assert!(
         !ui.is_command_available(&mut app, &copy),
-        "expected text.copy to be unavailable without a selection"
+        "expected edit.copy to be unavailable without a selection"
     );
 
     assert!(
         ui.dispatch_command(&mut app, &mut services, &select_all),
-        "expected text.select_all to be handled by selectable text"
+        "expected edit.select_all to be handled by selectable text"
     );
 
     assert!(
         ui.is_command_available(&mut app, &copy),
-        "expected text.copy to be available when a selection exists"
+        "expected edit.copy to be available when a selection exists"
     );
 }
 
@@ -2039,19 +2039,19 @@ fn selectable_text_copy_availability_respects_clipboard_capabilities() {
     let selectable_node = ui.children(root)[0];
     ui.set_focus(Some(selectable_node));
 
-    let copy = CommandId::from("text.copy");
-    let select_all = CommandId::from("text.select_all");
+    let copy = CommandId::from("edit.copy");
+    let select_all = CommandId::from("edit.select_all");
 
     assert!(
         ui.dispatch_command(&mut app, &mut services, &select_all),
-        "expected text.select_all to be handled by selectable text"
+        "expected edit.select_all to be handled by selectable text"
     );
     assert!(
         !ui.is_command_available(&mut app, &copy),
-        "expected text.copy to be unavailable when clipboard text is unsupported"
+        "expected edit.copy to be unavailable when clipboard text is unsupported"
     );
     assert!(
         !ui.dispatch_command(&mut app, &mut services, &copy),
-        "expected text.copy to not be handled when clipboard text is unsupported"
+        "expected edit.copy to not be handled when clipboard text is unsupported"
     );
 }

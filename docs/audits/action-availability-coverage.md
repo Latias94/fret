@@ -48,7 +48,7 @@ Scope: this document focuses on `CommandScope::Widget` commands and the question
       `install_app_ui_action_handlers_for_owner`,
       `app_ui_unit_action_handler_publishes_available_snapshot_when_focus_exists`.
   - Providers should use `CommandAvailability::Blocked` (not `NotHandled`) for "owned but currently
-    unavailable" states (e.g. `text.copy` with an empty selection) so menus/palettes can disable
+    unavailable" states (e.g. `edit.copy` with an empty selection) so menus/palettes can disable
     commands deterministically.
 
 ## Coverage Checklist (Core Widget Commands)
@@ -90,8 +90,6 @@ Source of truth: `crates/fret-app/src/core_commands.rs` (Widget scope)
     - `fret-ui-kit` table surfaces (non-text selection)
       - Evidence: `ecosystem/fret-ui-kit/src/declarative/table.rs` (`table_virtualized_copyable`)
       - Tests: `ecosystem/fret-ui-kit/src/declarative/table.rs` (`table_virtualized_copyable_reports_availability_and_emits_clipboard_text`)
-  - Notes:
-    - `text.copy` remains as a legacy alias for text-focused surfaces.
 - `edit.cut`
   - Availability should be `Blocked` when the focused widget is read-only.
   - Expected providers:

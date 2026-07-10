@@ -19,6 +19,7 @@ On the default `fret` app surface, prefer the grouped helpers:
 
 - `cx.data().query_async(...)` / `cx.data().query_async_local(...)` for observed reads,
 - `cx.data().mutation_async(...)` / `cx.data().mutation_async_local(...)` for explicit writes,
+- `cx.actions().mutation_submit(...)` for typed user-triggered submits without raw model access,
 - `cx.data().invalidate_query_namespace_after_mutation_success(...)` for the default
   mutation-to-query handoff inside `AppUi` / extracted default-lane helpers.
 
@@ -41,7 +42,7 @@ pub struct DbPool(pub Arc<SqlitePool>);
 Install it during app init:
 
 ```rust
-fn install_db_pool(app: &mut fret_app::App, pool: SqlitePool) {
+fn install_db_pool(app: &mut fret::app::App, pool: SqlitePool) {
     app.set_global(DbPool(Arc::new(pool)));
 }
 ```
@@ -144,7 +145,7 @@ Notes:
 - create a mutation handle in render with `cx.data().mutation_async(...)` or
   `cx.data().mutation_async_local(...)`,
 - read terminal state from `handle.read_layout(cx)`,
-- and start work only through `handle.submit(...)` or `handle.submit_action(...)`.
+- and bind user-triggered work through `cx.actions().mutation_submit(...)`.
 
 Under the hood, completion still crosses the same driver boundary (`InboxDrainRegistry`) as other
 async work. The default app lane simply stops making app authors spell raw inbox plumbing for the
@@ -156,7 +157,8 @@ Use this as the default contract for SQLx + `fret-query`:
 
 1. Read with `cx.data().query_async(...)`.
 2. Create a write handle with `cx.data().mutation_async(...)`.
-3. Only `handle.submit(...)` starts work.
+3. Bind a typed action with `cx.actions().mutation_submit(...)`; only dispatching that action starts
+   work.
 4. After a successful submit, call
    `cx.data().invalidate_query_namespace_after_mutation_success(...)`.
 5. On the next render, active read handles refetch because the namespace is stale.
@@ -174,8 +176,13 @@ example of that split.
 ```rust
 use std::sync::Arc;
 
-use fret::app::prelude::*;
+use fret::app::{AppActivateExt as _, prelude::*};
 use fret::mutation::{MutationError, MutationPolicy};
+use fret_ui_shadcn as shadcn;
+
+mod act {
+    fret::actions!([SaveTodo = "todo.save"]);
+}
 
 #[derive(Clone)]
 struct SaveTodoInput {
@@ -186,6 +193,7 @@ const TODOS_NS: &str = "my_app.db.todos.v1";
 const SAVE_TODO_INVALIDATE: u64 = 0xAFA0_2001;
 
 fn render_todo_editor(cx: &mut AppUi<'_, '_>) -> Ui {
+    let draft = cx.state().local_init(String::new);
     let pool = cx
         .app
         .global::<DbPool>()
@@ -208,22 +216,29 @@ fn render_todo_editor(cx: &mut AppUi<'_, '_>) -> Ui {
     );
 
     let save_state = save_todo.read_layout(cx);
+    cx.actions()
+        .mutation_submit::<act::SaveTodo, _, _>(&save_todo, {
+            let draft = draft.clone();
+            move |tx| {
+                Some(SaveTodoInput {
+                    text: tx.value_or(&draft, String::new()),
+                })
+            }
+        });
     let _ = cx.data().invalidate_query_namespace_after_mutation_success(
         SAVE_TODO_INVALIDATE,
         &save_todo,
         TODOS_NS,
     );
 
-    ui::raw_text(format!("save status: {}", save_state.status.as_str())).into()
-}
-
-fn on_save_clicked(
-    models: &mut fret_runtime::ModelStore,
-    window: fret::WindowId,
-    handle: &fret::mutation::MutationHandle<SaveTodoInput, ()>,
-    text: String,
-) -> bool {
-    handle.submit(models, window, SaveTodoInput { text })
+    ui::v_flex(|cx| {
+        ui::children![
+            cx;
+            shadcn::Button::new("Save todo").action(act::SaveTodo),
+            ui::raw_text(format!("save status: {}", save_state.status.as_str())),
+        ]
+    })
+    .into()
 }
 ```
 
@@ -237,7 +252,7 @@ Why use the grouped success-gated helper?
 ### wasm note
 
 If your SQLite/WebAssembly bridge produces `!Send` futures, switch the creation site to
-`cx.data().mutation_async_local(...)`. The explicit submit contract stays the same.
+`cx.data().mutation_async_local(...)`. The typed action submit contract stays the same.
 
 ## 3) Advanced/manual surfaces: raw `fret-executor` + inbox drainers
 

@@ -1,7 +1,7 @@
 use super::*;
 
 impl CodeEditorHandle {
-    pub fn feature_payload_snapshot(&self) -> CodeEditorFeaturePayloadSnapshotV1 {
+    pub fn feature_payload_snapshot(&self) -> CodeEditorFeaturePayloadSnapshot {
         self.state.borrow().feature_payloads.snapshot()
     }
 

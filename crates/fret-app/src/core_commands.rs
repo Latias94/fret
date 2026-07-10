@@ -24,10 +24,6 @@ pub const EDIT_CUT: &str = "edit.cut";
 pub const EDIT_PASTE: &str = "edit.paste";
 pub const EDIT_SELECT_ALL: &str = "edit.select_all";
 
-pub const TEXT_COPY: &str = "text.copy";
-pub const TEXT_CUT: &str = "text.cut";
-pub const TEXT_PASTE: &str = "text.paste";
-pub const TEXT_SELECT_ALL: &str = "text.select_all";
 pub const TEXT_RESCAN_SYSTEM_FONTS: &str = "text.rescan_system_fonts";
 pub const EDIT_UNDO: &str = "edit.undo";
 pub const EDIT_REDO: &str = "edit.redo";
@@ -266,8 +262,6 @@ pub fn register_text_edit_commands(registry: &mut CommandRegistry) {
         ..Default::default()
     };
 
-    let when_text = WhenExpr::parse("focus.is_text_input").expect("valid when expression");
-
     registry.register(
         CommandId::new(EDIT_COPY),
         CommandMeta::new("Copy")
@@ -370,49 +364,6 @@ pub fn register_text_edit_commands(registry: &mut CommandRegistry) {
                     when: None,
                 },
             ]),
-    );
-
-    // Legacy `text.*` commands: keep for compatibility, but prefer `edit.*` for cross-surface copy.
-    registry.register(
-        CommandId::new(TEXT_COPY),
-        CommandMeta::new("Copy")
-            .with_category("Edit")
-            .with_keywords(["copy", "clipboard"])
-            .with_scope(CommandScope::Widget)
-            .with_os_action(OsAction::Copy)
-            .hidden(),
-    );
-
-    registry.register(
-        CommandId::new(TEXT_CUT),
-        CommandMeta::new("Cut")
-            .with_category("Edit")
-            .with_keywords(["cut", "clipboard"])
-            .with_scope(CommandScope::Widget)
-            .with_os_action(OsAction::Cut)
-            .with_when(when_text.clone())
-            .hidden(),
-    );
-
-    registry.register(
-        CommandId::new(TEXT_PASTE),
-        CommandMeta::new("Paste")
-            .with_category("Edit")
-            .with_keywords(["paste", "clipboard"])
-            .with_scope(CommandScope::Widget)
-            .with_os_action(OsAction::Paste)
-            .with_when(when_text.clone())
-            .hidden(),
-    );
-
-    registry.register(
-        CommandId::new(TEXT_SELECT_ALL),
-        CommandMeta::new("Select All")
-            .with_category("Edit")
-            .with_keywords(["select", "all"])
-            .with_scope(CommandScope::Widget)
-            .with_os_action(OsAction::SelectAll)
-            .hidden(),
     );
 
     registry.register(
@@ -606,6 +557,25 @@ mod tests {
             }
 
             Err(I18nLookupError::MissingKey { key: key.clone() })
+        }
+    }
+
+    #[test]
+    fn text_edit_commands_register_only_canonical_edit_ids() {
+        let mut registry = CommandRegistry::default();
+        register_text_edit_commands(&mut registry);
+
+        for command in [EDIT_COPY, EDIT_CUT, EDIT_PASTE, EDIT_SELECT_ALL] {
+            assert!(
+                registry.get(CommandId::new(command)).is_some(),
+                "canonical command `{command}` should be registered"
+            );
+        }
+        for command in ["text.copy", "text.cut", "text.paste", "text.select_all"] {
+            assert!(
+                registry.get(CommandId::new(command)).is_none(),
+                "legacy command `{command}` should not be registered"
+            );
         }
     }
 

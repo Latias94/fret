@@ -23,10 +23,11 @@ pub use fret_code_editor_view::{
     RangeDecorationLayer, SemanticToken, SemanticTokenError, validate_code_action_list,
     validate_completion_list, validate_editor_assist_request, validate_hover_payload,
 };
+pub use fret_runtime::TextBoundaryMode;
 
 pub use editor::{
-    CodeEditor, CodeEditorCacheSizeSnapshotV1, CodeEditorCacheStats,
-    CodeEditorFeaturePayloadSnapshotV1, CodeEditorHandle, CodeEditorInteractionOptions,
-    CodeEditorMemorySnapshotV1, CodeEditorPaintPerfFrame, CodeEditorTorture, CodeFontFeaturePolicy,
+    CodeEditor, CodeEditorCacheSizeSnapshot, CodeEditorCacheStats,
+    CodeEditorFeaturePayloadSnapshot, CodeEditorHandle, CodeEditorInteractionOptions,
+    CodeEditorMemorySnapshot, CodeEditorPaintPerfFrame, CodeEditorTorture, CodeFontFeaturePolicy,
     CodeFontFeaturePreset, PreeditState,
 };

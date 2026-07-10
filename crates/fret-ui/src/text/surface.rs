@@ -33,12 +33,6 @@ pub(crate) fn apply_selectable_text_command(
     command: &str,
     boundary_mode: TextBoundaryMode,
 ) -> SelectableTextCommandOutcome {
-    let command = match command {
-        "edit.copy" => "text.copy",
-        "edit.select_all" => "text.select_all",
-        other => other,
-    };
-
     state.caret = utf8::clamp_to_grapheme_boundary(text, state.caret);
     state.selection_anchor = utf8::clamp_to_grapheme_boundary(text, state.selection_anchor);
     state.dragging = false;
@@ -47,13 +41,13 @@ pub(crate) fn apply_selectable_text_command(
     let mut copy_range: Option<(usize, usize)> = None;
 
     match command {
-        "text.copy" => {
+        "edit.copy" => {
             let (start, end) = buffer::selection_range(state.selection_anchor, state.caret);
             if start < end {
                 copy_range = Some((start, end));
             }
         }
-        "text.select_all" => {
+        "edit.select_all" => {
             state.selection_anchor = 0;
             state.caret = text.len();
             state.affinity = fret_core::CaretAffinity::Downstream;

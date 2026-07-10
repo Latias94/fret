@@ -87,9 +87,9 @@ re-publishing app-owned text; it is a no-op when the contents are unchanged. Use
 history above the editor and bridge through explicit transactions; do not treat the editor-local
 history as a framework-global undo stack.
 
-Focused command routing accepts `text.undo` / `text.redo` for editor-local history. The existing
-`edit.undo` / `edit.redo` ids remain accepted by the editor route during the transition, but app
-authors should still keep document/workspace undo ownership outside `CodeEditorHandle`.
+Focused command routing uses the standard `edit.undo` / `edit.redo` command ids for editor-local
+history. When the focused editor does not handle them, the same ids can fall back to the active
+document or workspace owner.
 
 ## Syntax and Boundaries
 
@@ -97,8 +97,10 @@ Syntax highlighting is optional and feature-gated. Apply language settings from 
 re-applying setters from render unless the input actually changed:
 
 ```rust
+use fret_code_editor::TextBoundaryMode;
+
 handle.set_language(Some("rust"));
-handle.set_text_boundary_mode(fret_runtime::TextBoundaryMode::Identifier);
+handle.set_text_boundary_mode(TextBoundaryMode::Identifier);
 ```
 
 Use `TextBoundaryMode::Identifier` for code-like movement and
@@ -147,7 +149,7 @@ handle.set_gutter_markers(vec![GutterMarker::logical_line(
 handle.set_semantic_tokens(vec![SemanticToken::new(0..2, "keyword")])?;
 ```
 
-The v1 editor handle does not remap feature payloads across text edits. Buffer edits and explicit
+The editor handle does not remap feature payloads across text edits. Buffer edits and explicit
 buffer replacement clear source/display payloads; producers such as language services should
 re-publish payloads for the new `buffer_revision()`. The `feature_payload_snapshot()` readout is
 included in diagnostics bundles so tests can assert payload stability without parsing editor

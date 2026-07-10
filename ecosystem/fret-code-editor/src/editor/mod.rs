@@ -61,14 +61,14 @@ mod tests;
 
 use a11y::{a11y_composed_text_window, map_a11y_offsets_to_buffer_composed};
 pub use diagnostics::{
-    CodeEditorCacheSizeSnapshotV1, CodeEditorCacheStats, CodeEditorMemorySnapshotV1,
+    CodeEditorCacheSizeSnapshot, CodeEditorCacheStats, CodeEditorMemorySnapshot,
     CodeEditorPaintPerfFrame,
 };
 use diagnostics::{
     estimate_text_buffer_tx_text_bytes_and_edits, normalized_paint_frame_visible_window,
     paint_frame_cache_min_entries, paint_frame_visible_row_count, paint_perf_enabled_from_env,
 };
-pub use feature_payloads::CodeEditorFeaturePayloadSnapshotV1;
+pub use feature_payloads::CodeEditorFeaturePayloadSnapshot;
 use feature_payloads::CodeEditorFeaturePayloadStore;
 #[cfg(test)]
 use geom::caret_rect_for_selection;

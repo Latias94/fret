@@ -37,8 +37,8 @@ Last updated: 2026-05-12
         wrapped-row gutter attachments or current visible-row evidence.
 - [x] Define semantic-token inputs separately from paint colors.
 - [x] Define command/keymap/undo grouping boundaries for editor actions.
-- [x] Accept `text.undo` / `text.redo` as editor-local history aliases while preserving
-      `edit.undo` / `edit.redo` for the existing focused command route.
+- [x] Converge editor-local and document fallback history on the canonical `edit.undo` /
+      `edit.redo` route; the temporary `text.undo` / `text.redo` aliases are retired.
 - [x] Extend focused command availability beyond `select_all` for the editor-handled undo, redo,
       copy, cut, paste, and word movement commands.
 - [x] Define how hover/completion/code-action overlays compose with Fret overlay/focus policy

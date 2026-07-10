@@ -479,7 +479,7 @@ pub(crate) mod commands {
     pub(crate) fn singleline_ui_delta(command: &str, outcome: Outcome) -> SingleLineUiDelta {
         let is_navigation = command.starts_with("text.move")
             || command.starts_with("text.select")
-            || command == "text.select_all";
+            || command == "edit.select_all";
 
         let invalidate_layout = outcome.invalidate_layout;
         let invalidate_paint = outcome.invalidate_paint || is_navigation;
@@ -496,7 +496,7 @@ pub(crate) mod commands {
     pub(crate) fn multiline_ui_delta(command: &str, outcome: Outcome) -> MultilineUiDelta {
         let is_navigation = command.starts_with("text.move")
             || command.starts_with("text.select")
-            || command == "text.select_all";
+            || command == "edit.select_all";
 
         let invalidate_layout = outcome.invalidate_layout;
         let invalidate_paint = outcome.invalidate_paint || is_navigation;
@@ -520,7 +520,7 @@ pub(crate) mod commands {
     ) -> Outcome {
         edit.set_boundary_mode(boundary_mode);
         match command {
-            "text.select_all" => Outcome::paint(edit.select_all()),
+            "edit.select_all" => Outcome::paint(edit.select_all()),
             "text.move_left" => Outcome::paint(edit.move_left(false)),
             "text.move_right" => Outcome::paint(edit.move_right(false)),
             "text.move_word_left" => Outcome::paint(edit.move_word_left(false)),
@@ -632,13 +632,13 @@ pub(crate) mod commands {
         edit.clamp_caret_and_anchor_to_grapheme_boundary();
 
         match command {
-            "text.copy" => ClipboardOutcome {
+            "edit.copy" => ClipboardOutcome {
                 outcome: Outcome::noop_handled(),
                 request: edit
                     .selected_text_owned()
                     .map(|text| ClipboardRequest::SetText { text }),
             },
-            "text.cut" => {
+            "edit.cut" => {
                 let request = edit
                     .selected_text_owned()
                     .map(|text| ClipboardRequest::SetText { text });
@@ -648,7 +648,7 @@ pub(crate) mod commands {
                     request,
                 }
             }
-            "text.paste" => ClipboardOutcome {
+            "edit.paste" => ClipboardOutcome {
                 outcome: Outcome::noop_handled(),
                 request: window_available.then_some(ClipboardRequest::GetText),
             },

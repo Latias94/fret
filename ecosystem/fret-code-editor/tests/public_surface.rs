@@ -1,11 +1,12 @@
 use fret_code_editor::{
-    CodeAction, CodeActionList, CodeEditor, CodeEditorCacheSizeSnapshotV1,
-    CodeEditorFeaturePayloadSnapshotV1, CodeEditorHandle, CodeEditorMemorySnapshotV1,
+    CodeAction, CodeActionList, CodeEditor, CodeEditorCacheSizeSnapshot,
+    CodeEditorFeaturePayloadSnapshot, CodeEditorHandle, CodeEditorMemorySnapshot,
     CodeFontFeaturePolicy, CodeFontFeaturePreset, CompletionCandidate, CompletionList,
     DiagnosticSeverity, DiagnosticSpan, DisplayMap, DisplayPoint, DocId, EditorAssistKind,
     EditorAssistRequest, FoldSpan, GutterMarker, GutterMarkerKind, HoverPayload, InlaySpan,
-    RangeDecoration, Selection, SemanticToken, TextBuffer, validate_code_action_list,
-    validate_completion_list, validate_editor_assist_request, validate_hover_payload,
+    RangeDecoration, Selection, SemanticToken, TextBoundaryMode, TextBuffer,
+    validate_code_action_list, validate_completion_list, validate_editor_assist_request,
+    validate_hover_payload,
 };
 use fret_code_editor_buffer::Selection as BufferSelection;
 use std::sync::Arc;
@@ -19,11 +20,12 @@ fn crate_root_exports_public_signature_types() {
     };
 
     handle.set_code_font_feature_policy(policy.clone());
+    handle.set_text_boundary_mode(TextBoundaryMode::Identifier);
     let _editor = CodeEditor::new(handle.clone()).code_font_features(policy);
 
-    let _cache_sizes: CodeEditorCacheSizeSnapshotV1 = handle.cache_size_snapshot();
-    let _memory: CodeEditorMemorySnapshotV1 = handle.memory_snapshot();
-    let _feature_payloads: CodeEditorFeaturePayloadSnapshotV1 = handle.feature_payload_snapshot();
+    let _cache_sizes: CodeEditorCacheSizeSnapshot = handle.cache_size_snapshot();
+    let _memory: CodeEditorMemorySnapshot = handle.memory_snapshot();
+    let _feature_payloads: CodeEditorFeaturePayloadSnapshot = handle.feature_payload_snapshot();
     let selection = Selection {
         anchor: 0,
         focus: 2,
@@ -99,4 +101,15 @@ fn crate_root_exports_public_signature_types() {
         )],
     );
     validate_code_action_list(&buffer, &actions).expect("code action lists are public");
+}
+
+#[test]
+fn app_author_docs_use_code_editor_owned_boundary_types_and_commands() {
+    let docs = include_str!("../../../docs/code-editor.md");
+
+    assert!(docs.contains("use fret_code_editor::TextBoundaryMode;"));
+    assert!(!docs.contains("fret_runtime::TextBoundaryMode"));
+    assert!(docs.contains("`edit.undo` / `edit.redo`"));
+    assert!(!docs.contains("`text.undo` / `text.redo`"));
+    assert!(!docs.contains("The v1 editor handle"));
 }

@@ -56,7 +56,7 @@ pub struct CodeEditorCacheStats {
 /// These are intentionally approximate and are used to correlate editor-level cache growth with
 /// process-level memory footprint signals (e.g. `vmmap` buckets on macOS).
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
-pub struct CodeEditorCacheSizeSnapshotV1 {
+pub struct CodeEditorCacheSizeSnapshot {
     pub schema_version: u32,
 
     pub row_text_cache_entries: u64,
@@ -91,7 +91,7 @@ pub struct CodeEditorCacheSizeSnapshotV1 {
 /// This is intended to answer "what is the editor keeping alive?" rather than providing exact
 /// allocator-level sizes.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
-pub struct CodeEditorMemorySnapshotV1 {
+pub struct CodeEditorMemorySnapshot {
     pub schema_version: u32,
 
     pub buffer_revision: u64,

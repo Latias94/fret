@@ -290,22 +290,11 @@ impl<H: UiHost> Widget<H> for BoundTextArea {
             return CommandAvailability::NotHandled;
         }
 
-        let cmd = match command.as_str() {
-            "edit.copy" => "text.copy",
-            "edit.cut" => "text.cut",
-            "edit.paste" => "text.paste",
-            "edit.select_all" => "text.select_all",
-            other => other,
-        };
-        if !cmd.starts_with("text.") {
-            return CommandAvailability::NotHandled;
-        }
-
         let (start, end) = self.area.selection_range();
         let has_selection = start != end;
 
-        match cmd {
-            "text.copy" => {
+        match command.as_str() {
+            "edit.copy" => {
                 if !cx.input_ctx.caps.clipboard.text.write {
                     return CommandAvailability::Blocked;
                 }
@@ -315,7 +304,7 @@ impl<H: UiHost> Widget<H> for BoundTextArea {
                     CommandAvailability::Blocked
                 }
             }
-            "text.cut" => {
+            "edit.cut" => {
                 if self.area.read_only || !cx.input_ctx.caps.clipboard.text.write {
                     return CommandAvailability::Blocked;
                 }
@@ -325,13 +314,13 @@ impl<H: UiHost> Widget<H> for BoundTextArea {
                     CommandAvailability::Blocked
                 }
             }
-            "text.paste" => {
+            "edit.paste" => {
                 if self.area.read_only || !cx.input_ctx.caps.clipboard.text.read {
                     return CommandAvailability::Blocked;
                 }
                 CommandAvailability::Available
             }
-            "text.select_all" => {
+            "edit.select_all" => {
                 if !self.area.text().is_empty() {
                     CommandAvailability::Available
                 } else {

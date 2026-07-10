@@ -21,6 +21,38 @@ impl CommandDispatchResult {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum EditorCommand {
+    Undo,
+    Redo,
+    SelectAll,
+    Copy,
+    Cut,
+    Paste,
+    MoveWordLeft,
+    MoveWordRight,
+    SelectWordLeft,
+    SelectWordRight,
+}
+
+impl EditorCommand {
+    fn parse(command: &str) -> Option<Self> {
+        match command {
+            "edit.undo" => Some(Self::Undo),
+            "edit.redo" => Some(Self::Redo),
+            "edit.select_all" => Some(Self::SelectAll),
+            "edit.copy" => Some(Self::Copy),
+            "edit.cut" => Some(Self::Cut),
+            "edit.paste" => Some(Self::Paste),
+            "text.move_word_left" => Some(Self::MoveWordLeft),
+            "text.move_word_right" => Some(Self::MoveWordRight),
+            "text.select_word_left" => Some(Self::SelectWordLeft),
+            "text.select_word_right" => Some(Self::SelectWordRight),
+            _ => None,
+        }
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 pub(in crate::editor) fn handle_key_down(
     host: &mut dyn fret_ui::action::UiFocusActionHost,
@@ -200,20 +232,24 @@ pub(in crate::editor) fn handle_command(
         return CommandDispatchResult::not_handled();
     }
 
+    let Some(command) = EditorCommand::parse(command) else {
+        return CommandDispatchResult::not_handled();
+    };
+
     match command {
-        "text.undo" | "edit.undo" => {
+        EditorCommand::Undo => {
             if !st.interaction.editable {
                 return CommandDispatchResult::handled(false);
             }
             CommandDispatchResult::handled(undo(st))
         }
-        "text.redo" | "edit.redo" => {
+        EditorCommand::Redo => {
             if !st.interaction.editable {
                 return CommandDispatchResult::handled(false);
             }
             CommandDispatchResult::handled(redo(st))
         }
-        "text.select_all" | "edit.select_all" => {
+        EditorCommand::SelectAll => {
             if !st.interaction.selectable {
                 return CommandDispatchResult::handled(false);
             }
@@ -226,55 +262,54 @@ pub(in crate::editor) fn handle_command(
             st.undo_group = None;
             CommandDispatchResult::handled(true)
         }
-        "text.copy" | "edit.copy" => {
+        EditorCommand::Copy => {
             if !st.interaction.selectable {
                 return CommandDispatchResult::handled(false);
             }
             copy_selection(host, action_cx, st);
             CommandDispatchResult::handled(true)
         }
-        "text.cut" | "edit.cut" => {
+        EditorCommand::Cut => {
             if !st.interaction.editable {
                 return CommandDispatchResult::handled(false);
             }
             CommandDispatchResult::handled(cut_selection(host, action_cx, st))
         }
-        "text.paste" | "edit.paste" => {
+        EditorCommand::Paste => {
             if !st.interaction.editable {
                 return CommandDispatchResult::handled(false);
             }
             request_paste(host, action_cx);
             CommandDispatchResult::handled(true)
         }
-        "text.move_word_left" => {
+        EditorCommand::MoveWordLeft => {
             if !st.interaction.selectable {
                 return CommandDispatchResult::handled(false);
             }
             st.set_preedit(None);
             CommandDispatchResult::handled(move_word(st, -1, false))
         }
-        "text.move_word_right" => {
+        EditorCommand::MoveWordRight => {
             if !st.interaction.selectable {
                 return CommandDispatchResult::handled(false);
             }
             st.set_preedit(None);
             CommandDispatchResult::handled(move_word(st, 1, false))
         }
-        "text.select_word_left" => {
+        EditorCommand::SelectWordLeft => {
             if !st.interaction.selectable {
                 return CommandDispatchResult::handled(false);
             }
             st.set_preedit(None);
             CommandDispatchResult::handled(move_word(st, -1, true))
         }
-        "text.select_word_right" => {
+        EditorCommand::SelectWordRight => {
             if !st.interaction.selectable {
                 return CommandDispatchResult::handled(false);
             }
             st.set_preedit(None);
             CommandDispatchResult::handled(move_word(st, 1, true))
         }
-        _ => CommandDispatchResult::not_handled(),
     }
 }
 
@@ -292,59 +327,62 @@ pub(in crate::editor) fn command_availability(
     let clipboard_read = input_ctx.caps.clipboard.text.read;
     let clipboard_write = input_ctx.caps.clipboard.text.write;
 
+    let Some(command) = EditorCommand::parse(command) else {
+        return fret_ui::CommandAvailability::NotHandled;
+    };
+
     match command {
-        "text.undo" | "edit.undo" => {
+        EditorCommand::Undo => {
             if st.interaction.editable && st.undo.can_undo() {
                 fret_ui::CommandAvailability::Available
             } else {
                 fret_ui::CommandAvailability::Blocked
             }
         }
-        "text.redo" | "edit.redo" => {
+        EditorCommand::Redo => {
             if st.interaction.editable && st.undo.can_redo() {
                 fret_ui::CommandAvailability::Available
             } else {
                 fret_ui::CommandAvailability::Blocked
             }
         }
-        "text.select_all" | "edit.select_all" => {
+        EditorCommand::SelectAll => {
             if st.interaction.selectable && has_text {
                 fret_ui::CommandAvailability::Available
             } else {
                 fret_ui::CommandAvailability::Blocked
             }
         }
-        "text.copy" | "edit.copy" => {
+        EditorCommand::Copy => {
             if st.interaction.selectable && has_selection && clipboard_write {
                 fret_ui::CommandAvailability::Available
             } else {
                 fret_ui::CommandAvailability::Blocked
             }
         }
-        "text.cut" | "edit.cut" => {
+        EditorCommand::Cut => {
             if st.interaction.editable && has_selection && clipboard_write {
                 fret_ui::CommandAvailability::Available
             } else {
                 fret_ui::CommandAvailability::Blocked
             }
         }
-        "text.paste" | "edit.paste" => {
+        EditorCommand::Paste => {
             if st.interaction.editable && clipboard_read {
                 fret_ui::CommandAvailability::Available
             } else {
                 fret_ui::CommandAvailability::Blocked
             }
         }
-        "text.move_word_left"
-        | "text.move_word_right"
-        | "text.select_word_left"
-        | "text.select_word_right" => {
+        EditorCommand::MoveWordLeft
+        | EditorCommand::MoveWordRight
+        | EditorCommand::SelectWordLeft
+        | EditorCommand::SelectWordRight => {
             if st.interaction.selectable && has_text {
                 fret_ui::CommandAvailability::Available
             } else {
                 fret_ui::CommandAvailability::Blocked
             }
         }
-        _ => fret_ui::CommandAvailability::NotHandled,
     }
 }

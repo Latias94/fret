@@ -1510,7 +1510,6 @@ fn action_availability_no_focus_subtree_fallback_skips_focus_bound_edit_commands
     let window = AppWindowId::default();
     let commands = [
         CommandId::from("edit.copy"),
-        CommandId::from("text.copy"),
         CommandId::from("test.available"),
     ];
     for command in &commands {
@@ -1546,10 +1545,6 @@ fn action_availability_no_focus_subtree_fallback_skips_focus_bound_edit_commands
         .expect("action availability service");
     assert_eq!(
         svc.available(window, &CommandId::from("edit.copy")),
-        Some(false)
-    );
-    assert_eq!(
-        svc.available(window, &CommandId::from("text.copy")),
         Some(false)
     );
     assert_eq!(

@@ -919,7 +919,7 @@ fn default_keymap_service() -> KeymapService {
                     },
                 },
                 BindingV1 {
-                    command: Some("text.copy".into()),
+                    command: Some("edit.copy".into()),
                     platform: Some("windows".into()),
                     when: None,
                     keys: KeySpecV1 {
@@ -928,7 +928,7 @@ fn default_keymap_service() -> KeymapService {
                     },
                 },
                 BindingV1 {
-                    command: Some("text.cut".into()),
+                    command: Some("edit.cut".into()),
                     platform: Some("windows".into()),
                     when: None,
                     keys: KeySpecV1 {
@@ -937,7 +937,7 @@ fn default_keymap_service() -> KeymapService {
                     },
                 },
                 BindingV1 {
-                    command: Some("text.paste".into()),
+                    command: Some("edit.paste".into()),
                     platform: Some("windows".into()),
                     when: None,
                     keys: KeySpecV1 {
@@ -946,7 +946,7 @@ fn default_keymap_service() -> KeymapService {
                     },
                 },
                 BindingV1 {
-                    command: Some("text.select_all".into()),
+                    command: Some("edit.select_all".into()),
                     platform: Some("windows".into()),
                     when: None,
                     keys: KeySpecV1 {
@@ -955,7 +955,7 @@ fn default_keymap_service() -> KeymapService {
                     },
                 },
                 BindingV1 {
-                    command: Some("text.copy".into()),
+                    command: Some("edit.copy".into()),
                     platform: Some("linux".into()),
                     when: None,
                     keys: KeySpecV1 {
@@ -964,7 +964,7 @@ fn default_keymap_service() -> KeymapService {
                     },
                 },
                 BindingV1 {
-                    command: Some("text.cut".into()),
+                    command: Some("edit.cut".into()),
                     platform: Some("linux".into()),
                     when: None,
                     keys: KeySpecV1 {
@@ -973,7 +973,7 @@ fn default_keymap_service() -> KeymapService {
                     },
                 },
                 BindingV1 {
-                    command: Some("text.paste".into()),
+                    command: Some("edit.paste".into()),
                     platform: Some("linux".into()),
                     when: None,
                     keys: KeySpecV1 {
@@ -982,7 +982,7 @@ fn default_keymap_service() -> KeymapService {
                     },
                 },
                 BindingV1 {
-                    command: Some("text.select_all".into()),
+                    command: Some("edit.select_all".into()),
                     platform: Some("linux".into()),
                     when: None,
                     keys: KeySpecV1 {
@@ -991,7 +991,7 @@ fn default_keymap_service() -> KeymapService {
                     },
                 },
                 BindingV1 {
-                    command: Some("text.copy".into()),
+                    command: Some("edit.copy".into()),
                     platform: Some("web".into()),
                     when: None,
                     keys: KeySpecV1 {
@@ -1000,7 +1000,7 @@ fn default_keymap_service() -> KeymapService {
                     },
                 },
                 BindingV1 {
-                    command: Some("text.cut".into()),
+                    command: Some("edit.cut".into()),
                     platform: Some("web".into()),
                     when: None,
                     keys: KeySpecV1 {
@@ -1009,7 +1009,7 @@ fn default_keymap_service() -> KeymapService {
                     },
                 },
                 BindingV1 {
-                    command: Some("text.paste".into()),
+                    command: Some("edit.paste".into()),
                     platform: Some("web".into()),
                     when: None,
                     keys: KeySpecV1 {
@@ -1018,7 +1018,7 @@ fn default_keymap_service() -> KeymapService {
                     },
                 },
                 BindingV1 {
-                    command: Some("text.select_all".into()),
+                    command: Some("edit.select_all".into()),
                     platform: Some("web".into()),
                     when: None,
                     keys: KeySpecV1 {
@@ -1027,7 +1027,7 @@ fn default_keymap_service() -> KeymapService {
                     },
                 },
                 BindingV1 {
-                    command: Some("text.copy".into()),
+                    command: Some("edit.copy".into()),
                     platform: Some("macos".into()),
                     when: None,
                     keys: KeySpecV1 {
@@ -1036,7 +1036,7 @@ fn default_keymap_service() -> KeymapService {
                     },
                 },
                 BindingV1 {
-                    command: Some("text.cut".into()),
+                    command: Some("edit.cut".into()),
                     platform: Some("macos".into()),
                     when: None,
                     keys: KeySpecV1 {
@@ -1045,7 +1045,7 @@ fn default_keymap_service() -> KeymapService {
                     },
                 },
                 BindingV1 {
-                    command: Some("text.paste".into()),
+                    command: Some("edit.paste".into()),
                     platform: Some("macos".into()),
                     when: None,
                     keys: KeySpecV1 {
@@ -1054,7 +1054,7 @@ fn default_keymap_service() -> KeymapService {
                     },
                 },
                 BindingV1 {
-                    command: Some("text.select_all".into()),
+                    command: Some("edit.select_all".into()),
                     platform: Some("macos".into()),
                     when: None,
                     keys: KeySpecV1 {

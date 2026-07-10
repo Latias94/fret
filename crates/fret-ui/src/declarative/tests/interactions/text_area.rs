@@ -33,8 +33,7 @@ fn text_area_select_all_is_blocked_when_empty() {
     let area_node = ui.children(root)[0];
     ui.set_focus(Some(area_node));
 
-    let select_all = CommandId::from("text.select_all");
-    let edit_select_all = CommandId::from("edit.select_all");
+    let select_all = CommandId::from("edit.select_all");
     let clear = CommandId::from("text.clear");
     let edit_copy = CommandId::from("edit.copy");
     let edit_cut = CommandId::from("edit.cut");
@@ -42,10 +41,6 @@ fn text_area_select_all_is_blocked_when_empty() {
 
     assert!(
         !ui.is_command_available(&mut app, &select_all),
-        "expected text.select_all to be unavailable for empty text area"
-    );
-    assert!(
-        !ui.is_command_available(&mut app, &edit_select_all),
         "expected edit.select_all to be unavailable for empty text area"
     );
     assert!(
@@ -103,11 +98,11 @@ fn text_area_read_only_blocks_mutation_but_allows_selection_copy() {
     let area_node = ui.children(root)[0];
     ui.set_focus(Some(area_node));
 
-    let copy = CommandId::from("text.copy");
-    let cut = CommandId::from("text.cut");
-    let paste = CommandId::from("text.paste");
+    let copy = CommandId::from("edit.copy");
+    let cut = CommandId::from("edit.cut");
+    let paste = CommandId::from("edit.paste");
     let clear = CommandId::from("text.clear");
-    let select_all = CommandId::from("text.select_all");
+    let select_all = CommandId::from("edit.select_all");
 
     assert!(
         ui.dispatch_command(&mut app, &mut services, &select_all),
@@ -895,10 +890,10 @@ fn text_area_word_navigation_respects_window_text_boundary_mode() {
         );
         let caret_right = focus_u16;
 
-        let select_all = CommandId::from("text.select_all");
+        let select_all = CommandId::from("edit.select_all");
         assert!(
             ui.dispatch_command(&mut app, &mut services, &select_all),
-            "expected text.select_all to be handled by text area"
+            "expected edit.select_all to be handled by text area"
         );
         let move_right = CommandId::from("text.move_right");
         assert!(
@@ -1004,7 +999,7 @@ fn text_area_delete_word_respects_window_text_boundary_mode() {
         text_after_commands(
             fret_runtime::TextBoundaryMode::UnicodeWord,
             &[
-                "text.select_all",
+                "edit.select_all",
                 "text.move_right",
                 "text.delete_word_backward"
             ],
@@ -1016,7 +1011,7 @@ fn text_area_delete_word_respects_window_text_boundary_mode() {
         text_after_commands(
             fret_runtime::TextBoundaryMode::Identifier,
             &[
-                "text.select_all",
+                "edit.select_all",
                 "text.move_right",
                 "text.delete_word_backward"
             ],
@@ -1028,7 +1023,7 @@ fn text_area_delete_word_respects_window_text_boundary_mode() {
         text_after_commands(
             fret_runtime::TextBoundaryMode::UnicodeWord,
             &[
-                "text.select_all",
+                "edit.select_all",
                 "text.move_word_left",
                 "text.move_word_left",
                 "text.move_word_left",
@@ -1042,7 +1037,7 @@ fn text_area_delete_word_respects_window_text_boundary_mode() {
         text_after_commands(
             fret_runtime::TextBoundaryMode::Identifier,
             &[
-                "text.select_all",
+                "edit.select_all",
                 "text.move_word_left",
                 "text.move_word_left",
                 "text.move_word_left",

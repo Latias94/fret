@@ -180,39 +180,39 @@ fn text_input_cut_updates_model_and_availability() {
     let input_node = ui.children(root)[0];
     ui.set_focus(Some(input_node));
 
-    let copy = CommandId::from("text.copy");
-    let cut = CommandId::from("text.cut");
-    let select_all = CommandId::from("text.select_all");
+    let copy = CommandId::from("edit.copy");
+    let cut = CommandId::from("edit.cut");
+    let select_all = CommandId::from("edit.select_all");
 
     assert!(
         ui.is_command_available(&mut app, &select_all),
-        "expected text.select_all to be available for focused text input"
+        "expected edit.select_all to be available for focused text input"
     );
     assert!(
         !ui.is_command_available(&mut app, &copy),
-        "expected text.copy to be unavailable without a selection"
+        "expected edit.copy to be unavailable without a selection"
     );
     assert!(
         !ui.is_command_available(&mut app, &cut),
-        "expected text.cut to be unavailable without a selection"
+        "expected edit.cut to be unavailable without a selection"
     );
 
     assert!(
         ui.dispatch_command(&mut app, &mut services, &select_all),
-        "expected text.select_all to be handled by text input"
+        "expected edit.select_all to be handled by text input"
     );
     assert!(
         ui.is_command_available(&mut app, &copy),
-        "expected text.copy to be available after select_all"
+        "expected edit.copy to be available after select_all"
     );
     assert!(
         ui.is_command_available(&mut app, &cut),
-        "expected text.cut to be available after select_all"
+        "expected edit.cut to be available after select_all"
     );
 
     assert!(
         ui.dispatch_command(&mut app, &mut services, &cut),
-        "expected text.cut to be handled by text input"
+        "expected edit.cut to be handled by text input"
     );
     assert_eq!(
         app.models().get_cloned(&model).as_deref(),
@@ -223,7 +223,7 @@ fn text_input_cut_updates_model_and_availability() {
         app.take_effects()
             .iter()
             .any(|e| matches!(e, fret_runtime::Effect::ClipboardWriteText { .. })),
-        "expected text.cut to emit ClipboardWriteText"
+        "expected edit.cut to emit ClipboardWriteText"
     );
 }
 
@@ -257,21 +257,21 @@ fn text_input_paste_requests_clipboard_text_when_editable() {
     let input_node = ui.children(root)[0];
     ui.set_focus(Some(input_node));
 
-    let paste = CommandId::from("text.paste");
+    let paste = CommandId::from("edit.paste");
     assert!(
         ui.is_command_available(&mut app, &paste),
-        "expected text.paste to be available for focused editable text input"
+        "expected edit.paste to be available for focused editable text input"
     );
     assert!(
         ui.dispatch_command(&mut app, &mut services, &paste),
-        "expected text.paste to be handled by text input"
+        "expected edit.paste to be handled by text input"
     );
 
     assert!(
         app.take_effects()
             .iter()
             .any(|e| matches!(e, fret_runtime::Effect::ClipboardReadText { .. })),
-        "expected text.paste to request ClipboardReadText"
+        "expected edit.paste to request ClipboardReadText"
     );
 }
 
@@ -560,11 +560,11 @@ fn text_input_read_only_blocks_mutation_but_allows_selection_copy() {
     let input_node = ui.children(root)[0];
     ui.set_focus(Some(input_node));
 
-    let copy = CommandId::from("text.copy");
-    let cut = CommandId::from("text.cut");
-    let paste = CommandId::from("text.paste");
+    let copy = CommandId::from("edit.copy");
+    let cut = CommandId::from("edit.cut");
+    let paste = CommandId::from("edit.paste");
     let clear = CommandId::from("text.clear");
-    let select_all = CommandId::from("text.select_all");
+    let select_all = CommandId::from("edit.select_all");
 
     assert!(
         ui.dispatch_command(&mut app, &mut services, &select_all),
@@ -1016,8 +1016,7 @@ fn text_input_select_all_is_blocked_when_empty() {
     let input_node = ui.children(root)[0];
     ui.set_focus(Some(input_node));
 
-    let select_all = CommandId::from("text.select_all");
-    let edit_select_all = CommandId::from("edit.select_all");
+    let select_all = CommandId::from("edit.select_all");
     let clear = CommandId::from("text.clear");
     let edit_copy = CommandId::from("edit.copy");
     let edit_cut = CommandId::from("edit.cut");
@@ -1025,10 +1024,6 @@ fn text_input_select_all_is_blocked_when_empty() {
 
     assert!(
         !ui.is_command_available(&mut app, &select_all),
-        "expected text.select_all to be unavailable for empty text input"
-    );
-    assert!(
-        !ui.is_command_available(&mut app, &edit_select_all),
         "expected edit.select_all to be unavailable for empty text input"
     );
     assert!(

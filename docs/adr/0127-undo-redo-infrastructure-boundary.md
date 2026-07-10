@@ -121,22 +121,23 @@ Undo/redo is invoked via commands routed through the existing focus model (ADR 0
 
 - The framework recommends providing commands that can be handled by the focused surface:
   - Example: a node graph widget can handle `node_graph.undo` / `node_graph.redo` (ADR 0126).
-  - Example: a text input widget can handle `text.undo` / `text.redo` (local history).
-- A window-level fallback may handle “document undo” when focus is not inside a specialized widget.
+  - Example: a focused text editor can handle `edit.undo` / `edit.redo` against its local history.
+- A window-level fallback may handle the same `edit.undo` / `edit.redo` ids against document
+  history when the focused surface does not handle them.
 
-This ADR does not lock a single global command id; it only requires that command routing supports:
+This ADR locks `edit.undo` / `edit.redo` as the standard user-facing identities and requires that
+command routing supports:
 
 - focused-surface undo (widget scope),
 - window/document undo (window scope),
 - app-wide undo (app scope) only where an app explicitly chooses it.
 
-Command naming guidance (non-normative, recommended):
+Command naming guidance:
 
-- Reserve `edit.undo` / `edit.redo` for window/document-level undo targets.
-- Use domain-specific namespaces for specialized surfaces:
-  - `node_graph.undo` / `node_graph.redo` (ADR 0126),
-  - `text.undo` / `text.redo` for text editing surfaces (local history),
-  - tool-specific commands may exist but should generally delegate to one of the above.
+- Use `edit.undo` / `edit.redo` for standard undo and redo regardless of whether the focused
+  widget or the window/document fallback owns the active history.
+- Domain-specific commands such as `node_graph.undo` / `node_graph.redo` may exist only when they
+  represent a distinct product intent, not as compatibility aliases for standard undo/redo.
 
 The key requirement is not the string id, but that the focus/router can resolve whether undo/redo
 targets the focused surface’s local history or the active document history.
