@@ -58,7 +58,8 @@ pub use text_assist_field::{
 };
 pub use text_field::{
     OnTextFieldOutcome, TextField, TextFieldAssistiveSemantics, TextFieldBlurBehavior,
-    TextFieldDraftController, TextFieldMode, TextFieldOptions, TextFieldOutcome,
+    TextFieldDraftController, TextFieldDraftSnapshot, TextFieldMode, TextFieldOptions,
+    TextFieldOutcome,
 };
 pub use transform_edit::{
     OnTransformEditAxisOutcome, TransformEdit, TransformEditAxisOutcome,

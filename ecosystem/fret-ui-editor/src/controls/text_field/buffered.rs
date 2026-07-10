@@ -13,10 +13,11 @@ mod controller;
 
 pub(super) use actions::{
     cancel_buffered_text_field, cancel_buffered_text_field_from_controller,
-    clear_buffered_text_field_state, commit_buffered_text_field,
-    commit_buffered_text_field_from_controller,
+    cancel_buffered_text_field_from_controller_if_dirty, clear_buffered_text_field_state,
+    commit_buffered_text_field, commit_buffered_text_field_from_controller,
+    commit_buffered_text_field_from_controller_if_dirty,
 };
-pub use controller::TextFieldDraftController;
+pub use controller::{TextFieldDraftController, TextFieldDraftSnapshot};
 
 #[derive(Debug, Default)]
 pub(super) struct BufferedTextFieldState {

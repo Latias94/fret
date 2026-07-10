@@ -2529,64 +2529,42 @@ DATATABLE_FORBIDDEN_COMPACT_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = 
 EDITOR_NOTES_OWNER = "examples-editor-notes"
 
 EDITOR_NOTES_REQUIRED_COMPACT_MARKERS = (
-    "structEditorAssetModels{",
-    "name:Model<String>,",
-    "notes:Model<String>,",
-    "notes_outcome:Model<String>,",
-    "summary_status:Model<String>,",
-    "models:EditorAssetModels,",
-    "structEditorThemePresetBinding{",
-    "theme:EditorThemePresetBinding,",
+    "usefret::app::editor::{",
+    "EditorThemePresetPickerLocalStateExtas_",
+    "InspectorTextFieldBinding",
+    "InspectorTextFieldSnapshot",
+    "TextFieldLocalStateExtas_",
+    "name:LocalState<String>,",
+    "notes:InspectorTextFieldBinding,",
+    "theme:LocalState<EditorThemePresetV1>,",
     "fneditor_asset_paint_snapshot(",
-    "structEditorNotesModelOwner<'a>{",
-    "models:&'amutModelStore,",
-    "fnset_text(&mutself,model:&Model<String>,value:implInto<String>)->bool{",
-    "fnset_notes_outcome(&self,models:&mutModelStore,value:implInto<String>)->bool{",
-    "fnset_summary_status(&self,models:&mutModelStore,value:implInto<String>)->bool{",
-    "EditorNotesModelOwner::new(models).set_text(&self.notes_outcome,value)",
-    "EditorNotesModelOwner::new(models).set_text(&self.summary_status,value)",
-    "models.set_notes_outcome(host.models_mut(),next",
-    "models.set_notes_outcome(host.models_mut(),\"Committed\"",
-    "models.set_notes_outcome(host.models_mut(),\"Canceled\"",
-    "models.set_summary_status(host.models_mut(),draft_commit_status.clone()",
-    "models.set_summary_status(host.models_mut(),draft_discard_status.clone()",
-    "models.set_summary_status(host.models_mut(),summary_status_next.clone()",
-    "EditorThemePresetPicker::new(theme.picker_model())",
-    "EditorThemePresetBinding::new(app)",
+    "InspectorTextFieldBinding::new(app,notes,",
+    ".outcome_statuses(",
+    "asset.name.paint_value(cx)",
+    "asset.notes.paint_snapshot(cx)",
+    "asset.name.editor_text_field()",
+    "asset.notes.text_field(TextFieldOptions{",
+    "asset.notes.commit_activate()",
+    "asset.notes.discard_activate()",
+    "asset.notes.status_activate(",
+    "theme.editor_theme_preset_picker()",
+    "notes_snapshot.draft_status_label(&committed_label)",
     "editor_asset_paint_snapshot(cx,&asset)",
 )
 
-EDITOR_NOTES_FORBIDDEN_RAW_WRITE_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
-    (
-        "models_mut().update",
-        re.compile(r"\bmodels_mut\s*\(\s*\)\s*\.\s*update(?:_any)?\s*\("),
-    ),
-    (
-        "ModelStore::update",
-        re.compile(
-            r"(?:\bModelStore\s*::\s*update(?:_any)?\s*\(|<\s*ModelStore\s*>\s*::\s*update(?:_any)?\s*\()"
-        ),
-    ),
-    (
-        "legacy-public-model-field",
-        re.compile(
-            r"\bpub\s*\(\s*crate\s*\)\s*(?:name|notes|notes_outcome|summary_status)_model\s*:\s*Model\s*<"
-        ),
-    ),
-    (
-        "legacy-theme-model-field",
-        re.compile(r"\btheme_preset_model\s*:\s*Model\s*<"),
-    ),
-    (
-        "legacy-model-field",
-        re.compile(
-            r"\b(?:asset\s*\.\s*)?(?:name|notes|notes_outcome|summary_status)_model\b"
-        ),
-    ),
-    (
-        "legacy-free-helper",
-        re.compile(r"\bfn\s+editor_notes_host_(?:update_model|set_model|set_text)\b"),
-    ),
+EDITOR_NOTES_FORBIDDEN_COMPACT_MARKERS = (
+    ("raw-runtime-import", "fret_runtime::"),
+    ("raw-model-store", "ModelStore"),
+    ("raw-model-handle", "Model<"),
+    ("legacy-asset-model-owner", "EditorAssetModels"),
+    ("legacy-text-model-owner", "EditorNotesModelOwner"),
+    ("raw-model-store-access", "models_mut("),
+    ("manual-draft-controller", "TextFieldDraftController"),
+    ("direct-text-field-model-construction", "TextField::new("),
+    ("direct-theme-model-construction", "EditorThemePresetPicker::new("),
+    ("raw-selector-model-read", "selector_model_paint("),
+    ("raw-local-state-construction", "LocalState::new_in("),
+    ("raw-local-state-bridge", "LocalState::from_model("),
 )
 
 
@@ -3321,16 +3299,12 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
     ),
     _fret_examples_advanced_surface(
         "editor_notes_demo.rs",
-        "the editor notes demo owns editor app model bindings, shell-mounted rails, and theme "
-        "preset wiring while keeping app-facing writes behind EditorAssetModels, "
-        "EditorNotesModelOwner, and EditorThemePresetBinding",
+        "the editor notes demo keeps host-generic reusable panel composition on explicit render "
+        "seams while state, inspector actions, and theme controls use fret::app::editor recipes",
         (
-            "fret_app",
             "fret_core",
-            "fret_runtime",
             "fret_ui",
             "AnyElement",
-            "ModelStore",
         ),
         owner=EDITOR_NOTES_OWNER,
     ),
@@ -5528,37 +5502,39 @@ def _scan_editor_notes_bindings_boundary(
         if missing_markers:
             violations.append(
                 SurfaceViolation(
-                    rule="advanced-surface-editor-notes-bindings-boundary",
+                    rule="app-facing-editor-notes-binding-boundary",
                     path=path,
                     line_no=1,
                     message=(
-                        "editor notes model and theme state must stay behind "
-                        f"EditorAssetModels/EditorNotesModelOwner/EditorThemePresetBinding; "
+                        "editor notes state and controls must use the fret::app::editor "
+                        f"LocalState/controller recipe; "
                         f"missing compact markers: {', '.join(missing_markers)}"
                     ),
                 )
             )
 
-        for line_no, line in _code_lines_for_scan(path, production_text):
-            if path.suffix == ".rs" and _is_rust_source_line_ignorable(line):
+        scannable_compact = _compact_source(
+            "\n".join(
+                line
+                for _line_no, line in _code_lines_for_scan(path, production_text)
+                if path.suffix != ".rs" or not _is_rust_source_line_ignorable(line)
+            )
+        )
+        for seam, marker in EDITOR_NOTES_FORBIDDEN_COMPACT_MARKERS:
+            if marker not in scannable_compact:
                 continue
-            for seam, pattern in EDITOR_NOTES_FORBIDDEN_RAW_WRITE_PATTERNS:
-                if not pattern.search(line):
-                    continue
-                violations.append(
-                    SurfaceViolation(
-                        rule="advanced-surface-editor-notes-bindings-boundary",
-                        path=path,
-                        line_no=line_no,
-                        message=(
-                            "editor notes app writes and shared model exposure must route through "
-                            f"EditorAssetModels/EditorNotesModelOwner/EditorThemePresetBinding; "
-                            f"direct `{seam}` bypasses the binding boundary"
-                        ),
-                        source=line.strip(),
-                    )
+            violations.append(
+                SurfaceViolation(
+                    rule="app-facing-editor-notes-binding-boundary",
+                    path=path,
+                    line_no=1,
+                    message=(
+                        "editor notes default state/actions must use fret::app::editor "
+                        f"LocalState/controller recipes; `{seam}` bypasses the binding boundary"
+                    ),
+                    source=marker,
                 )
-                break
+            )
 
     return violations
 

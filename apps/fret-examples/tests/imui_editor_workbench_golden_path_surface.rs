@@ -42,9 +42,9 @@ fn imui_editor_workbench_demo_is_the_canonical_editor_workbench_route() {
         "editor notes should expose its reusable workflow view to the canonical workbench route"
     );
     for needle in [
-        "theme: EditorThemePresetBinding",
-        "EditorThemePresetBinding::new(app)",
-        "EditorThemePresetPicker::new(theme.picker_model())",
+        "theme: LocalState<EditorThemePresetV1>",
+        "editor_theme_preset_state(app)",
+        ".editor_theme_preset_picker()",
         "EditorThemePresetPickerOptions",
         "row_cx.label_text(cx, \"Theme preset\")",
         "TEST_ID_THEME_PRESET_PICKER",

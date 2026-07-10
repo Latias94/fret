@@ -38,6 +38,56 @@ def check_fixture_policy(root: Path, **kwargs):
     return POLICY.check_surface_policy(root, **kwargs)
 
 
+EDITOR_NOTES_APP_FACING_FIXTURE = """
+use fret::app::editor::{
+    EditorThemePresetPickerLocalStateExt as _, InspectorTextFieldBinding,
+    InspectorTextFieldSnapshot, TextFieldLocalStateExt as _,
+};
+use fret::app::LocalState;
+
+struct EditorAssetState {
+    name: LocalState<String>,
+    notes: InspectorTextFieldBinding,
+}
+
+struct EditorNotesDemoView {
+    theme: LocalState<EditorThemePresetV1>,
+}
+
+fn make_asset(app: &mut App, name: &str, notes: &str) -> EditorAssetState {
+    EditorAssetState {
+        name: app.local_state(name.to_string()),
+        notes: InspectorTextFieldBinding::new(app, notes, "Ready")
+            .outcome_statuses("Committed", "Canceled"),
+    }
+}
+
+fn editor_asset_paint_snapshot(
+    cx: &mut AppUi<'_, '_>,
+    asset: &EditorAssetState,
+) -> InspectorTextFieldSnapshot {
+    let _ = asset.name.paint_value(cx);
+    asset.notes.paint_snapshot(cx)
+}
+
+fn render(
+    cx: &mut AppUi<'_, '_>,
+    asset: EditorAssetState,
+    theme: LocalState<EditorThemePresetV1>,
+) {
+    let notes_snapshot = editor_asset_paint_snapshot(cx, &asset);
+    let committed_label = "1 line committed".to_string();
+    let _ = notes_snapshot.draft_status_label(&committed_label);
+    let _ = asset.name.editor_text_field();
+    let _ = asset.notes.text_field(TextFieldOptions { ..Default::default() });
+    let _ = asset.notes.commit_activate();
+    let _ = asset.notes.discard_activate();
+    let _ = asset.notes.status_activate("Copied");
+    let _ = theme.editor_theme_preset_picker();
+}
+"""
+
+
 class SurfacePolicyTests(unittest.TestCase):
     def test_default_tutorial_raw_runtime_import_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -10066,214 +10116,67 @@ class SurfacePolicyTests(unittest.TestCase):
     def test_editor_notes_direct_model_writes_are_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            write(
-                root / "apps/fret-examples/src/editor_notes_demo.rs",
-                """
-                use fret_runtime::ModelStore;
-
-                struct EditorNotesModelOwner<'a> {
-                    models: &'a mut ModelStore,
-                }
-
-                impl<'a> EditorNotesModelOwner<'a> {
-                    fn new(models: &'a mut ModelStore) -> Self {
-                        Self { models }
-                    }
-
-                    fn set_text(&mut self, model: &Model<String>, value: impl Into<String>) -> bool {
-                        false
-                    }
-                }
-
-                struct EditorAssetModels {
-                    name: Model<String>,
-                    notes: Model<String>,
-                    notes_outcome: Model<String>,
-                    summary_status: Model<String>,
-                }
-
-                impl EditorAssetModels {
-                    fn new(models: &mut ModelStore, title: &str, name: &str, notes: &str) -> Self {
-                        Self {
-                            name: models.insert(name.to_string()),
-                            notes: models.insert(notes.to_string()),
-                            notes_outcome: models.insert("Idle".to_string()),
-                            summary_status: models.insert(format!("Ready to copy summary for {title}.")),
-                        }
-                    }
-
-                    fn set_notes_outcome(&self, models: &mut ModelStore, value: impl Into<String>) -> bool {
-                        EditorNotesModelOwner::new(models).set_text(&self.notes_outcome, value)
-                    }
-
-                    fn set_summary_status(&self, models: &mut ModelStore, value: impl Into<String>) -> bool {
-                        EditorNotesModelOwner::new(models).set_text(&self.summary_status, value)
-                    }
-                }
-
-                struct EditorThemePresetBinding {
-                    preset: Model<EditorThemePresetV1>,
-                }
-
-                impl EditorThemePresetBinding {
-                    fn picker_model(&self) -> Model<EditorThemePresetV1> {
-                        self.preset.clone()
-                    }
-                }
-
-                struct EditorAssetState {
-                    models: EditorAssetModels,
-                }
-
-                struct EditorNotesDemoView {
-                    theme: EditorThemePresetBinding,
-                }
-
-                fn editor_asset_paint_snapshot(cx: &mut AppUi<'_, '_>, asset: &EditorAssetState) {}
-
-                fn init(app: &mut App) {
-                    let theme = EditorThemePresetBinding::new(app);
-                    let _ = theme;
-                }
-
-                fn render(cx: &mut AppUi<'_, '_>, asset: EditorAssetState, theme: EditorThemePresetBinding) {
-                    editor_asset_paint_snapshot(cx, &asset);
-                    EditorThemePresetPicker::new(theme.picker_model());
-                    let models = asset.models.clone();
-                    models.set_notes_outcome(host.models_mut(), next);
-                    models.set_notes_outcome(host.models_mut(), "Committed");
-                    models.set_notes_outcome(host.models_mut(), "Canceled");
-                    models.set_summary_status(host.models_mut(), draft_commit_status.clone());
-                    models.set_summary_status(host.models_mut(), draft_discard_status.clone());
-                    models.set_summary_status(host.models_mut(), summary_status_next.clone());
-                    let _ = app.models_mut().update(&models.notes_outcome, |_| true);
-                    let _ = ModelStore::update(app.models_mut(), &models.summary_status, |_| true);
-                    let _ = asset.notes_outcome_model.clone();
-                }
-                """,
+            surface = POLICY.SurfacePath(
+                "apps/fret-examples/src/editor_notes_demo.rs",
+                "advanced_manual",
+                "fixture editor notes surface",
+                owner=POLICY.EDITOR_NOTES_OWNER,
+                allowed_raw_seams=("fret_core", "fret_ui", "AnyElement"),
+                retirement=POLICY.FRET_EXAMPLES_ADVANCED_RETIREMENT,
+            )
+            injections = (
+                ("raw-runtime-import", "use fret_runtime::RuntimeProbe;"),
+                ("raw-model-store", "struct RawStore(ModelStore);"),
+                ("raw-model-handle", "struct RawModel(Model<String>);"),
+                ("legacy-asset-model-owner", "struct EditorAssetModels;"),
+                ("legacy-text-model-owner", "struct EditorNotesModelOwner;"),
+                ("raw-model-store-access", "fn raw() { host.models_mut(); }"),
+                ("manual-draft-controller", "fn raw() { TextFieldDraftController::new(); }"),
+                ("direct-text-field-model-construction", "fn raw() { TextField::new(model); }"),
+                (
+                    "direct-theme-model-construction",
+                    "fn raw() { EditorThemePresetPicker::new(model); }",
+                ),
+                ("raw-selector-model-read", "fn raw() { selector_model_paint(); }"),
+                ("raw-local-state-construction", "fn raw() { LocalState::new_in(); }"),
+                ("raw-local-state-bridge", "fn raw() { LocalState::from_model(); }"),
             )
 
+            write(
+                root / "apps/fret-examples/src/editor_notes_demo.rs",
+                "\n".join(
+                    [EDITOR_NOTES_APP_FACING_FIXTURE]
+                    + [injection for _seam, injection in injections]
+                ),
+            )
             violations = check_fixture_policy(
                 root,
                 default_surfaces=[],
-                advanced_manual_surfaces=[
-                    POLICY.SurfacePath(
-                        "apps/fret-examples/src/editor_notes_demo.rs",
-                        "advanced_manual",
-                        "fixture editor notes surface",
-                        owner="examples-editor-notes",
-                        allowed_raw_seams=(
-                            "fret_app",
-                            "fret_core",
-                            "fret_runtime",
-                            "fret_ui",
-                            "AnyElement",
-                            "ElementContext",
-                            "ModelStore",
-                        ),
-                        retirement=POLICY.FRET_EXAMPLES_ADVANCED_RETIREMENT,
-                    )
-                ],
+                advanced_manual_surfaces=[surface],
                 policy_recipe_surfaces=[],
                 mechanism_root_surfaces=[],
             )
-
             owner_violations = [
                 violation
                 for violation in violations
-                if violation.rule == "advanced-surface-editor-notes-bindings-boundary"
+                if violation.rule == "app-facing-editor-notes-binding-boundary"
             ]
-            self.assertEqual(3, len(owner_violations))
-            messages = "\n".join(violation.message for violation in owner_violations)
-            self.assertIn("models_mut().update", messages)
-            self.assertIn("ModelStore::update", messages)
-            self.assertIn("legacy-model-field", messages)
+            self.assertEqual(len(injections), len(owner_violations))
+            for seam, injection in injections:
+                with self.subTest(seam=seam):
+                    seam_violations = [
+                        violation
+                        for violation in owner_violations
+                        if f"`{seam}`" in violation.message
+                    ]
+                    self.assertEqual(1, len(seam_violations), injection)
 
     def test_editor_notes_binding_surface_is_allowed(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             write(
                 root / "apps/fret-examples/src/editor_notes_demo.rs",
-                """
-                use fret_runtime::ModelStore;
-
-                struct EditorNotesModelOwner<'a> {
-                    models: &'a mut ModelStore,
-                }
-
-                impl<'a> EditorNotesModelOwner<'a> {
-                    fn new(models: &'a mut ModelStore) -> Self {
-                        Self { models }
-                    }
-
-                    fn set_text(&mut self, model: &Model<String>, value: impl Into<String>) -> bool {
-                        false
-                    }
-                }
-
-                struct EditorAssetModels {
-                    name: Model<String>,
-                    notes: Model<String>,
-                    notes_outcome: Model<String>,
-                    summary_status: Model<String>,
-                }
-
-                impl EditorAssetModels {
-                    fn new(models: &mut ModelStore, title: &str, name: &str, notes: &str) -> Self {
-                        Self {
-                            name: models.insert(name.to_string()),
-                            notes: models.insert(notes.to_string()),
-                            notes_outcome: models.insert("Idle".to_string()),
-                            summary_status: models.insert(format!("Ready to copy summary for {title}.")),
-                        }
-                    }
-
-                    fn set_notes_outcome(&self, models: &mut ModelStore, value: impl Into<String>) -> bool {
-                        EditorNotesModelOwner::new(models).set_text(&self.notes_outcome, value)
-                    }
-
-                    fn set_summary_status(&self, models: &mut ModelStore, value: impl Into<String>) -> bool {
-                        EditorNotesModelOwner::new(models).set_text(&self.summary_status, value)
-                    }
-                }
-
-                struct EditorThemePresetBinding {
-                    preset: Model<EditorThemePresetV1>,
-                }
-
-                impl EditorThemePresetBinding {
-                    fn picker_model(&self) -> Model<EditorThemePresetV1> {
-                        self.preset.clone()
-                    }
-                }
-
-                struct EditorAssetState {
-                    models: EditorAssetModels,
-                }
-
-                struct EditorNotesDemoView {
-                    theme: EditorThemePresetBinding,
-                }
-
-                fn editor_asset_paint_snapshot(cx: &mut AppUi<'_, '_>, asset: &EditorAssetState) {}
-
-                fn init(app: &mut App) {
-                    let theme = EditorThemePresetBinding::new(app);
-                    let _ = theme;
-                }
-
-                fn render(cx: &mut AppUi<'_, '_>, asset: EditorAssetState, theme: EditorThemePresetBinding) {
-                    editor_asset_paint_snapshot(cx, &asset);
-                    EditorThemePresetPicker::new(theme.picker_model());
-                    let models = asset.models.clone();
-                    models.set_notes_outcome(host.models_mut(), next);
-                    models.set_notes_outcome(host.models_mut(), "Committed");
-                    models.set_notes_outcome(host.models_mut(), "Canceled");
-                    models.set_summary_status(host.models_mut(), draft_commit_status.clone());
-                    models.set_summary_status(host.models_mut(), draft_discard_status.clone());
-                    models.set_summary_status(host.models_mut(), summary_status_next.clone());
-                }
-                """,
+                EDITOR_NOTES_APP_FACING_FIXTURE,
             )
 
             violations = check_fixture_policy(
@@ -10284,15 +10187,11 @@ class SurfacePolicyTests(unittest.TestCase):
                         "apps/fret-examples/src/editor_notes_demo.rs",
                         "advanced_manual",
                         "fixture editor notes surface",
-                        owner="examples-editor-notes",
+                        owner=POLICY.EDITOR_NOTES_OWNER,
                         allowed_raw_seams=(
-                            "fret_app",
                             "fret_core",
-                            "fret_runtime",
                             "fret_ui",
                             "AnyElement",
-                            "ElementContext",
-                            "ModelStore",
                         ),
                         retirement=POLICY.FRET_EXAMPLES_ADVANCED_RETIREMENT,
                     )
@@ -10305,7 +10204,7 @@ class SurfacePolicyTests(unittest.TestCase):
                 [
                     violation
                     for violation in violations
-                    if violation.rule == "advanced-surface-editor-notes-bindings-boundary"
+                    if violation.rule == "app-facing-editor-notes-binding-boundary"
                 ]
             )
 

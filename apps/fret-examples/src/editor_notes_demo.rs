@@ -1,21 +1,20 @@
 use std::sync::Arc;
 
+use fret::app::editor::{
+    EditorTextSelectionBehavior, EditorThemePresetPickerLocalStateExt as _,
+    EditorThemePresetPickerOptions, EditorThemePresetV1, InspectorTextFieldBinding,
+    InspectorTextFieldOutcome, InspectorTextFieldSnapshot, TextFieldBlurBehavior,
+    TextFieldLocalStateExt as _, TextFieldOptions,
+};
 use fret::app::prelude::*;
-use fret::app::{AppRenderContext, text};
-use fret::{Defaults, FretApp, shadcn};
-use fret_app::{CommandId, Model};
+use fret::app::{AppRenderContext, LocalState, text};
+use fret::{CommandId, Defaults, FretApp, shadcn};
 use fret_core::Px;
-use fret_runtime::ModelStore;
 use fret_ui::element::{AnyElement, LayoutStyle, Length, SizeStyle};
 use fret_ui_editor::composites::{
     InspectorPanel, InspectorPanelOptions, PropertyGrid, PropertyGroup, PropertyGroupOptions,
     PropertyRow,
 };
-use fret_ui_editor::controls::{
-    EditorTextSelectionBehavior, EditorThemePresetPicker, EditorThemePresetPickerOptions,
-    TextField, TextFieldBlurBehavior, TextFieldDraftController, TextFieldOptions, TextFieldOutcome,
-};
-use fret_ui_editor::theme::EditorThemePresetV1;
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::{IntoUiElementInExt as _, Space};
 use fret_workspace::WorkspaceFrame;
@@ -57,85 +56,10 @@ pub(crate) mod act {
     ]);
 }
 
-struct EditorNotesModelOwner<'a> {
-    models: &'a mut ModelStore,
-}
-
-impl<'a> EditorNotesModelOwner<'a> {
-    fn new(models: &'a mut ModelStore) -> Self {
-        Self { models }
-    }
-
-    fn set_text(&mut self, model: &Model<String>, value: impl Into<String>) -> bool {
-        let value = value.into();
-        self.models
-            .update(model, |slot| {
-                *slot = value;
-                true
-            })
-            .unwrap_or(false)
-    }
-}
-
 #[derive(Clone)]
-struct EditorAssetModels {
-    name: Model<String>,
-    notes: Model<String>,
-    notes_outcome: Model<String>,
-    summary_status: Model<String>,
-}
-
-impl EditorAssetModels {
-    fn new(models: &mut ModelStore, title: &str, name: &str, notes: &str) -> Self {
-        Self {
-            name: models.insert(name.to_string()),
-            notes: models.insert(notes.to_string()),
-            notes_outcome: models.insert("Idle".to_string()),
-            summary_status: models.insert(format!("Ready to copy summary for {title}.")),
-        }
-    }
-
-    fn name_text_model(&self) -> Model<String> {
-        self.name.clone()
-    }
-
-    fn notes_text_model(&self) -> Model<String> {
-        self.notes.clone()
-    }
-
-    fn set_notes_outcome(&self, models: &mut ModelStore, value: impl Into<String>) -> bool {
-        EditorNotesModelOwner::new(models).set_text(&self.notes_outcome, value)
-    }
-
-    fn set_summary_status(&self, models: &mut ModelStore, value: impl Into<String>) -> bool {
-        EditorNotesModelOwner::new(models).set_text(&self.summary_status, value)
-    }
-}
-
 pub(crate) struct EditorAssetSnapshot {
     pub(crate) name_value: String,
-    pub(crate) committed_notes: String,
-    pub(crate) notes_outcome: String,
-    pub(crate) summary_status: String,
-}
-
-#[derive(Clone)]
-pub(crate) struct EditorThemePresetBinding {
-    preset: Model<EditorThemePresetV1>,
-}
-
-impl EditorThemePresetBinding {
-    pub(crate) fn new(app: &mut App) -> Self {
-        let theme_preset = fret_ui_editor::theme::installed_editor_theme_preset_v1(app)
-            .unwrap_or(EditorThemePresetV1::Default);
-        Self {
-            preset: app.models_mut().insert(theme_preset),
-        }
-    }
-
-    fn picker_model(&self) -> Model<EditorThemePresetV1> {
-        self.preset.clone()
-    }
+    pub(crate) notes: InspectorTextFieldSnapshot,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
@@ -153,12 +77,19 @@ pub(crate) struct EditorAssetState {
     subtitle: Arc<str>,
     name_id_source: Arc<str>,
     notes_id_source: Arc<str>,
-    models: EditorAssetModels,
+    name: LocalState<String>,
+    notes: InspectorTextFieldBinding,
 }
 
 pub(crate) struct EditorNotesDemoView {
     assets: Arc<[EditorAssetState]>,
-    theme: EditorThemePresetBinding,
+    theme: LocalState<EditorThemePresetV1>,
+}
+
+pub(crate) fn editor_theme_preset_state(app: &mut App) -> LocalState<EditorThemePresetV1> {
+    let preset = fret_ui_editor::theme::installed_editor_theme_preset_v1(app)
+        .unwrap_or(EditorThemePresetV1::Default);
+    app.local_state(preset)
 }
 
 pub(crate) fn install_editor_notes_demo_theme(app: &mut App) {
@@ -190,7 +121,7 @@ impl View for EditorNotesDemoView {
     fn init(app: &mut App, _window: WindowId) -> Self {
         Self {
             assets: default_editor_assets(app),
-            theme: EditorThemePresetBinding::new(app),
+            theme: editor_theme_preset_state(app),
         }
     }
 
@@ -213,23 +144,17 @@ impl View for EditorNotesDemoView {
 
         let selection_panel = render_selection_panel(cx, selected);
 
+        let notes_snapshot = snapshot.notes;
         let center = render_center_panel(
             cx,
             asset.clone(),
             snapshot.name_value,
-            snapshot.committed_notes.clone(),
-            snapshot.notes_outcome.clone(),
+            notes_snapshot.committed().to_owned(),
+            notes_snapshot.outcome,
             "WorkspaceFrame owns the outer shell slots; fret-ui-editor owns the reusable inspector content.",
             "This center region is app-local content, while both side regions are mounted through the existing workspace shell seam.",
         );
-        let inspector = render_inspector_panel(
-            cx,
-            asset,
-            self.theme.clone(),
-            committed_line_count_label(&snapshot.committed_notes),
-            snapshot.notes_outcome,
-            snapshot.summary_status,
-        );
+        let inspector = render_inspector_panel(cx, asset, self.theme.clone(), notes_snapshot);
         let left_rail = ui::container(|_cx| [selection_panel])
             .w_px(Px(256.0))
             .flex_shrink_0()
@@ -323,7 +248,16 @@ fn make_asset_state(
         subtitle: Arc::from(subtitle),
         name_id_source: Arc::from(format!("editor-notes-demo.asset.{key}.name")),
         notes_id_source: Arc::from(format!("editor-notes-demo.asset.{key}.notes")),
-        models: EditorAssetModels::new(app.models_mut(), title, name, notes),
+        name: app.local_state(name.to_string()),
+        notes: InspectorTextFieldBinding::new(
+            app,
+            notes,
+            format!("Ready to copy summary for {title}."),
+        )
+        .outcome_statuses(
+            editor_notes_draft_action_status(title, "Draft committed"),
+            editor_notes_draft_action_status(title, "Draft discarded"),
+        ),
     }
 }
 
@@ -331,24 +265,9 @@ pub(crate) fn editor_asset_paint_snapshot(
     cx: &mut AppUi<'_, '_>,
     asset: &EditorAssetState,
 ) -> EditorAssetSnapshot {
-    let (name_value, committed_notes, notes_outcome, summary_status) =
-        cx.data().selector_model_paint(
-            (
-                &asset.models.name,
-                &asset.models.notes,
-                &asset.models.notes_outcome,
-                &asset.models.summary_status,
-            ),
-            |(name, committed_notes, notes_outcome, summary_status)| {
-                (name, committed_notes, notes_outcome, summary_status)
-            },
-        );
-
     EditorAssetSnapshot {
-        name_value,
-        committed_notes,
-        notes_outcome,
-        summary_status,
+        name_value: asset.name.paint_value(cx),
+        notes: asset.notes.paint_snapshot(cx),
     }
 }
 
@@ -356,8 +275,8 @@ fn editor_asset_summary_command_status(asset: &EditorAssetState) -> String {
     format!("Copied summary: {} · {}", asset.title, asset.subtitle)
 }
 
-fn editor_notes_draft_action_status(asset: &EditorAssetState, action: &str) -> String {
-    format!("{action}: {} · TextField draft controller", asset.title)
+fn editor_notes_draft_action_status(title: &str, action: &str) -> String {
+    format!("{action}: {title}")
 }
 
 fn editor_notes_readout_text<'a, Cx>(cx: &mut Cx, text: impl Into<Arc<str>>) -> AnyElement
@@ -519,7 +438,7 @@ pub(crate) fn render_center_panel<'a, Cx>(
     asset: EditorAssetState,
     name_value: String,
     committed_notes: String,
-    notes_outcome: String,
+    notes_outcome: InspectorTextFieldOutcome,
     ownership_note: &'static str,
     committed_notes_intro: &'static str,
 ) -> AnyElement
@@ -532,11 +451,7 @@ where
         committed_notes.clone()
     };
     let note_summary = committed_line_count_label(&committed_notes);
-    let outcome_label = if notes_outcome.is_empty() {
-        "Idle".to_string()
-    } else {
-        notes_outcome
-    };
+    let outcome_label = notes_outcome.label();
     let title = asset.title.clone();
     let subtitle = asset.subtitle.clone();
     let header = shadcn::CardHeader::new([ui::v_flex(|cx| {
@@ -615,10 +530,8 @@ where
 pub(crate) fn render_inspector_panel<'a, Cx>(
     cx: &mut Cx,
     asset: EditorAssetState,
-    theme: EditorThemePresetBinding,
-    committed_label: String,
-    outcome_label: String,
-    summary_status: String,
+    theme: LocalState<EditorThemePresetV1>,
+    notes_snapshot: InspectorTextFieldSnapshot,
 ) -> AnyElement
 where
     Cx: fret::app::ElementContextAccess<'a, App>,
@@ -626,17 +539,10 @@ where
     let subtitle = asset.subtitle.clone();
     let title = asset.title.clone();
     let summary_status_next = editor_asset_summary_command_status(&asset);
-    let draft_commit_status = editor_notes_draft_action_status(&asset, "Draft committed");
-    let draft_discard_status = editor_notes_draft_action_status(&asset, "Draft discarded");
-    let draft_status_label = editor_notes_draft_status_label(&outcome_label, &committed_label);
-    let draft_controller = cx.elements().keyed_slot_state(
-        (
-            "editor-notes-demo.notes.draft-controller",
-            asset.notes_id_source.clone(),
-        ),
-        TextFieldDraftController::new,
-        |controller| controller.clone(),
-    );
+    let committed_label = committed_line_count_label(notes_snapshot.committed());
+    let outcome_label = notes_snapshot.outcome.label().to_string();
+    let draft_status_label = notes_snapshot.draft_status_label(&committed_label);
+    let summary_status = notes_snapshot.status.clone();
 
     InspectorPanel::new(None)
         .options(InspectorPanelOptions {
@@ -675,15 +581,17 @@ where
                                         PropertyRow::new(),
                                         |cx| row_cx.label_text(cx, "Name"),
                                         |cx| {
-                                            TextField::new(asset.models.name_text_model())
-                                            .options(TextFieldOptions {
-                                                id_source: Some(asset.name_id_source.clone()),
-                                                selection_behavior:
-                                                    EditorTextSelectionBehavior::SelectAllOnFocus,
-                                                clear_button: true,
-                                                test_id: Some(Arc::from(TEST_ID_NAME)),
-                                                ..Default::default()
-                                            })
+                                            asset.name.editor_text_field().options(
+                                                TextFieldOptions {
+                                                    id_source: Some(asset.name_id_source.clone()),
+                                                    selection_behavior:
+                                                        EditorTextSelectionBehavior::SelectAllOnFocus,
+                                                    clear_button: true,
+                                                    a11y_label: Some(Arc::from("Asset name")),
+                                                    test_id: Some(Arc::from(TEST_ID_NAME)),
+                                                    ..Default::default()
+                                                },
+                                            )
                                             .into_element(cx)
                                         },
                                         |_cx| None,
@@ -694,30 +602,20 @@ where
                                         PropertyRow::new(),
                                         |cx| row_cx.label_text(cx, "Notes"),
                                         |cx| {
-                                            TextField::new(asset.models.notes_text_model())
-                                            .on_outcome(Some(Arc::new({
-                                                let models = asset.models.clone();
-                                                move |host, action_cx, outcome: TextFieldOutcome| {
-                                                    let next = match outcome {
-                                                        TextFieldOutcome::Committed => "Committed",
-                                                        TextFieldOutcome::Canceled => "Canceled",
-                                                    };
-                                                    let _ = models
-                                                        .set_notes_outcome(host.models_mut(), next);
-                                                    host.request_redraw(action_cx.window);
-                                                }
-                                            })))
-                                            .options(TextFieldOptions {
-                                                id_source: Some(asset.notes_id_source.clone()),
-                                                multiline: true,
-                                                stable_line_boxes: true,
-                                                min_height: Some(Px(120.0)),
-                                                blur_behavior: TextFieldBlurBehavior::PreserveDraft,
-                                                draft_controller: Some(draft_controller.clone()),
-                                                test_id: Some(Arc::from(TEST_ID_NOTES)),
-                                                ..Default::default()
-                                            })
-                                            .into_element(cx)
+                                            asset
+                                                .notes
+                                                .text_field(TextFieldOptions {
+                                                    id_source: Some(asset.notes_id_source.clone()),
+                                                    multiline: true,
+                                                    stable_line_boxes: true,
+                                                    min_height: Some(Px(120.0)),
+                                                    blur_behavior:
+                                                        TextFieldBlurBehavior::PreserveDraft,
+                                                    a11y_label: Some(Arc::from("Asset notes")),
+                                                    test_id: Some(Arc::from(TEST_ID_NOTES)),
+                                                    ..Default::default()
+                                                })
+                                                .into_element(cx)
                                         },
                                         |_cx| None,
                                     ));
@@ -769,66 +667,14 @@ where
                                                     shadcn::Button::new("Commit draft")
                                                         .variant(shadcn::ButtonVariant::Secondary)
                                                         .size(shadcn::ButtonSize::Sm)
-                                                        .on_activate(fret_ui_kit::on_activate({
-                                                            let models = asset.models.clone();
-                                                            let draft_commit_status =
-                                                                draft_commit_status.clone();
-                                                            let draft_controller =
-                                                                draft_controller.clone();
-                                                            move |host, action_cx, _reason| {
-                                                                if draft_controller
-                                                                    .commit(host, action_cx)
-                                                                {
-                                                                    let _ = models
-                                                                        .set_notes_outcome(
-                                                                            host.models_mut(),
-                                                                            "Committed",
-                                                                        );
-                                                                    let _ = models
-                                                                        .set_summary_status(
-                                                                            host.models_mut(),
-                                                                            draft_commit_status
-                                                                                .clone(),
-                                                                        );
-                                                                    host.request_redraw(
-                                                                        action_cx.window,
-                                                                    );
-                                                                }
-                                                            }
-                                                        }))
+                                                        .on_activate(asset.notes.commit_activate())
                                                         .test_id(TEST_ID_DRAFT_COMMIT_COMMAND)
                                                         .ui()
                                                         .into_element_in(cx),
                                                     shadcn::Button::new("Discard draft")
                                                         .variant(shadcn::ButtonVariant::Ghost)
                                                         .size(shadcn::ButtonSize::Sm)
-                                                        .on_activate(fret_ui_kit::on_activate({
-                                                            let models = asset.models.clone();
-                                                            let draft_discard_status =
-                                                                draft_discard_status.clone();
-                                                            let draft_controller =
-                                                                draft_controller.clone();
-                                                            move |host, action_cx, _reason| {
-                                                                if draft_controller
-                                                                    .discard(host, action_cx)
-                                                                {
-                                                                    let _ = models
-                                                                        .set_notes_outcome(
-                                                                            host.models_mut(),
-                                                                            "Canceled",
-                                                                        );
-                                                                    let _ = models
-                                                                        .set_summary_status(
-                                                                            host.models_mut(),
-                                                                            draft_discard_status
-                                                                                .clone(),
-                                                                        );
-                                                                    host.request_redraw(
-                                                                        action_cx.window,
-                                                                    );
-                                                                }
-                                                            }
-                                                        }))
+                                                        .on_activate(asset.notes.discard_activate())
                                                         .test_id(TEST_ID_DRAFT_DISCARD_COMMAND)
                                                         .ui()
                                                         .into_element_in(cx),
@@ -845,7 +691,8 @@ where
                                         PropertyRow::new(),
                                         |cx| row_cx.label_text(cx, "Theme preset"),
                                         |cx| {
-                                            EditorThemePresetPicker::new(theme.picker_model())
+                                            theme
+                                                .editor_theme_preset_picker()
                                                 .options(EditorThemePresetPickerOptions {
                                                     label: Some(Arc::from("Editor theme preset")),
                                                     test_id: Some(Arc::from(
@@ -866,18 +713,11 @@ where
                                             shadcn::Button::new("Copy asset summary")
                                                 .variant(shadcn::ButtonVariant::Secondary)
                                                 .size(shadcn::ButtonSize::Sm)
-                                                .on_activate(fret_ui_kit::on_activate({
-                                                    let models = asset.models.clone();
-                                                    let summary_status_next =
-                                                        summary_status_next.clone();
-                                                    move |host, action_cx, _reason| {
-                                                        let _ = models.set_summary_status(
-                                                            host.models_mut(),
-                                                            summary_status_next.clone(),
-                                                        );
-                                                        host.request_redraw(action_cx.window);
-                                                    }
-                                                }))
+                                                .on_activate(
+                                                    asset.notes.status_activate(
+                                                        summary_status_next.clone(),
+                                                    ),
+                                                )
                                                 .test_id(TEST_ID_SUMMARY_COMMAND)
                                                 .ui()
                                                 .into_element_in(cx)
@@ -911,36 +751,5 @@ pub(crate) fn committed_line_count_label(text: &str) -> String {
         0 => "No committed notes".to_string(),
         1 => "1 line committed".to_string(),
         n => format!("{n} lines committed"),
-    }
-}
-
-pub(crate) fn editor_notes_draft_status_label(outcome: &str, committed_label: &str) -> String {
-    match outcome {
-        "Committed" => format!("Clean draft · {committed_label}"),
-        "Canceled" => format!("Draft canceled · preserved editor text · {committed_label}"),
-        _ => format!("Draft preserved until commit · {committed_label}"),
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn editor_notes_model_owner_preserves_text_state_updates() {
-        let mut models = ModelStore::default();
-        let status = models.insert("Idle".to_string());
-
-        assert!(EditorNotesModelOwner::new(&mut models).set_text(&status, "Committed"));
-        assert_eq!(
-            models.read(&status, Clone::clone).ok().as_deref(),
-            Some("Committed")
-        );
-
-        assert!(EditorNotesModelOwner::new(&mut models).set_text(&status, "Canceled"));
-        assert_eq!(
-            models.read(&status, Clone::clone).ok().as_deref(),
-            Some("Canceled")
-        );
     }
 }

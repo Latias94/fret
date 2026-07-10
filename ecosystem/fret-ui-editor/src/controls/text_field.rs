@@ -25,6 +25,7 @@ use crate::primitives::EditSessionOutcome;
 use crate::primitives::text_entry::{EditorTextCancelBehavior, EditorTextSelectionBehavior};
 
 pub use buffered::TextFieldDraftController;
+pub use buffered::TextFieldDraftSnapshot;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum TextFieldMode {

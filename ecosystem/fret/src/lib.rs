@@ -816,6 +816,25 @@ pub mod app {
     /// `ElementContext` ownership.
     pub use fret_ui::ElementContextAccess;
 
+    /// App-facing editor bindings for `LocalState`-owned inspector controls.
+    ///
+    /// This lane adapts editor controls to the default app state surface without moving editor
+    /// policy into the core UI crates or exposing raw `ModelStore` ownership at app call sites.
+    #[cfg(feature = "editor")]
+    pub mod editor {
+        pub use crate::view::{
+            EditorThemePresetPickerLocalStateExt, InspectorTextFieldBinding,
+            InspectorTextFieldOutcome, InspectorTextFieldSnapshot, TextFieldLocalStateExt,
+        };
+        pub use fret_ui_editor::controls::{
+            EditorTextCancelBehavior, EditorTextSelectionBehavior, EditorThemePresetPicker,
+            EditorThemePresetPickerOptions, TextField, TextFieldAssistiveSemantics,
+            TextFieldBlurBehavior, TextFieldDraftSnapshot, TextFieldMode, TextFieldOptions,
+            TextFieldOutcome,
+        };
+        pub use fret_ui_editor::theme::EditorThemePresetV1;
+    }
+
     /// Request that the runner close a window.
     pub fn close_window(app: &mut App, window: crate::WindowId) {
         app.push_effect(fret_app::Effect::Window(fret_app::WindowRequest::Close(

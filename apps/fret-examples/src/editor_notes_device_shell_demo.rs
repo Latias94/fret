@@ -1,6 +1,8 @@
 use std::sync::Arc;
 
 use fret::adaptive::{DeviceShellSwitchPolicy, device_shell_switch};
+use fret::app::LocalState;
+use fret::app::editor::{EditorThemePresetV1, InspectorTextFieldSnapshot};
 use fret::app::prelude::*;
 use fret::app::{AppElement, AppRenderContext, RenderContextAccess as _, text};
 use fret::{Defaults, FretApp, shadcn};
@@ -11,9 +13,7 @@ use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::{LayoutRefinement, Space};
 use fret_workspace::WorkspaceFrame;
 
-use crate::editor_notes_demo::{
-    self, EditorAssetSelection, EditorAssetState, EditorThemePresetBinding,
-};
+use crate::editor_notes_demo::{self, EditorAssetSelection, EditorAssetState};
 
 const TEST_ID_ROOT: &str = "editor-notes-device-shell-demo.root";
 const TEST_ID_LEFT_RAIL: &str = "editor-notes-device-shell-demo.left-rail";
@@ -31,7 +31,7 @@ const MOBILE_COMMITTED_NOTES_INTRO: &str = "This center region stays app-local o
 
 struct EditorNotesDeviceShellDemoView {
     assets: Arc<[EditorAssetState]>,
-    theme: EditorThemePresetBinding,
+    theme: LocalState<EditorThemePresetV1>,
 }
 
 fn device_shell_section_text<'a, Cx, T>(cx: &mut Cx, text: T) -> AppElement
@@ -70,7 +70,7 @@ impl View for EditorNotesDeviceShellDemoView {
     fn init(app: &mut App, _window: WindowId) -> Self {
         Self {
             assets: editor_notes_demo::default_editor_assets(app),
-            theme: EditorThemePresetBinding::new(app),
+            theme: editor_notes_demo::editor_theme_preset_state(app),
         }
     }
 
@@ -91,28 +91,12 @@ impl View for EditorNotesDeviceShellDemoView {
         let theme = cx.theme_snapshot();
         let selected = cx.state().watch(&selected).layout().value_or_default();
         let asset = editor_notes_demo::editor_asset_for_selection(&self.assets, selected).clone();
-        let snapshot = editor_notes_demo::editor_asset_paint_snapshot(cx, &asset);
-        let name_value = snapshot.name_value;
-        let committed_notes = snapshot.committed_notes;
-        let notes_outcome = snapshot.notes_outcome;
-        let summary_status = snapshot.summary_status;
-        let committed_label = editor_notes_demo::committed_line_count_label(&committed_notes);
         let desktop_background = theme.color_token("background");
 
         let desktop_asset = asset.clone();
-        let desktop_name_value = name_value.clone();
-        let desktop_committed_notes = committed_notes.clone();
-        let desktop_notes_outcome = notes_outcome.clone();
-        let desktop_committed_label = committed_label.clone();
-        let desktop_summary_status = summary_status.clone();
         let desktop_theme = self.theme.clone();
 
         let mobile_asset = asset;
-        let mobile_name_value = name_value;
-        let mobile_committed_notes = committed_notes;
-        let mobile_notes_outcome = notes_outcome;
-        let mobile_committed_label = committed_label;
-        let mobile_summary_status = summary_status;
         let drawer_theme = self.theme.clone();
 
         let shell = device_shell_switch(
@@ -120,13 +104,16 @@ impl View for EditorNotesDeviceShellDemoView {
             Invalidation::Layout,
             DeviceShellSwitchPolicy::default(),
             move |cx| {
+                let snapshot = editor_notes_demo::editor_asset_paint_snapshot(cx, &desktop_asset);
+                let desktop_name_value = snapshot.name_value;
+                let desktop_notes_snapshot = snapshot.notes;
                 let selection_panel = editor_notes_demo::render_selection_panel(cx, selected);
                 let center = editor_notes_demo::render_center_panel(
                     cx,
                     desktop_asset.clone(),
-                    desktop_name_value.clone(),
-                    desktop_committed_notes.clone(),
-                    desktop_notes_outcome.clone(),
+                    desktop_name_value,
+                    desktop_notes_snapshot.committed().to_owned(),
+                    desktop_notes_snapshot.outcome,
                     DESKTOP_OWNERSHIP_NOTE,
                     DESKTOP_COMMITTED_NOTES_INTRO,
                 );
@@ -134,9 +121,7 @@ impl View for EditorNotesDeviceShellDemoView {
                     cx,
                     desktop_asset.clone(),
                     desktop_theme.clone(),
-                    desktop_committed_label.clone(),
-                    desktop_notes_outcome.clone(),
-                    desktop_summary_status.clone(),
+                    desktop_notes_snapshot.clone(),
                 );
                 let left_rail = ui::container(|_cx| [selection_panel])
                     .w_px(Px(256.0))
@@ -158,20 +143,21 @@ impl View for EditorNotesDeviceShellDemoView {
                     .into_element_in(cx)
             },
             move |cx| {
+                let snapshot = editor_notes_demo::editor_asset_paint_snapshot(cx, &mobile_asset);
+                let mobile_name_value = snapshot.name_value;
+                let mobile_notes_snapshot = snapshot.notes;
                 let center = editor_notes_demo::render_center_panel(
                     cx,
                     mobile_asset.clone(),
                     mobile_name_value,
-                    mobile_committed_notes,
-                    mobile_notes_outcome.clone(),
+                    mobile_notes_snapshot.committed().to_owned(),
+                    mobile_notes_snapshot.outcome,
                     MOBILE_OWNERSHIP_NOTE,
                     MOBILE_COMMITTED_NOTES_INTRO,
                 );
 
                 let drawer_asset = mobile_asset.clone();
-                let drawer_committed_label = mobile_committed_label.clone();
-                let drawer_notes_outcome = mobile_notes_outcome.clone();
-                let drawer_summary_status = mobile_summary_status.clone();
+                let drawer_notes_snapshot: InspectorTextFieldSnapshot = mobile_notes_snapshot;
                 let drawer = shadcn::Drawer::new(drawer_open.clone())
                     .children([
                         shadcn::DrawerPart::trigger(shadcn::DrawerTrigger::build(
@@ -187,9 +173,7 @@ impl View for EditorNotesDeviceShellDemoView {
                                 cx,
                                 drawer_asset.clone(),
                                 drawer_theme.clone(),
-                                drawer_committed_label.clone(),
-                                drawer_notes_outcome.clone(),
-                                drawer_summary_status.clone(),
+                                drawer_notes_snapshot.clone(),
                             );
                             let body = ui::v_flex(|_cx| [selection_panel, inspector])
                                 .gap(Space::N4)

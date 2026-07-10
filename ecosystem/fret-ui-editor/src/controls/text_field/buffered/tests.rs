@@ -3,19 +3,29 @@ use std::sync::{Arc, Mutex};
 use super::super::{TextFieldBlurBehavior, TextFieldOptions};
 use super::{
     BufferedTextFieldFocusPlan, BufferedTextFieldPendingBlurPlan, BufferedTextFieldState,
-    TextFieldDraftController, plan_buffered_text_field_focus_transition,
+    TextFieldDraftController, TextFieldDraftSnapshot, plan_buffered_text_field_focus_transition,
     sync_buffered_text_field_session, sync_draft_from_model_when_session_inactive,
 };
 use fret_app::App;
 use fret_core::{AppWindowId, Point, Px, Rect, Size};
 use fret_runtime::ModelStore;
 use fret_ui::action::{ActionCx, UiActionHost, UiFocusActionHost};
-use fret_ui::{GlobalElementId, elements::with_element_cx};
+use fret_ui::{GlobalElementId, Invalidation, elements::with_element_cx};
 
 #[derive(Default)]
 struct FakeHost {
     models: ModelStore,
     redraws: Vec<AppWindowId>,
+}
+
+impl fret_runtime::ModelHost for FakeHost {
+    fn models(&self) -> &ModelStore {
+        &self.models
+    }
+
+    fn models_mut(&mut self) -> &mut ModelStore {
+        &mut self.models
+    }
 }
 
 impl UiActionHost for FakeHost {
@@ -61,14 +71,27 @@ fn bind_test_controller(
     fret_runtime::Model<String>,
     Arc<Mutex<BufferedTextFieldState>>,
 ) {
-    let model = host.models.insert(String::from("before"));
-    let draft = host.models.insert(String::from("after"));
+    bind_test_controller_values(host, controller, "before", "after")
+}
+
+fn bind_test_controller_values(
+    host: &mut FakeHost,
+    controller: &TextFieldDraftController,
+    committed: &str,
+    draft: &str,
+) -> (
+    fret_runtime::Model<String>,
+    fret_runtime::Model<String>,
+    Arc<Mutex<BufferedTextFieldState>>,
+) {
+    let model = host.models.insert(committed.to_string());
+    let draft = host.models.insert(draft.to_string());
     let buffered_state = Arc::new(Mutex::new(BufferedTextFieldState::default()));
     buffered_state
         .lock()
         .unwrap_or_else(|e| e.into_inner())
         .session
-        .begin(String::from("before"));
+        .begin(committed.to_string());
 
     controller.bind(model.clone(), draft.clone(), buffered_state.clone(), None);
 
@@ -84,18 +107,7 @@ fn bind_equal_test_controller(
     fret_runtime::Model<String>,
     Arc<Mutex<BufferedTextFieldState>>,
 ) {
-    let model = host.models.insert(text.to_string());
-    let draft = host.models.insert(text.to_string());
-    let buffered_state = Arc::new(Mutex::new(BufferedTextFieldState::default()));
-    buffered_state
-        .lock()
-        .unwrap_or_else(|e| e.into_inner())
-        .session
-        .begin(text.to_string());
-
-    controller.bind(model.clone(), draft.clone(), buffered_state.clone(), None);
-
-    (model, draft, buffered_state)
+    bind_test_controller_values(host, controller, text, text)
 }
 
 #[test]
@@ -275,9 +287,103 @@ fn draft_controller_unbound_actions_are_noops() {
     let controller = TextFieldDraftController::new();
 
     assert!(!controller.is_bound());
+    assert_eq!(controller.snapshot(&host), TextFieldDraftSnapshot::Unbound);
     assert!(!controller.commit(&mut host, action_cx()));
+    assert!(!controller.commit_if_dirty(&mut host, action_cx()));
     assert!(!controller.discard(&mut host, action_cx()));
+    assert!(!controller.discard_if_dirty(&mut host, action_cx()));
     assert!(host.redraws.is_empty());
+}
+
+#[test]
+fn draft_controller_snapshot_distinguishes_clean_and_dirty_sessions() {
+    let mut host = FakeHost::default();
+    let controller = TextFieldDraftController::new();
+    let (_model, draft, _buffered_state) =
+        bind_equal_test_controller(&mut host, &controller, "before");
+
+    assert_eq!(
+        controller.snapshot(&host),
+        TextFieldDraftSnapshot::Clean {
+            committed: "before".to_string(),
+        }
+    );
+    assert_eq!(controller.snapshot(&host).committed(), Some("before"));
+    assert!(!controller.commit_if_dirty(&mut host, action_cx()));
+    assert!(!controller.discard_if_dirty(&mut host, action_cx()));
+    assert!(host.redraws.is_empty());
+
+    host.models
+        .update(&draft, |draft| *draft = "after".to_string())
+        .expect("update draft");
+    assert_eq!(
+        controller.snapshot(&host),
+        TextFieldDraftSnapshot::Dirty {
+            committed: "before".to_string(),
+            draft: "after".to_string(),
+        }
+    );
+    assert_eq!(controller.snapshot(&host).committed(), Some("before"));
+
+    assert!(controller.commit_if_dirty(&mut host, action_cx()));
+    assert_eq!(
+        controller.snapshot(&host),
+        TextFieldDraftSnapshot::Clean {
+            committed: "after".to_string(),
+        }
+    );
+}
+
+#[test]
+fn draft_controller_snapshot_in_reads_through_element_context() {
+    let mut app = App::new();
+    let window = AppWindowId::default();
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(120.0), Px(48.0)));
+    let model = app.models_mut().insert(String::from("before"));
+    let draft = app.models_mut().insert(String::from("after"));
+    let buffered_state = Arc::new(Mutex::new(BufferedTextFieldState::default()));
+    buffered_state
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .session
+        .begin(String::from("before"));
+    let controller = TextFieldDraftController::new();
+    controller.bind(model, draft, buffered_state, None);
+
+    with_element_cx(
+        &mut app,
+        window,
+        bounds,
+        "draft-controller-snapshot-test",
+        |cx| {
+            assert_eq!(
+                controller.snapshot_in(cx, Invalidation::Paint),
+                TextFieldDraftSnapshot::Dirty {
+                    committed: "before".to_string(),
+                    draft: "after".to_string(),
+                }
+            );
+        },
+    );
+}
+
+#[test]
+fn draft_controller_snapshot_is_clean_after_discard() {
+    let mut host = FakeHost::default();
+    let controller = TextFieldDraftController::new();
+    let (_model, _draft, _buffered_state) = bind_test_controller(&mut host, &controller);
+
+    assert!(matches!(
+        controller.snapshot(&host),
+        TextFieldDraftSnapshot::Dirty { .. }
+    ));
+    assert!(controller.discard_if_dirty(&mut host, action_cx()));
+    assert_eq!(
+        controller.snapshot(&host),
+        TextFieldDraftSnapshot::Clean {
+            committed: "before".to_string(),
+        }
+    );
 }
 
 #[test]

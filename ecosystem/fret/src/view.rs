@@ -25,6 +25,8 @@ mod canvas;
 mod chart;
 mod context;
 mod data;
+#[cfg(feature = "editor")]
+mod editor;
 mod effects;
 mod lane_barriers;
 mod layout_query;
@@ -62,6 +64,11 @@ pub use data::{AppRenderData, AppRenderDataExt, AppUiData};
 #[cfg(feature = "state-selector")]
 #[allow(unused_imports)]
 pub use data::{LocalSelectorLayoutInputs, ModelSelectorInputs};
+#[cfg(feature = "editor")]
+pub use editor::{
+    EditorThemePresetPickerLocalStateExt, InspectorTextFieldBinding, InspectorTextFieldOutcome,
+    InspectorTextFieldSnapshot, TextFieldLocalStateExt,
+};
 pub use effects::AppUiEffects;
 pub use local_state::{
     AppLocalStateExt, AppLocalStateTxnExt, LocalActionCapture, LocalState,

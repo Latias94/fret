@@ -58,9 +58,55 @@ pub(in crate::controls::text_field) fn commit_buffered_text_field_from_controlle
     buffered_state: &Arc<Mutex<BufferedTextFieldState>>,
     submit_command: Option<&CommandId>,
 ) -> bool {
+    commit_buffered_text_field_from_controller_impl(
+        host,
+        action_cx,
+        model,
+        draft,
+        buffered_state,
+        submit_command,
+        false,
+    )
+}
+
+pub(in crate::controls::text_field) fn commit_buffered_text_field_from_controller_if_dirty(
+    host: &mut dyn UiActionHost,
+    action_cx: ActionCx,
+    model: &Model<String>,
+    draft: &Model<String>,
+    buffered_state: &Arc<Mutex<BufferedTextFieldState>>,
+    submit_command: Option<&CommandId>,
+) -> bool {
+    commit_buffered_text_field_from_controller_impl(
+        host,
+        action_cx,
+        model,
+        draft,
+        buffered_state,
+        submit_command,
+        true,
+    )
+}
+
+fn commit_buffered_text_field_from_controller_impl(
+    host: &mut dyn UiActionHost,
+    action_cx: ActionCx,
+    model: &Model<String>,
+    draft: &Model<String>,
+    buffered_state: &Arc<Mutex<BufferedTextFieldState>>,
+    submit_command: Option<&CommandId>,
+    require_dirty: bool,
+) -> bool {
     let next = host.models_mut().get_cloned(draft).unwrap_or_default();
+    let committed = require_dirty.then(|| host.models_mut().get_cloned(model).unwrap_or_default());
     {
         let mut state = buffered_state.lock().unwrap_or_else(|e| e.into_inner());
+        if committed
+            .as_ref()
+            .is_some_and(|committed| !state.session.is_active() || committed == &next)
+        {
+            return false;
+        }
         clear_buffered_text_field_pending_blur(&mut state);
         let _ = state.session.commit();
     }
@@ -110,9 +156,52 @@ pub(in crate::controls::text_field) fn cancel_buffered_text_field_from_controlle
     draft: &Model<String>,
     buffered_state: &Arc<Mutex<BufferedTextFieldState>>,
 ) -> bool {
+    cancel_buffered_text_field_from_controller_impl(
+        host,
+        action_cx,
+        model,
+        draft,
+        buffered_state,
+        false,
+    )
+}
+
+pub(in crate::controls::text_field) fn cancel_buffered_text_field_from_controller_if_dirty(
+    host: &mut dyn UiActionHost,
+    action_cx: ActionCx,
+    model: &Model<String>,
+    draft: &Model<String>,
+    buffered_state: &Arc<Mutex<BufferedTextFieldState>>,
+) -> bool {
+    cancel_buffered_text_field_from_controller_impl(
+        host,
+        action_cx,
+        model,
+        draft,
+        buffered_state,
+        true,
+    )
+}
+
+fn cancel_buffered_text_field_from_controller_impl(
+    host: &mut dyn UiActionHost,
+    action_cx: ActionCx,
+    model: &Model<String>,
+    draft: &Model<String>,
+    buffered_state: &Arc<Mutex<BufferedTextFieldState>>,
+    require_dirty: bool,
+) -> bool {
     let current_model = host.models_mut().get_cloned(model).unwrap_or_default();
+    let current_draft =
+        require_dirty.then(|| host.models_mut().get_cloned(draft).unwrap_or_default());
     let revert = {
         let mut state = buffered_state.lock().unwrap_or_else(|e| e.into_inner());
+        if current_draft
+            .as_ref()
+            .is_some_and(|draft| !state.session.is_active() || draft == &current_model)
+        {
+            return false;
+        }
         clear_buffered_text_field_pending_blur(&mut state);
         state
             .session

@@ -14,7 +14,7 @@ fn editor_notes_demo_composes_shell_mounted_rails_through_workspace_frame_slots(
         "WorkspaceFrame::new(center)",
         ".left(left_rail)",
         ".right(right_rail)",
-        "use fret::app::{AppRenderContext, text};",
+        "use fret::app::{AppRenderContext, LocalState, text};",
         "fn editor_notes_readout_text<",
         "fn editor_notes_section_text<",
         "fn editor_notes_paragraph_text<",
@@ -46,16 +46,27 @@ fn editor_notes_demo_composes_shell_mounted_rails_through_workspace_frame_slots(
         "const TEST_ID_SUMMARY_COMMAND: &str = \"editor-notes-demo.inspector.summary-command\";",
         "const TEST_ID_SUMMARY_STATUS: &str = \"editor-notes-demo.inspector.summary-status\";",
         "fn editor_asset_summary_command_status(",
-        "fn editor_notes_draft_status_label(",
         "fn editor_notes_draft_action_status(",
-        "TextFieldDraftController::new",
-        "draft_controller: Some(draft_controller.clone())",
-        ".commit(host, action_cx)",
-        ".discard(host, action_cx)",
-        "models: EditorAssetModels",
-        "EditorThemePresetBinding::new(app)",
+        "use fret::app::editor::{",
+        "InspectorTextFieldBinding",
+        "TextFieldLocalStateExt as _",
+        "EditorThemePresetPickerLocalStateExt as _",
+        "name: LocalState<String>",
+        "notes: InspectorTextFieldBinding",
+        "theme: LocalState<EditorThemePresetV1>",
+        "InspectorTextFieldBinding::new(",
+        ".outcome_statuses(",
         "editor_asset_paint_snapshot(cx, &asset)",
-        "EditorThemePresetPicker::new(theme.picker_model())",
+        "asset.name.editor_text_field()",
+        ".text_field(TextFieldOptions {",
+        "a11y_label: Some(Arc::from(\"Asset name\"))",
+        "a11y_label: Some(Arc::from(\"Asset notes\"))",
+        ".on_activate(asset.notes.commit_activate())",
+        ".on_activate(asset.notes.discard_activate())",
+        "asset.notes.status_activate(",
+        "summary_status_next.clone()",
+        ".editor_theme_preset_picker()",
+        "notes_snapshot.draft_status_label(&committed_label)",
         "shadcn::Button::new(\"Copy asset summary\")",
         ".test_id(TEST_ID_SUMMARY_COMMAND)",
         ".test_id(TEST_ID_SUMMARY_STATUS)",
@@ -119,47 +130,52 @@ fn editor_notes_demo_composes_shell_mounted_rails_through_workspace_frame_slots(
 }
 
 #[test]
-fn editor_notes_demo_model_state_stays_behind_asset_bindings() {
+fn editor_notes_demo_model_state_uses_app_facing_local_bindings() {
     let source = include_str!("../src/editor_notes_demo.rs");
     let production_source = source
         .split("#[cfg(test)]")
         .next()
         .expect("editor notes demo should have production source before tests");
-    let compact_source = compact(source);
     let compact_production = compact(production_source);
 
     for needle in [
-        "usefret_runtime::ModelStore;",
-        "structEditorAssetModels{",
-        "name:Model<String>,",
-        "notes:Model<String>,",
-        "notes_outcome:Model<String>,",
-        "summary_status:Model<String>,",
-        "models:EditorAssetModels,",
-        "structEditorThemePresetBinding{",
-        "theme:EditorThemePresetBinding,",
+        "usefret::app::editor::{",
+        "EditorThemePresetPickerLocalStateExtas_",
+        "InspectorTextFieldBinding",
+        "TextFieldLocalStateExtas_",
+        "name:LocalState<String>,",
+        "notes:InspectorTextFieldBinding,",
+        "theme:LocalState<EditorThemePresetV1>,",
         "fneditor_asset_paint_snapshot(",
-        "structEditorNotesModelOwner<'a>{",
-        "models:&'amutModelStore,",
-        "fnset_text(&mutself,model:&Model<String>,value:implInto<String>)->bool{",
-        "fnset_notes_outcome(&self,models:&mutModelStore,value:implInto<String>)->bool{",
-        "fnset_summary_status(&self,models:&mutModelStore,value:implInto<String>)->bool{",
-        "EditorNotesModelOwner::new(models).set_text(&self.notes_outcome,value)",
-        "EditorNotesModelOwner::new(models).set_text(&self.summary_status,value)",
-        "models.set_notes_outcome(host.models_mut(),next",
-        "models.set_notes_outcome(host.models_mut(),\"Committed\"",
-        "models.set_notes_outcome(host.models_mut(),\"Canceled\"",
-        "models.set_summary_status(host.models_mut(),draft_commit_status.clone()",
-        "models.set_summary_status(host.models_mut(),draft_discard_status.clone()",
-        "models.set_summary_status(host.models_mut(),summary_status_next.clone()",
+        "InspectorTextFieldBinding::new(app,notes,",
+        ".outcome_statuses(",
+        "asset.name.paint_value(cx)",
+        "asset.notes.paint_snapshot(cx)",
+        "asset.name.editor_text_field()",
+        "asset.notes.text_field(TextFieldOptions{",
+        ".on_activate(asset.notes.commit_activate())",
+        ".on_activate(asset.notes.discard_activate())",
+        "asset.notes.status_activate(",
+        "summary_status_next.clone()",
+        "theme.editor_theme_preset_picker()",
     ] {
         assert!(
-            compact_source.contains(needle),
-            "editor notes demo should keep shared-model state behind named asset/theme bindings; missing `{needle}`"
+            compact_production.contains(needle),
+            "editor notes demo should teach app-facing local/controller bindings; missing `{needle}`"
         );
     }
 
     for forbidden in [
+        "usefret_runtime::ModelStore;",
+        "Model<String>",
+        "EditorAssetModels",
+        "EditorNotesModelOwner",
+        "EditorThemePresetBinding",
+        "host.models_mut()",
+        "app.models_mut()",
+        "TextFieldDraftController::new",
+        "TextField::new(",
+        "EditorThemePresetPicker::new(",
         "pub(crate)name_model:Model<String>",
         "pub(crate)notes_model:Model<String>",
         "pub(crate)notes_outcome_model:Model<String>",
@@ -189,7 +205,7 @@ fn editor_notes_demo_model_state_stays_behind_asset_bindings() {
     ] {
         assert!(
             !compact_production.contains(forbidden),
-            "editor notes production code should not bypass the owner helper with `{forbidden}`"
+            "editor notes production code should not bypass the app-facing binding recipe with `{forbidden}`"
         );
     }
 }
@@ -211,6 +227,9 @@ fn editor_notes_demo_draft_controller_diag_script_clicks_app_owned_commit_and_di
         "\"Controller discard pending\"",
         "\"Draft committed: Material\"",
         "\"Draft discarded: Material\"",
+        "\"text\": \"Asset notes\"",
+        "\"text\": \"Clean draft\"",
+        "\"text\": \"Unsaved draft\"",
         "\"type\": \"click_stable\"",
         "\"type\": \"capture_screenshot\"",
         "\"type\": \"capture_bundle\"",
@@ -220,6 +239,11 @@ fn editor_notes_demo_draft_controller_diag_script_clicks_app_owned_commit_and_di
             "editor notes draft-controller diag script should keep the app-owned commit/discard proof reviewable; missing `{needle}`"
         );
     }
+
+    assert!(
+        script.matches("\"kind\": \"focus_is\"").count() >= 4,
+        "draft-controller diagnostics should prove field focus before editing and button focus after both external commit/discard actions",
+    );
 }
 
 #[test]

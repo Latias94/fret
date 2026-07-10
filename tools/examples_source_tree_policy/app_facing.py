@@ -69,6 +69,37 @@ EDITOR_NOTES_REUSABLE_PANEL_FORBIDDEN = [
     "fn render_inspector_panel(cx: &mut AppComponentCx<'_>,",
 ]
 
+EDITOR_NOTES_APP_BINDING_REQUIRED = [
+    "use fret::app::editor::{",
+    "InspectorTextFieldBinding",
+    "InspectorTextFieldSnapshot",
+    "TextFieldLocalStateExt as _",
+    "EditorThemePresetPickerLocalStateExt as _",
+    "notes: InspectorTextFieldBinding",
+    "asset.notes.paint_snapshot(cx)",
+    "asset.name.editor_text_field()",
+    ".text_field(TextFieldOptions {",
+    "asset.notes.commit_activate()",
+    "asset.notes.discard_activate()",
+    "asset.notes.status_activate(",
+    ".editor_theme_preset_picker()",
+    "a11y_label: Some(Arc::from(\"Asset name\"))",
+    "a11y_label: Some(Arc::from(\"Asset notes\"))",
+]
+
+EDITOR_NOTES_APP_BINDING_FORBIDDEN = [
+    "use fret_runtime::ModelStore",
+    "ModelStore",
+    "EditorAssetModels",
+    "EditorNotesModelOwner",
+    "host.models_mut()",
+    "app.models_mut()",
+    "TextFieldDraftController",
+    "TextField::new(",
+    "EditorThemePresetPicker::new(",
+    "selector_model_paint(",
+]
+
 EDITOR_NOTES_RENDER_SLICE_REQUIRED = [
     ".h_full().into_element_in(cx).test_id(TEST_ID_LEFT_RAIL);",
     ".h_full().into_element_in(cx).test_id(TEST_ID_RIGHT_RAIL);",
@@ -586,10 +617,14 @@ def check_app_facing_demo_source_policies(
         editor_notes_path,
         editor_notes_source,
         required=[
-            "use fret_ui_kit::{ColorRef, IntoUiElementInExt as _, Space};",
+            "use fret_ui_kit::{IntoUiElementInExt as _, Space};",
             *EDITOR_NOTES_REUSABLE_PANEL_REQUIRED,
+            *EDITOR_NOTES_APP_BINDING_REQUIRED,
         ],
-        forbidden=EDITOR_NOTES_REUSABLE_PANEL_FORBIDDEN,
+        forbidden=[
+            *EDITOR_NOTES_REUSABLE_PANEL_FORBIDDEN,
+            *EDITOR_NOTES_APP_BINDING_FORBIDDEN,
+        ],
         failures=failures,
     )
     check_required_forbidden_markers(

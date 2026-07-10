@@ -92,10 +92,11 @@ tracing = ["desktop", "fret-bootstrap/tracing"]
 
 # Ecosystem integrations.
 shadcn = ["dep:fret-ui-shadcn"]
+editor = ["dep:fret-ui-editor"]
 imui = [
+    "editor",
     "dep:fret-docking",
     "dep:fret-imui",
-    "dep:fret-ui-editor",
     "fret-docking/imui",
     "fret-ui-editor/imui",
     "fret-ui-kit/imui",
