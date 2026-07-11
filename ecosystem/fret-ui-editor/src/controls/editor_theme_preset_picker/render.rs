@@ -8,14 +8,14 @@ use fret_ui::{ElementContext, UiHost};
 mod listbox;
 mod row;
 
-use crate::theme::EditorThemePresetV1;
+use crate::theme::EditorThemePreset;
 
 pub(super) struct EditorThemePresetPickerRenderInput {
-    pub(super) selected: EditorThemePresetV1,
+    pub(super) selected: EditorThemePreset,
     pub(super) label: Arc<str>,
     pub(super) item_prefix: Option<Arc<str>>,
     pub(super) options: super::EditorThemePresetPickerOptions,
-    pub(super) model: Model<EditorThemePresetV1>,
+    pub(super) model: Model<EditorThemePreset>,
     pub(super) total: usize,
     pub(super) row_height: Px,
     pub(super) padding_x: Px,

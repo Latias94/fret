@@ -182,6 +182,58 @@ impl<H: UiHost> UiTree<H> {
         )
     }
 
+    #[cfg(feature = "diagnostics")]
+    pub(in crate::tree) fn record_shortcut_command_dispatch_source(
+        &self,
+        app: &mut H,
+        command: &CommandId,
+    ) {
+        let Some(window) = self.window else {
+            return;
+        };
+        crate::action::record_command_dispatch_source_if_enabled(
+            app,
+            window,
+            command,
+            fret_runtime::CommandDispatchSourceV1 {
+                kind: fret_runtime::CommandDispatchSourceKindV1::Shortcut,
+                element: None,
+                test_id: None,
+            },
+        );
+    }
+
+    pub(in crate::tree) fn push_shortcut_command_effect(&self, app: &mut H, command: CommandId) {
+        if self.window.is_some_and(|window| {
+            !crate::action::command_dispatch_is_enabled(app, window, &command)
+        }) {
+            return;
+        }
+        #[cfg(feature = "diagnostics")]
+        self.record_shortcut_command_dispatch_source(app, &command);
+        app.push_effect(Effect::Command {
+            window: self.window,
+            command,
+        });
+    }
+
+    fn dispatch_shortcut_command(
+        &mut self,
+        app: &mut H,
+        services: &mut dyn UiServices,
+        command: CommandId,
+    ) {
+        #[cfg(feature = "diagnostics")]
+        self.record_shortcut_command_dispatch_source(app, &command);
+        if self.window.is_some() && self.dispatch_command(app, services, &command) {
+            self.request_redraw_coalesced(app);
+        } else {
+            // `dispatch_command` consumes the pending source even when no widget handles the
+            // command. Restore it before handing the command to the app driver.
+            self.push_shortcut_command_effect(app, command);
+        }
+    }
+
     pub(super) fn sync_pending_shortcut_overlay_state(
         &mut self,
         app: &mut H,
@@ -347,34 +399,8 @@ impl<H: UiHost> UiTree<H> {
                             Some(command.clone()),
                             Some(true),
                         );
-                        #[cfg(feature = "diagnostics")]
-                        if let Some(window) = self.window {
-                            app.with_global_mut(
-                                fret_runtime::WindowPendingCommandDispatchSourceService::default,
-                                |svc, app| {
-                                    svc.record(
-                                        window,
-                                        app.tick_id(),
-                                        command.clone(),
-                                        fret_runtime::CommandDispatchSourceV1 {
-                                            kind:
-                                                fret_runtime::CommandDispatchSourceKindV1::Shortcut,
-                                            element: None,
-                                            test_id: None,
-                                        },
-                                    );
-                                },
-                            );
-                        }
                         self.suppress_text_input_until_key_up = Some(params.key);
-                        if self.window.is_some() && self.dispatch_command(app, services, &command) {
-                            self.request_redraw_coalesced(app);
-                        } else {
-                            app.push_effect(Effect::Command {
-                                window: self.window,
-                                command,
-                            });
-                        }
+                        self.dispatch_shortcut_command(app, services, command);
                         return true;
                     }
 
@@ -477,34 +503,9 @@ impl<H: UiHost> UiTree<H> {
                         Some(command.clone()),
                         Some(true),
                     );
-                    #[cfg(feature = "diagnostics")]
-                    if let Some(window) = self.window {
-                        app.with_global_mut(
-                            fret_runtime::WindowPendingCommandDispatchSourceService::default,
-                            |svc, app| {
-                                svc.record(
-                                    window,
-                                    app.tick_id(),
-                                    command.clone(),
-                                    fret_runtime::CommandDispatchSourceV1 {
-                                        kind: fret_runtime::CommandDispatchSourceKindV1::Shortcut,
-                                        element: None,
-                                        test_id: None,
-                                    },
-                                );
-                            },
-                        );
-                    }
                     self.clear_pending_shortcut(app);
                     self.suppress_text_input_until_key_up = Some(params.key);
-                    if self.window.is_some() && self.dispatch_command(app, services, &command) {
-                        self.request_redraw_coalesced(app);
-                    } else {
-                        app.push_effect(Effect::Command {
-                            window: self.window,
-                            command,
-                        });
-                    }
+                    self.dispatch_shortcut_command(app, services, command);
                     return true;
                 }
 
@@ -598,33 +599,8 @@ impl<H: UiHost> UiTree<H> {
                     Some(command.clone()),
                     Some(true),
                 );
-                #[cfg(feature = "diagnostics")]
-                if let Some(window) = self.window {
-                    app.with_global_mut(
-                        fret_runtime::WindowPendingCommandDispatchSourceService::default,
-                        |svc, app| {
-                            svc.record(
-                                window,
-                                app.tick_id(),
-                                command.clone(),
-                                fret_runtime::CommandDispatchSourceV1 {
-                                    kind: fret_runtime::CommandDispatchSourceKindV1::Shortcut,
-                                    element: None,
-                                    test_id: None,
-                                },
-                            );
-                        },
-                    );
-                }
                 self.suppress_text_input_until_key_up = Some(params.key);
-                if self.window.is_some() && self.dispatch_command(app, services, &command) {
-                    self.request_redraw_coalesced(app);
-                } else {
-                    app.push_effect(Effect::Command {
-                        window: self.window,
-                        command,
-                    });
-                }
+                self.dispatch_shortcut_command(app, services, command);
                 return true;
             }
 
@@ -701,10 +677,7 @@ impl<H: UiHost> UiTree<H> {
                 && let Some(command) = service.keymap.resolve(ctx, stroke.chord)
             {
                 if self.command_is_enabled_for_shortcut_dispatch(app, ctx, &command) {
-                    app.push_effect(Effect::Command {
-                        window: self.window,
-                        command,
-                    });
+                    self.push_shortcut_command_effect(app, command);
                 }
                 continue;
             }

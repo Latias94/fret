@@ -1,6 +1,52 @@
 use super::*;
 
 #[test]
+fn active_input_barrier_only_reports_visible_blocking_layers() {
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    let base = ui.create_node(TestStack);
+    let overlay = ui.create_node(TestStack);
+    ui.set_root(base);
+
+    assert!(!ui.has_active_input_barrier());
+    let layer = ui.push_overlay_root(overlay, true);
+    assert!(ui.has_active_input_barrier());
+
+    ui.set_layer_visible(layer, false);
+    assert!(!ui.has_active_input_barrier());
+}
+
+#[test]
+fn active_input_barrier_scope_accepts_modal_and_higher_layer_elements_only() {
+    let mut app = crate::test_host::TestHost::new();
+    let window = AppWindowId::default();
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let underlay_element = crate::elements::GlobalElementId(0xA11);
+    let underlay = ui.create_node_for_element(underlay_element, TestStack);
+    ui.set_root(underlay);
+    assert!(!ui.element_is_within_active_input_barrier_scope(&mut app, underlay_element));
+
+    let barrier = ui.create_node(TestStack);
+    let modal_element = crate::elements::GlobalElementId(0xB22);
+    let modal_child = ui.create_node_for_element(modal_element, TestStack);
+    ui.add_child(barrier, modal_child);
+    ui.push_overlay_root(barrier, true);
+
+    let higher_layer_element = crate::elements::GlobalElementId(0xC33);
+    let higher_layer = ui.create_node_for_element(higher_layer_element, TestStack);
+    ui.push_overlay_root(higher_layer, false);
+
+    assert!(!ui.element_is_within_active_input_barrier_scope(&mut app, underlay_element));
+    assert!(ui.element_is_within_active_input_barrier_scope(&mut app, modal_element));
+    assert!(ui.element_is_within_active_input_barrier_scope(&mut app, higher_layer_element));
+    assert!(!ui.element_is_within_active_input_barrier_scope(
+        &mut app,
+        crate::elements::GlobalElementId(0xDEAD),
+    ));
+}
+
+#[test]
 fn dispatch_snapshot_cache_reuses_forest_across_frames_until_structure_changes() {
     let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
     ui.set_debug_enabled(true);

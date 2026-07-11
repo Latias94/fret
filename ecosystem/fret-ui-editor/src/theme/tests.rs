@@ -5,10 +5,10 @@ use fret_ui_shadcn::facade::themes::{ShadcnBaseColor, ShadcnColorScheme, apply_s
 use std::any::TypeId;
 
 use super::{
-    EDITOR_THEME_PRESETS_V1, EditorThemePresetV1, apply_editor_theme_preset_v1,
-    install_editor_theme_preset_v1, installed_editor_theme_preset_v1,
+    EDITOR_THEME_PRESETS, EditorThemePreset, apply_editor_theme_preset,
+    install_editor_theme_preset, installed_editor_theme_preset,
+    reapply_installed_editor_theme_preset,
     reapply_installed_editor_theme_preset_on_window_metrics_change,
-    reapply_installed_editor_theme_preset_v1,
     sync_host_theme_then_reapply_installed_editor_theme_preset_on_window_metrics_change,
 };
 use crate::primitives::EditorTokenKeys;

@@ -463,10 +463,7 @@ impl<H: UiHost> UiTree<H> {
             let pending = std::mem::take(&mut self.pending_shortcut);
             self.sync_pending_shortcut_overlay_state(app, None);
             if let Some(command) = pending.fallback {
-                app.push_effect(Effect::Command {
-                    window: self.window,
-                    command,
-                });
+                self.push_shortcut_command_effect(app, command);
             } else {
                 self.replay_captured_keystrokes(app, services, &input_ctx, pending.keystrokes);
             }

@@ -1,7 +1,7 @@
 use fret_app::App;
 use fret_core::{AppWindowId, FrameId, Point, Px, Rect, SemanticsRole, Size as CoreSize};
 use fret_ui::tree::UiTree;
-use fret_ui_kit::OverlayController;
+use fret_ui_kit::{LayoutRefinement, OverlayController};
 use fret_ui_shadcn::facade as shadcn;
 use std::sync::Arc;
 
@@ -326,6 +326,10 @@ fn data_table_recipe_wires_toolbar_and_table_debug_ids() {
         row_test_id_prefix: Some(Arc::from("orders-row-")),
         row_cell_test_ids: true,
     })
+    .table(
+        shadcn::DataTable::new()
+            .refine_layout(LayoutRefinement::default().w_full().h_px(Px(320.0))),
+    )
     .toolbar_test_id_prefix("orders-table");
 
     let mut ui: UiTree<App> = UiTree::new();
@@ -352,6 +356,9 @@ fn data_table_recipe_wires_toolbar_and_table_debug_ids() {
     find_by_test_id(&snap, "orders-table-global-filter-input");
     find_by_test_id(&snap, "orders-header");
     find_by_test_id(&snap, "orders-body");
+    let row = find_by_test_id(&snap, "orders-row-7");
+    assert_eq!(row.role, SemanticsRole::ListItem);
+    find_by_test_id(&snap, "orders-row-7-cell-name");
 
     let populated_output = app
         .models()
@@ -388,6 +395,22 @@ fn data_table_recipe_wires_toolbar_and_table_debug_ids() {
     assert_eq!(no_results_output.pagination.page_count, 0);
     assert!(!no_results_output.pagination.can_prev);
     assert!(!no_results_output.pagination.can_next);
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("expected no-results semantics snapshot");
+    assert!(
+        snap.nodes
+            .iter()
+            .all(|node| node.test_id.as_deref() != Some("orders-row-7")),
+        "filtered-out rows should not leave stale row debug anchors"
+    );
+    assert!(
+        snap.nodes
+            .iter()
+            .all(|node| node.test_id.as_deref() != Some("orders-row-7-cell-name")),
+        "filtered-out rows should not leave stale cell debug anchors"
+    );
 
     app.models_mut()
         .update(&state, |table_state| {

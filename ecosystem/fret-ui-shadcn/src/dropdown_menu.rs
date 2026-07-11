@@ -2294,6 +2294,11 @@ fn render_dropdown_submenu_entries<H: UiHost>(
                                             }
                                         };
                                         if is_hit {
+                                            host.record_pending_command_dispatch_source(
+                                                acx,
+                                                &trailing_cmd,
+                                                fret_ui::action::ActivateReason::Pointer,
+                                            );
                                             host.dispatch_command(
                                                 Some(acx.window),
                                                 trailing_cmd.clone(),
@@ -4741,6 +4746,11 @@ impl DropdownMenu {
                                                                                         }
                                                                                     };
                                                                                     if is_hit {
+                                                                                        host.record_pending_command_dispatch_source(
+                                                                                            acx,
+                                                                                            &trailing_cmd,
+                                                                                            fret_ui::action::ActivateReason::Pointer,
+                                                                                        );
                                                                                         host.dispatch_command(
                                                                                             Some(acx.window),
                                                                                             trailing_cmd.clone(),

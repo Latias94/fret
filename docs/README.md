@@ -259,7 +259,7 @@ now taught as `LocalState` + view runtime + typed actions.
   - **Comparison**: `simple_todo_v2_target` and other evidence-oriented side-by-side samples
   - **Advanced**: gallery, viewport/interop, docking, renderer, maintainer harnesses
 - Upgrade guidance (app authors): `docs/fearless-refactoring.md`
-- Authoring golden path (v2): `docs/authoring-golden-path-v2.md`
+- Authoring golden path: `docs/authoring-golden-path.md`
 - Integration guidance:
   - Async fetch (tokio/wasm): `docs/integrating-tokio-and-reqwest.md`
   - Persistence (sqlite/sqlx): `docs/integrating-sqlite-and-sqlx.md`

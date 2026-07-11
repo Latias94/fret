@@ -63,6 +63,14 @@ impl<S> UiAppDriver<S> {
         self
     }
 
+    pub fn on_app_event(
+        mut self,
+        f: fn(&mut KernelApp, fret_core::AppWindowId, &mut S, &fret_core::Event),
+    ) -> Self {
+        self.inner = self.inner.on_app_event(f);
+        self
+    }
+
     pub fn on_command_before_ui(
         mut self,
         f: fn(
@@ -75,6 +83,20 @@ impl<S> UiAppDriver<S> {
         ) -> bool,
     ) -> Self {
         self.inner = self.inner.on_command_before_ui(f);
+        self
+    }
+
+    pub fn on_app_command_before_ui(
+        mut self,
+        f: fn(
+            &mut KernelApp,
+            fret_core::AppWindowId,
+            &mut S,
+            &fret_runtime::CommandId,
+            fret_bootstrap::ui_app_driver::UiAppCommandBeforeUiContext<'_>,
+        ) -> bool,
+    ) -> Self {
+        self.inner = self.inner.on_app_command_before_ui(f);
         self
     }
 
@@ -149,6 +171,14 @@ impl<S> UiAppDriver<S> {
         self
     }
 
+    pub fn on_app_global_changes(
+        mut self,
+        f: fn(&mut KernelApp, fret_core::AppWindowId, &mut S, &[std::any::TypeId]),
+    ) -> Self {
+        self.inner = self.inner.on_app_global_changes(f);
+        self
+    }
+
     pub fn window_create_spec(
         mut self,
         f: fn(
@@ -212,12 +242,30 @@ impl<S> UiAppDriver<S> {
         self
     }
 
+    /// Observe ordered app-frame stages without taking ownership of retained-tree staging.
+    pub fn on_frame_stage(
+        mut self,
+        f: fn(&mut KernelApp, fret_core::AppWindowId, &mut S, crate::app::UiAppFrameObservation),
+    ) -> Self {
+        self.inner = self.inner.on_frame_stage(f);
+        self
+    }
+
     #[cfg(feature = "command-palette")]
     pub fn command_palette(mut self, enabled: bool) -> Self {
         self.inner = self.inner.command_palette(enabled);
         if enabled {
             self.inner = fret_bootstrap::with_shadcn_command_palette(self.inner);
         }
+        self
+    }
+}
+
+#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+impl<S: crate::app::UiAppFrameStageSink> UiAppDriver<S> {
+    /// Record ordered app-frame stages into the app state.
+    pub fn record_frame_stages(mut self) -> Self {
+        self.inner = self.inner.record_frame_stages();
         self
     }
 }

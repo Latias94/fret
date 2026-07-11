@@ -28,21 +28,19 @@ pub(super) fn poll_window_redraw_diag_screenshot_requests(
 pub(super) fn begin_window_redraw_diag_screenshot_capture(
     diag: Option<&mut DiagScreenshotCapture>,
     app_window: AppWindowId,
-    frame_view: Option<&(wgpu::SurfaceTexture, wgpu::TextureView)>,
+    source_texture: &wgpu::Texture,
     device: &wgpu::Device,
     surface_format: wgpu::TextureFormat,
     surface_size: (u32, u32),
     cmd_buffers: &mut Vec<wgpu::CommandBuffer>,
 ) -> Option<InFlightCapture> {
-    let (Some(diag), Some((frame, _view))) = (diag, frame_view) else {
-        return None;
-    };
+    let diag = diag?;
 
     let window_ffi = app_window.data().as_ffi();
     let (cmd, inflight) = diag.begin_capture_for_window(
         device,
         window_ffi,
-        &frame.texture,
+        source_texture,
         surface_format,
         surface_size,
     )?;
@@ -73,17 +71,15 @@ pub(super) fn finish_window_redraw_diag_screenshot_capture(
 pub(super) fn begin_window_redraw_bundle_screenshot_readback(
     diag: &DiagBundleScreenshotCapture,
     screenshot_dir: Option<PathBuf>,
-    frame_view: Option<&(wgpu::SurfaceTexture, wgpu::TextureView)>,
+    source_texture: &wgpu::Texture,
     device: &wgpu::Device,
     surface_format: wgpu::TextureFormat,
     surface_size: (u32, u32),
     cmd_buffers: &mut Vec<wgpu::CommandBuffer>,
 ) -> Option<WindowRedrawBundleScreenshotReadback> {
-    let (Some(dir), Some((frame, _view))) = (screenshot_dir, frame_view) else {
-        return None;
-    };
+    let dir = screenshot_dir?;
     let (pending, copy_cmd) =
-        diag.begin_readback(device, &frame.texture, surface_format, surface_size)?;
+        diag.begin_readback(device, source_texture, surface_format, surface_size)?;
 
     cmd_buffers.push(copy_cmd);
     Some(WindowRedrawBundleScreenshotReadback { pending, dir })

@@ -5,7 +5,7 @@ use fret_core::Px;
 use fret_ui::Theme;
 
 use super::{FieldStatus, FieldStatusBadgeOptions, status_badge_palette};
-use crate::theme::{EditorThemePresetV1, apply_editor_theme_preset_v1};
+use crate::theme::{EditorThemePreset, apply_editor_theme_preset};
 
 #[test]
 fn error_badge_palette_keeps_short_visible_label() {
@@ -30,7 +30,7 @@ fn loading_badge_palette_uses_short_label() {
 #[test]
 fn loading_badge_palette_stays_darker_than_editor_foreground() {
     let mut app = App::new();
-    apply_editor_theme_preset_v1(&mut app, EditorThemePresetV1::Default);
+    apply_editor_theme_preset(&mut app, EditorThemePreset::Default);
     let theme = Theme::global(&app);
 
     let (bg, border, fg, _) = status_badge_palette(theme, &FieldStatus::Loading);

@@ -2,10 +2,11 @@
   "schema_version": 2,
   "meta": {
     "name": "Workspace shell demo: overflow menu close does not activate tab (smoke)",
-    "tags": ["workspace", "tabstrip", "overflow", "close", "smoke", "gate"],
-    "required_capabilities": ["diag.script_v2"],
+    "tags": ["workspace", "tabstrip", "overflow", "close", "layout", "smoke", "gate"],
+    "required_capabilities": ["diag.script_v2", "diag.command_dispatch_trace"],
     "target_hints": [
       "Shrinks the window to force tab strip overflow.",
+      "Captures the narrow startup layout so width ownership remains reviewable.",
       "Selects a stable active tab (doc-a-0).",
       "Opens the overflow menu and clicks the close affordance for a hidden tab entry.",
       "Asserts the closed tab is removed and the previously active tab remains selected."
@@ -13,8 +14,12 @@
   },
   "steps": [
     { "type": "reset_diagnostics" },
-    { "type": "set_window_inner_size", "width_px": 420.0, "height_px": 720.0 },
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
     { "type": "wait_frames", "n": 10 },
+    {
+      "type": "capture_layout_sidecar",
+      "label": "workspace-shell-demo-tab-overflow-close-startup-layout"
+    },
 
     {
       "type": "wait_until",
@@ -95,6 +100,20 @@
         "id": "workspace-shell-pane-pane-a-tab-strip.overflow_entry.doc-a-2.close"
       },
       "button": "left"
+    },
+    {
+      "type": "wait_command_dispatch_trace",
+      "query": {
+        "command": "workspace.tab.close.doc-a-2",
+        "target": "pane-a/doc-a-2",
+        "applied": true,
+        "blocked_dirty_close": false,
+        "handled": true,
+        "handled_by_scope": "window",
+        "handled_by_driver": true,
+        "source_kind": "pointer"
+      },
+      "timeout_frames": 240
     },
     { "type": "wait_frames", "n": 1 },
 

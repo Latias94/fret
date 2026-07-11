@@ -10,6 +10,10 @@ homepage.workspace = true
 documentation.workspace = true
 description = "Golden-path bootstrap utilities and app defaults for the Fret UI framework."
 
+[[example]]
+name = "fn_driver_escape_hatch"
+required-features = ["launch"]
+
 [features]
 default = []
 # Enable the concrete native launch/render adapter layer (`fret-launch` + `fret-render`).

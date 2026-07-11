@@ -19,8 +19,9 @@ use fret_workspace::{WorkspaceCommandScope, WorkspaceFrame, WorkspacePaneContent
 use std::sync::Arc;
 
 use super::{
-    UiGalleryDriver, UiGalleryWindowState, chrome, debug_hud, debug_stats, inspector, menubar,
-    settings_sheet, shell, status_bar, text_roles, toaster, ui_gallery_bisect_flags,
+    PostFrameUiFocusLifecycle, UiGalleryDriver, UiGalleryWindowState, chrome, debug_hud, debug_stats,
+    inspector, menubar, settings_sheet, shell, status_bar, text_roles, toaster,
+    ui_gallery_bisect_flags,
 };
 
 const COMPACT_SHELL_MAX_SIDEBAR_WIDTH: Px = Px(640.0);
@@ -31,8 +32,6 @@ pub(super) struct PreparedFrame {
     pub(super) cache_content: bool,
     pub(super) content_models: Arc<ui::UiGalleryModels>,
     pub(super) selected_page: Model<Arc<str>>,
-    pub(super) workspace_tabs: Model<Vec<Arc<str>>>,
-    pub(super) workspace_dirty_tabs: Model<Vec<Arc<str>>>,
     pub(super) workspace_window_layout: Model<fret_workspace::layout::WorkspaceWindowLayout>,
     pub(super) nav_query: Model<String>,
     pub(super) settings_open: Model<bool>,
@@ -68,9 +67,7 @@ pub(super) fn begin_frame(
 
     #[cfg(target_arch = "wasm32")]
     UiGalleryDriver::sync_page_router_from_external_history(app, window, state);
-    if !UiGalleryDriver::sync_workspace_models_from_window_layout(app, state, window) {
-        UiGalleryDriver::sync_workspace_window_layout_from_models(app, state);
-    }
+    UiGalleryDriver::sync_selected_page_from_workspace_layout(app, state, window);
 
     let availability = app
         .global::<WindowCommandAvailabilityService>()
@@ -132,9 +129,7 @@ pub(super) fn begin_frame(
 
     let content_models = Arc::new(state.content_models());
     let selected_page = state.selected_page.clone();
-    let workspace_tabs = state.workspace_tabs.clone();
-    let workspace_dirty_tabs = state.workspace_dirty_tabs.clone();
-    let workspace_window_layout = state.workspace_window_layout.clone();
+    let workspace_window_layout = state.workspace_workbench.window_layout().clone();
     let nav_query = state.nav_query.clone();
     let settings_open = state.settings_open.clone();
     let settings_menu_bar_os = state.settings_menu_bar_os.clone();
@@ -190,8 +185,6 @@ pub(super) fn begin_frame(
         cache_content,
         content_models,
         selected_page,
-        workspace_tabs,
-        workspace_dirty_tabs,
         workspace_window_layout,
         nav_query,
         settings_open,
@@ -338,9 +331,7 @@ fn render_root_contents(
         Some(chrome::tab_strip_view(
             cx,
             false,
-            &frame.selected_page,
-            &frame.workspace_tabs,
-            &frame.workspace_dirty_tabs,
+            &frame.workspace_window_layout,
         ))
     } else {
         None
@@ -641,6 +632,7 @@ mod tests {
         rendered.frame_index = rendered.frame_index.saturating_add(1);
         rendered.app.set_tick_id(TickId(rendered.frame_index));
         rendered.app.set_frame_id(FrameId(rendered.frame_index));
+        PostFrameUiFocusLifecycle::begin_frame(&mut rendered.app, rendered.window);
 
         let frame = begin_frame(&mut rendered.app, rendered.window, &mut rendered.state);
         let root = render_root(
@@ -666,6 +658,12 @@ mod tests {
             &mut rendered.services,
             rendered.bounds,
             1.0,
+        );
+        PostFrameUiFocusLifecycle::finish_frame(
+            &mut rendered.app,
+            &mut rendered.services,
+            rendered.window,
+            &mut rendered.state.ui,
         );
     }
 
@@ -1138,7 +1136,7 @@ mod tests {
         let workspace_layout = rendered
             .app
             .models()
-            .get_cloned(&rendered.state.workspace_window_layout)
+            .get_cloned(rendered.state.workspace_workbench.window_layout())
             .expect("workspace layout model should exist after helper render");
         let layout_snapshot = UiGalleryDriver::workspace_window_layout_snapshot(&workspace_layout)
             .expect("workspace layout snapshot should remain supported after helper render");
@@ -1221,7 +1219,7 @@ mod tests {
     }
 
     #[test]
-    fn begin_frame_mirrors_workspace_layout_commands_before_rebuilding_from_models() {
+    fn begin_frame_projects_workspace_layout_into_selected_page_without_rebuilding_layout() {
         let mut rendered = render_gallery_page(PAGE_INTRO);
 
         let selected_before = rendered
@@ -1230,12 +1228,19 @@ mod tests {
             .get_cloned(&rendered.state.selected_page)
             .expect("selected page model should exist after initial render");
         assert_eq!(selected_before.as_ref(), PAGE_INTRO);
+        let dirty_tabs_before = rendered
+            .app
+            .models()
+            .get_cloned(rendered.state.workspace_workbench.window_layout())
+            .and_then(|layout| UiGalleryDriver::workspace_window_layout_snapshot(&layout))
+            .map(|snapshot| snapshot.2)
+            .expect("workspace dirty state should exist before projecting the layout");
 
         let _ =
             rendered
                 .app
                 .models_mut()
-                .update(&rendered.state.workspace_window_layout, |layout| {
+                .update(rendered.state.workspace_workbench.window_layout(), |layout| {
                     let pane = layout
                         .pane_tree
                         .find_pane_mut(super::super::UI_GALLERY_WORKSPACE_PANE_ID)
@@ -1256,54 +1261,39 @@ mod tests {
             .app
             .models()
             .get_cloned(&rendered.state.selected_page)
-            .expect("selected page model should exist after mirrored layout update");
-        let workspace_tabs_after = rendered
-            .app
-            .models()
-            .get_cloned(&rendered.state.workspace_tabs)
-            .expect("workspace tabs model should exist after mirrored layout update");
-        let workspace_dirty_tabs_after = rendered
-            .app
-            .models()
-            .get_cloned(&rendered.state.workspace_dirty_tabs)
-            .expect("workspace dirty tabs model should exist after mirrored layout update");
+            .expect("selected page projection should exist after layout update");
         let layout_after = rendered
             .app
             .models()
-            .get_cloned(&rendered.state.workspace_window_layout)
+            .get_cloned(rendered.state.workspace_workbench.window_layout())
             .expect("workspace layout model should exist after mirrored layout update");
         let layout_snapshot = UiGalleryDriver::workspace_window_layout_snapshot(&layout_after)
             .expect("workspace layout snapshot should remain supported");
 
         assert_eq!(selected_after.as_ref(), PAGE_COMMAND);
         assert!(
-            workspace_tabs_after
+            layout_snapshot
+                .0
                 .iter()
                 .all(|tab_id| tab_id.as_ref() != PAGE_INTRO),
-            "expected closed intro tab to be mirrored back into the workspace tab models: tabs={workspace_tabs_after:?}"
+            "expected canonical workspace layout to retain the intro close: tabs={:?}",
+            layout_snapshot.0
         );
-        assert_eq!(layout_snapshot.0, workspace_tabs_after);
         assert_eq!(layout_snapshot.1.as_deref(), Some(PAGE_COMMAND));
-        assert_eq!(layout_snapshot.2, workspace_dirty_tabs_after);
+        assert_eq!(layout_snapshot.2, dirty_tabs_before);
     }
 
     #[test]
-    fn workspace_layout_tab_next_uses_gallery_visible_order() {
-        run_with_large_test_stack("workspace-layout-tab-next-visible-order", || {
+    fn workspace_workbench_tab_next_uses_gallery_visible_order() {
+        run_with_large_test_stack("workspace-workbench-tab-next-visible-order", || {
             let mut rendered = render_gallery_page_with_bootstrapped_app(PAGE_FIELD);
 
-            let _ =
-                rendered
-                    .app
-                    .models_mut()
-                    .update(&rendered.state.workspace_window_layout, |layout| {
-                        assert!(
-                            layout.apply_command(&CommandId::from(
-                                fret_workspace::commands::CMD_WORKSPACE_TAB_NEXT
-                            )),
-                            "expected workspace layout tab-next command to apply"
-                        );
-                    });
+            let outcome = rendered.state.workspace_workbench.clone().apply_command(
+                &mut rendered.app,
+                rendered.window,
+                &CommandId::from(fret_workspace::commands::CMD_WORKSPACE_TAB_NEXT),
+            );
+            assert!(outcome.handled && outcome.applied);
 
             render_gallery_frame(&mut rendered);
 
@@ -1315,7 +1305,7 @@ mod tests {
             let layout_after = rendered
                 .app
                 .models()
-                .get_cloned(&rendered.state.workspace_window_layout)
+                .get_cloned(rendered.state.workspace_workbench.window_layout())
                 .expect("workspace layout model should exist after workspace layout tab next");
             let layout_snapshot = UiGalleryDriver::workspace_window_layout_snapshot(&layout_after)
                 .expect(
@@ -1346,7 +1336,7 @@ mod tests {
         let layout_after = rendered
             .app
             .models()
-            .get_cloned(&rendered.state.workspace_window_layout)
+            .get_cloned(rendered.state.workspace_workbench.window_layout())
             .expect("workspace layout model should exist after sidebar click");
         let layout_snapshot = UiGalleryDriver::workspace_window_layout_snapshot(&layout_after)
             .expect("workspace layout snapshot should remain supported after sidebar click");
@@ -1424,7 +1414,7 @@ mod tests {
         let layout_after = rendered
             .app
             .models()
-            .get_cloned(&rendered.state.workspace_window_layout)
+            .get_cloned(rendered.state.workspace_workbench.window_layout())
             .expect("workspace layout model should exist after workspace tab next");
         let layout_snapshot = UiGalleryDriver::workspace_window_layout_snapshot(&layout_after)
             .expect("workspace layout snapshot should remain supported after workspace tab next");
@@ -1452,15 +1442,10 @@ mod tests {
             .models()
             .get_cloned(&rendered.state.selected_page)
             .expect("selected page model should exist after workspace tab close");
-        let workspace_tabs_after = rendered
-            .app
-            .models()
-            .get_cloned(&rendered.state.workspace_tabs)
-            .expect("workspace tabs model should exist after workspace tab close");
         let layout_after = rendered
             .app
             .models()
-            .get_cloned(&rendered.state.workspace_window_layout)
+            .get_cloned(rendered.state.workspace_workbench.window_layout())
             .expect("workspace layout model should exist after workspace tab close");
         let layout_snapshot = UiGalleryDriver::workspace_window_layout_snapshot(&layout_after)
             .expect("workspace layout snapshot should remain supported after workspace tab close");
@@ -1468,15 +1453,82 @@ mod tests {
             super::super::page_from_gallery_location(&rendered.state.page_router.state().location)
                 .expect("page router should carry the next selected workspace tab page");
 
-        assert_eq!(selected_after.as_ref(), PAGE_LAYOUT);
+        assert_eq!(selected_after.as_ref(), PAGE_COMMAND);
         assert!(
-            workspace_tabs_after
+            layout_snapshot
+                .0
                 .iter()
                 .all(|tab_id| tab_id.as_ref() != PAGE_INTRO),
-            "expected closed intro tab to be removed from workspace tabs: tabs={workspace_tabs_after:?}"
+            "expected closed intro tab to be removed from canonical workspace layout: tabs={:?}",
+            layout_snapshot.0
         );
-        assert_eq!(layout_snapshot.1.as_deref(), Some(PAGE_LAYOUT));
-        assert_eq!(routed_page.as_ref(), PAGE_LAYOUT);
+        assert_eq!(layout_snapshot.1.as_deref(), Some(PAGE_COMMAND));
+        assert_eq!(routed_page.as_ref(), PAGE_COMMAND);
+    }
+
+    #[test]
+    fn workspace_tab_close_preserves_the_last_gallery_page() {
+        let mut rendered = render_gallery_page_with_bootstrapped_app(PAGE_INTRO);
+        let single_tab_layout = UiGalleryDriver::build_workspace_window_layout(
+            Arc::<str>::from(PAGE_INTRO),
+            &[Arc::<str>::from(PAGE_INTRO)],
+            &[],
+        );
+        let _ = rendered
+            .app
+            .models_mut()
+            .update(rendered.state.workspace_workbench.window_layout(), |layout| {
+                *layout = single_tab_layout;
+            });
+        render_gallery_frame(&mut rendered);
+
+        let command = CommandId::from(fret_workspace::commands::CMD_WORKSPACE_TAB_CLOSE);
+        dispatch_command(&mut rendered, command.clone());
+        render_gallery_frame(&mut rendered);
+
+        let selected_after = rendered
+            .app
+            .models()
+            .get_cloned(&rendered.state.selected_page)
+            .expect("selected page model should exist after refusing the last tab close");
+        let layout_after = rendered
+            .app
+            .models()
+            .get_cloned(rendered.state.workspace_workbench.window_layout())
+            .expect("workspace layout model should exist after refusing the last tab close");
+        let layout_snapshot = UiGalleryDriver::workspace_window_layout_snapshot(&layout_after)
+            .expect("workspace layout snapshot should remain supported after the last tab close");
+        let routed_page =
+            super::super::page_from_gallery_location(&rendered.state.page_router.state().location)
+                .expect("page router should retain the last gallery page");
+        let decisions = rendered
+            .app
+            .global::<fret_runtime::WindowCommandDispatchDiagnosticsStore>()
+            .expect("driver-handled workspace close should record diagnostics")
+            .snapshot_since(rendered.window, 0, 16);
+        let decision = decisions
+            .iter()
+            .rev()
+            .find(|decision| decision.command == command)
+            .expect("expected a driver trace for the refused last tab close");
+
+        assert_eq!(layout_snapshot.0, vec![Arc::<str>::from(PAGE_INTRO)]);
+        assert_eq!(layout_snapshot.1.as_deref(), Some(PAGE_INTRO));
+        assert_eq!(selected_after.as_ref(), PAGE_INTRO);
+        assert_eq!(routed_page.as_ref(), PAGE_INTRO);
+        assert!(decision.handled);
+        assert!(decision.handled_by_driver);
+        assert_eq!(
+            decision.handled_by_scope,
+            Some(fret_runtime::CommandScope::Window)
+        );
+        assert_eq!(
+            decision
+                .outcome
+                .as_ref()
+                .map(|outcome| (outcome.applied, outcome.blocked_dirty_close)),
+            Some((false, false))
+        );
     }
 
     #[test]

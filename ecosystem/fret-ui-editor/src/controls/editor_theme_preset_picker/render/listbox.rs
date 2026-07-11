@@ -47,7 +47,7 @@ pub(super) fn theme_preset_picker_listbox<H: UiHost>(
             let mut rows = Vec::with_capacity(total + 1);
             rows.push(header_text(cx, label.clone(), muted_fg, text_px));
             rows.extend(
-                crate::theme::EDITOR_THEME_PRESETS_V1
+                crate::theme::EDITOR_THEME_PRESETS
                     .iter()
                     .copied()
                     .enumerate()

@@ -6,6 +6,9 @@
       "diag.screenshot_png"
     ],
     "tags": [
+      "app_facing",
+      "frame_pipeline",
+      "layout",
       "workspace",
       "tabstrip",
       "drop_preview",
@@ -13,9 +16,11 @@
       "gate"
     ],
     "target_hints": [
+      "Waits for the complete app-facing frame-stage trace exposed by workspace_shell_demo.",
       "Drags a tab from pane A toward the right edge of pane B.",
       "Waits for the right-edge drop preview indicator to appear.",
-      "Captures a screenshot while the preview is visible (used to gate docking drop overlay tokens)."
+      "Captures a layout sidecar and screenshot while the preview is visible (used to gate docking drop overlay tokens).",
+      "Releases the pointer and asserts the split pane and moved tab are committed."
     ]
   },
   "schema_version": 2,
@@ -28,6 +33,19 @@
     {
       "n": 10,
       "type": "wait_frames"
+    },
+    {
+      "predicate": {
+        "kind": "label_contains",
+        "target": {
+          "id": "workspace-shell-frame-stage-trace",
+          "kind": "test_id"
+        },
+        "text": "Begin > View > Overlay > DiagnosticsOverlay > Semantics > Layout > Paint > DiagnosticsDriveScript > DiagnosticsSnapshot > End"
+      },
+      "timeout_frames": 600,
+      "timeout_ms": 15000,
+      "type": "wait_until"
     },
     {
       "predicate": {
@@ -74,6 +92,10 @@
       "type": "wait_frames"
     },
     {
+      "label": "workspace-shell-demo-drop-preview-right.layout",
+      "type": "capture_layout_sidecar"
+    },
+    {
       "label": "workspace-shell-demo-drop-preview-right",
       "type": "capture_screenshot"
     },
@@ -88,6 +110,42 @@
         "kind": "not_exists",
         "target": {
           "id": "workspace-pane-pane-b.drop_preview.right",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 240,
+      "timeout_ms": 15000,
+      "type": "wait_until"
+    },
+    {
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "id": "workspace-shell-pane-window-1.pane.1-root",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 240,
+      "timeout_ms": 15000,
+      "type": "wait_until"
+    },
+    {
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "id": "workspace-shell-pane-window-1.pane.1-tab-doc-a-2",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 240,
+      "timeout_ms": 15000,
+      "type": "wait_until"
+    },
+    {
+      "predicate": {
+        "kind": "not_exists",
+        "target": {
+          "id": "workspace-shell-pane-pane-a-tab-doc-a-2",
           "kind": "test_id"
         }
       },

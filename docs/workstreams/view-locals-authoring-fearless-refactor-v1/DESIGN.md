@@ -10,7 +10,7 @@ Related:
 - `docs/workstreams/local-state-facade-boundary-hardening-v1/CLOSEOUT_AUDIT_2026-03-16.md`
 - `docs/workstreams/action-write-surface-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-17.md`
 - `docs/workstreams/selector-query-authoring-density-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-20.md`
-- `docs/authoring-golden-path-v2.md`
+- `docs/authoring-golden-path.md`
 - `docs/examples/todo-app-golden-path.md`
 - `CLOSEOUT_AUDIT_2026-03-20.md`
 
@@ -136,7 +136,7 @@ Non-Todo proof:
 
 Docs/golden path:
 
-- `docs/authoring-golden-path-v2.md`
+- `docs/authoring-golden-path.md`
 - `docs/examples/todo-app-golden-path.md`
 - `ecosystem/fret/README.md`
 

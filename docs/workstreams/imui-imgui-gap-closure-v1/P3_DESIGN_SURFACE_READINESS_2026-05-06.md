@@ -11,7 +11,7 @@ Fret's current design direction is the right one:
 
 - generic IMUI chrome stays small and theme-derived in `fret-ui-kit::imui`,
 - editor-grade density and visual policy live in `fret-ui-editor`,
-- demos that need imgui-class density opt into `EditorThemePresetV1::ImguiLikeDense`,
+- demos that need imgui-class density opt into `EditorThemePreset::ImguiLikeDense`,
 - per-widget tuning should use typed options or editor token patches, not frame-local global style
   mutation.
 
@@ -30,15 +30,15 @@ visual evidence, not from mirroring Dear ImGui's style API surface.
 
 ## Source-Backed Facts
 
-- `EditorThemePresetV1::ImguiLikeDense` exists in `fret-ui-editor` and changes row height,
+- `EditorThemePreset::ImguiLikeDense` exists in `fret-ui-editor` and changes row height,
   padding, hit thickness, text-field radius, popup radius/shadow, property-grid metrics, checkbox
   metrics, and editor color tokens.
-- `install_editor_theme_preset_v1(...)` stores the selected preset so it can be reapplied after a
+- `install_editor_theme_preset(...)` stores the selected preset so it can be reapplied after a
   host theme reset.
 - `apps/fret-cookbook/examples/imui_editor_controls_basics.rs` installs
-  `EditorThemePresetV1::ImguiLikeDense`.
+  `EditorThemePreset::ImguiLikeDense`.
 - `apps/fret-examples/src/imui_editor_proof_demo.rs` defaults its editor proof theme to
-  `EditorThemePresetV1::ImguiLikeDense` unless `FRET_IMUI_EDITOR_PRESET` selects another preset.
+  `EditorThemePreset::ImguiLikeDense` unless `FRET_IMUI_EDITOR_PRESET` selects another preset.
 - Generic IMUI text input/textarea chrome is compact and intentionally avoids focus-ring styling
   inside the immediate chrome.
 - Dear ImGui exposes style as mutable runtime state via `ImGuiStyle`, style colors, style vars, and
@@ -74,7 +74,7 @@ Suggested follow-on names:
 Suggested audit/gate commands:
 
 ```powershell
-rg -n "EditorThemePresetV1|ImguiLikeDense|install_editor_theme_preset_v1|reapply_installed_editor_theme_preset_v1" ecosystem/fret-ui-editor/src/theme.rs apps/fret-cookbook/examples/imui_editor_controls_basics.rs apps/fret-examples/src/imui_editor_proof_demo.rs
+rg -n "EditorThemePreset|ImguiLikeDense|install_editor_theme_preset|reapply_installed_editor_theme_preset" ecosystem/fret-ui-editor/src/theme.rs apps/fret-cookbook/examples/imui_editor_controls_basics.rs apps/fret-examples/src/imui_editor_proof_demo.rs
 rg -n "component\\.imui\\.disabled_alpha|imui_text_input_style_from_theme|input_text_model_uses_compact_imui_chrome_without_focus_ring|textarea_model_uses_compact_imui_chrome_without_focus_ring|hovered_like_imgui|ImUiHoveredFlags" ecosystem/fret-ui-kit/src/imui
 rg -n "ShowStyleEditor|ImGuiStyle|PushStyleColor|PushStyleVar|StyleColorsDark|StyleColorsLight|StyleColorsClassic" repo-ref/imgui/imgui.h repo-ref/imgui/imgui_demo.cpp
 cargo nextest run -p fret-ui-editor default_preset_keeps_existing_editor_patch_baseline imgui_like_dense_preset_overrides_density_and_field_chrome installed_preset_can_be_reapplied_after_base_theme_reset --no-fail-fast
@@ -85,7 +85,7 @@ cargo nextest run -p fret-ui-kit --features imui input_text_model_uses_compact_i
 
 2026-05-06 local results:
 
-- `rg -n "EditorThemePresetV1|ImguiLikeDense|install_editor_theme_preset_v1|reapply_installed_editor_theme_preset_v1" ecosystem/fret-ui-editor/src/theme.rs apps/fret-cookbook/examples/imui_editor_controls_basics.rs apps/fret-examples/src/imui_editor_proof_demo.rs`
+- `rg -n "EditorThemePreset|ImguiLikeDense|install_editor_theme_preset|reapply_installed_editor_theme_preset" ecosystem/fret-ui-editor/src/theme.rs apps/fret-cookbook/examples/imui_editor_controls_basics.rs apps/fret-examples/src/imui_editor_proof_demo.rs`
   passed and found the editor theme preset, cookbook opt-in, and editor proof default preset anchors.
 - `rg -n "component\\.imui\\.disabled_alpha|imui_text_input_style_from_theme|input_text_model_uses_compact_imui_chrome_without_focus_ring|textarea_model_uses_compact_imui_chrome_without_focus_ring|hovered_like_imgui|ImUiHoveredFlags" ecosystem/fret-ui-kit/src/imui`
   passed and found the generic IMUI chrome, disabled alpha, hover flag, and focused text-control

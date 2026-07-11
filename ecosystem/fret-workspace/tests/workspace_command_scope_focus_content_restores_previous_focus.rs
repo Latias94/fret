@@ -262,4 +262,23 @@ fn focus_content_restores_pre_focus_target_after_focus_tab_strip() {
         ui.dispatch_command(&mut app, &mut services, &cmd);
     }
     assert_eq!(ui.focus(), Some(outside));
+
+    let decision = app
+        .global::<fret_runtime::WindowCommandDispatchDiagnosticsStore>()
+        .expect("command dispatch diagnostics")
+        .snapshot_since(window, 0, 32)
+        .into_iter()
+        .rev()
+        .find(|decision| decision.command == focus_content)
+        .expect("Escape focus-content dispatch decision");
+    assert_eq!(
+        decision.source.kind,
+        fret_runtime::CommandDispatchSourceKindV1::Keyboard
+    );
+    assert!(decision.handled);
+    assert_eq!(
+        decision.handled_by_scope,
+        Some(fret_runtime::CommandScope::Widget)
+    );
+    assert!(!decision.handled_by_driver);
 }

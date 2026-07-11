@@ -27,7 +27,7 @@ use fret_ui::GlobalElementId;
 use fret_ui::action::{UiActionHostExt as _, UiFocusActionHost};
 use fret_ui::scroll::ScrollHandle;
 use fret_ui_editor::imui as editor_imui;
-use fret_ui_editor::theme::EditorThemePresetV1;
+use fret_ui_editor::theme::EditorThemePreset;
 use fret_ui_kit::IntoUiElement as _;
 use fret_ui_kit::recipes::imui_drag_preview::{
     DragPreviewGhostOptions, drag_preview_ghost_with_options,
@@ -86,12 +86,12 @@ fn diag_enabled() -> bool {
     std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty() && v != "0")
 }
 
-fn selected_editor_theme_preset() -> EditorThemePresetV1 {
+fn selected_editor_theme_preset() -> EditorThemePreset {
     // This proof demo is explicitly editor-grade, so prefer the dense imgui-inspired preset by
     // default and keep the conservative baseline available via `FRET_IMUI_EDITOR_PRESET=default`
     // for A/B screenshots and regression triage.
     crate::editor_theme_preset_from_env(ENV_EDITOR_PRESET)
-        .unwrap_or(EditorThemePresetV1::ImguiLikeDense)
+        .unwrap_or(EditorThemePreset::ImguiLikeDense)
 }
 
 fn selected_proof_layout() -> ImUiEditorProofLayout {
@@ -174,7 +174,7 @@ fn install_imui_editor_proof_theme(app: &mut KernelApp) {
     // This proof owns a fixed editor-grade baseline. Do not route it through the generic shadcn
     // environment-sync lifecycle or the host can flip back to the OS light theme mid-run.
     shadcn::themes::apply_shadcn_new_york(app, EDITOR_HOST_BASE_COLOR, EDITOR_HOST_DEFAULT_SCHEME);
-    fret_ui_editor::theme::install_editor_theme_preset_v1(app, selected_editor_theme_preset());
+    fret_ui_editor::theme::install_editor_theme_preset(app, selected_editor_theme_preset());
 }
 
 fn single_window_mode_enabled() -> bool {

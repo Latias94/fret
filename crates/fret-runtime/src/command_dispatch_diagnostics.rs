@@ -5,9 +5,12 @@ use fret_core::{AppWindowId, FrameId};
 
 use crate::{CommandId, CommandScope, TickId};
 
-/// Best-effort classification of where a command dispatch originated.
+/// Best-effort provenance for where a command dispatch originated.
 ///
-/// This is diagnostics-only metadata intended to improve explainability in `fretboard-dev diag`.
+/// The UI runtime may use a still-live `element` to seed command routing and to validate that an
+/// owner-first hook originated inside the active modal input scope. `kind` and `test_id` retain
+/// their diagnostics role. Missing, stale, or ambiguous element identity must fail closed for
+/// modal provenance and fall back to normal focus/root routing for widget dispatch.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CommandDispatchSourceKindV1 {
     Pointer,
@@ -23,10 +26,23 @@ pub struct CommandDispatchSourceV1 {
     pub element: Option<u64>,
     /// Best-effort stable selector for explainability (typically a semantics `test_id`).
     ///
-    /// This is diagnostics-only metadata intended to make pointer-triggered `Effect::Command`
-    /// dispatch explainable without requiring callers to correlate element IDs with a semantics
-    /// snapshot.
+    /// This keeps UI-triggered `Effect::Command` dispatch explainable without requiring callers
+    /// to correlate element IDs with a semantics snapshot.
     pub test_id: Option<Arc<str>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CommandDispatchOutcomeV1 {
+    /// Canonical typed action identity, when known.
+    ///
+    /// This identifies the domain action represented by the outcome. It is not dispatch-source
+    /// provenance; [`CommandDispatchSourceV1`] carries that separately. The routed `command` may
+    /// be an alias or shell command while this field retains the canonical typed identity.
+    pub action_id: Option<CommandId>,
+    /// Domain-owned target identity, such as `pane-a/doc-a` for workspace commands.
+    pub target: Option<Arc<str>>,
+    pub applied: bool,
+    pub blocked_dirty_close: bool,
 }
 
 impl CommandDispatchSourceV1 {
@@ -47,6 +63,7 @@ pub struct CommandDispatchDecisionV1 {
     pub window: AppWindowId,
     pub command: CommandId,
     pub source: CommandDispatchSourceV1,
+    pub outcome: Option<CommandDispatchOutcomeV1>,
     pub handled: bool,
     /// `GlobalElementId.0` (from `crates/fret-ui`) for the first widget that handled the command.
     pub handled_by_element: Option<u64>,
@@ -63,6 +80,59 @@ pub struct CommandDispatchDecisionV1 {
     pub stopped: bool,
     pub started_from_focus: bool,
     pub used_default_root_fallback: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct PendingCommandDispatchOutcomeV1 {
+    tick_id: TickId,
+    window: AppWindowId,
+    command: CommandId,
+    outcome: CommandDispatchOutcomeV1,
+}
+
+#[derive(Default)]
+pub struct WindowPendingCommandDispatchOutcomeService {
+    per_window: HashMap<AppWindowId, Vec<PendingCommandDispatchOutcomeV1>>,
+}
+
+impl WindowPendingCommandDispatchOutcomeService {
+    const MAX_PENDING_PER_WINDOW: usize = 32;
+    const PENDING_OUTCOME_TTL_TICKS: u64 = 64;
+
+    pub fn record(
+        &mut self,
+        window: AppWindowId,
+        tick_id: TickId,
+        command: CommandId,
+        outcome: CommandDispatchOutcomeV1,
+    ) {
+        let entries = self.per_window.entry(window).or_default();
+        entries.push(PendingCommandDispatchOutcomeV1 {
+            tick_id,
+            window,
+            command,
+            outcome,
+        });
+        if entries.len() > Self::MAX_PENDING_PER_WINDOW {
+            let extra = entries.len().saturating_sub(Self::MAX_PENDING_PER_WINDOW);
+            entries.drain(0..extra);
+        }
+    }
+
+    pub fn consume(
+        &mut self,
+        window: AppWindowId,
+        tick_id: TickId,
+        command: &CommandId,
+    ) -> Option<CommandDispatchOutcomeV1> {
+        let entries = self.per_window.get_mut(&window)?;
+        let min_tick = TickId(tick_id.0.saturating_sub(Self::PENDING_OUTCOME_TTL_TICKS));
+        entries.retain(|entry| entry.tick_id.0 >= min_tick.0 && entry.tick_id.0 <= tick_id.0);
+        let position = entries
+            .iter()
+            .position(|entry| &entry.command == command && entry.window == window)?;
+        Some(entries.remove(position).outcome)
+    }
 }
 
 #[derive(Default)]
@@ -127,19 +197,33 @@ impl WindowCommandDispatchDiagnosticsStore {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct PendingCommandDispatchSourceV1 {
+    entry_id: u64,
     tick_id: TickId,
     window: AppWindowId,
     command: CommandId,
     source: CommandDispatchSourceV1,
 }
 
-/// Frame/tick-local source metadata for the next `Effect::Command` dispatch.
+/// Opaque identity for one source reinserted with
+/// [`WindowPendingCommandDispatchSourceService::restore_next`].
 ///
-/// This is a diagnostics-only escape hatch so pointer-triggered dispatch (which is encoded via an
-/// `Effect::Command`) can still be explained as “element X dispatched command Y”.
+/// A dispatcher that tentatively restores a source can use this ticket to remove only that entry
+/// if a downstream route did not consume it. Later occurrences of the same command remain intact.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct PendingCommandDispatchSourceTicket {
+    window: AppWindowId,
+    entry_id: u64,
+}
+
+/// Frame/tick-local provenance for the next `Effect::Command` dispatch.
+///
+/// `Effect::Command` does not carry its origin directly, so UI actions record provenance here for
+/// both live source-element routing and diagnostics. Consumers that tentatively inspect an entry
+/// before delegating to the next routing layer must restore it with [`Self::restore_next`].
 #[derive(Default)]
 pub struct WindowPendingCommandDispatchSourceService {
     per_window: HashMap<AppWindowId, Vec<PendingCommandDispatchSourceV1>>,
+    next_entry_id: u64,
 }
 
 impl WindowPendingCommandDispatchSourceService {
@@ -153,7 +237,9 @@ impl WindowPendingCommandDispatchSourceService {
         command: CommandId,
         source: CommandDispatchSourceV1,
     ) {
+        let entry_id = self.allocate_entry_id();
         let pending = PendingCommandDispatchSourceV1 {
+            entry_id,
             tick_id,
             window,
             command,
@@ -165,6 +251,55 @@ impl WindowPendingCommandDispatchSourceService {
             let extra = entries.len().saturating_sub(Self::MAX_PENDING_PER_WINDOW);
             entries.drain(0..extra);
         }
+    }
+
+    /// Restore a source that was tentatively consumed by a dispatcher before handing the same
+    /// command to the next routing layer.
+    ///
+    /// The restored entry must remain ahead of later same-command effects, so this inserts at the
+    /// front instead of behaving like a newly recorded dispatch.
+    pub fn restore_next(
+        &mut self,
+        window: AppWindowId,
+        tick_id: TickId,
+        command: CommandId,
+        source: CommandDispatchSourceV1,
+    ) -> PendingCommandDispatchSourceTicket {
+        let entry_id = self.allocate_entry_id();
+        let entries = self.per_window.entry(window).or_default();
+        entries.insert(
+            0,
+            PendingCommandDispatchSourceV1 {
+                entry_id,
+                tick_id,
+                window,
+                command,
+                source,
+            },
+        );
+        entries.truncate(Self::MAX_PENDING_PER_WINDOW);
+        PendingCommandDispatchSourceTicket { window, entry_id }
+    }
+
+    /// Remove the exact source previously returned by [`Self::restore_next`].
+    ///
+    /// Returns `false` when a downstream dispatcher already consumed the restored entry. Unlike
+    /// [`Self::consume`], this never removes a later occurrence that happens to share a command ID.
+    pub fn discard_restored(&mut self, ticket: PendingCommandDispatchSourceTicket) -> bool {
+        let Some(entries) = self.per_window.get_mut(&ticket.window) else {
+            return false;
+        };
+        let Some(pos) = entries
+            .iter()
+            .position(|entry| entry.entry_id == ticket.entry_id)
+        else {
+            return false;
+        };
+        entries.remove(pos);
+        if entries.is_empty() {
+            self.per_window.remove(&ticket.window);
+        }
+        true
     }
 
     pub fn consume(
@@ -188,8 +323,14 @@ impl WindowPendingCommandDispatchSourceService {
 
         let pos = entries
             .iter()
-            .rposition(|e| &e.command == command && e.window == window)?;
+            .position(|e| &e.command == command && e.window == window)?;
         Some(entries.remove(pos).source)
+    }
+
+    fn allocate_entry_id(&mut self) -> u64 {
+        let entry_id = self.next_entry_id;
+        self.next_entry_id = self.next_entry_id.wrapping_add(1);
+        entry_id
     }
 }
 
@@ -258,7 +399,7 @@ mod tests {
     }
 
     #[test]
-    fn pending_source_prefers_most_recent_match() {
+    fn pending_source_preserves_fifo_order_for_repeated_command() {
         let mut svc = WindowPendingCommandDispatchSourceService::default();
         let window = AppWindowId::default();
         let cmd = CommandId::from("test.cmd");
@@ -288,9 +429,113 @@ mod tests {
             svc.consume(window, TickId(20), &cmd),
             Some(CommandDispatchSourceV1 {
                 kind: CommandDispatchSourceKindV1::Pointer,
+                element: Some(1),
+                test_id: None,
+            })
+        );
+        assert_eq!(
+            svc.consume(window, TickId(20), &cmd),
+            Some(CommandDispatchSourceV1 {
+                kind: CommandDispatchSourceKindV1::Pointer,
                 element: Some(2),
                 test_id: None,
             })
+        );
+    }
+
+    #[test]
+    fn restored_source_stays_ahead_of_later_same_command_dispatches() {
+        let mut svc = WindowPendingCommandDispatchSourceService::default();
+        let window = AppWindowId::default();
+        let command = CommandId::from("test.cmd");
+        for element in [1, 2] {
+            svc.record(
+                window,
+                TickId(10),
+                command.clone(),
+                CommandDispatchSourceV1 {
+                    kind: CommandDispatchSourceKindV1::Pointer,
+                    element: Some(element),
+                    test_id: None,
+                },
+            );
+        }
+        let first = svc
+            .consume(window, TickId(10), &command)
+            .expect("first source");
+        let ticket = svc.restore_next(window, TickId(10), command.clone(), first);
+
+        assert_eq!(
+            svc.consume(window, TickId(10), &command)
+                .and_then(|source| source.element),
+            Some(1)
+        );
+        assert!(!svc.discard_restored(ticket));
+        assert_eq!(
+            svc.consume(window, TickId(10), &command)
+                .and_then(|source| source.element),
+            Some(2)
+        );
+    }
+
+    #[test]
+    fn restored_ticket_discards_only_the_reinserted_occurrence() {
+        let mut svc = WindowPendingCommandDispatchSourceService::default();
+        let window = AppWindowId::default();
+        let command = CommandId::from("test.cmd");
+        for element in [1, 2] {
+            svc.record(
+                window,
+                TickId(10),
+                command.clone(),
+                CommandDispatchSourceV1 {
+                    kind: CommandDispatchSourceKindV1::Pointer,
+                    element: Some(element),
+                    test_id: None,
+                },
+            );
+        }
+        let first = svc
+            .consume(window, TickId(10), &command)
+            .expect("first source");
+        let ticket = svc.restore_next(window, TickId(10), command.clone(), first);
+
+        assert!(svc.discard_restored(ticket));
+        assert_eq!(
+            svc.consume(window, TickId(10), &command)
+                .and_then(|source| source.element),
+            Some(2)
+        );
+    }
+
+    #[test]
+    fn pending_outcome_preserves_fifo_order_for_repeated_command() {
+        let mut svc = WindowPendingCommandDispatchOutcomeService::default();
+        let window = AppWindowId::default();
+        let command = CommandId::from("test.cmd");
+        for target in ["first", "second"] {
+            svc.record(
+                window,
+                TickId(10),
+                command.clone(),
+                CommandDispatchOutcomeV1 {
+                    action_id: Some(command.clone()),
+                    target: Some(Arc::from(target)),
+                    applied: true,
+                    blocked_dirty_close: false,
+                },
+            );
+        }
+
+        assert_eq!(
+            svc.consume(window, TickId(10), &command)
+                .and_then(|outcome| outcome.target),
+            Some(Arc::from("first"))
+        );
+        assert_eq!(
+            svc.consume(window, TickId(10), &command)
+                .and_then(|outcome| outcome.target),
+            Some(Arc::from("second"))
         );
     }
 }

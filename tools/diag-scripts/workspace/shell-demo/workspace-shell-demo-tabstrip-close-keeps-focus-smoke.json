@@ -2,9 +2,11 @@
   "meta": {
     "name": "Workspace shell demo: tabstrip close keeps focus in strip (smoke)",
     "required_capabilities": [
-      "diag.script_v2"
+      "diag.script_v2",
+      "diag.command_dispatch_trace"
     ],
     "tags": [
+      "app_facing",
       "workspace",
       "tabstrip",
       "focus",
@@ -44,20 +46,14 @@
     },
     {
       "button": "left",
+      "max_move_px": 1.0,
+      "stable_frames": 2,
       "target": {
         "id": "workspace-shell-pane-pane-a-tab-doc-a-2",
         "kind": "test_id"
       },
-      "type": "pointer_down",
-      "window": {
-        "kind": "current"
-      }
-    },
-    {
-      "type": "pointer_up",
-      "window": {
-        "kind": "current"
-      }
+      "timeout_frames": 240,
+      "type": "click_stable"
     },
     {
       "predicate": {
@@ -73,20 +69,28 @@
     },
     {
       "button": "left",
+      "max_move_px": 1.0,
+      "stable_frames": 2,
       "target": {
         "id": "workspace-shell-pane-pane-a-tab-doc-a-1",
         "kind": "test_id"
       },
-      "type": "pointer_down",
-      "window": {
-        "kind": "current"
-      }
+      "timeout_frames": 240,
+      "type": "click_stable"
     },
     {
-      "type": "pointer_up",
-      "window": {
-        "kind": "current"
-      }
+      "type": "wait_command_dispatch_trace",
+      "query": {
+        "command": "workspace.tab.activate.doc-a-1",
+        "target": "pane-a/doc-a-1",
+        "applied": true,
+        "handled": true,
+        "handled_by_scope": "window",
+        "handled_by_driver": true,
+        "source_kind": "pointer",
+        "source_test_id": "workspace-shell-pane-pane-a-tab-doc-a-1"
+      },
+      "timeout_frames": 240
     },
     {
       "predicate": {

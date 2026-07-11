@@ -60,9 +60,9 @@ fn shadcn_auto_theme_middleware_reacts_to_window_metrics() {
 fn shadcn_auto_theme_middleware_replays_installed_editor_preset() {
     let mut app = KernelApp::new();
     shadcn::app::install(&mut app);
-    fret_ui_editor::theme::install_editor_theme_preset_v1(
+    fret_ui_editor::theme::install_editor_theme_preset(
         &mut app,
-        fret_ui_editor::theme::EditorThemePresetV1::ImguiLikeDense,
+        fret_ui_editor::theme::EditorThemePreset::ImguiLikeDense,
     );
 
     let window = AppWindowId::from(slotmap::KeyData::from_ffi(1));

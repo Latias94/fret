@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "kind": "diag_script_suite_manifest",
+  "scripts": [
+    "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-pane-focus-and-move-keyboard-smoke.json",
+    "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-rails-keyboard-semantics-smoke.json",
+    "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-drag-to-split-right-drop-preview-screenshot.json",
+    "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-cross-pane-move-to-end.json",
+    "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tabstrip-close-keeps-focus-smoke.json",
+    "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tabstrip-keyboard-roving-smoke.json",
+    "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-cycle-commands-smoke.json",
+    "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-button-dirty-shows-prompt-smoke.json",
+    "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-others-dirty-aggregation-smoke.json",
+    "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-dirty-save-and-close-smoke.json"
+  ]
+}

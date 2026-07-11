@@ -51,9 +51,10 @@ When users say “the API feels complex”, it usually comes from these layers b
    `cx.actions().transient::<A>(...)`, and widget `.action(...)` / `.action_payload(...)` when a
    stable action slot exists. Keep the same action-first vocabulary (`.action(...)` /
    `.action_payload(...)` / `.listen(...)`) for activation-only surfaces after an explicit
-   `use fret::app::AppActivateExt as _;`; `.dispatch::<A>()` / `.dispatch_payload::<A>(...)` stay
-   available as explicit aliases. Drop down to `cx.actions().models::<A>(...)` only for shared
-   graphs. Treat raw `on_action_notify`, raw `on_payload_action_notify`, and low-level
+   `use fret::app::AppActivateExt as _;`. The former `.dispatch::<A>()` /
+   `.dispatch_payload::<A>(...)` aliases are deleted; do not teach a second activation vocabulary.
+   Drop down to `cx.actions().models::<A>(...)` only for shared graphs. Treat raw
+   `on_action_notify`, raw `on_payload_action_notify`, and low-level
    `.on_activate(cx.actions()....)` helpers as cookbook/reference-only advanced seams.
 3. **Embedding surfaces** (viewport panels, retained-widget bridge): how to host “foreign” systems.
 
@@ -75,26 +76,50 @@ To keep the core contract stable, the ergonomics work should focus on (2) while 
 - **Interop** is typically done by hosting external render surfaces (engine/canvas/video) and
   translating input.
 
-### Fret (current + target)
+### Fret (current)
 
-- Current: a retained tree prototype exists (`UiTree`), with a long-term goal of a GPUI-style
-  “rebuild each frame + cross-frame state externalized” authoring model.
-- Contract philosophy: lock hard-to-change runtime contracts first, then iterate policy-heavy
-  component surfaces in `ecosystem/`.
+- App authoring rebuilds declarative element descriptions through `View` / `AppUi`, while the
+  retained `UiTree` remains an internal mechanism for identity, layout, routing, semantics, and
+  paint reuse. Ordinary apps do not own that mechanism.
+- App-owned cross-frame state uses `LocalState`; explicit shared graphs use advanced model APIs.
+- Hard-to-change runtime contracts stay in core crates, while policy-heavy authoring modules live
+  in `ecosystem/`.
 
-### 2026-07 GPUI audit verdict
+### 2026-07 GPUI audit closeout
 
-The current audit conclusion is that Fret's default app Interface is directionally good, while its
-real app probes still expose advanced runtime seams too early. `FretApp`, `View`, `AppUi`,
-`LocalState`, typed actions, and the curated `fret::app::prelude::*` are the right first-contact
-Module shape. The weak spots are editor-grade and data-heavy surfaces that still require callers to
-understand `FnDriver`, `UiTree`, frame ordering, raw model-store ownership, string command routing,
-and manual diagnostics.
+The audit validated the first-contact shape (`FretApp`, `View`, `AppUi`, `LocalState`, typed
+actions, and `fret::app::prelude::*`) and exposed second-hour leaks. The implementation now closes
+those default-path gaps without widening the core root:
 
-The next ergonomics work should deepen app-facing Modules around workspace shells, frame driving,
-data-table recipes, and editor-inspector state binding instead of widening the core root surface.
-See `docs/audits/gpui-ergonomics-boundary-audit-2026-07.md` for the evidence register and
-`docs/plans/2026-07-09-002-refactor-gpui-ergonomics-boundary-plan.md` for the implementation plan.
+- `UiAppDriver` exposes ordered `UiAppFrameStage` observations and an app-facing frame harness;
+  `workspace_shell_demo` consumes that surface through `WorkspaceApp` and publishes the completed
+  stage sequence to diagnostics;
+- `fret::workspace::WorkspaceApp` owns ordinary startup/menu/frame integration;
+  `WorkspaceWorkbench` owns the default workspace model commands and dirty-close transactions; and
+  `WorkspaceCommandScope` publishes the scoped tab-strip/content focus lane used for post-frame
+  focus transfer;
+- `WorkspaceWindowState::save_workspace_dirty_close` is the fail-closed persistence boundary:
+  `SaveAndClose` commits only after the app returns `true`, while the default `false` keeps the
+  prompt open and the candidate layout uncommitted;
+- `DataTableRecipe<T>` compresses standard table composition while keeping state, output, columns,
+  row keys, and debug ids inspectable;
+- `InspectorTextFieldBinding` owns the common buffered inspector workflow with explicit
+  `LocalState` handles;
+- the `fret` facade is split by app, component, workspace, advanced/raw, builder, asset, and text
+  ownership, and legacy command aliases are removed.
+
+Raw `UiTree`, model-store transactions, and manual mechanism staging still exist where custom
+integrations need them, but they are explicit advanced/mechanism surfaces rather than ordinary
+probe prerequisites. See `docs/audits/gpui-ergonomics-boundary-audit-2026-07.md` for the baseline
+and `docs/plans/2026-07-09-002-refactor-gpui-ergonomics-boundary-plan.md` for the executed contract.
+The [second-hour canonical slices](authoring-golden-path.md#second-hour-canonical-slices) show the
+bounded public `WorkspaceApp`, `DataTableRecipe`, and `InspectorTextFieldBinding` call shapes. The
+`ui-gallery-workspace-shell` and `workspace-shell-app-facing` suite definitions separate shared
+chrome coverage from the real `WorkspaceApp` launch/frame path; their run artifacts, rather than
+this note, determine whether diagnostics passed.
+The audit's [KTD2 falsification gate](audits/gpui-ergonomics-boundary-audit-2026-07.md#ktd2-falsification-gate)
+and [workspace keyboard and semantics matrix](audits/gpui-ergonomics-boundary-audit-2026-07.md#workspace-keyboard-and-semantics-matrix)
+define the quantitative stop conditions and real-app evidence required to keep that boundary.
 
 ## Interop Recommendation: Tiered Embedding (Not “Same Tree” Mixing)
 

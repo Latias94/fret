@@ -1,0 +1,259 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "Workspace shell demo: pane focus and active-tab move preserve keyboard focus (smoke)",
+    "tags": [
+      "app_facing",
+      "workspace",
+      "pane",
+      "tabstrip",
+      "keyboard",
+      "focus",
+      "cross_pane",
+      "smoke",
+      "gate"
+    ],
+    "required_capabilities": [
+      "diag.script_v2",
+      "diag.shortcut_routing_trace",
+      "diag.command_dispatch_trace"
+    ],
+    "target_hints": [
+      "Starts with pane-a active and keyboard focus in pane-a content.",
+      "Uses the cross-platform primary+K, Shift+ArrowRight sequence to focus pane-b and asserts keyboard focus follows to pane-b content.",
+      "Moves focus into pane-b's tab strip with Ctrl+F6, then uses primary+K, Alt+ArrowLeft to move doc-b-1 into pane-a.",
+      "Asserts the moved tab is selected and keyboard focus follows its new pane-a tab element rather than remaining on a stale pane-b element.",
+      "Splits pane-a to the right from the tabstrip lane and asserts focus follows the cloned active tab into window-1.pane.1."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 10 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "selected_is",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2" },
+        "selected": true
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "selected_is",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-b-tab-doc-b-1" },
+        "selected": true
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-content" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-content" }
+      },
+      "timeout_frames": 240
+    },
+
+    { "type": "press_shortcut", "shortcut": "primary+k", "repeat": false },
+    { "type": "press_shortcut", "shortcut": "shift+arrow_right", "repeat": false },
+    {
+      "type": "wait_shortcut_routing_trace",
+      "query": {
+        "outcome": "command_dispatched",
+        "key": "ArrowRight",
+        "command": "workspace.pane.focus.right"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_command_dispatch_trace",
+      "query": {
+        "command": "workspace.pane.focus.right",
+        "action_id": "workspace.pane.focus.right",
+        "applied": true,
+        "blocked_dirty_close": false,
+        "source_kind": "shortcut",
+        "handled": true,
+        "handled_by_scope": "window",
+        "handled_by_driver": true,
+        "started_from_focus": true
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-b-content" }
+      },
+      "timeout_frames": 240
+    },
+
+    { "type": "press_key", "key": "f6", "modifiers": { "ctrl": true }, "repeat": false },
+    {
+      "type": "wait_shortcut_routing_trace",
+      "query": {
+        "outcome": "command_dispatched",
+        "key": "F6",
+        "command": "workspace.pane.toggle_tab_strip_focus"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_command_dispatch_trace",
+      "query": {
+        "command": "workspace.pane.toggle_tab_strip_focus",
+        "source_kind": "shortcut",
+        "handled": true,
+        "handled_by_scope": "widget",
+        "handled_by_driver": false,
+        "started_from_focus": true
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-b-tab-doc-b-1" }
+      },
+      "timeout_frames": 240
+    },
+
+    { "type": "press_shortcut", "shortcut": "primary+k", "repeat": false },
+    { "type": "press_shortcut", "shortcut": "alt+arrow_left", "repeat": false },
+    {
+      "type": "wait_shortcut_routing_trace",
+      "query": {
+        "outcome": "command_dispatched",
+        "key": "ArrowLeft",
+        "command": "workspace.pane.move_active_tab.left"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_command_dispatch_trace",
+      "query": {
+        "command": "workspace.pane.move_active_tab.left",
+        "action_id": "workspace.pane.move_active_tab.left",
+        "applied": true,
+        "blocked_dirty_close": false,
+        "source_kind": "shortcut",
+        "handled": true,
+        "handled_by_scope": "window",
+        "handled_by_driver": true,
+        "started_from_focus": true
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_command_dispatch_trace",
+      "query": {
+        "command": "workspace.pane.focus_tab_strip",
+        "source_kind": "programmatic",
+        "handled": true,
+        "handled_by_scope": "widget",
+        "handled_by_driver": false,
+        "started_from_focus": false,
+        "used_default_root_fallback": true
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-b-tab-doc-b-1" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "selected_is",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-b-1" },
+        "selected": true
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-b-1" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-b-tab-doc-b-0" }
+      },
+      "timeout_frames": 240
+    },
+
+    { "type": "press_shortcut", "shortcut": "primary+k", "repeat": false },
+    { "type": "press_shortcut", "shortcut": "arrow_right", "repeat": false },
+    {
+      "type": "wait_shortcut_routing_trace",
+      "query": {
+        "outcome": "command_dispatched",
+        "key": "ArrowRight",
+        "command": "workspace.pane.split.right"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_command_dispatch_trace",
+      "query": {
+        "command": "workspace.pane.split.right",
+        "action_id": "workspace.pane.split.right",
+        "applied": true,
+        "blocked_dirty_close": false,
+        "source_kind": "shortcut",
+        "handled": true,
+        "handled_by_scope": "window",
+        "handled_by_driver": true,
+        "started_from_focus": true
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "selected_is",
+        "target": {
+          "kind": "test_id",
+          "id": "workspace-shell-pane-window-1.pane.1-tab-doc-b-1"
+        },
+        "selected": true
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": {
+          "kind": "test_id",
+          "id": "workspace-shell-pane-window-1.pane.1-tab-doc-b-1"
+        }
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "capture_bundle",
+      "label": "workspace-shell-demo-pane-focus-and-move-keyboard-smoke"
+    }
+  ]
+}

@@ -12,6 +12,11 @@ from pathlib import Path
 from types import ModuleType
 
 
+TOOLS_DIR = Path(__file__).parent
+if str(TOOLS_DIR) not in sys.path:
+    sys.path.insert(0, str(TOOLS_DIR))
+
+
 def load_surface_policy_module() -> ModuleType:
     path = Path(__file__).with_name("check_surface_policy.py")
     spec = importlib.util.spec_from_file_location("check_surface_policy", path)
@@ -51,7 +56,7 @@ struct EditorAssetState {
 }
 
 struct EditorNotesDemoView {
-    theme: LocalState<EditorThemePresetV1>,
+    theme: LocalState<EditorThemePreset>,
 }
 
 fn make_asset(app: &mut App, name: &str, notes: &str) -> EditorAssetState {
@@ -73,7 +78,7 @@ fn editor_asset_paint_snapshot(
 fn render(
     cx: &mut AppUi<'_, '_>,
     asset: EditorAssetState,
-    theme: LocalState<EditorThemePresetV1>,
+    theme: LocalState<EditorThemePreset>,
 ) {
     let notes_snapshot = editor_asset_paint_snapshot(cx, &asset);
     let committed_label = "1 line committed".to_string();
@@ -88,7 +93,103 @@ fn render(
 """
 
 
+WORKSPACE_SHELL_APP_FACING_FIXTURE = """
+use fret_workspace::WorkspaceWorkbench;
+
+struct WorkspaceShellModelBundle {
+    workbench: WorkspaceWorkbench,
+}
+
+impl WorkspaceShellModelBundle {
+    fn new(
+        app: &mut App,
+        window_layout: WorkspaceWindowLayout,
+        block_dirty_close: bool,
+    ) -> Self {
+        let workbench =
+            WorkspaceWorkbench::new(app.models_mut(), window_layout.clone(), block_dirty_close);
+        Self { workbench }
+    }
+}
+
+struct WorkspaceShellWindowState {
+    workbench: WorkspaceWorkbench,
+}
+
+impl fret::workspace::WorkspaceWindowState for WorkspaceShellWindowState {
+    fn workspace_workbench(&self) -> &WorkspaceWorkbench {
+        &self.workbench
+    }
+}
+
+fn residual_fret_ui_seam(_: fret_ui::Invalidation) {}
+
+fn launch() {
+    let _ = fret::workspace::WorkspaceApp::new("workspace-shell-demo")
+        .ui(create_window_state, render_workspace_shell);
+}
+"""
+
+
 class SurfacePolicyTests(unittest.TestCase):
+    def test_obsolete_pre_release_version_names_are_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            fixtures = {
+                "ecosystem/theme.rs": "pub struct EditorThemePresetV1;\n",
+                "ecosystem/theme.yml": "installer: install_editor_theme_preset_v2\n",
+                "README.md": "Use EditorThemeInstallConfigV3.\n",
+                "docs/authoring-golden-path-v4.md": "# Old authoring guide\n",
+                "tools/check.sh": "name=AUTHORING_GOLDEN_PATH_V5\n",
+            }
+            for relative, source in fixtures.items():
+                write(root / relative, source)
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            self.assertEqual(5, len(violations))
+            self.assertEqual(
+                {
+                    "obsolete-authoring-golden-path-version-surface",
+                    "obsolete-editor-theme-version-surface",
+                },
+                {violation.rule for violation in violations},
+            )
+
+    def test_obsolete_pre_release_version_names_preserve_historical_docs(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(root / "docs/first-hour.md", "Use EditorThemePresetV1.\n")
+            write(
+                root / "docs/workstreams/closed/EVIDENCE.md",
+                "The 2026-05-14 run used EditorThemePresetV1.\n",
+            )
+            write(
+                root / "docs/archive/old.md",
+                "The archived guide was authoring-golden-path-v2.md.\n",
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            self.assertEqual(1, len(violations))
+            self.assertEqual(
+                "obsolete-editor-theme-version-surface",
+                violations[0].rule,
+            )
+            self.assertEqual(root / "docs/first-hour.md", violations[0].path)
+
     def test_default_tutorial_raw_runtime_import_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -263,7 +364,7 @@ class SurfacePolicyTests(unittest.TestCase):
                 {violation.rule for violation in violations},
             )
 
-    def test_gpui_real_app_probes_have_plan_tracked_retirements(self) -> None:
+    def test_real_app_probes_classify_only_residual_advanced_seams(self) -> None:
         specs = {spec.path: spec for spec in POLICY.ADVANCED_MANUAL_SURFACES}
         probe_paths = {
             "apps/fret-examples/src/workspace_shell_demo",
@@ -271,17 +372,26 @@ class SurfacePolicyTests(unittest.TestCase):
 
         for path in probe_paths:
             spec = specs[path]
-            self.assertIn("Temporary real-app probe allowance", spec.retirement)
-            self.assertIn(POLICY.GPUI_ERGONOMICS_BOUNDARY_PLAN, spec.retirement)
             self.assertTrue(spec.owner)
             self.assertTrue(spec.allowed_raw_seams)
+            self.assertTrue(spec.retirement)
 
         workspace_spec = specs["apps/fret-examples/src/workspace_shell_demo"]
         self.assertEqual(POLICY.WORKSPACE_SHELL_OWNER, workspace_spec.owner)
         self.assertNotIn("FnDriver", workspace_spec.allowed_raw_seams)
-        self.assertIn("UiTree", workspace_spec.allowed_raw_seams)
+        self.assertNotIn("UiTree", workspace_spec.allowed_raw_seams)
+        self.assertNotIn("ModelStore", workspace_spec.allowed_raw_seams)
+        self.assertIn("fret_ui", workspace_spec.allowed_raw_seams)
+        self.assertIn("WorkspaceWorkbench", workspace_spec.reason)
+        self.assertIn("WorkspaceApp", workspace_spec.reason)
+        self.assertIn("WorkspaceWorkbench", workspace_spec.retirement)
         self.assertIn("WorkspaceApp", workspace_spec.retirement)
-        self.assertIn("typed workspace commands", workspace_spec.retirement)
+        self.assertIn("overlay", workspace_spec.retirement)
+        self.assertIn("virtual-list", workspace_spec.retirement)
+        self.assertIn("window-close policy", workspace_spec.retirement)
+        self.assertIn("retained-frame staging", workspace_spec.retirement)
+        self.assertIn("already run through", workspace_spec.retirement)
+        self.assertNotIn("Temporary", workspace_spec.retirement)
 
         default_specs = {spec.path: spec for spec in POLICY.DEFAULT_AUTHORING_SURFACES}
         datatable_spec = default_specs["apps/fret-examples/src/datatable_demo.rs"]
@@ -8376,108 +8486,84 @@ class SurfacePolicyTests(unittest.TestCase):
                 ]
             )
 
-    def test_workspace_shell_driver_direct_model_writes_are_rejected(self) -> None:
+    def test_workspace_shell_ordinary_path_rejects_every_raw_seam(self) -> None:
+        injections = (
+            ("FnDriver", "fn raw(_: Option<FnDriver<(), ()>>) {}"),
+            ("UiTree", "fn raw(_: Option<fret_ui::UiTree<App>>) {}"),
+            (
+                "RenderRootContext",
+                "fn raw() { let _ = fret_ui::declarative::RenderRootContext::new; }",
+            ),
+            ("UiFrameCx", "fn raw() { let _ = fret_ui::UiFrameCx::new; }"),
+            ("surface.driver()", "fn raw(surface: &DockSurface) { surface.driver(); }"),
+            ("ModelStore", "fn raw(_: &mut fret_runtime::ModelStore) {}"),
+            (
+                "direct-raw-frame-staging",
+                "fn raw(frame: &mut RawFrame) { frame.layout_all(); }",
+            ),
+            (
+                "direct-raw-frame-staging",
+                "fn raw(frame: &mut RawFrame) { frame.paint_all(scene); }",
+            ),
+            (
+                "direct-raw-frame-staging",
+                "fn raw(ui: &mut RawTree) { ui.propagate_model_changes(app); }",
+            ),
+            (
+                "direct-raw-frame-staging",
+                "fn raw(ui: &mut RawTree) { ui.propagate_global_changes(app); }",
+            ),
+            (
+                "direct-raw-frame-staging",
+                "fn raw() { declarative::render_root(app, root); }",
+            ),
+            (
+                "direct-raw-frame-staging",
+                "fn raw(ui: &mut RawTree) { ui.build_semantics(app); }",
+            ),
+        )
+
+        for seam, injection in injections:
+            with self.subTest(seam=seam, injection=injection):
+                with tempfile.TemporaryDirectory() as tmp:
+                    root = Path(tmp)
+                    write(
+                        root / "apps/fret-examples/src/workspace_shell_demo/driver.rs",
+                        f"{WORKSPACE_SHELL_APP_FACING_FIXTURE}\n{injection}\n",
+                    )
+
+                    violations = check_fixture_policy(
+                        root,
+                        default_surfaces=[],
+                        advanced_manual_surfaces=[
+                            POLICY.SurfacePath(
+                                "apps/fret-examples/src/workspace_shell_demo",
+                                "advanced_manual",
+                                "fixture app-facing workspace shell with residual fret_ui composition",
+                                owner=POLICY.WORKSPACE_SHELL_OWNER,
+                                allowed_raw_seams=("fret_ui",),
+                                retirement="retire residual fret_ui composition behind recipes",
+                            )
+                        ],
+                        policy_recipe_surfaces=[],
+                        mechanism_root_surfaces=[],
+                    )
+
+                    ordinary_path_violations = [
+                        violation
+                        for violation in violations
+                        if violation.rule == "app-facing-workspace-shell-ordinary-path"
+                    ]
+                    self.assertEqual(1, len(ordinary_path_violations), violations)
+                    self.assertIn(f"`{seam}`", ordinary_path_violations[0].message)
+                    self.assertIn("residual `fret_ui`", ordinary_path_violations[0].message)
+
+    def test_workspace_shell_app_facing_surface_is_allowed(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             write(
                 root / "apps/fret-examples/src/workspace_shell_demo/driver.rs",
-                """
-                use fret_runtime::{ModelStore, PlatformCapabilities};
-
-                struct WorkspaceShellModelBundle {}
-                impl WorkspaceShellModelBundle {
-                    fn new(
-                        models: &mut ModelStore,
-                        window_layout: WorkspaceWindowLayout,
-                        file_tree_items: Vec<TreeItem>,
-                        file_tree_state: TreeState,
-                    ) -> Self {
-                        Self {}
-                    }
-                }
-
-                struct WorkspaceShellModelOwner<'a> {
-                    models: &'a mut ModelStore,
-                }
-
-                impl<'a> WorkspaceShellModelOwner<'a> {
-                    fn new(models: &'a mut ModelStore) -> Self {
-                        Self { models }
-                    }
-
-                    fn update<T: Any, R>(&mut self, model: &Model<T>, f: impl FnOnce(&mut T) -> R) -> Option<R> {
-                        None
-                    }
-
-                    fn set<T: Any>(&mut self, model: &Model<T>, value: T) -> bool {
-                        true
-                    }
-
-                    fn update_window_layout<R>(
-                        &mut self,
-                        state: &WorkspaceShellWindowState,
-                        f: impl FnOnce(&mut WorkspaceWindowLayout) -> R,
-                    ) -> Option<R> {
-                        None
-                    }
-
-                    fn open_dirty_close_prompt(&mut self, state: &WorkspaceShellWindowState, prompt: WorkspaceShellDirtyClosePrompt) {}
-                    fn clear_dirty_close_prompt(&mut self, state: &WorkspaceShellWindowState) {}
-                    fn toggle_tabstrip_two_row_pinned(&mut self, model: &Model<bool>) -> bool { true }
-                }
-
-                fn workspace_shell_update_window_layout<R>(
-                    app: &mut App,
-                    state: &WorkspaceShellWindowState,
-                    f: impl FnOnce(&mut WorkspaceWindowLayout) -> R,
-                ) -> Option<R> {
-                    WorkspaceShellModelOwner::new(app.models_mut()).update_window_layout(state, f)
-                }
-
-                fn workspace_shell_open_dirty_close_prompt(app: &mut App, state: &WorkspaceShellWindowState, prompt: WorkspaceShellDirtyClosePrompt) {
-                    WorkspaceShellModelOwner::new(app.models_mut()).open_dirty_close_prompt(state, prompt);
-                }
-
-                fn workspace_shell_clear_dirty_close_prompt(app: &mut App, state: &WorkspaceShellWindowState) {
-                    WorkspaceShellModelOwner::new(app.models_mut()).clear_dirty_close_prompt(state);
-                }
-
-                fn workspace_shell_host_clear_dirty_close_prompt(
-                    host: &mut dyn Host,
-                    prompt_model: &Model<Option<WorkspaceShellDirtyClosePrompt>>,
-                    open_model: &Model<bool>,
-                ) {
-                    let mut owner = WorkspaceShellModelOwner::new(host.models_mut());
-                    let _ = owner.set(prompt_model, None);
-                    let _ = owner.set(open_model, false);
-                }
-
-                fn build_ui(app: &mut App, window_layout: WorkspaceWindowLayout, items_value: Vec<TreeItem>, state_value: TreeState) {
-                    let models = WorkspaceShellModelBundle::new(app.models_mut(), window_layout, items_value, state_value);
-                    let _ = models;
-                }
-
-                fn on_close(host: &mut dyn Host, prompt_model: Model<Option<WorkspaceShellDirtyClosePrompt>>, open_model: Model<bool>) {
-                    workspace_shell_host_clear_dirty_close_prompt(host, &prompt_model, &open_model);
-                }
-
-                fn open_prompt(app: &mut App, state: &WorkspaceShellWindowState, req: Request) {
-                    workspace_shell_open_dirty_close_prompt(app, state, WorkspaceShellDirtyClosePrompt::window_close(req),);
-                    workspace_shell_clear_dirty_close_prompt(app, state);
-                }
-
-                fn toggle(app: &mut App, state: &WorkspaceShellWindowState) {
-                    WorkspaceShellModelOwner::new(app.models_mut()).toggle_tabstrip_two_row_pinned(&state.tabstrip_two_row_pinned);
-                }
-
-                fn bad(app: &mut App, state: &WorkspaceShellWindowState) {
-                    let _ = app.models_mut().update(&state.tabstrip_two_row_pinned, |_| true);
-                    let _ = ModelStore::update(app.models_mut(), &state.tabstrip_two_row_pinned, |_| true);
-                    let mut store = app.models_mut();
-                    let _ = store.update(&state.tabstrip_two_row_pinned, |_| true);
-                    let _ = app.models_mut().insert(false);
-                }
-                """,
+                WORKSPACE_SHELL_APP_FACING_FIXTURE,
             )
 
             violations = check_fixture_policy(
@@ -8487,149 +8573,100 @@ class SurfacePolicyTests(unittest.TestCase):
                     POLICY.SurfacePath(
                         "apps/fret-examples/src/workspace_shell_demo",
                         "advanced_manual",
-                        "fixture workspace shell surface",
-                        owner="examples-workspace-shell",
-                        allowed_raw_seams=("fret_runtime", "ModelStore"),
-                        retirement=POLICY.FRET_EXAMPLES_ADVANCED_RETIREMENT,
+                        "fixture app-facing workspace shell with residual fret_ui composition",
+                        owner=POLICY.WORKSPACE_SHELL_OWNER,
+                        allowed_raw_seams=("fret_ui",),
+                        retirement="retire residual fret_ui composition behind recipes",
                     )
                 ],
                 policy_recipe_surfaces=[],
                 mechanism_root_surfaces=[],
             )
 
-            owner_violations = [
+            self.assertEqual([], violations)
+
+    def test_workspace_shell_required_marker_in_comments_is_rejected(self) -> None:
+        source = WORKSPACE_SHELL_APP_FACING_FIXTURE.replace(
+            ".ui(create_window_state, render_workspace_shell)",
+            ".ui(legacy_create_window_state, legacy_render_workspace_shell)",
+        )
+        source += """
+// .ui(create_window_state,render_workspace_shell)
+/* outer
+   /* .ui(create_window_state,render_workspace_shell) */
+*/
+"""
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "apps/fret-examples/src/workspace_shell_demo/driver.rs",
+                source,
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/workspace_shell_demo",
+                        "advanced_manual",
+                        "fixture app-facing workspace shell with residual fret_ui composition",
+                        owner=POLICY.WORKSPACE_SHELL_OWNER,
+                        allowed_raw_seams=("fret_ui",),
+                        retirement="retire residual fret_ui composition behind recipes",
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+        owner_violations = [
+            violation
+            for violation in violations
+            if violation.rule == "advanced-surface-workspace-shell-driver-owner-boundary"
+        ]
+        self.assertEqual(1, len(owner_violations), violations)
+        self.assertIn(
+            ".ui(create_window_state,render_workspace_shell)",
+            owner_violations[0].message,
+        )
+
+    def test_workspace_shell_ordinary_path_scans_non_driver_modules(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            workspace_root = root / "apps/fret-examples/src/workspace_shell_demo"
+            write(workspace_root / "driver.rs", WORKSPACE_SHELL_APP_FACING_FIXTURE)
+            write(
+                workspace_root / "state.rs",
+                "fn raw() { let _ = fret_ui::UiFrameCx::new; }\n",
+            )
+
+            violations = check_fixture_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[
+                    POLICY.SurfacePath(
+                        "apps/fret-examples/src/workspace_shell_demo",
+                        "advanced_manual",
+                        "fixture app-facing workspace shell with residual fret_ui composition",
+                        owner=POLICY.WORKSPACE_SHELL_OWNER,
+                        allowed_raw_seams=("fret_ui",),
+                        retirement="retire residual fret_ui composition behind recipes",
+                    )
+                ],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            ordinary_path_violations = [
                 violation
                 for violation in violations
-                if violation.rule == "advanced-surface-workspace-shell-driver-owner-boundary"
+                if violation.rule == "app-facing-workspace-shell-ordinary-path"
             ]
-            self.assertEqual(4, len(owner_violations))
-            messages = "\n".join(violation.message for violation in owner_violations)
-            self.assertIn("models_mut().update", messages)
-            self.assertIn("ModelStore::update", messages)
-            self.assertIn("ModelStore alias", messages)
-            self.assertIn("models_mut().insert", messages)
-
-    def test_workspace_shell_driver_owner_surface_is_allowed(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            write(
-                root / "apps/fret-examples/src/workspace_shell_demo/driver.rs",
-                """
-                use fret_runtime::{ModelStore, PlatformCapabilities};
-
-                struct WorkspaceShellModelBundle {}
-                impl WorkspaceShellModelBundle {
-                    fn new(
-                        models: &mut ModelStore,
-                        window_layout: WorkspaceWindowLayout,
-                        file_tree_items: Vec<TreeItem>,
-                        file_tree_state: TreeState,
-                    ) -> Self {
-                        Self {}
-                    }
-                }
-
-                struct WorkspaceShellModelOwner<'a> {
-                    models: &'a mut ModelStore,
-                }
-
-                impl<'a> WorkspaceShellModelOwner<'a> {
-                    fn new(models: &'a mut ModelStore) -> Self {
-                        Self { models }
-                    }
-
-                    fn update<T: Any, R>(&mut self, model: &Model<T>, f: impl FnOnce(&mut T) -> R) -> Option<R> {
-                        None
-                    }
-
-                    fn set<T: Any>(&mut self, model: &Model<T>, value: T) -> bool {
-                        true
-                    }
-
-                    fn update_window_layout<R>(
-                        &mut self,
-                        state: &WorkspaceShellWindowState,
-                        f: impl FnOnce(&mut WorkspaceWindowLayout) -> R,
-                    ) -> Option<R> {
-                        None
-                    }
-
-                    fn open_dirty_close_prompt(&mut self, state: &WorkspaceShellWindowState, prompt: WorkspaceShellDirtyClosePrompt) {}
-                    fn clear_dirty_close_prompt(&mut self, state: &WorkspaceShellWindowState) {}
-                    fn toggle_tabstrip_two_row_pinned(&mut self, model: &Model<bool>) -> bool { true }
-                }
-
-                fn workspace_shell_update_window_layout<R>(
-                    app: &mut App,
-                    state: &WorkspaceShellWindowState,
-                    f: impl FnOnce(&mut WorkspaceWindowLayout) -> R,
-                ) -> Option<R> {
-                    WorkspaceShellModelOwner::new(app.models_mut()).update_window_layout(state, f)
-                }
-
-                fn workspace_shell_open_dirty_close_prompt(app: &mut App, state: &WorkspaceShellWindowState, prompt: WorkspaceShellDirtyClosePrompt) {
-                    WorkspaceShellModelOwner::new(app.models_mut()).open_dirty_close_prompt(state, prompt);
-                }
-
-                fn workspace_shell_clear_dirty_close_prompt(app: &mut App, state: &WorkspaceShellWindowState) {
-                    WorkspaceShellModelOwner::new(app.models_mut()).clear_dirty_close_prompt(state);
-                }
-
-                fn workspace_shell_host_clear_dirty_close_prompt(
-                    host: &mut dyn Host,
-                    prompt_model: &Model<Option<WorkspaceShellDirtyClosePrompt>>,
-                    open_model: &Model<bool>,
-                ) {
-                    let mut owner = WorkspaceShellModelOwner::new(host.models_mut());
-                    let _ = owner.set(prompt_model, None);
-                    let _ = owner.set(open_model, false);
-                }
-
-                fn build_ui(app: &mut App, window_layout: WorkspaceWindowLayout, items_value: Vec<TreeItem>, state_value: TreeState) {
-                    let models = WorkspaceShellModelBundle::new(app.models_mut(), window_layout, items_value, state_value);
-                    let _ = models;
-                }
-
-                fn on_close(host: &mut dyn Host, prompt_model: Model<Option<WorkspaceShellDirtyClosePrompt>>, open_model: Model<bool>) {
-                    workspace_shell_host_clear_dirty_close_prompt(host, &prompt_model, &open_model);
-                }
-
-                fn open_prompt(app: &mut App, state: &WorkspaceShellWindowState, req: Request) {
-                    workspace_shell_open_dirty_close_prompt(app, state, WorkspaceShellDirtyClosePrompt::window_close(req),);
-                    workspace_shell_clear_dirty_close_prompt(app, state);
-                }
-
-                fn toggle(app: &mut App, state: &WorkspaceShellWindowState) {
-                    WorkspaceShellModelOwner::new(app.models_mut()).toggle_tabstrip_two_row_pinned(&state.tabstrip_two_row_pinned);
-                }
-                """,
-            )
-
-            violations = check_fixture_policy(
-                root,
-                default_surfaces=[],
-                advanced_manual_surfaces=[
-                    POLICY.SurfacePath(
-                        "apps/fret-examples/src/workspace_shell_demo",
-                        "advanced_manual",
-                        "fixture workspace shell surface",
-                        owner="examples-workspace-shell",
-                        allowed_raw_seams=("fret_runtime", "ModelStore"),
-                        retirement=POLICY.FRET_EXAMPLES_ADVANCED_RETIREMENT,
-                    )
-                ],
-                policy_recipe_surfaces=[],
-                mechanism_root_surfaces=[],
-            )
-
-            self.assertFalse(
-                [
-                    violation
-                    for violation in violations
-                    if violation.rule
-                    == "advanced-surface-workspace-shell-driver-owner-boundary"
-                ]
-            )
+            self.assertEqual(1, len(ordinary_path_violations), violations)
+            self.assertEqual("state.rs", ordinary_path_violations[0].path.name)
+            self.assertIn("`UiFrameCx`", ordinary_path_violations[0].message)
 
     def test_api_workbench_direct_model_access_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

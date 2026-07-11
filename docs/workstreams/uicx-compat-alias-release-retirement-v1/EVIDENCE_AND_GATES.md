@@ -59,7 +59,7 @@ git diff --check
 - `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/UICX_COMPAT_ALIAS_DEPRECATION_AUDIT_2026-04-19.md`
 - `docs/adr/0319-public-authoring-state-lanes-and-identity-contract-v1.md`
 - `docs/crate-usage-guide.md`
-- `docs/authoring-golden-path-v2.md`
+- `docs/authoring-golden-path.md`
 - `docs/examples/todo-app-golden-path.md`
 - `docs/first-hour.md`
 - `docs/shadcn-declarative-progress.md`

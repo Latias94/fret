@@ -16,11 +16,46 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, Sequence
 
+from _gate_lib import strip_rust_comments
+
 
 WORKSPACE_ROOT = Path(__file__).resolve().parent.parent
 GATE_NAME = "surface responsibility policy"
-GPUI_ERGONOMICS_BOUNDARY_PLAN = (
-    "docs/plans/2026-07-09-002-refactor-gpui-ergonomics-boundary-plan.md"
+
+OBSOLETE_PRE_RELEASE_VERSION_PATTERNS = (
+    (
+        "obsolete-editor-theme-version-surface",
+        re.compile(r"\bEditorTheme(?:Preset|InstallConfig)V\d+\b"),
+        "editor theme API",
+    ),
+    (
+        "obsolete-editor-theme-version-surface",
+        re.compile(r"\bEDITOR_THEME_PRESETS_V\d+\b"),
+        "editor theme API",
+    ),
+    (
+        "obsolete-editor-theme-version-surface",
+        re.compile(
+            r"\b(?:apply|install|installed|reapply_installed)_editor_theme_preset_v\d+\b"
+        ),
+        "editor theme API",
+    ),
+    (
+        "obsolete-editor-theme-version-surface",
+        re.compile(
+            r"\b(?:editor_theme_patch|editor_theme_preset_overrides|imgui_like_dense_patch)_v\d+\b"
+        ),
+        "editor theme API",
+    ),
+    (
+        "obsolete-authoring-golden-path-version-surface",
+        re.compile(r"\bAUTHORING_GOLDEN_PATH_V\d+\b|authoring-golden-path-v\d+\.md"),
+        "authoring golden path",
+    ),
+)
+
+SOURCE_POLICY_TEXT_SUFFIXES = frozenset(
+    {".json", ".md", ".py", ".rs", ".sh", ".toml", ".txt", ".yaml", ".yml"}
 )
 
 
@@ -283,11 +318,11 @@ FRET_EXAMPLES_ADVANCED_RETIREMENT = (
     "runner/test harness glue or moves the remaining raw seams behind explicit public wrappers."
 )
 
-WORKSPACE_SHELL_GPUI_RETIREMENT = (
-    "Temporary real-app probe allowance tracked by "
-    f"{GPUI_ERGONOMICS_BOUNDARY_PLAN}; retire once WorkspaceApp, the app-facing frame harness, "
-    "and typed workspace commands own command routing, dirty-close blocking, diagnostics, and "
-    "window lifecycle flows."
+WORKSPACE_SHELL_ADVANCED_RETIREMENT = (
+    "Remove this advanced classification after the app-specific shell overlay and virtual-list "
+    "adapters move behind named app-facing recipes. Workspace commands, dirty-close transactions, "
+    "window-close policy, launch, retained-frame staging, and diagnostics already run through "
+    "WorkspaceWorkbench and WorkspaceApp."
 )
 
 CLASSIFIED_RAW_SURFACE_CATEGORIES = frozenset(
@@ -2030,51 +2065,54 @@ WORKSPACE_SHELL_OWNER = "examples-workspace-shell"
 
 WORKSPACE_SHELL_DRIVER_REQUIRED_COMPACT_MARKERS = (
     "structWorkspaceShellModelBundle{",
-    "fnnew(models:&mutModelStore,window_layout:WorkspaceWindowLayout,file_tree_items:Vec<TreeItem>,file_tree_state:TreeState,)->Self{",
-    "letmodels=WorkspaceShellModelBundle::new(app.models_mut(),window_layout,items_value,state_value);",
-    "structWorkspaceShellModelOwner<'a>{",
-    "models:&'amutModelStore,",
-    "fnupdate<T:Any,R>(&mutself,model:&Model<T>,f:implFnOnce(&mutT)->R)->Option<R>{",
-    "fnset<T:Any>(&mutself,model:&Model<T>,value:T)->bool{",
-    "fnupdate_window_layout<R>(",
-    "fnopen_dirty_close_prompt(",
-    "fnclear_dirty_close_prompt(",
-    "fntoggle_tabstrip_two_row_pinned(&mutself,model:&Model<bool>)->bool{",
-    "fnworkspace_shell_update_window_layout<R>(",
-    "fnworkspace_shell_open_dirty_close_prompt(",
-    "fnworkspace_shell_clear_dirty_close_prompt(",
-    "fnworkspace_shell_host_clear_dirty_close_prompt(",
-    "workspace_shell_host_clear_dirty_close_prompt(host,&prompt_model,&open_model);",
-    "workspace_shell_open_dirty_close_prompt(app,state,WorkspaceShellDirtyClosePrompt::window_close(req),);",
-    "workspace_shell_clear_dirty_close_prompt(app,state);",
-    "WorkspaceShellModelOwner::new(app.models_mut()).toggle_tabstrip_two_row_pinned(&state.tabstrip_two_row_pinned);",
+    "workbench:WorkspaceWorkbench,",
+    "WorkspaceWorkbench::new(app.models_mut(),window_layout.clone(),block_dirty_close);",
+    "implfret::workspace::WorkspaceWindowStateforWorkspaceShellWindowState{",
+    "fnworkspace_workbench(&self)->&WorkspaceWorkbench{",
+    "WorkspaceApp::new(",
+    ".ui(create_window_state,render_workspace_shell)",
 )
 
-WORKSPACE_SHELL_DRIVER_FORBIDDEN_COMPACT_MARKERS = (
-    "fnworkspace_shell_update_model",
-    "fnworkspace_shell_host_update_model",
-    "fnworkspace_shell_set_model",
-    "fnworkspace_shell_host_set_model",
-)
-
-WORKSPACE_SHELL_DRIVER_FORBIDDEN_RAW_WRITE_PATTERNS: tuple[
-    tuple[str, re.Pattern[str]], ...
+WORKSPACE_SHELL_ORDINARY_PATH_FORBIDDEN_PATTERNS: tuple[
+    tuple[str, re.Pattern[str], str], ...
 ] = (
     (
-        "models_mut().update",
-        re.compile(
-            r"\bmodels_mut\s*\(\s*\)\s*\.\s*update(?:_any)?\s*(?:::\s*<[^>]*>)?\s*\("
-        ),
+        "FnDriver",
+        re.compile(r"\bFnDriver\b"),
+        "manual launch ownership belongs behind WorkspaceApp",
     ),
     (
-        "models_mut().insert",
-        re.compile(r"\bmodels_mut\s*\(\s*\)\s*\.\s*insert\s*\("),
+        "UiTree",
+        re.compile(r"\bUiTree\b"),
+        "retained-tree ownership belongs behind the app-facing frame harness",
     ),
     (
-        "ModelStore::update",
+        "RenderRootContext",
+        re.compile(r"\bRenderRootContext\b"),
+        "raw render-root construction belongs behind the app-facing frame harness",
+    ),
+    (
+        "UiFrameCx",
+        re.compile(r"\bUiFrameCx\b"),
+        "raw frame-context ownership belongs behind the app-facing frame harness",
+    ),
+    (
+        "surface.driver()",
+        re.compile(r"\bsurface\s*\.\s*driver\s*\("),
+        "ordinary workspace code must use the surface's app-facing operations",
+    ),
+    (
+        "ModelStore",
+        re.compile(r"\bModelStore\b"),
+        "raw model-store ownership belongs behind WorkspaceWorkbench or app-facing state helpers",
+    ),
+    (
+        "direct-raw-frame-staging",
         re.compile(
-            r"(?:\bModelStore\s*::\s*|<\s*ModelStore\s*>\s*::\s*)update(?:_any)?\s*(?:::\s*<[^>]*>)?\s*\("
+            r"(?:\bdeclarative\s*::\s*render_root\s*\(|"
+            r"\.\s*(?:propagate_model_changes|propagate_global_changes|layout_all|paint_all|build_semantics)\s*\()"
         ),
+        "render, propagation, layout, paint, and semantics ordering belongs behind WorkspaceApp",
     ),
 )
 
@@ -2537,7 +2575,7 @@ EDITOR_NOTES_REQUIRED_COMPACT_MARKERS = (
     "TextFieldLocalStateExtas_",
     "name:LocalState<String>,",
     "notes:InspectorTextFieldBinding,",
-    "theme:LocalState<EditorThemePresetV1>,",
+    "theme:LocalState<EditorThemePreset>,",
     "fneditor_asset_paint_snapshot(",
     "InspectorTextFieldBinding::new(app,notes,",
     ".outcome_statuses(",
@@ -3049,9 +3087,9 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
         "apps/fret-examples/src/workspace_shell_demo",
         "advanced_manual",
         (
-            "workspace shell proof still owns explicit workspace model and dirty-close command "
-            "transactions plus shell overlay/virtual-list seams while launch, frame lifecycle, "
-            "and diagnostics run through WorkspaceApp/UiAppDriver"
+            "workspace shell proof retains app-specific overlay and virtual-list composition while "
+            "WorkspaceWorkbench owns workspace/dirty-close transactions and WorkspaceApp owns "
+            "launch, frame lifecycle, command routing, and diagnostics"
         ),
         owner=WORKSPACE_SHELL_OWNER,
         allowed_raw_seams=(
@@ -3062,10 +3100,8 @@ ADVANCED_MANUAL_SURFACES: tuple[SurfacePath, ...] = (
             "fret_ui",
             "AnyElement",
             "ElementContext",
-            "ModelStore",
-            "UiTree",
         ),
-        retirement=WORKSPACE_SHELL_GPUI_RETIREMENT,
+        retirement=WORKSPACE_SHELL_ADVANCED_RETIREMENT,
     ),
     _fret_examples_advanced_surface(
         "components_gallery.rs",
@@ -4778,99 +4814,48 @@ def _scan_workspace_shell_driver_owner_boundary(
 
     violations: list[SurfaceViolation] = []
     for path in _iter_source_files(root / spec.path):
-        if path.name != "driver.rs":
-            continue
-
         text = _read_text(path)
-        production_text = text.split("#[cfg(test)]", 1)[0]
-        compact_production = _compact_source(production_text)
-        missing_markers = [
-            marker
-            for marker in WORKSPACE_SHELL_DRIVER_REQUIRED_COMPACT_MARKERS
-            if marker not in compact_production
-        ]
-        if missing_markers:
-            violations.append(
-                SurfaceViolation(
-                    rule="advanced-surface-workspace-shell-driver-owner-boundary",
-                    path=path,
-                    line_no=1,
-                    message=(
-                        "workspace shell driver model allocation and writes must stay behind "
-                        f"WorkspaceShellModelBundle/Owner; missing compact markers: "
-                        f"{', '.join(missing_markers)}"
-                    ),
-                )
-            )
-
-        for marker in WORKSPACE_SHELL_DRIVER_FORBIDDEN_COMPACT_MARKERS:
-            if marker not in compact_production:
-                continue
-            violations.append(
-                SurfaceViolation(
-                    rule="advanced-surface-workspace-shell-driver-owner-boundary",
-                    path=path,
-                    line_no=1,
-                    message=(
-                        "workspace shell driver must not regress to raw helper or direct "
-                        f"ModelStore allocation seams; compact `{marker}` bypasses the owner boundary"
-                    ),
-                )
-            )
-
-        for line_no, line in _code_lines_for_scan(path, production_text):
-            if path.suffix == ".rs" and _is_rust_source_line_ignorable(line):
-                continue
-            for seam, pattern in WORKSPACE_SHELL_DRIVER_FORBIDDEN_RAW_WRITE_PATTERNS:
-                if not pattern.search(line):
-                    continue
-                violations.append(
-                    SurfaceViolation(
-                        rule="advanced-surface-workspace-shell-driver-owner-boundary",
-                        path=path,
-                        line_no=line_no,
-                        message=(
-                            "workspace shell driver model allocation and writes must route through "
-                            f"WorkspaceShellModelBundle/Owner; direct `{seam}` bypasses the owner boundary"
-                        ),
-                        source=line.strip(),
-                    )
-                )
-                break
-
-        model_store_aliases: list[str] = []
-        for statement in production_text.split(";"):
-            compact_statement = _compact_source(statement)
-            rest = compact_statement.removeprefix("let")
-            if rest == compact_statement:
-                continue
-            if "=" not in rest:
-                continue
-            alias, rhs = rest.split("=", 1)
-            if not re.fullmatch(r"(?:[A-Za-z_][A-Za-z0-9_]*\.)?models_mut\(\)", rhs):
-                continue
-            model_store_aliases.append(alias.strip().removeprefix("mut"))
-
-        for alias in model_store_aliases:
-            for forbidden in (
-                f"{alias}.update(",
-                f"{alias}.update::<",
-                f"{alias}.update_any(",
-                f"{alias}.update_any::<",
-                f"{alias}.insert(",
-            ):
-                if forbidden not in compact_production:
-                    continue
+        if path.name == "driver.rs":
+            production_text = strip_rust_comments(text).split("#[cfg(test)]", 1)[0]
+            compact_production = _compact_source(production_text)
+            missing_markers = [
+                marker
+                for marker in WORKSPACE_SHELL_DRIVER_REQUIRED_COMPACT_MARKERS
+                if marker not in compact_production
+            ]
+            if missing_markers:
                 violations.append(
                     SurfaceViolation(
                         rule="advanced-surface-workspace-shell-driver-owner-boundary",
                         path=path,
                         line_no=1,
                         message=(
-                            "workspace shell driver model allocation and writes must route through "
-                            f"WorkspaceShellModelBundle/Owner; ModelStore alias `{forbidden}` "
-                            "bypasses the owner boundary"
+                            "workspace shell command and dirty-close ownership must stay behind "
+                            f"WorkspaceWorkbench/WorkspaceApp; missing compact markers: "
+                            f"{', '.join(missing_markers)}"
                         ),
+                    )
+                )
+
+        for line_no, line in _code_lines_for_scan(
+            path, text, skip_rust_cfg_test_modules=path.suffix == ".rs"
+        ):
+            if path.suffix == ".rs" and _is_rust_source_line_ignorable(line):
+                continue
+            for seam, pattern, reason in WORKSPACE_SHELL_ORDINARY_PATH_FORBIDDEN_PATTERNS:
+                if not pattern.search(line):
+                    continue
+                violations.append(
+                    SurfaceViolation(
+                        rule="app-facing-workspace-shell-ordinary-path",
+                        path=path,
+                        line_no=line_no,
+                        message=(
+                            f"workspace shell ordinary path uses forbidden raw seam `{seam}`; "
+                            f"{reason}. The residual `fret_ui` classification does not permit "
+                            "raw frame/tree/driver ownership"
+                        ),
+                        source=line.strip(),
                     )
                 )
 
@@ -5961,6 +5946,79 @@ def _scan_unclassified_public_examples(
     return violations
 
 
+def _scan_obsolete_pre_release_version_names(root: Path) -> list[SurfaceViolation]:
+    violations: list[SurfaceViolation] = []
+    excluded = {
+        (root / "tools/check_surface_policy.py").resolve(),
+        (root / "tools/test_check_surface_policy.py").resolve(),
+    }
+    paths = {
+        path
+        for path in root.iterdir()
+        if path.is_file() and path.suffix in SOURCE_POLICY_TEXT_SUFFIXES
+    }
+    for source_root in ("apps", "crates", "ecosystem", "tools"):
+        base = root / source_root
+        if not base.exists():
+            continue
+        paths.update(
+            path
+            for path in base.rglob("*")
+            if path.is_file() and path.suffix in SOURCE_POLICY_TEXT_SUFFIXES
+        )
+
+    docs_root = root / "docs"
+    if docs_root.exists():
+        paths.update(
+            path
+            for path in docs_root.glob("*")
+            if path.is_file() and path.suffix in SOURCE_POLICY_TEXT_SUFFIXES
+        )
+        examples_root = docs_root / "examples"
+        if examples_root.exists():
+            paths.update(
+                path
+                for path in examples_root.rglob("*")
+                if path.is_file() and path.suffix in SOURCE_POLICY_TEXT_SUFFIXES
+            )
+
+    for path in sorted(paths):
+        if path.resolve() in excluded or "__pycache__" in path.parts:
+            continue
+        versioned_guide = re.search(r"authoring-golden-path-v\d+\.md", path.name)
+        if versioned_guide is not None:
+            violations.append(
+                SurfaceViolation(
+                    rule="obsolete-authoring-golden-path-version-surface",
+                    path=path,
+                    line_no=1,
+                    message=(
+                        f"obsolete pre-release authoring golden path name "
+                        f"`{versioned_guide.group(0)}` must not return; use the canonical "
+                        "unversioned surface"
+                    ),
+                    source=path.name,
+                )
+            )
+        for line_no, line in enumerate(_read_text(path).splitlines(), start=1):
+            for rule, pattern, surface in OBSOLETE_PRE_RELEASE_VERSION_PATTERNS:
+                for match in pattern.finditer(line):
+                    violations.append(
+                        SurfaceViolation(
+                            rule=rule,
+                            path=path,
+                            line_no=line_no,
+                            message=(
+                                f"obsolete pre-release {surface} name `{match.group(0)}` must "
+                                "not return; use the canonical unversioned surface"
+                            ),
+                            source=line.strip(),
+                        )
+                    )
+
+    return violations
+
+
 def check_surface_policy(
     root: Path,
     *,
@@ -5984,6 +6042,7 @@ def check_surface_policy(
     ]
     violations = _validate_surface_specs(specs)
     violations.extend(_validate_existing_classified_surfaces(root, specs))
+    violations.extend(_scan_obsolete_pre_release_version_names(root))
 
     for spec in default_surfaces:
         violations.extend(_scan_default_authoring_surface(root, spec))

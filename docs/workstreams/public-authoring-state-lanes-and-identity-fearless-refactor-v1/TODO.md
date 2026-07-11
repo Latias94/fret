@@ -70,7 +70,7 @@ Companion docs:
 - [x] Freeze the default lane wording:
   - [x] `LocalState<T>` is the only blessed first-contact local-state story,
   - [x] keyed identity is the only taught dynamic-list/subtree rule.
-    Result: the default docs (`docs/authoring-golden-path-v2.md`, `docs/first-hour.md`,
+    Result: the default docs (`docs/authoring-golden-path.md`, `docs/first-hour.md`,
     `docs/examples/README.md`, `docs/examples/todo-app-golden-path.md`), ADR 0319, and the
     `fretboard` onboarding templates now all freeze the same LocalState-first + keyed-dynamic-list
     posture, with `default_state_identity_docs.rs` as the source-policy gate. See
@@ -516,7 +516,7 @@ Companion docs:
   - [x] `docs/first-hour.md`
   - [x] `docs/examples/README.md`
   - [x] `docs/examples/todo-app-golden-path.md`
-  - [x] `docs/authoring-golden-path-v2.md`
+  - [x] `docs/authoring-golden-path.md`
   - [x] `docs/crate-usage-guide.md`
   - [x] `docs/fearless-refactoring.md`
   - [x] `ecosystem/fret/README.md`

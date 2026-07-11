@@ -59,7 +59,11 @@ Fret applications should be explained and structured as three unidirectional pip
 
 2. **Command pipeline (UI → app logic)**:
    - UI triggers commands (`CommandId`),
-   - the driver dispatches them (UI-first, app-second),
+   - the driver dispatches them through an explicit owner-first hook when one is installed;
+     otherwise dispatch remains UI-first, app-second,
+   - an owner-first hook is valid only for a domain model owner that must run before retained UI
+     to avoid a second model writer; UI-only focus/interaction commands still belong to the UI
+     dispatch path,
    - app logic updates models/globals and/or pushes effects.
 
 3. **Effect pipeline (app → platform/renderer → event backflow)**:
@@ -174,6 +178,34 @@ The golden path must support:
 - multi-window command routing (commands may be window-scoped or global),
 - editor-grade docking workflows (still handled by ecosystem docking crate; driver just wires the pipelines).
 
+## Implementation Status (as of 2026-07-11)
+
+`UiAppDriver` is implemented in `ecosystem/fret-bootstrap/src/ui_app_driver.rs` and remains the
+single default owner of retained-tree event/command propagation, layout, paint, semantics,
+diagnostics, and frame ordering. Ordinary app code enters through `FretApp`, `View`, or
+`fret::workspace::WorkspaceApp`; it does not own `FnDriver`, `UiTree`, `RenderRootContext`, or
+manual `UiFrameCx` staging.
+
+Two advanced-driver contracts are public and shared rather than reimplemented by custom drivers:
+
+- `PostFrameUiFocusLifecycle::{begin_frame,finish_frame,clear_window}` preserves the same deferred
+  focus transaction ordering as `UiAppDriver`.
+- `record_driver_handled_command_dispatch` finalizes a driver-owned command trace while preserving
+  the pending source, window scope, `handled_by_driver`, and any typed domain outcome recorded by
+  the policy owner.
+- `UiAppCommandBeforeUiContext` carries the FIFO-preserved source plus live modal provenance
+  computed by `UiAppDriver`. Policy owners do not receive raw `UiTree` access and must not infer
+  modal membership from best-effort source metadata such as `test_id`.
+
+`WorkspaceApp` installs `WorkspaceWorkbench` as the explicit owner-first handler for workspace
+model commands. UI Gallery's advanced custom driver uses the same Workbench and bootstrap helpers,
+while focus-only workspace commands continue through `WorkspaceCommandScope`. This keeps one
+workspace model writer without making workspace policy part of `fret-bootstrap`. The real
+`workspace-shell-app-facing` diagnostics suite is the cross-layer proof; the
+`ui-gallery-workspace-shell` suite is a direct advanced-driver/shared-chrome proof and does not
+replace it. Reproducible run evidence is recorded in
+`docs/audits/gpui-ergonomics-boundary-audit-2026-07.md`.
+
 ## Consequences
 
 ### Benefits
@@ -187,13 +219,14 @@ The golden path must support:
 - Yet another surface to document and keep stable.
 - Some “escape hatches” remain necessary for advanced apps (custom runners, custom effect draining policies).
 
-## Implementation Notes (Suggested)
+## Implementation Notes
 
-- Implement the golden path as a wrapper over `fret-launch::FnDriver` in `fret-bootstrap`.
-- Implement the golden path as a wrapper over `fret-launch::FnDriver` in `fret-bootstrap` (e.g. `UiAppDriver`).
-- Provide a minimal `Todo`-class example as a user-facing reference (see `docs/examples/todo-app-golden-path.md`).
-- Keep all Subsecond integration feature-gated and dev-focused (ADR 0105).
-- Add an ecosystem integration guidance note once patterns stabilize (see ADR 0111).
+- `fret-bootstrap::UiAppDriver` implements the golden path as a wrapper over
+  `fret-launch::FnDriver`.
+- The `Todo`-class user-facing reference is documented in
+  `docs/examples/todo-app-golden-path.md`.
+- Subsecond integration remains feature-gated and dev-focused (ADR 0105).
+- Ecosystem integration guidance is recorded in ADR 0111.
 
 ## References
 
@@ -212,4 +245,3 @@ The golden path must support:
     `repo-ref/zed/crates/gpui/src/window.rs`
   - integration glue and the “real app” surface:
     `repo-ref/zed/crates/gpui_tokio`, `repo-ref/zed/crates/zed`
-

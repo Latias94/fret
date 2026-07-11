@@ -149,6 +149,14 @@ pub struct UiTreeDebugSnapshotV1 {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiCommandDispatchTraceEntryV1 {
     pub command: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub action_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub target: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub applied: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub blocked_dirty_close: Option<bool>,
     pub handled: bool,
     /// Best-effort handler scope classification (ADR 0307).
     ///

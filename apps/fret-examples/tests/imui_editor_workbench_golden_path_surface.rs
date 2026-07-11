@@ -42,7 +42,7 @@ fn imui_editor_workbench_demo_is_the_canonical_editor_workbench_route() {
         "editor notes should expose its reusable workflow view to the canonical workbench route"
     );
     for needle in [
-        "theme: LocalState<EditorThemePresetV1>",
+        "theme: LocalState<EditorThemePreset>",
         "editor_theme_preset_state(app)",
         ".editor_theme_preset_picker()",
         "EditorThemePresetPickerOptions",
@@ -193,7 +193,7 @@ fn imui_editor_workbench_demo_is_the_canonical_editor_workbench_route() {
         "fret-examples should export the canonical IMUI workbench route"
     );
     assert!(
-        lib_source.contains("EditorThemePresetV1::from_key(key)")
+        lib_source.contains("EditorThemePreset::from_key(key)")
             && lib_source.contains("parse_editor_theme_preset_key(\"IMGUI-LIKE-DENSE\")"),
         "fret-examples should route preset parsing through the editor-owned canonical parser"
     );

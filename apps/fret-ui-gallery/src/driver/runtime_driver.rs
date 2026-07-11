@@ -15,11 +15,11 @@ use fret_launch::{
     WindowCreateSpec, WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext,
     WinitRunnerConfig, WinitWindowContext,
 };
+use fret_runtime::command_dispatch_diagnostics::PendingCommandDispatchSourceTicket;
 use fret_runtime::{
-    CommandDispatchDecisionV1, CommandDispatchSourceV1, FrameId, MenuItemToggle,
-    MenuItemToggleKind, PlatformCapabilities, WindowCommandAvailabilityService,
-    WindowCommandDispatchDiagnosticsStore, WindowCommandEnabledService,
-    WindowPendingCommandDispatchSourceService,
+    CommandDispatchSourceV1, FrameId, MenuItemToggle, MenuItemToggleKind, PlatformCapabilities,
+    WindowCommandAvailabilityService, WindowCommandEnabledService,
+    WindowPendingCommandDispatchOutcomeService, WindowPendingCommandDispatchSourceService,
 };
 use fret_ui::UiTree;
 use fret_ui::action::{UiActionHost, UiActionHostAdapter};
@@ -27,17 +27,22 @@ use fret_ui::action::{UiActionHost, UiActionHostAdapter};
 use fret_ui::scroll::VirtualListScrollHandle;
 use fret_ui_shadcn::facade as shadcn;
 use fret_undo::{CoalesceKey, DocumentId, UndoRecord, UndoService, ValueTx};
-use fret_workspace::commands::{
-    CMD_WORKSPACE_TAB_CLOSE, CMD_WORKSPACE_TAB_CLOSE_PREFIX, CMD_WORKSPACE_TAB_NEXT,
-    CMD_WORKSPACE_TAB_PREV,
-};
+use fret_workspace::commands::is_workspace_model_command;
 use fret_workspace::layout::WorkspaceWindowLayout;
 use fret_workspace::tabs::TabCycleMode;
+use fret_workspace::{
+    WorkspaceLastTabClosePolicy, WorkspaceWorkbench, WorkspaceWorkbenchCommandOutcome,
+    WorkspaceWorkbenchFocusGuard,
+};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use std::time::Duration;
 use time::Date;
 
+use fret_bootstrap::ui_app_driver::{
+    PostFrameUiFocusGuard, PostFrameUiFocusLifecycle, defer_ui_focus_until_after_frame,
+    record_driver_handled_command_dispatch,
+};
 use fret_bootstrap::ui_diagnostics::UiDiagnosticsService;
 
 #[cfg(all(feature = "gallery-dev", not(target_arch = "wasm32")))]
@@ -338,8 +343,7 @@ const UI_GALLERY_WORKSPACE_PANE_ID: &str = "ui-gallery-main-pane";
 #[derive(Clone)]
 struct UiGalleryHarnessModelIds {
     selected_page: Model<Arc<str>>,
-    workspace_tabs: Model<Vec<Arc<str>>>,
-    workspace_dirty_tabs: Model<Vec<Arc<str>>>,
+    workspace_window_layout: Model<WorkspaceWindowLayout>,
     nav_query: Model<String>,
     theme_preset: Model<Option<Arc<str>>>,
     theme_preset_open: Model<bool>,
@@ -417,10 +421,7 @@ struct UiGalleryWindowState {
     pending_file_dialog: Option<UiGalleryFileDialogKind>,
     page_router: Router<UiGalleryRouteId, UiGalleryHistory>,
     selected_page: Model<Arc<str>>,
-    workspace_tabs: Model<Vec<Arc<str>>>,
-    workspace_dirty_tabs: Model<Vec<Arc<str>>>,
-    workspace_window_layout: Model<WorkspaceWindowLayout>,
-    workspace_tab_close_by_command: HashMap<Arc<str>, Arc<str>>,
+    workspace_workbench: WorkspaceWorkbench,
     nav_query: Model<String>,
     theme_preset: Model<Option<Arc<str>>>,
     theme_preset_open: Model<bool>,
@@ -620,48 +621,89 @@ impl UiGalleryDriver {
         window: AppWindowId,
         command: &CommandId,
         source: CommandDispatchSourceV1,
-    ) {
+    ) -> PendingCommandDispatchSourceTicket {
         app.with_global_mut(
             WindowPendingCommandDispatchSourceService::default,
-            |svc, app| {
-                svc.record(window, app.tick_id(), command.clone(), source);
+            |svc, app| svc.restore_next(window, app.tick_id(), command.clone(), source),
+        )
+    }
+
+    fn workspace_workbench_owns_command(command: &CommandId) -> bool {
+        is_workspace_model_command(command)
+            && (command.as_str().starts_with("workspace.tab.")
+                || fret_workspace::commands::pane_activate_command(UI_GALLERY_WORKSPACE_PANE_ID)
+                    .as_ref()
+                    == Some(command))
+    }
+
+    fn workspace_modal_allows_workbench_command(
+        app: &mut App,
+        state: &mut UiGalleryWindowState,
+        source: &CommandDispatchSourceV1,
+    ) -> bool {
+        if !state.ui.has_active_input_barrier() {
+            return true;
+        }
+        if !matches!(
+            source.kind,
+            fret_runtime::CommandDispatchSourceKindV1::Pointer
+                | fret_runtime::CommandDispatchSourceKindV1::Keyboard
+        ) {
+            return false;
+        }
+        source.element.is_some_and(|element| {
+            state.ui.element_is_within_active_input_barrier_scope(
+                app,
+                fret_ui::GlobalElementId(element),
+            )
+        })
+    }
+
+    fn record_workspace_workbench_outcome(
+        app: &mut App,
+        window: AppWindowId,
+        command: &CommandId,
+        outcome: &WorkspaceWorkbenchCommandOutcome,
+    ) {
+        if !outcome.handled {
+            return;
+        }
+        app.with_global_mut(
+            WindowPendingCommandDispatchOutcomeService::default,
+            |service, app| {
+                service.record(window, app.tick_id(), command.clone(), outcome.into());
             },
         );
     }
 
-    fn record_driver_handled_command_dispatch(
+    fn apply_workspace_workbench_outcome(
         app: &mut App,
         window: AppWindowId,
-        command: &CommandId,
-        source: CommandDispatchSourceV1,
+        outcome: &WorkspaceWorkbenchCommandOutcome,
     ) {
-        let handled_by_scope = app
-            .commands()
-            .get(command.clone())
-            .map(|meta| meta.scope)
-            .or(Some(fret_runtime::CommandScope::Window));
-        let started_from_focus = source.kind == fret_runtime::CommandDispatchSourceKindV1::Keyboard;
-
-        app.with_global_mut(
-            WindowCommandDispatchDiagnosticsStore::default,
-            |store, app| {
-                store.record(CommandDispatchDecisionV1 {
-                    seq: 0,
-                    frame_id: app.frame_id(),
-                    tick_id: app.tick_id(),
-                    window,
-                    command: command.clone(),
-                    source,
-                    handled: true,
-                    handled_by_element: None,
-                    handled_by_scope,
-                    handled_by_driver: true,
-                    stopped: false,
-                    started_from_focus,
-                    used_default_root_fallback: false,
-                });
-            },
-        );
+        if outcome.close_window {
+            app.push_effect(Effect::Window(WindowRequest::Close(window)));
+        }
+        if let Some(focus) = outcome.focus.as_ref() {
+            defer_ui_focus_until_after_frame(
+                app,
+                window,
+                match focus.guard {
+                    WorkspaceWorkbenchFocusGuard::NoLiveFocus => PostFrameUiFocusGuard::NoLiveFocus,
+                    WorkspaceWorkbenchFocusGuard::Unchanged(target) => {
+                        PostFrameUiFocusGuard::Unchanged(target)
+                    }
+                    WorkspaceWorkbenchFocusGuard::Authoritative => {
+                        PostFrameUiFocusGuard::Authoritative
+                    }
+                },
+                focus.target,
+                focus.fallback.map(|fallback| fallback.command_id()),
+            );
+        }
+        if outcome.handled {
+            app.request_redraw(window);
+        }
     }
 
     fn sync_undo_availability(app: &mut App, window: AppWindowId, doc: &DocumentId) {
@@ -1477,22 +1519,57 @@ impl WinitAppDriver for UiGalleryDriver {
             ..
         } = context;
 
-        if command.as_str() == fret_app::core_commands::COMMAND_PALETTE
-            || command.as_str() == fret_app::core_commands::COMMAND_PALETTE_LEGACY
-        {
+        let started_from_focus = state.ui.focus().is_some();
+        let pending_source = Self::consume_pending_command_dispatch_source(app, window, &command);
+
+        if command.as_str() == fret_app::core_commands::COMMAND_PALETTE {
             let _ = app.models_mut().update(&state.cmdk_open, |v| *v = true);
             let _ = app.models_mut().update(&state.cmdk_query, |v| v.clear());
+            record_driver_handled_command_dispatch(
+                app,
+                window,
+                &command,
+                &pending_source,
+                started_from_focus,
+            );
             app.request_redraw(window);
             return;
         }
 
         if Self::handle_menu_bar_mode_command(app, window, state, command.as_str()) {
+            record_driver_handled_command_dispatch(
+                app,
+                window,
+                &command,
+                &pending_source,
+                started_from_focus,
+            );
             app.request_redraw(window);
             return;
         }
 
-        let pending_source = Self::consume_pending_command_dispatch_source(app, window, &command);
-        Self::restore_pending_command_dispatch_source(
+        if Self::workspace_workbench_owns_command(&command)
+            && Self::workspace_modal_allows_workbench_command(app, state, &pending_source)
+        {
+            let outcome = state
+                .workspace_workbench
+                .apply_command(app, window, &command);
+            if outcome.handled {
+                Self::sync_selected_page_from_workspace_layout(app, state, window);
+                Self::record_workspace_workbench_outcome(app, window, &command, &outcome);
+                Self::apply_workspace_workbench_outcome(app, window, &outcome);
+                record_driver_handled_command_dispatch(
+                    app,
+                    window,
+                    &command,
+                    &pending_source,
+                    started_from_focus,
+                );
+                return;
+            }
+        }
+
+        let restored_source_ticket = Self::restore_pending_command_dispatch_source(
             app,
             window,
             &command,
@@ -1500,12 +1577,16 @@ impl WinitAppDriver for UiGalleryDriver {
         );
 
         if state.ui.dispatch_command(app, services, &command) {
-            if command.as_str().starts_with("workspace.") {
-                let _ = Self::sync_workspace_models_from_window_layout(app, state, window);
-            }
             app.request_redraw(window);
             return;
         }
+
+        app.with_global_mut(
+            WindowPendingCommandDispatchSourceService::default,
+            |service, _app| {
+                let _ = service.discard_restored(restored_source_ticket);
+            },
+        );
 
         if command.as_str().starts_with("ui_gallery.context_menu.") {
             let _ = app.models_mut().update(&state.last_action, |v| {
@@ -1566,19 +1647,15 @@ impl WinitAppDriver for UiGalleryDriver {
             app.request_redraw(window);
             return;
         }
-        if Self::handle_workspace_tab_command(app, state, window, &command) {
-            app.request_redraw(window);
-            return;
-        }
-
         let did_nav = Self::handle_nav_command(app, state, window, &command);
         let did_gallery = Self::handle_gallery_command(app, state, window, &command);
         if did_nav || did_gallery {
-            Self::record_driver_handled_command_dispatch(
+            record_driver_handled_command_dispatch(
                 app,
                 window,
                 &command,
-                pending_source.clone(),
+                &pending_source,
+                started_from_focus,
             );
             app.request_redraw(window);
         }
@@ -1683,22 +1760,24 @@ impl WinitAppDriver for UiGalleryDriver {
                 let _ = app.models_mut().update(&state.last_action, |v| {
                     *v = Arc::<str>::from("cmd.open");
                 });
-                Self::record_driver_handled_command_dispatch(
+                record_driver_handled_command_dispatch(
                     app,
                     window,
                     &command,
-                    pending_source.clone(),
+                    &pending_source,
+                    started_from_focus,
                 );
             }
             CMD_APP_SAVE => {
                 let _ = app.models_mut().update(&state.last_action, |v| {
                     *v = Arc::<str>::from("cmd.save");
                 });
-                Self::record_driver_handled_command_dispatch(
+                record_driver_handled_command_dispatch(
                     app,
                     window,
                     &command,
-                    pending_source.clone(),
+                    &pending_source,
+                    started_from_focus,
                 );
             }
             CMD_APP_SETTINGS => {
@@ -2213,23 +2292,30 @@ impl WinitAppDriver for UiGalleryDriver {
                 Self::bump_menu_bar_seq(app, &state.menu_bar_seq);
             }
             Event::WindowCloseRequested => {
-                app.with_global_mut(UiGalleryHarnessDiagnosticsStore::default, |store, _app| {
-                    store.per_window.remove(&window);
-                    if store.focused_window == Some(window) {
-                        let next_focused = store
-                            .per_window
-                            .keys()
-                            .copied()
-                            .min_by_key(|window_id| format!("{window_id:?}"));
-                        store.focused_window = next_focused;
-                    }
-                });
-                Self::sync_menu_bar_after_state_change(app, window);
-                app.push_effect(Effect::Window(WindowRequest::Close(window)));
+                let outcome = state.workspace_workbench.request_window_close(app, window);
+                if outcome.close_window {
+                    app.with_global_mut(
+                        UiGalleryHarnessDiagnosticsStore::default,
+                        |store, _app| {
+                            store.per_window.remove(&window);
+                            if store.focused_window == Some(window) {
+                                let next_focused = store
+                                    .per_window
+                                    .keys()
+                                    .copied()
+                                    .min_by_key(|window_id| format!("{window_id:?}"));
+                                store.focused_window = next_focused;
+                            }
+                        },
+                    );
+                    Self::sync_menu_bar_after_state_change(app, window);
+                    PostFrameUiFocusLifecycle::clear_window(app, window);
+                }
+                Self::apply_workspace_workbench_outcome(app, window, &outcome);
             }
             _ => {
                 state.ui.dispatch_event(app, services, event);
-                if Self::sync_workspace_models_from_window_layout(app, state, window) {
+                if Self::sync_selected_page_from_workspace_layout(app, state, window) {
                     app.request_redraw(window);
                 }
             }
@@ -2258,6 +2344,7 @@ impl WinitAppDriver for UiGalleryDriver {
             scene,
         } = context;
 
+        PostFrameUiFocusLifecycle::begin_frame(app, window);
         sync_in_flight_frame_id(app);
         Self::render_ui(app, services, window, state, bounds);
 
@@ -2379,7 +2466,7 @@ impl WinitAppDriver for UiGalleryDriver {
                 state.ui.dispatch_event(app, services, &event);
             }
         });
-        if injected_any && Self::sync_workspace_models_from_window_layout(app, state, window) {
+        if injected_any && Self::sync_selected_page_from_workspace_layout(app, state, window) {
             app.request_redraw(window);
         }
 
@@ -2453,6 +2540,7 @@ impl WinitAppDriver for UiGalleryDriver {
                 }
             },
         );
+        PostFrameUiFocusLifecycle::finish_frame(app, services, window, &mut state.ui);
     }
 
     fn window_create_spec(
@@ -2494,6 +2582,90 @@ impl WinitAppDriver for UiGalleryDriver {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[derive(Default)]
+    struct FakeUiServices;
+
+    impl fret_core::TextService for FakeUiServices {
+        fn prepare(
+            &mut self,
+            _input: &fret_core::TextInput,
+            _constraints: fret_core::TextConstraints,
+        ) -> (fret_core::TextBlobId, fret_core::TextMetrics) {
+            (
+                fret_core::TextBlobId::default(),
+                fret_core::TextMetrics {
+                    size: fret_core::Size::new(fret_core::Px(10.0), fret_core::Px(10.0)),
+                    baseline: fret_core::Px(8.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: fret_core::TextBlobId) {}
+    }
+
+    impl fret_core::PathService for FakeUiServices {
+        fn prepare(
+            &mut self,
+            _commands: &[fret_core::PathCommand],
+            _style: fret_core::PathStyle,
+            _constraints: fret_core::PathConstraints,
+        ) -> (fret_core::PathId, fret_core::PathMetrics) {
+            (
+                fret_core::PathId::default(),
+                fret_core::PathMetrics::default(),
+            )
+        }
+
+        fn release(&mut self, _path: fret_core::PathId) {}
+    }
+
+    impl fret_core::SvgService for FakeUiServices {
+        fn register_svg(&mut self, _bytes: &[u8]) -> fret_core::SvgId {
+            fret_core::SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: fret_core::SvgId) -> bool {
+            false
+        }
+    }
+
+    impl fret_core::MaterialService for FakeUiServices {
+        fn register_material(
+            &mut self,
+            _desc: fret_core::MaterialDescriptor,
+        ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+            Err(fret_core::MaterialRegistrationError::Unsupported)
+        }
+
+        fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+            false
+        }
+    }
+
+    fn record_command_source(
+        app: &mut App,
+        window: AppWindowId,
+        command: &CommandId,
+        element: u64,
+        test_id: &'static str,
+    ) {
+        app.with_global_mut(
+            WindowPendingCommandDispatchSourceService::default,
+            |service, app| {
+                service.record(
+                    window,
+                    app.tick_id(),
+                    command.clone(),
+                    CommandDispatchSourceV1 {
+                        kind: fret_runtime::CommandDispatchSourceKindV1::Pointer,
+                        element: Some(element),
+                        test_id: Some(Arc::from(test_id)),
+                    },
+                );
+            },
+        );
+    }
 
     #[test]
     fn sync_in_flight_frame_id_advances_monotonically() {
@@ -2633,20 +2805,32 @@ mod tests {
             command.clone(),
             CommandMeta::new("Driver handled").with_scope(fret_runtime::CommandScope::Window),
         );
-
-        UiGalleryDriver::record_driver_handled_command_dispatch(
-            &mut app,
-            window,
-            &command,
-            CommandDispatchSourceV1 {
-                kind: fret_runtime::CommandDispatchSourceKindV1::Pointer,
-                element: Some(42),
-                test_id: Some(Arc::from("driver-command-source")),
+        app.with_global_mut(
+            WindowPendingCommandDispatchOutcomeService::default,
+            |service, app| {
+                service.record(
+                    window,
+                    app.tick_id(),
+                    command.clone(),
+                    fret_runtime::CommandDispatchOutcomeV1 {
+                        action_id: Some(command.clone()),
+                        target: Some(Arc::from("gallery/test")),
+                        applied: true,
+                        blocked_dirty_close: false,
+                    },
+                );
             },
         );
 
+        let source = CommandDispatchSourceV1 {
+            kind: fret_runtime::CommandDispatchSourceKindV1::Pointer,
+            element: Some(42),
+            test_id: Some(Arc::from("driver-command-source")),
+        };
+        record_driver_handled_command_dispatch(&mut app, window, &command, &source, true);
+
         let decisions = app
-            .global::<WindowCommandDispatchDiagnosticsStore>()
+            .global::<fret_runtime::WindowCommandDispatchDiagnosticsStore>()
             .expect("driver handled command dispatch should create diagnostics store")
             .snapshot_since(window, 0, 8);
 
@@ -2656,6 +2840,16 @@ mod tests {
             .expect("driver handled command dispatch decision");
         assert!(decision.handled);
         assert!(decision.handled_by_driver);
+        assert!(decision.started_from_focus);
+        assert_eq!(
+            decision.outcome,
+            Some(fret_runtime::CommandDispatchOutcomeV1 {
+                action_id: Some(command.clone()),
+                target: Some(Arc::from("gallery/test")),
+                applied: true,
+                blocked_dirty_close: false,
+            })
+        );
         assert_eq!(
             decision.handled_by_scope,
             Some(fret_runtime::CommandScope::Window)
@@ -2665,6 +2859,97 @@ mod tests {
         assert_eq!(
             decision.source.test_id.as_deref(),
             Some("driver-command-source")
+        );
+        let pending = app.with_global_mut(
+            WindowPendingCommandDispatchOutcomeService::default,
+            |service, app| service.consume(window, app.tick_id(), &command),
+        );
+        assert_eq!(pending, None);
+    }
+
+    #[test]
+    fn pre_ui_driver_routes_consume_source_and_record_trace() {
+        let mut app = App::new();
+        let window = AppWindowId::default();
+        let mut state = UiGalleryDriver::build_ui(&mut app, window);
+        let mut services = FakeUiServices;
+        let mut driver = UiGalleryDriver;
+
+        for (index, command) in [
+            CommandId::new(fret_app::core_commands::COMMAND_PALETTE),
+            CommandId::new(crate::spec::CMD_MENU_BAR_OS_ON),
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            let element = index as u64 + 41;
+            record_command_source(&mut app, window, &command, element, "pre-ui-driver-route");
+
+            driver.handle_command(
+                WinitCommandContext {
+                    app: &mut app,
+                    services: &mut services,
+                    window,
+                    state: &mut state,
+                },
+                command.clone(),
+            );
+
+            let pending = app.with_global_mut(
+                WindowPendingCommandDispatchSourceService::default,
+                |service, app| service.consume(window, app.tick_id(), &command),
+            );
+            assert_eq!(pending, None, "{command:?} left its source pending");
+
+            let decision = app
+                .global::<fret_runtime::WindowCommandDispatchDiagnosticsStore>()
+                .expect("pre-UI route should create diagnostics store")
+                .snapshot_since(window, 0, 16)
+                .into_iter()
+                .rev()
+                .find(|decision| decision.command == command)
+                .expect("pre-UI route should record a command dispatch decision");
+            assert!(decision.handled);
+            assert!(decision.handled_by_driver);
+            assert_eq!(decision.source.element, Some(element));
+            assert_eq!(
+                decision.source.test_id.as_deref(),
+                Some("pre-ui-driver-route")
+            );
+        }
+    }
+
+    #[test]
+    fn unmounted_ui_dispatch_discards_only_the_restored_source() {
+        let mut app = App::new();
+        let window = AppWindowId::default();
+        let mut state = UiGalleryDriver::build_ui(&mut app, window);
+        let mut services = FakeUiServices;
+        let mut driver = UiGalleryDriver;
+        let command = CommandId::new("ui_gallery.test.unhandled_before_root");
+
+        assert_eq!(state.ui.base_root(), None);
+        record_command_source(&mut app, window, &command, 11, "first-occurrence");
+        record_command_source(&mut app, window, &command, 22, "second-occurrence");
+
+        driver.handle_command(
+            WinitCommandContext {
+                app: &mut app,
+                services: &mut services,
+                window,
+                state: &mut state,
+            },
+            command.clone(),
+        );
+
+        let remaining = app.with_global_mut(
+            WindowPendingCommandDispatchSourceService::default,
+            |service, app| service.consume(window, app.tick_id(), &command),
+        );
+        assert_eq!(
+            remaining.and_then(|source| source.element),
+            Some(22),
+            "the failed pre-root UI route must discard its restored ticket without consuming the next occurrence"
         );
     }
 }

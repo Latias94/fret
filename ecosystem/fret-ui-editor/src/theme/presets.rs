@@ -3,7 +3,7 @@
 /// These presets intentionally stay in the policy layer: they patch existing theme tokens instead
 /// of creating a second widget tree or a new runtime-level theme namespace.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum EditorThemePresetV1 {
+pub enum EditorThemePreset {
     /// Conservative editor density baseline intended to preserve current demo behavior.
     #[default]
     Default,
@@ -12,12 +12,12 @@ pub enum EditorThemePresetV1 {
 }
 
 /// Stable editor theme preset order for editor tools and diagnostics.
-pub const EDITOR_THEME_PRESETS_V1: [EditorThemePresetV1; 2] = [
-    EditorThemePresetV1::Default,
-    EditorThemePresetV1::ImguiLikeDense,
+pub const EDITOR_THEME_PRESETS: [EditorThemePreset; 2] = [
+    EditorThemePreset::Default,
+    EditorThemePreset::ImguiLikeDense,
 ];
 
-impl EditorThemePresetV1 {
+impl EditorThemePreset {
     pub const fn key(self) -> &'static str {
         match self {
             Self::Default => "default",
@@ -41,7 +41,7 @@ impl EditorThemePresetV1 {
 
     pub fn from_key(key: &str) -> Option<Self> {
         let normalized = key.trim().to_ascii_lowercase().replace('-', "_");
-        EDITOR_THEME_PRESETS_V1
+        EDITOR_THEME_PRESETS
             .iter()
             .copied()
             .find(|preset| preset.key() == normalized.as_str())

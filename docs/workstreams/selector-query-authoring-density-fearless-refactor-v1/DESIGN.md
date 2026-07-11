@@ -9,7 +9,7 @@ Related:
 - `docs/workstreams/dataflow-authoring-surface-fearless-refactor-v1/DESIGN.md`
 - `docs/workstreams/dataflow-authoring-surface-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`
 - `docs/workstreams/action-write-surface-fearless-refactor-v1/DESIGN.md`
-- `docs/authoring-golden-path-v2.md`
+- `docs/authoring-golden-path.md`
 - `docs/examples/todo-app-golden-path.md`
 - `CLOSEOUT_AUDIT_2026-03-20.md`
 

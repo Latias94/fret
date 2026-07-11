@@ -83,7 +83,7 @@ Selector-specific note:
 ### Ecosystem / teaching proof surfaces
 
 - [x] `docs/crate-usage-guide.md`
-- [x] `docs/authoring-golden-path-v2.md`
+- [x] `docs/authoring-golden-path.md`
 - [x] `docs/examples/todo-app-golden-path.md`
 - [x] first-party ecosystem adapter touchpoints under `ecosystem/*` once the target surfaces are chosen
 

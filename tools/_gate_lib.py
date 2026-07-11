@@ -9,6 +9,11 @@ from typing import Iterable, Sequence
 
 WORKSPACE_ROOT = Path(__file__).resolve().parent.parent
 
+_RUST_RAW_STRING_OPEN = re.compile(r'(?:br|cr|r)(?P<hashes>#{0,255})"')
+_RUST_CHAR_LITERAL = re.compile(
+    r"'(?:[^'\\\r\n]|\\(?:x[0-9A-Fa-f]{2}|u\{[0-9A-Fa-f_]{1,6}\}|[^\r\n]))'"
+)
+
 
 @dataclass(frozen=True)
 class Hit:
@@ -16,6 +21,79 @@ class Hit:
     line_no: int
     line: str
     pattern: str
+
+
+def strip_rust_comments(source: str) -> str:
+    """Remove Rust comments without changing strings, newlines, or source length."""
+
+    stripped: list[str] = []
+    index = 0
+    source_len = len(source)
+
+    while index < source_len:
+        char_match = _RUST_CHAR_LITERAL.match(source, index)
+        if char_match is not None:
+            stripped.append(char_match.group(0))
+            index = char_match.end()
+            continue
+
+        raw_match = _RUST_RAW_STRING_OPEN.match(source, index)
+        if raw_match is not None and (
+            index == 0 or not (source[index - 1].isalnum() or source[index - 1] == "_")
+        ):
+            terminator = '"' + raw_match.group("hashes")
+            end = source.find(terminator, raw_match.end())
+            if end == -1:
+                stripped.append(source[index:])
+                break
+            end += len(terminator)
+            stripped.append(source[index:end])
+            index = end
+            continue
+
+        if source[index] == '"':
+            end = index + 1
+            while end < source_len:
+                if source[end] == "\\":
+                    end = min(end + 2, source_len)
+                    continue
+                end += 1
+                if source[end - 1] == '"':
+                    break
+            stripped.append(source[index:end])
+            index = end
+            continue
+
+        if source.startswith("//", index):
+            end = source.find("\n", index + 2)
+            if end == -1:
+                end = source_len
+            stripped.append("".join("\r" if char == "\r" else " " for char in source[index:end]))
+            index = end
+            continue
+
+        if source.startswith("/*", index):
+            depth = 1
+            end = index + 2
+            while end < source_len and depth > 0:
+                if source.startswith("/*", end):
+                    depth += 1
+                    end += 2
+                elif source.startswith("*/", end):
+                    depth -= 1
+                    end += 2
+                else:
+                    end += 1
+            stripped.append(
+                "".join(char if char in "\r\n" else " " for char in source[index:end])
+            )
+            index = end
+            continue
+
+        stripped.append(source[index])
+        index += 1
+
+    return "".join(stripped)
 
 
 def iter_files(
@@ -132,4 +210,3 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv[1:]))
-

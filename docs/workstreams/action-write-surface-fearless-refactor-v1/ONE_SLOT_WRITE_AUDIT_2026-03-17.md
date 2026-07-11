@@ -96,7 +96,7 @@ The current docs/templates do **not** present these helpers as three competing g
     `transient::<A>(...)`, keyed payload row writes, and explicit `models::<A>(...)`
 - `docs/first-hour.md`
   - also centers the default ladder on `locals_with((...)).on::<A>(...)` plus payload row writes
-- `docs/authoring-golden-path-v2.md`
+- `docs/authoring-golden-path.md`
   - collapses the trio into one row: `cx.actions().local_set/update`
 - `apps/fretboard/src/scaffold/templates.rs`
   - hello teaches `local_update::<A>(...)` because the example is specifically "increment one

@@ -8,7 +8,7 @@ Related:
 - `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/MILESTONES.md`
 - `docs/adr/0319-public-authoring-state-lanes-and-identity-contract-v1.md`
 - `docs/crate-usage-guide.md`
-- `docs/authoring-golden-path-v2.md`
+- `docs/authoring-golden-path.md`
 - `docs/first-hour.md`
 - `ecosystem/fret/src/lib.rs`
 - `ecosystem/fret/tests/render_authoring_capability_surface.rs`
@@ -27,7 +27,7 @@ does not widen the advanced lane back into the default prelude.
 
 1. `AppComponentCx` is now compatibility vocabulary, not the taught default helper name.
    Confidence: Confident.
-   Evidence: `docs/authoring-golden-path-v2.md`, `docs/first-hour.md`,
+   Evidence: `docs/authoring-golden-path.md`, `docs/first-hour.md`,
    `docs/crate-usage-guide.md`, `docs/adr/0319-public-authoring-state-lanes-and-identity-contract-v1.md`.
 2. `AppRenderCx<'a>` already exists exactly to carry the default concrete helper story without
    reopening raw `ElementContext<App>` naming.
@@ -85,7 +85,7 @@ be deleted everywhere.
 - `ecosystem/fret/src/lib.rs`
 - `ecosystem/fret/tests/render_authoring_capability_surface.rs`
 - `docs/crate-usage-guide.md`
-- `docs/authoring-golden-path-v2.md`
+- `docs/authoring-golden-path.md`
 - `docs/first-hour.md`
 
 ## Gate commands

@@ -78,13 +78,13 @@ pub(crate) fn build_default_view_demo_fn_driver<V: fret::app::View>(
 
 pub(crate) fn parse_editor_theme_preset_key(
     key: &str,
-) -> Option<fret_ui_editor::theme::EditorThemePresetV1> {
-    fret_ui_editor::theme::EditorThemePresetV1::from_key(key)
+) -> Option<fret_ui_editor::theme::EditorThemePreset> {
+    fret_ui_editor::theme::EditorThemePreset::from_key(key)
 }
 
 pub(crate) fn editor_theme_preset_from_env(
     name: &str,
-) -> Option<fret_ui_editor::theme::EditorThemePresetV1> {
+) -> Option<fret_ui_editor::theme::EditorThemePreset> {
     let raw = std::env::var_os(name)?;
     parse_editor_theme_preset_key(&raw.to_string_lossy())
 }
@@ -101,7 +101,7 @@ pub(crate) fn sync_shadcn_host_theme_then_reapply_editor_preset_on_window_metric
     changed: &[std::any::TypeId],
     base_color: fret::shadcn::themes::ShadcnBaseColor,
     default_scheme_when_unknown: fret::shadcn::themes::ShadcnColorScheme,
-) -> Option<fret_ui_editor::theme::EditorThemePresetV1> {
+) -> Option<fret_ui_editor::theme::EditorThemePreset> {
     fret_ui_editor::theme::sync_host_theme_then_reapply_installed_editor_theme_preset_on_window_metrics_change(
         app,
         changed,
@@ -294,15 +294,15 @@ mod authoring_surface_policy_tests {
     fn parse_editor_theme_preset_key_accepts_supported_values() {
         assert_eq!(
             super::parse_editor_theme_preset_key("default"),
-            Some(fret_ui_editor::theme::EditorThemePresetV1::Default)
+            Some(fret_ui_editor::theme::EditorThemePreset::Default)
         );
         assert_eq!(
             super::parse_editor_theme_preset_key(" imgui_like_dense "),
-            Some(fret_ui_editor::theme::EditorThemePresetV1::ImguiLikeDense)
+            Some(fret_ui_editor::theme::EditorThemePreset::ImguiLikeDense)
         );
         assert_eq!(
             super::parse_editor_theme_preset_key("IMGUI-LIKE-DENSE"),
-            Some(fret_ui_editor::theme::EditorThemePresetV1::ImguiLikeDense)
+            Some(fret_ui_editor::theme::EditorThemePreset::ImguiLikeDense)
         );
     }
 

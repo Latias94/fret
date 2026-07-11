@@ -937,7 +937,7 @@ Implementation note on 2026-03-13:
   on the ordinary `ui::v_flex(|cx| ..)` lane without introducing a wider `keyed_column(...)`
   abstraction yet.
 - the default product docs now teach the same keyed-list lane:
-  `docs/first-hour.md`, `docs/authoring-golden-path-v2.md`, and
+  `docs/first-hour.md`, `docs/authoring-golden-path.md`, and
   `docs/examples/todo-app-golden-path.md` now prefer `ui::for_each_keyed(...)` as the default
   list-identity story, reserve `ui::for_each_keyed_with_cx(...)` for row builders that truly need
   the inner keyed child scope, and frame `*_build(...)` sinks as explicit advanced/manual

@@ -11,8 +11,8 @@ use crate::primitives::colors::{
 use crate::primitives::input_group::derived_test_id;
 use crate::primitives::style::EditorStyle;
 use crate::theme::{
-    EDITOR_THEME_PRESETS_V1, EditorThemePresetV1, install_editor_theme_preset_v1,
-    installed_editor_theme_preset_v1,
+    EDITOR_THEME_PRESETS, EditorThemePreset, install_editor_theme_preset,
+    installed_editor_theme_preset,
 };
 
 use super::EditorThemePresetPickerOptions;
@@ -20,12 +20,12 @@ use super::render::{EditorThemePresetPickerRenderInput, build_editor_theme_prese
 
 #[derive(Clone)]
 pub struct EditorThemePresetPicker {
-    model: Model<EditorThemePresetV1>,
+    model: Model<EditorThemePreset>,
     options: EditorThemePresetPickerOptions,
 }
 
 impl EditorThemePresetPicker {
-    pub fn new(model: Model<EditorThemePresetV1>) -> Self {
+    pub fn new(model: Model<EditorThemePreset>) -> Self {
         Self {
             model,
             options: EditorThemePresetPickerOptions::default(),
@@ -43,8 +43,8 @@ impl EditorThemePresetPicker {
             .get_model_copied(&self.model, Invalidation::Paint)
             .unwrap_or_default();
 
-        if installed_editor_theme_preset_v1(&*cx.app) != Some(selected) {
-            install_editor_theme_preset_v1(cx.app, selected);
+        if installed_editor_theme_preset(&*cx.app) != Some(selected) {
+            install_editor_theme_preset(cx.app, selected);
         }
 
         let (density, row_height, border, ring, fg, muted_fg, subtle_bg, accent, text_px) = {
@@ -84,7 +84,7 @@ impl EditorThemePresetPicker {
                 item_prefix,
                 options,
                 model,
-                total: EDITOR_THEME_PRESETS_V1.len(),
+                total: EDITOR_THEME_PRESETS.len(),
                 row_height,
                 padding_x: density.padding_x,
                 border,

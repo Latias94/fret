@@ -690,12 +690,17 @@ pub(super) fn handle_wait_command_dispatch_trace_step(
             remaining_frames: timeout_frames,
             deadline_unix_ms: timeout_ms.map(|ms| unix_ms_now().saturating_add(ms as u64)),
             start_frame_id: app.frame_id().0.saturating_sub(1),
+            source_step_index: active.last_injected_step,
         },
     };
 
     let found = active.command_dispatch_trace.iter().any(|entry| {
-        entry.frame_id >= state.start_frame_id
-            && command_dispatch_trace_entry_matches_query(entry, &query)
+        command_dispatch_trace_entry_matches_wait(
+            entry,
+            &query,
+            state.start_frame_id,
+            state.source_step_index,
+        )
     });
 
     if found {
@@ -711,6 +716,7 @@ pub(super) fn handle_wait_command_dispatch_trace_step(
             &active.command_dispatch_trace,
             &query,
             state.start_frame_id,
+            state.source_step_index,
         ) {
             push_script_event_log(
                 active,
@@ -741,6 +747,7 @@ pub(super) fn handle_wait_command_dispatch_trace_step(
             remaining_frames: state.remaining_frames.saturating_sub(1),
             deadline_unix_ms: state.deadline_unix_ms,
             start_frame_id: state.start_frame_id,
+            source_step_index: state.source_step_index,
         });
         output.request_redraw = true;
     }
@@ -882,11 +889,14 @@ pub(super) fn command_dispatch_trace_timeout_note(
     trace: &[UiScriptCommandDispatchTraceEntryV1],
     query: &UiScriptCommandDispatchTraceQueryV1,
     start_frame_id: u64,
+    source_step_index: Option<u32>,
 ) -> Option<String> {
     let (candidate, mismatches) = trace
         .iter()
         .enumerate()
-        .filter(|(_, entry)| entry.frame_id >= start_frame_id)
+        .filter(|(_, entry)| {
+            command_dispatch_trace_entry_is_fresh(entry, start_frame_id, source_step_index)
+        })
         .filter_map(|(index, entry)| {
             let mismatches = command_dispatch_trace_query_mismatches(entry, query);
             if mismatches.is_empty() {
@@ -901,20 +911,45 @@ pub(super) fn command_dispatch_trace_timeout_note(
         .map(|(_, entry, mismatches)| (entry, mismatches))?;
 
     Some(format!(
-        "query={} start_frame_id={} trace_count={} best_candidate={} mismatches={}",
+        "query={} start_frame_id={} source_step_index={source_step_index:?} trace_count={} best_candidate={} mismatches={}",
         command_dispatch_query_summary(query),
         start_frame_id,
         trace
             .iter()
-            .filter(|entry| entry.frame_id >= start_frame_id)
+            .filter(|entry| {
+                command_dispatch_trace_entry_is_fresh(entry, start_frame_id, source_step_index)
+            })
             .count(),
         command_dispatch_trace_candidate_summary(candidate),
         mismatches.join("; ")
     ))
 }
 
+fn command_dispatch_trace_entry_is_fresh(
+    entry: &UiScriptCommandDispatchTraceEntryV1,
+    start_frame_id: u64,
+    source_step_index: Option<u32>,
+) -> bool {
+    entry.frame_id >= start_frame_id
+        && source_step_index.is_none_or(|step_index| entry.step_index == step_index)
+}
+
+fn command_dispatch_trace_entry_matches_wait(
+    entry: &UiScriptCommandDispatchTraceEntryV1,
+    query: &UiScriptCommandDispatchTraceQueryV1,
+    start_frame_id: u64,
+    source_step_index: Option<u32>,
+) -> bool {
+    command_dispatch_trace_entry_is_fresh(entry, start_frame_id, source_step_index)
+        && command_dispatch_trace_entry_matches_query(entry, query)
+}
+
 fn command_dispatch_trace_query_field_count(query: &UiScriptCommandDispatchTraceQueryV1) -> usize {
     query.command.is_some() as usize
+        + query.action_id.is_some() as usize
+        + query.target.is_some() as usize
+        + query.applied.is_some() as usize
+        + query.blocked_dirty_close.is_some() as usize
         + query.source_kind.is_some() as usize
         + query.source_test_id.is_some() as usize
         + query.handled.is_some() as usize
@@ -935,6 +970,25 @@ fn command_dispatch_trace_query_mismatches(
         "command",
         query.command.as_deref(),
         Some(entry.command.as_str()),
+    );
+    push_string_mismatch(
+        &mut mismatches,
+        "action_id",
+        query.action_id.as_deref(),
+        entry.action_id.as_deref(),
+    );
+    push_string_mismatch(
+        &mut mismatches,
+        "target",
+        query.target.as_deref(),
+        entry.target.as_deref(),
+    );
+    push_optional_bool_mismatch(&mut mismatches, "applied", query.applied, entry.applied);
+    push_optional_bool_mismatch(
+        &mut mismatches,
+        "blocked_dirty_close",
+        query.blocked_dirty_close,
+        entry.blocked_dirty_close,
     );
     push_string_mismatch(
         &mut mismatches,
@@ -984,8 +1038,12 @@ fn command_dispatch_trace_query_mismatches(
 
 fn command_dispatch_query_summary(query: &UiScriptCommandDispatchTraceQueryV1) -> String {
     format!(
-        "command={:?} source_kind={:?} source_test_id={:?} handled={:?} handled_by_scope={:?} handled_by_driver={:?} handled_by_test_id={:?} started_from_focus={:?} used_default_root_fallback={:?}",
+        "command={:?} action_id={:?} target={:?} applied={:?} blocked_dirty_close={:?} source_kind={:?} source_test_id={:?} handled={:?} handled_by_scope={:?} handled_by_driver={:?} handled_by_test_id={:?} started_from_focus={:?} used_default_root_fallback={:?}",
         query.command.as_deref(),
+        query.action_id.as_deref(),
+        query.target.as_deref(),
+        query.applied,
+        query.blocked_dirty_close,
         query.source_kind.as_deref(),
         query.source_test_id.as_deref(),
         query.handled,
@@ -999,10 +1057,14 @@ fn command_dispatch_query_summary(query: &UiScriptCommandDispatchTraceQueryV1) -
 
 fn command_dispatch_trace_candidate_summary(entry: &UiScriptCommandDispatchTraceEntryV1) -> String {
     format!(
-        "step_index={} frame_id={} command={:?} source_kind={:?} source_test_id={:?} handled={} handled_by_scope={:?} handled_by_driver={} handled_by_test_id={:?} stopped={} started_from_focus={} used_default_root_fallback={}",
+        "step_index={} frame_id={} command={:?} action_id={:?} target={:?} applied={:?} blocked_dirty_close={:?} source_kind={:?} source_test_id={:?} handled={} handled_by_scope={:?} handled_by_driver={} handled_by_test_id={:?} stopped={} started_from_focus={} used_default_root_fallback={}",
         entry.step_index,
         entry.frame_id,
         entry.command,
+        entry.action_id.as_deref(),
+        entry.target.as_deref(),
+        entry.applied,
+        entry.blocked_dirty_close,
         entry.source_kind,
         entry.source_test_id.as_deref(),
         entry.handled,
@@ -1013,6 +1075,19 @@ fn command_dispatch_trace_candidate_summary(entry: &UiScriptCommandDispatchTrace
         entry.started_from_focus,
         entry.used_default_root_fallback
     )
+}
+
+fn push_optional_bool_mismatch(
+    mismatches: &mut Vec<String>,
+    field: &str,
+    expected: Option<bool>,
+    actual: Option<bool>,
+) {
+    if let Some(expected) = expected
+        && actual != Some(expected)
+    {
+        mismatches.push(format!("{field}: expected={expected} actual={actual:?}"));
+    }
 }
 
 fn push_string_mismatch(
@@ -1741,37 +1816,42 @@ mod tests {
 
     #[test]
     fn command_dispatch_timeout_note_names_query_mismatches() {
-        let trace = vec![UiScriptCommandDispatchTraceEntryV1 {
-            step_index: 9,
-            frame_id: 201,
-            command: "menu.open".to_string(),
-            handled: false,
-            handled_by_scope: Some("window".to_string()),
-            handled_by_driver: true,
-            stopped: false,
-            source_kind: "pointer".to_string(),
-            source_element: Some(10),
-            source_test_id: Some("toolbar-menu-trigger".to_string()),
-            handled_by_element: Some(11),
-            handled_by_test_id: Some("window-shell".to_string()),
-            started_from_focus: false,
-            used_default_root_fallback: true,
-        }];
-        let query = UiScriptCommandDispatchTraceQueryV1 {
-            command: Some("menu.open".to_string()),
-            source_kind: Some("keyboard".to_string()),
-            source_test_id: Some("palette-trigger".to_string()),
-            handled: Some(true),
-            handled_by_scope: Some("widget".to_string()),
-            handled_by_driver: Some(false),
-            handled_by_test_id: Some("menu-button".to_string()),
-            started_from_focus: Some(true),
-            used_default_root_fallback: Some(false),
-        };
+        let mut entry = UiScriptCommandDispatchTraceEntryV1::for_command(9, 201, "menu.open");
+        entry.action_id = Some("menu.open".to_string());
+        entry.target = Some("pane-a/doc-a".to_string());
+        entry.applied = Some(false);
+        entry.blocked_dirty_close = Some(true);
+        entry.handled_by_scope = Some("window".to_string());
+        entry.handled_by_driver = true;
+        entry.source_kind = "pointer".to_string();
+        entry.source_element = Some(10);
+        entry.source_test_id = Some("toolbar-menu-trigger".to_string());
+        entry.handled_by_element = Some(11);
+        entry.handled_by_test_id = Some("window-shell".to_string());
+        entry.used_default_root_fallback = true;
+        let trace = vec![entry];
 
-        let note = command_dispatch_trace_timeout_note(&trace, &query, 200).unwrap();
+        let mut query = UiScriptCommandDispatchTraceQueryV1::for_command("menu.open");
+        query.action_id = Some("workspace.tab.close".to_string());
+        query.target = Some("pane-b/doc-b".to_string());
+        query.applied = Some(true);
+        query.blocked_dirty_close = Some(false);
+        query.source_kind = Some("keyboard".to_string());
+        query.source_test_id = Some("palette-trigger".to_string());
+        query.handled = Some(true);
+        query.handled_by_scope = Some("widget".to_string());
+        query.handled_by_driver = Some(false);
+        query.handled_by_test_id = Some("menu-button".to_string());
+        query.started_from_focus = Some(true);
+        query.used_default_root_fallback = Some(false);
+
+        let note = command_dispatch_trace_timeout_note(&trace, &query, 200, Some(9)).unwrap();
 
         assert!(note.contains("trace_count=1"));
+        assert!(note.contains("action_id expected Some(\"workspace.tab.close\")"));
+        assert!(note.contains("target expected Some(\"pane-b/doc-b\")"));
+        assert!(note.contains("applied: expected=true actual=Some(false)"));
+        assert!(note.contains("blocked_dirty_close: expected=false actual=Some(true)"));
         assert!(note.contains("source_kind expected Some(\"keyboard\") actual Some(\"pointer\")"));
         assert!(note.contains(
             "source_test_id expected Some(\"palette-trigger\") actual Some(\"toolbar-menu-trigger\")"
@@ -1782,6 +1862,72 @@ mod tests {
             "handled_by_test_id expected Some(\"menu-button\") actual Some(\"window-shell\")"
         ));
         assert!(note.contains("used_default_root_fallback expected false actual true"));
+    }
+
+    #[test]
+    fn command_dispatch_wait_does_not_reuse_trace_from_an_older_step() {
+        let entry = UiScriptCommandDispatchTraceEntryV1::for_command(8, 201, "workspace.tab.close");
+        let matching_query =
+            UiScriptCommandDispatchTraceQueryV1::for_command("workspace.tab.close");
+        let mismatch_query = UiScriptCommandDispatchTraceQueryV1::for_command("workspace.tab.save");
+
+        assert!(!command_dispatch_trace_entry_is_fresh(&entry, 200, Some(9)));
+        assert!(command_dispatch_trace_entry_is_fresh(&entry, 200, None));
+        assert!(
+            !command_dispatch_trace_entry_is_fresh(&entry, 202, Some(8)),
+            "the step binding supplements rather than replaces the frame lower bound"
+        );
+        assert!(!command_dispatch_trace_entry_matches_wait(
+            &entry,
+            &matching_query,
+            200,
+            Some(9)
+        ));
+        assert!(
+            command_dispatch_trace_timeout_note(
+                std::slice::from_ref(&entry),
+                &mismatch_query,
+                200,
+                Some(9),
+            )
+            .is_none(),
+            "timeout diagnostics must apply the same step freshness filter"
+        );
+        assert!(
+            command_dispatch_trace_timeout_note(&[entry], &mismatch_query, 200, None).is_some(),
+            "without an injected source step the frame-based compatibility fallback remains"
+        );
+    }
+
+    #[test]
+    fn command_dispatch_wait_can_query_driver_and_fallback_entries_from_same_step() {
+        let mut driver =
+            UiScriptCommandDispatchTraceEntryV1::for_command(12, 300, "workspace.tab.close");
+        driver.handled = true;
+        driver.handled_by_driver = true;
+        driver.handled_by_scope = Some("window".to_string());
+
+        let mut fallback =
+            UiScriptCommandDispatchTraceEntryV1::for_command(12, 300, "workspace.tab.close");
+        fallback.handled = true;
+        fallback.used_default_root_fallback = true;
+        fallback.handled_by_scope = Some("widget".to_string());
+
+        let trace = [driver, fallback];
+        let mut driver_query =
+            UiScriptCommandDispatchTraceQueryV1::for_command("workspace.tab.close");
+        driver_query.handled_by_driver = Some(true);
+        driver_query.used_default_root_fallback = Some(false);
+        let mut fallback_query =
+            UiScriptCommandDispatchTraceQueryV1::for_command("workspace.tab.close");
+        fallback_query.handled_by_driver = Some(false);
+        fallback_query.used_default_root_fallback = Some(true);
+
+        for query in [&driver_query, &fallback_query] {
+            assert!(trace.iter().any(|entry| {
+                command_dispatch_trace_entry_matches_wait(entry, query, 299, Some(12))
+            }));
+        }
     }
 }
 

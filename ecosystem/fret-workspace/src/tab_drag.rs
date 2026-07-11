@@ -233,6 +233,7 @@ pub struct WorkspaceTabDragState {
     pub source_window: Option<AppWindowId>,
     pub source_pane: Option<Arc<str>>,
     pub dragged_tab: Option<Arc<str>>,
+    pub dragged_tab_pinned: bool,
     pub hovered_pane: Option<Arc<str>>,
     pub hovered_zone: Option<WorkspaceTabDropZone>,
     pub hovered_tab: Option<Arc<str>>,

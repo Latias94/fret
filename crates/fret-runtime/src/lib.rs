@@ -106,8 +106,9 @@ pub use clipboard_diagnostics::{
 };
 pub use command::CommandId;
 pub use command_dispatch_diagnostics::{
-    CommandDispatchDecisionV1, CommandDispatchSourceKindV1, CommandDispatchSourceV1,
-    WindowCommandDispatchDiagnosticsStore, WindowPendingCommandDispatchSourceService,
+    CommandDispatchDecisionV1, CommandDispatchOutcomeV1, CommandDispatchSourceKindV1,
+    CommandDispatchSourceV1, WindowCommandDispatchDiagnosticsStore,
+    WindowPendingCommandDispatchOutcomeService, WindowPendingCommandDispatchSourceService,
 };
 pub use commands::{CommandMeta, CommandRegistry, CommandScope, OsAction};
 pub use docking_settings::{

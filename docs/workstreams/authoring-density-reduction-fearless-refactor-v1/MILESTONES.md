@@ -99,7 +99,7 @@ Tracked-read note on 2026-03-16:
     authoring API.
 - `CLOSEOUT_AUDIT_2026-03-16.md` now closes the workstream:
   - `docs/first-hour.md`, `docs/examples/todo-app-golden-path.md`,
-    `docs/authoring-golden-path-v2.md`, and the scaffold/source-policy gates all agree on the
+    `docs/authoring-golden-path.md`, and the scaffold/source-policy gates all agree on the
     shorter default path,
   - onboarding docs no longer teach `cx.watch_model(...)` or explicit
     `.into_element(cx)` / `AnyElement` seams as the default app-authoring posture,

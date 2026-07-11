@@ -20,7 +20,7 @@ Core workstream docs:
 
 Default-path docs/templates/examples:
 
-- `docs/authoring-golden-path-v2.md`
+- `docs/authoring-golden-path.md`
 - `docs/examples/todo-app-golden-path.md`
 - `apps/fretboard/src/scaffold/templates.rs`
 

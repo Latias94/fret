@@ -187,7 +187,7 @@ Current switch behavior:
 Current implementation note:
 
 - the preset surface lives in `ecosystem/fret-ui-editor/src/theme.rs`
-- the proof demo applies `EditorThemePresetV1` during app init
+- the proof demo applies `EditorThemePreset` during app init
 - the demo header renders the resolved preset name so screenshots / diag captures can prove which
   preset was active
 - the proof demo also includes a shared-model parity section:

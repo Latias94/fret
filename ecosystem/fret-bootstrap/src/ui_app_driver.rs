@@ -32,16 +32,239 @@ use crate::ui_diagnostics::{UiDiagnosticsService, UiRealPerfSpanCaptureV1};
 
 pub type ViewElements = Elements;
 
+#[derive(Default)]
+struct WindowPostFrameUiFocusService {
+    by_window: HashMap<AppWindowId, PostFrameUiFocusQueue>,
+}
+
+#[derive(Default)]
+struct PostFrameUiFocusQueue {
+    pending: Vec<PostFrameUiFocusRequest>,
+    ready: Vec<PostFrameUiFocusRequest>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct PostFrameUiFocusRequest {
+    guard: PostFrameUiFocusGuard,
+    target: Option<fret_ui::elements::GlobalElementId>,
+    fallback_command: Option<CommandId>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PostFrameUiFocusGuard {
+    NoLiveFocus,
+    Unchanged(fret_ui::elements::GlobalElementId),
+    Authoritative,
+}
+
+fn post_frame_ui_focus_request_can_apply(
+    request: &PostFrameUiFocusRequest,
+    focused_node_present: bool,
+    focused_element: Option<fret_ui::elements::GlobalElementId>,
+) -> bool {
+    match request.guard {
+        PostFrameUiFocusGuard::NoLiveFocus => !focused_node_present,
+        PostFrameUiFocusGuard::Unchanged(expected) => {
+            !focused_node_present || focused_element == Some(expected)
+        }
+        PostFrameUiFocusGuard::Authoritative => true,
+    }
+}
+
+/// Queue focus restoration until the retained tree has completed its next frame.
+///
+/// This is intended for follow-up policy such as focus restoration after an instant modal closes.
+/// The driver waits until the authoritative input-context snapshot no longer reports a modal,
+/// then focuses the original live element or dispatches the supplied UI-only fallback command.
+/// `guard` makes the transaction's authority explicit instead of overloading a missing element ID.
+pub fn defer_ui_focus_until_after_frame(
+    app: &mut App,
+    window: AppWindowId,
+    guard: PostFrameUiFocusGuard,
+    target: Option<fret_ui::elements::GlobalElementId>,
+    fallback_command: Option<CommandId>,
+) {
+    app.with_global_mut_untracked(WindowPostFrameUiFocusService::default, |service, _app| {
+        service
+            .by_window
+            .entry(window)
+            .or_default()
+            .pending
+            .push(PostFrameUiFocusRequest {
+                guard,
+                target,
+                fallback_command,
+            });
+    });
+    app.request_redraw(window);
+}
+
+/// Advanced-driver lifecycle for focus requests queued with
+/// [`defer_ui_focus_until_after_frame`].
+///
+/// `UiAppDriver` drives this automatically. Custom retained-tree drivers must call
+/// [`Self::begin_frame`] before rebuilding the tree and [`Self::finish_frame`] after the frame is
+/// complete so queued focus transactions observe the same ordering.
+pub struct PostFrameUiFocusLifecycle;
+
+impl PostFrameUiFocusLifecycle {
+    pub fn begin_frame(app: &mut App, window: AppWindowId) {
+        promote_post_frame_ui_focus_requests(app, window);
+    }
+
+    pub fn finish_frame(
+        app: &mut App,
+        services: &mut dyn UiServices,
+        window: AppWindowId,
+        ui: &mut UiTree<App>,
+    ) {
+        if ui.has_active_input_barrier() {
+            return;
+        }
+
+        let ready_requests = take_ready_post_frame_ui_focus_requests(app, window);
+        if ready_requests.is_empty() {
+            return;
+        }
+
+        for request in ready_requests {
+            let focused_node = ui.focus();
+            let focused_element = focused_node.and_then(|node| ui.debug_node_element(node));
+            let live_focus_present = match (focused_node, focused_element) {
+                (None, _) => false,
+                (Some(_), None) => true,
+                (Some(node), Some(element)) => ui
+                    .live_attached_node_for_element(app, element)
+                    .is_some_and(|live| live == node),
+            };
+            if !post_frame_ui_focus_request_can_apply(&request, live_focus_present, focused_element)
+            {
+                continue;
+            }
+            let restored_target = request.target.is_some_and(|target| {
+                if ui.live_attached_node_for_element(app, target).is_none() {
+                    return false;
+                }
+                ui.request_focus_element(app, target);
+                true
+            });
+            if restored_target {
+                app.request_redraw(window);
+            } else if let Some(command) = request.fallback_command
+                && ui.dispatch_command(app, services, &command)
+            {
+                app.request_redraw(window);
+            }
+        }
+    }
+
+    pub fn clear_window(app: &mut App, window: AppWindowId) {
+        clear_post_frame_ui_focus_requests(app, window);
+    }
+}
+
+/// Record a command handled by an app/runner integration rather than a retained UI element.
+///
+/// The caller owns pending dispatch-source routing. Any domain outcome previously recorded in
+/// [`fret_runtime::WindowPendingCommandDispatchOutcomeService`] is consumed into the final trace.
+pub fn record_driver_handled_command_dispatch(
+    app: &mut App,
+    window: AppWindowId,
+    command: &CommandId,
+    source: &fret_runtime::CommandDispatchSourceV1,
+    started_from_focus: bool,
+) {
+    let handled_by_scope = app
+        .commands()
+        .get(command.clone())
+        .map(|meta| meta.scope)
+        .or(Some(fret_runtime::CommandScope::Window));
+    let outcome = app.with_global_mut(
+        fret_runtime::WindowPendingCommandDispatchOutcomeService::default,
+        |service, app| service.consume(window, app.tick_id(), command),
+    );
+    app.with_global_mut(
+        fret_runtime::WindowCommandDispatchDiagnosticsStore::default,
+        |store, app| {
+            store.record(fret_runtime::CommandDispatchDecisionV1 {
+                seq: 0,
+                frame_id: app.frame_id(),
+                tick_id: app.tick_id(),
+                window,
+                command: command.clone(),
+                source: source.clone(),
+                outcome,
+                handled: true,
+                handled_by_element: None,
+                handled_by_scope,
+                handled_by_driver: true,
+                stopped: false,
+                started_from_focus,
+                used_default_root_fallback: false,
+            });
+        },
+    );
+}
+
+fn promote_post_frame_ui_focus_requests(app: &mut App, window: AppWindowId) {
+    app.with_global_mut_untracked(WindowPostFrameUiFocusService::default, |service, _app| {
+        let Some(queue) = service.by_window.get_mut(&window) else {
+            return;
+        };
+        if !queue.pending.is_empty() {
+            queue.ready.append(&mut queue.pending);
+        }
+    });
+}
+
+fn take_ready_post_frame_ui_focus_requests(
+    app: &mut App,
+    window: AppWindowId,
+) -> Vec<PostFrameUiFocusRequest> {
+    app.with_global_mut_untracked(WindowPostFrameUiFocusService::default, |service, _app| {
+        let Some(queue) = service.by_window.get_mut(&window) else {
+            return Vec::new();
+        };
+        let ready = std::mem::take(&mut queue.ready);
+        if queue.pending.is_empty() && queue.ready.is_empty() {
+            service.by_window.remove(&window);
+        }
+        ready
+    })
+}
+
+fn clear_post_frame_ui_focus_requests(app: &mut App, window: AppWindowId) {
+    app.with_global_mut_untracked(WindowPostFrameUiFocusService::default, |service, _app| {
+        service.by_window.remove(&window);
+    });
+}
+
 type ViewFn<S> = for<'a> fn(&mut ElementContext<'a, App>, &mut S) -> ViewElements;
 
 type EventHookFn<S> =
     fn(&mut App, &mut dyn UiServices, AppWindowId, &mut UiTree<App>, &mut S, &Event);
+
+type AppEventHookFn<S> = fn(&mut App, AppWindowId, &mut S, &Event);
 
 type CommandHookFn<S> =
     fn(&mut App, &mut dyn UiServices, AppWindowId, &mut UiTree<App>, &mut S, &CommandId);
 
 type CommandBeforeUiHookFn<S> =
     fn(&mut App, &mut dyn UiServices, AppWindowId, &mut UiTree<App>, &mut S, &CommandId) -> bool;
+
+/// Data-only routing context for app-owned command hooks that run before retained UI dispatch.
+///
+/// `source_is_within_active_input_barrier_scope` is computed against the live `UiTree`; callers
+/// must not infer modal provenance from the best-effort source metadata alone.
+#[derive(Debug, Clone, Copy)]
+pub struct UiAppCommandBeforeUiContext<'a> {
+    pub source: &'a fret_runtime::CommandDispatchSourceV1,
+    pub ui_has_modal: bool,
+    pub source_is_within_active_input_barrier_scope: bool,
+}
+
+type AppCommandBeforeUiHookFn<S> =
+    for<'a> fn(&mut App, AppWindowId, &mut S, &CommandId, UiAppCommandBeforeUiContext<'a>) -> bool;
 
 type PreferencesHookFn<S> =
     fn(&mut App, &mut dyn UiServices, AppWindowId, &mut UiTree<App>, &mut S);
@@ -52,6 +275,7 @@ type ModelChangesHookFn<S> =
     fn(&mut App, AppWindowId, &mut UiTree<App>, &mut S, &[fret_app::ModelId]);
 type GlobalChangesHookFn<S> =
     fn(&mut App, AppWindowId, &mut UiTree<App>, &mut S, &[std::any::TypeId]);
+type AppGlobalChangesHookFn<S> = fn(&mut App, AppWindowId, &mut S, &[std::any::TypeId]);
 
 type RecordEngineFrameHookFn<S> = fn(
     &mut App,
@@ -150,12 +374,15 @@ pub struct UiAppDriver<S> {
     drive_ui_assets: bool,
 
     on_event: Option<EventHookFn<S>>,
+    on_app_event: Option<AppEventHookFn<S>>,
     on_command_before_ui: Option<CommandBeforeUiHookFn<S>>,
+    on_app_command_before_ui: Option<AppCommandBeforeUiHookFn<S>>,
     on_command: Option<CommandHookFn<S>>,
     on_preferences: Option<PreferencesHookFn<S>>,
     on_hot_reload_window: Option<HotReloadHookFn<S>>,
     on_model_changes: Option<ModelChangesHookFn<S>>,
     on_global_changes: Option<GlobalChangesHookFn<S>>,
+    on_app_global_changes: Option<AppGlobalChangesHookFn<S>>,
     on_global_changes_middleware: Option<GlobalChangesHookFn<S>>,
 
     window_create_spec:
@@ -191,12 +418,15 @@ impl<S> UiAppDriver<S> {
             #[cfg(feature = "ui-assets")]
             drive_ui_assets: true,
             on_event: None,
+            on_app_event: None,
             on_command_before_ui: None,
+            on_app_command_before_ui: None,
             on_command: None,
             on_preferences: None,
             on_hot_reload_window: None,
             on_model_changes: None,
             on_global_changes: None,
+            on_app_global_changes: None,
             on_global_changes_middleware: None,
             window_create_spec: None,
             window_created: None,
@@ -236,6 +466,12 @@ impl<S> UiAppDriver<S> {
         self
     }
 
+    /// Register an app-state event hook without exposing retained-tree or service seams.
+    pub fn on_app_event(mut self, f: AppEventHookFn<S>) -> Self {
+        self.on_app_event = Some(f);
+        self
+    }
+
     /// When `true` (default, with the `ui-assets` feature enabled), drives `fret-ui-assets`
     /// caches from the event pipeline.
     ///
@@ -261,9 +497,19 @@ impl<S> UiAppDriver<S> {
     ///
     /// This is for app-facing harnesses that own a model transaction first (for example a
     /// workspace dirty-close policy) while still using `UiAppDriver` for frame/diagnostics
-    /// ownership. Return `true` when the hook handled the command.
+    /// ownership. Return `true` when the hook handled the command; the driver records that
+    /// outcome with the original dispatch source for diagnostics.
     pub fn on_command_before_ui(mut self, f: CommandBeforeUiHookFn<S>) -> Self {
         self.on_command_before_ui = Some(f);
+        self
+    }
+
+    /// Register an app-state command hook before retained UI routing.
+    ///
+    /// The hook receives the preserved dispatch source plus live modal provenance, but no `UiTree`
+    /// or `UiServices` access.
+    pub fn on_app_command_before_ui(mut self, f: AppCommandBeforeUiHookFn<S>) -> Self {
+        self.on_app_command_before_ui = Some(f);
         self
     }
 
@@ -292,6 +538,12 @@ impl<S> UiAppDriver<S> {
 
     pub fn on_global_changes(mut self, f: GlobalChangesHookFn<S>) -> Self {
         self.on_global_changes = Some(f);
+        self
+    }
+
+    /// Register an app-state global-change hook without retained-tree access.
+    pub fn on_app_global_changes(mut self, f: AppGlobalChangesHookFn<S>) -> Self {
+        self.on_app_global_changes = Some(f);
         self
     }
 
@@ -1537,6 +1789,10 @@ fn ui_app_handle_event<S>(
         let _ = fret_ui_assets::UiAssets::handle_event(app, window, event);
     }
 
+    if let Some(on_app_event) = driver.on_app_event {
+        on_app_event(app, window, &mut state.state, event);
+    }
+
     if let Some(on_event) = driver.on_event {
         #[cfg(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32")))]
         {
@@ -1580,40 +1836,7 @@ fn ui_app_handle_command<S>(
         window,
         state,
     } = context;
-
-    let record_driver_handled_dispatch =
-        |app: &mut App,
-         window: AppWindowId,
-         command: &CommandId,
-         source: &fret_runtime::CommandDispatchSourceV1| {
-            let handled_by_scope = app
-                .commands()
-                .get(command.clone())
-                .map(|m| m.scope)
-                .or(Some(fret_runtime::CommandScope::Window));
-            let started_from_focus =
-                source.kind == fret_runtime::CommandDispatchSourceKindV1::Keyboard;
-            app.with_global_mut(
-                fret_runtime::WindowCommandDispatchDiagnosticsStore::default,
-                |store, app| {
-                    store.record(fret_runtime::CommandDispatchDecisionV1 {
-                        seq: 0,
-                        frame_id: app.frame_id(),
-                        tick_id: app.tick_id(),
-                        window,
-                        command: command.clone(),
-                        source: source.clone(),
-                        handled: true,
-                        handled_by_element: None,
-                        handled_by_scope,
-                        handled_by_driver: true,
-                        stopped: false,
-                        started_from_focus,
-                        used_default_root_fallback: false,
-                    });
-                },
-            );
-        };
+    let started_from_focus = state.ui.focus().is_some();
 
     // Capture the best-effort pending source up front so driver-handled commands can record the
     // same origin metadata as UI-tree-handled commands (ADR 0307).
@@ -1627,58 +1850,111 @@ fn ui_app_handle_command<S>(
 
     #[cfg(feature = "ui-app-command-palette")]
     if driver.command_palette_enabled
-        && matches!(
-            command.as_str(),
-            "app.command_palette" | "command_palette.toggle"
-        )
+        && command.as_str() == fret_app::core_commands::COMMAND_PALETTE
     {
         let _ = command_palette_toggle(app, window);
-        record_driver_handled_dispatch(app, window, &command, &pending_source);
+        record_driver_handled_command_dispatch(
+            app,
+            window,
+            &command,
+            &pending_source,
+            started_from_focus,
+        );
         return;
     }
 
     // Re-insert the pending source so the UI tree dispatch can consume it when it records its own
     // trace entry.
-    app.with_global_mut(
+    let restored_source_ticket = app.with_global_mut(
         fret_runtime::WindowPendingCommandDispatchSourceService::default,
         |svc, app| {
-            svc.record(
+            svc.restore_next(
                 window,
                 app.tick_id(),
                 command.clone(),
                 pending_source.clone(),
-            );
+            )
         },
     );
 
-    if let Some(on_command_before_ui) = driver.on_command_before_ui {
-        #[cfg(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32")))]
-        {
-            let mut hot = subsecond::HotFn::current(on_command_before_ui);
-            if hot.call((
+    let ui_has_modal = state.ui.has_active_input_barrier();
+    let source_is_within_active_input_barrier_scope = ui_has_modal
+        && pending_source.element.is_some_and(|element| {
+            state.ui.element_is_within_active_input_barrier_scope(
                 app,
-                services,
-                window,
-                &mut state.ui,
-                &mut state.state,
-                &command,
-            )) {
-                return;
-            }
-        }
+                fret_ui::GlobalElementId(element),
+            )
+        });
+    let app_command_context = UiAppCommandBeforeUiContext {
+        source: &pending_source,
+        ui_has_modal,
+        source_is_within_active_input_barrier_scope,
+    };
 
-        #[cfg(not(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32"))))]
-        {
-            if on_command_before_ui(
-                app,
-                services,
-                window,
-                &mut state.ui,
-                &mut state.state,
-                &command,
-            ) {
-                return;
+    if let Some(on_app_command_before_ui) = driver.on_app_command_before_ui
+        && on_app_command_before_ui(app, window, &mut state.state, &command, app_command_context)
+    {
+        app.with_global_mut(
+            fret_runtime::WindowPendingCommandDispatchSourceService::default,
+            |service, _app| {
+                let _ = service.discard_restored(restored_source_ticket);
+            },
+        );
+        record_driver_handled_command_dispatch(
+            app,
+            window,
+            &command,
+            &pending_source,
+            started_from_focus,
+        );
+        return;
+    }
+
+    if let Some(on_command_before_ui) = driver.on_command_before_ui {
+        let handled = {
+            #[cfg(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32")))]
+            {
+                let mut hot = subsecond::HotFn::current(on_command_before_ui);
+                hot.call((
+                    app,
+                    services,
+                    window,
+                    &mut state.ui,
+                    &mut state.state,
+                    &command,
+                ))
             }
+
+            #[cfg(not(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32"))))]
+            {
+                on_command_before_ui(
+                    app,
+                    services,
+                    window,
+                    &mut state.ui,
+                    &mut state.state,
+                    &command,
+                )
+            }
+        };
+
+        if handled {
+            // The hook may have dispatched into the UI tree and consumed this source already.
+            // Remove any leftover copy before recording the app-owned handling outcome.
+            app.with_global_mut(
+                fret_runtime::WindowPendingCommandDispatchSourceService::default,
+                |svc, _app| {
+                    let _ = svc.discard_restored(restored_source_ticket);
+                },
+            );
+            record_driver_handled_command_dispatch(
+                app,
+                window,
+                &command,
+                &pending_source,
+                started_from_focus,
+            );
+            return;
         }
     }
 
@@ -1686,54 +1962,112 @@ fn ui_app_handle_command<S>(
         return;
     }
 
+    // `dispatch_command` normally consumes the restored source even when no widget handles the
+    // command. Before the first UI root exists it returns early, so clean up this exact occurrence
+    // before trying driver-owned fallbacks.
+    app.with_global_mut(
+        fret_runtime::WindowPendingCommandDispatchSourceService::default,
+        |service, _app| {
+            let _ = service.discard_restored(restored_source_ticket);
+        },
+    );
+
     match command.as_str() {
         fret_app::core_commands::APP_ABOUT => {
             #[cfg(target_os = "macos")]
             {
                 app.push_effect(Effect::ShowAboutPanel);
-                record_driver_handled_dispatch(app, window, &command, &pending_source);
+                record_driver_handled_command_dispatch(
+                    app,
+                    window,
+                    &command,
+                    &pending_source,
+                    started_from_focus,
+                );
                 return;
             }
         }
         fret_app::core_commands::APP_PREFERENCES => {
             if let Some(f) = driver.on_preferences {
                 f(app, services, window, &mut state.ui, &mut state.state);
-                record_driver_handled_dispatch(app, window, &command, &pending_source);
+                record_driver_handled_command_dispatch(
+                    app,
+                    window,
+                    &command,
+                    &pending_source,
+                    started_from_focus,
+                );
                 return;
             }
         }
         fret_app::core_commands::APP_LOCALE_SWITCH_NEXT => {
             if fret_app::core_commands::handle_locale_cycle_command(app, &command) {
                 app.request_redraw(window);
-                record_driver_handled_dispatch(app, window, &command, &pending_source);
+                record_driver_handled_command_dispatch(
+                    app,
+                    window,
+                    &command,
+                    &pending_source,
+                    started_from_focus,
+                );
                 return;
             }
         }
         fret_app::core_commands::APP_QUIT => {
             app.push_effect(Effect::QuitApp);
-            record_driver_handled_dispatch(app, window, &command, &pending_source);
+            record_driver_handled_command_dispatch(
+                app,
+                window,
+                &command,
+                &pending_source,
+                started_from_focus,
+            );
             return;
         }
         fret_app::core_commands::APP_HIDE => {
             app.push_effect(Effect::HideApp);
-            record_driver_handled_dispatch(app, window, &command, &pending_source);
+            record_driver_handled_command_dispatch(
+                app,
+                window,
+                &command,
+                &pending_source,
+                started_from_focus,
+            );
             return;
         }
         fret_app::core_commands::APP_HIDE_OTHERS => {
             app.push_effect(Effect::HideOtherApps);
-            record_driver_handled_dispatch(app, window, &command, &pending_source);
+            record_driver_handled_command_dispatch(
+                app,
+                window,
+                &command,
+                &pending_source,
+                started_from_focus,
+            );
             return;
         }
         fret_app::core_commands::APP_SHOW_ALL => {
             app.push_effect(Effect::UnhideAllApps);
-            record_driver_handled_dispatch(app, window, &command, &pending_source);
+            record_driver_handled_command_dispatch(
+                app,
+                window,
+                &command,
+                &pending_source,
+                started_from_focus,
+            );
             return;
         }
         _ => {}
     }
 
     if fret_ui_kit::try_handle_window_overlays_command(&mut state.ui, app, window, &command) {
-        record_driver_handled_dispatch(app, window, &command, &pending_source);
+        record_driver_handled_command_dispatch(
+            app,
+            window,
+            &command,
+            &pending_source,
+            started_from_focus,
+        );
         return;
     }
 
@@ -1893,6 +2227,10 @@ fn ui_app_handle_global_changes<S>(
         {
             f(app, window, &mut state.ui, &mut state.state, changed);
         }
+    }
+
+    if let Some(f) = driver.on_app_global_changes {
+        f(app, window, &mut state.state, changed);
     }
 
     if let Some(f) = driver.on_global_changes {
@@ -2235,6 +2573,7 @@ fn ui_app_render<S>(
         scale_factor,
         scene,
     } = context;
+    PostFrameUiFocusLifecycle::begin_frame(app, window);
 
     #[cfg(feature = "tracing")]
     let frame_span = tracing::info_span!(
@@ -2822,6 +3161,8 @@ fn ui_app_render<S>(
         );
     }
 
+    PostFrameUiFocusLifecycle::finish_frame(app, services, window, &mut state.ui);
+
     if let (Some(cfg), Some(started)) = (hitch_config, hitch_total_started) {
         let total = started.elapsed();
         let total_ms = total.as_millis() as u64;
@@ -2985,20 +3326,25 @@ fn ui_app_before_close_window<S>(
     app: &mut App,
     window: AppWindowId,
 ) -> bool {
-    let Some(f) = driver.before_close_window else {
-        return true;
+    let allow_close = match driver.before_close_window {
+        None => true,
+        Some(f) => {
+            #[cfg(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32")))]
+            {
+                let mut hot = subsecond::HotFn::current(f);
+                hot.call((app, window))
+            }
+
+            #[cfg(not(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32"))))]
+            {
+                f(app, window)
+            }
+        }
     };
-
-    #[cfg(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32")))]
-    {
-        let mut hot = subsecond::HotFn::current(f);
-        return hot.call((app, window));
+    if allow_close {
+        PostFrameUiFocusLifecycle::clear_window(app, window);
     }
-
-    #[cfg(not(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32"))))]
-    {
-        f(app, window)
-    }
+    allow_close
 }
 
 fn ui_app_accessibility_snapshot<S>(
@@ -3221,6 +3567,8 @@ fn ui_app_record_engine_frame<S>(
     }
 }
 
+// The explicit return keeps the default diagnostics sink from running after a custom hook.
+#[allow(clippy::needless_return)]
 fn ui_app_renderer_perf_sample<S>(
     driver: &mut UiAppDriver<S>,
     app: &mut App,
@@ -3273,6 +3621,148 @@ mod tests {
     static SEQ: AtomicUsize = AtomicUsize::new(0);
     static MIDDLEWARE_SEQ: AtomicUsize = AtomicUsize::new(0);
     static USER_SEQ: AtomicUsize = AtomicUsize::new(0);
+
+    #[test]
+    fn post_frame_ui_focus_requests_preserve_fifo_order() {
+        let mut app = App::new();
+        let window = AppWindowId::default();
+        let first = fret_ui::elements::GlobalElementId(1);
+        let second = fret_ui::elements::GlobalElementId(2);
+        defer_ui_focus_until_after_frame(
+            &mut app,
+            window,
+            PostFrameUiFocusGuard::Unchanged(first),
+            Some(first),
+            Some(CommandId::from("focus.first")),
+        );
+        defer_ui_focus_until_after_frame(
+            &mut app,
+            window,
+            PostFrameUiFocusGuard::Unchanged(second),
+            Some(second),
+            Some(CommandId::from("focus.second")),
+        );
+
+        assert!(take_ready_post_frame_ui_focus_requests(&mut app, window).is_empty());
+        promote_post_frame_ui_focus_requests(&mut app, window);
+        defer_ui_focus_until_after_frame(
+            &mut app,
+            window,
+            PostFrameUiFocusGuard::NoLiveFocus,
+            None,
+            Some(CommandId::from("focus.third")),
+        );
+        assert_eq!(
+            take_ready_post_frame_ui_focus_requests(&mut app, window),
+            vec![
+                PostFrameUiFocusRequest {
+                    guard: PostFrameUiFocusGuard::Unchanged(first),
+                    target: Some(first),
+                    fallback_command: Some(CommandId::from("focus.first")),
+                },
+                PostFrameUiFocusRequest {
+                    guard: PostFrameUiFocusGuard::Unchanged(second),
+                    target: Some(second),
+                    fallback_command: Some(CommandId::from("focus.second")),
+                },
+            ]
+        );
+        assert!(take_ready_post_frame_ui_focus_requests(&mut app, window).is_empty());
+        promote_post_frame_ui_focus_requests(&mut app, window);
+        assert_eq!(
+            take_ready_post_frame_ui_focus_requests(&mut app, window),
+            vec![PostFrameUiFocusRequest {
+                guard: PostFrameUiFocusGuard::NoLiveFocus,
+                target: None,
+                fallback_command: Some(CommandId::from("focus.third")),
+            }]
+        );
+    }
+
+    #[test]
+    fn post_frame_ui_focus_requests_are_cleared_when_a_window_closes() {
+        let mut app = App::new();
+        let window = AppWindowId::default();
+        defer_ui_focus_until_after_frame(
+            &mut app,
+            window,
+            PostFrameUiFocusGuard::NoLiveFocus,
+            None,
+            Some(CommandId::from("focus.active")),
+        );
+
+        PostFrameUiFocusLifecycle::clear_window(&mut app, window);
+        promote_post_frame_ui_focus_requests(&mut app, window);
+
+        assert!(take_ready_post_frame_ui_focus_requests(&mut app, window).is_empty());
+    }
+
+    #[test]
+    fn post_frame_ui_focus_request_yields_to_newer_focus() {
+        let original = fret_ui::elements::GlobalElementId(1);
+        let newer = fret_ui::elements::GlobalElementId(2);
+        let request = PostFrameUiFocusRequest {
+            guard: PostFrameUiFocusGuard::Unchanged(original),
+            target: Some(original),
+            fallback_command: Some(CommandId::from("focus.original")),
+        };
+
+        assert!(post_frame_ui_focus_request_can_apply(&request, false, None));
+        assert!(post_frame_ui_focus_request_can_apply(
+            &request,
+            true,
+            Some(original)
+        ));
+        assert!(!post_frame_ui_focus_request_can_apply(
+            &request,
+            true,
+            Some(newer)
+        ));
+        assert!(!post_frame_ui_focus_request_can_apply(&request, true, None));
+
+        let fallback_request = PostFrameUiFocusRequest {
+            guard: PostFrameUiFocusGuard::Unchanged(original),
+            target: None,
+            fallback_command: Some(CommandId::from("focus.fallback")),
+        };
+        assert!(post_frame_ui_focus_request_can_apply(
+            &fallback_request,
+            true,
+            Some(original)
+        ));
+        assert!(!post_frame_ui_focus_request_can_apply(
+            &fallback_request,
+            true,
+            Some(newer)
+        ));
+
+        let empty_focus_request = PostFrameUiFocusRequest {
+            guard: PostFrameUiFocusGuard::NoLiveFocus,
+            target: None,
+            fallback_command: Some(CommandId::from("focus.empty")),
+        };
+        assert!(post_frame_ui_focus_request_can_apply(
+            &empty_focus_request,
+            false,
+            None
+        ));
+        assert!(!post_frame_ui_focus_request_can_apply(
+            &empty_focus_request,
+            true,
+            Some(newer)
+        ));
+
+        let authoritative_request = PostFrameUiFocusRequest {
+            guard: PostFrameUiFocusGuard::Authoritative,
+            target: None,
+            fallback_command: Some(CommandId::from("focus.authoritative")),
+        };
+        assert!(post_frame_ui_focus_request_can_apply(
+            &authoritative_request,
+            true,
+            Some(newer)
+        ));
+    }
 
     fn init_window(app: &mut App, window: AppWindowId) -> u8 {
         let _ = (app, window);
@@ -3350,6 +3840,7 @@ mod tests {
         dirty: bool,
         dirty_close_blocked: bool,
         commands: Vec<String>,
+        app_command_sources: Vec<Option<u64>>,
     }
 
     impl UiAppFrameStageSink for FrameHarnessSmokeState {
@@ -3373,6 +3864,40 @@ mod tests {
         ViewElements::default()
     }
 
+    #[derive(Default)]
+    struct FocusBatchHarnessState {
+        first: Option<fret_ui::elements::GlobalElementId>,
+        second: Option<fret_ui::elements::GlobalElementId>,
+        third: Option<fret_ui::elements::GlobalElementId>,
+    }
+
+    fn focus_batch_init(_app: &mut App, _window: AppWindowId) -> FocusBatchHarnessState {
+        FocusBatchHarnessState::default()
+    }
+
+    fn focus_batch_view(
+        cx: &mut ElementContext<'_, App>,
+        state: &mut FocusBatchHarnessState,
+    ) -> ViewElements {
+        let props = fret_ui::element::PressableProps {
+            focusable: true,
+            ..Default::default()
+        };
+        let first = cx.keyed("focus-batch-first", |cx| {
+            cx.pressable(props.clone(), |_cx, _state| Vec::new())
+        });
+        let second = cx.keyed("focus-batch-second", |cx| {
+            cx.pressable(props.clone(), |_cx, _state| Vec::new())
+        });
+        let third = cx.keyed("focus-batch-third", |cx| {
+            cx.pressable(props, |_cx, _state| Vec::new())
+        });
+        state.first = Some(first.id);
+        state.second = Some(second.id);
+        state.third = Some(third.id);
+        vec![first, second, third].into()
+    }
+
     fn frame_harness_on_command(
         _app: &mut App,
         _services: &mut dyn UiServices,
@@ -3382,6 +3907,50 @@ mod tests {
         command: &CommandId,
     ) {
         state.commands.push(command.as_str().to_owned());
+    }
+
+    fn frame_harness_on_command_before_ui(
+        _app: &mut App,
+        _services: &mut dyn UiServices,
+        _window: AppWindowId,
+        _ui: &mut UiTree<App>,
+        state: &mut FrameHarnessSmokeState,
+        command: &CommandId,
+    ) -> bool {
+        state.commands.push(command.as_str().to_owned());
+        true
+    }
+
+    fn frame_harness_legacy_hook_consumes_source(
+        app: &mut App,
+        _services: &mut dyn UiServices,
+        window: AppWindowId,
+        _ui: &mut UiTree<App>,
+        state: &mut FrameHarnessSmokeState,
+        command: &CommandId,
+    ) -> bool {
+        let source = app.with_global_mut(
+            fret_runtime::WindowPendingCommandDispatchSourceService::default,
+            |service, app| service.consume(window, app.tick_id(), command),
+        );
+        state
+            .app_command_sources
+            .push(source.and_then(|source| source.element));
+        true
+    }
+
+    fn frame_harness_on_app_command_before_ui(
+        _app: &mut App,
+        _window: AppWindowId,
+        state: &mut FrameHarnessSmokeState,
+        command: &CommandId,
+        context: UiAppCommandBeforeUiContext<'_>,
+    ) -> bool {
+        state.commands.push(command.as_str().to_owned());
+        state.app_command_sources.push(context.source.element);
+        assert!(!context.ui_has_modal);
+        assert!(!context.source_is_within_active_input_barrier_scope);
+        true
     }
 
     fn frame_harness_on_event(
@@ -3425,12 +3994,12 @@ mod tests {
         stages
     }
 
-    fn render_smoke_frame(
-        driver: &mut UiAppDriver<FrameHarnessSmokeState>,
+    fn render_test_frame<S>(
+        driver: &mut UiAppDriver<S>,
         app: &mut App,
         services: &mut FakeUiServices,
         window: AppWindowId,
-        state: &mut UiAppWindowState<FrameHarnessSmokeState>,
+        state: &mut UiAppWindowState<S>,
     ) {
         let mut scene = fret_core::Scene::default();
         ui_app_render(
@@ -3521,7 +4090,7 @@ mod tests {
         .record_frame_stages();
         let mut state = ui_app_create_window_state(&mut driver, &mut app, window);
 
-        render_smoke_frame(&mut driver, &mut app, &mut services, window, &mut state);
+        render_test_frame(&mut driver, &mut app, &mut services, window, &mut state);
 
         let stages = state
             .state
@@ -3538,6 +4107,48 @@ mod tests {
             assert_eq!(observation.tick_id, app.tick_id());
             assert_eq!(observation.frame_id, app.frame_id());
         }
+    }
+
+    #[test]
+    fn post_frame_focus_batch_rechecks_guard_after_each_restore() {
+        let mut app = App::new();
+        let window = AppWindowId::default();
+        let mut services = FakeUiServices;
+        let mut driver = UiAppDriver::new("focus-batch", focus_batch_init, focus_batch_view);
+        let mut state = ui_app_create_window_state(&mut driver, &mut app, window);
+        render_test_frame(&mut driver, &mut app, &mut services, window, &mut state);
+
+        let first = state.state.first.expect("first focus target");
+        let second = state.state.second.expect("second focus target");
+        let third = state.state.third.expect("third focus target");
+        let first_node = state
+            .ui
+            .live_attached_node_for_element(&mut app, first)
+            .expect("first live node");
+        let second_node = state
+            .ui
+            .live_attached_node_for_element(&mut app, second)
+            .expect("second live node");
+        state.ui.set_focus(Some(first_node));
+
+        defer_ui_focus_until_after_frame(
+            &mut app,
+            window,
+            PostFrameUiFocusGuard::Authoritative,
+            Some(second),
+            None,
+        );
+        defer_ui_focus_until_after_frame(
+            &mut app,
+            window,
+            PostFrameUiFocusGuard::Unchanged(first),
+            Some(third),
+            None,
+        );
+        PostFrameUiFocusLifecycle::begin_frame(&mut app, window);
+        PostFrameUiFocusLifecycle::finish_frame(&mut app, &mut services, window, &mut state.ui);
+
+        assert_eq!(state.ui.focus(), Some(second_node));
     }
 
     #[test]
@@ -3588,7 +4199,7 @@ mod tests {
             "dirty close smoke should not emit a close-window effect"
         );
 
-        render_smoke_frame(&mut driver, &mut app, &mut services, window, &mut state);
+        render_test_frame(&mut driver, &mut app, &mut services, window, &mut state);
 
         assert_eq!(
             state.state.commands,
@@ -3612,6 +4223,275 @@ mod tests {
 
         #[cfg(feature = "diagnostics")]
         assert!(stages.contains(&UiAppFrameStage::DiagnosticsSnapshot));
+    }
+
+    #[test]
+    fn command_before_ui_trace_preserves_source_and_entry_focus_state() {
+        let mut app = App::new();
+        let window = AppWindowId::default();
+        let mut services = FakeUiServices;
+        let mut driver = UiAppDriver::new(
+            "command-before-ui-smoke",
+            frame_harness_init,
+            frame_harness_view,
+        )
+        .on_command_before_ui(frame_harness_on_command_before_ui);
+        let mut state = ui_app_create_window_state(&mut driver, &mut app, window);
+        let cases = [
+            (
+                "workspace.smoke.before_ui.keyboard",
+                fret_runtime::CommandDispatchSourceKindV1::Keyboard,
+                false,
+            ),
+            (
+                "workspace.smoke.before_ui.shortcut",
+                fret_runtime::CommandDispatchSourceKindV1::Shortcut,
+                true,
+            ),
+        ];
+
+        for (index, (command_name, source_kind, expected_started_from_focus)) in
+            cases.into_iter().enumerate()
+        {
+            let command = CommandId::new(command_name);
+            let source = fret_runtime::CommandDispatchSourceV1 {
+                kind: source_kind,
+                element: Some(42 + index as u64),
+                test_id: Some(std::sync::Arc::from("workspace.smoke.trigger")),
+            };
+            state
+                .ui
+                .set_focus(expected_started_from_focus.then_some(fret_core::NodeId::default()));
+
+            app.with_global_mut(
+                fret_runtime::WindowPendingCommandDispatchSourceService::default,
+                |service, app| {
+                    service.record(window, app.tick_id(), command.clone(), source.clone());
+                },
+            );
+            ui_app_handle_command(
+                &mut driver,
+                WinitCommandContext {
+                    app: &mut app,
+                    services: &mut services,
+                    window,
+                    state: &mut state,
+                },
+                command.clone(),
+            );
+
+            let decisions = app
+                .global::<fret_runtime::WindowCommandDispatchDiagnosticsStore>()
+                .expect("driver-handled command should record diagnostics")
+                .snapshot_since(window, 0, 10);
+            let decision = decisions
+                .iter()
+                .find(|decision| decision.command == command)
+                .expect("expected a trace entry for the before-UI hook");
+            assert!(decision.handled);
+            assert!(decision.handled_by_driver);
+            assert_eq!(
+                decision.handled_by_scope,
+                Some(fret_runtime::CommandScope::Window)
+            );
+            assert_eq!(decision.source, source);
+            assert_eq!(
+                decision.started_from_focus, expected_started_from_focus,
+                "driver traces must use the focus state captured at dispatch entry"
+            );
+
+            let pending = app.with_global_mut(
+                fret_runtime::WindowPendingCommandDispatchSourceService::default,
+                |service, app| service.consume(window, app.tick_id(), &command),
+            );
+            assert_eq!(pending, None);
+        }
+
+        assert_eq!(
+            state.state.commands,
+            cases
+                .into_iter()
+                .map(|(command, _, _)| command.to_owned())
+                .collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn repeated_same_command_preserves_fifo_sources_across_app_hook_cleanup() {
+        let mut app = App::new();
+        let window = AppWindowId::default();
+        let mut services = FakeUiServices;
+        let mut driver = UiAppDriver::new(
+            "command-source-fifo-smoke",
+            frame_harness_init,
+            frame_harness_view,
+        )
+        .on_app_command_before_ui(frame_harness_on_app_command_before_ui);
+        let mut state = ui_app_create_window_state(&mut driver, &mut app, window);
+        let command = CommandId::new("workspace.smoke.before_ui.repeated");
+
+        app.with_global_mut(
+            fret_runtime::WindowPendingCommandDispatchSourceService::default,
+            |service, app| {
+                for element in [1, 2] {
+                    service.record(
+                        window,
+                        app.tick_id(),
+                        command.clone(),
+                        fret_runtime::CommandDispatchSourceV1 {
+                            kind: fret_runtime::CommandDispatchSourceKindV1::Pointer,
+                            element: Some(element),
+                            test_id: None,
+                        },
+                    );
+                }
+            },
+        );
+
+        for _ in 0..2 {
+            ui_app_handle_command(
+                &mut driver,
+                WinitCommandContext {
+                    app: &mut app,
+                    services: &mut services,
+                    window,
+                    state: &mut state,
+                },
+                command.clone(),
+            );
+        }
+
+        let source_elements = app
+            .global::<fret_runtime::WindowCommandDispatchDiagnosticsStore>()
+            .expect("driver-handled commands should record diagnostics")
+            .snapshot_since(window, 0, 10)
+            .into_iter()
+            .filter(|decision| decision.command == command)
+            .map(|decision| decision.source.element)
+            .collect::<Vec<_>>();
+        assert_eq!(source_elements, vec![Some(1), Some(2)]);
+        assert_eq!(state.state.app_command_sources, vec![Some(1), Some(2)]);
+        let pending = app.with_global_mut(
+            fret_runtime::WindowPendingCommandDispatchSourceService::default,
+            |service, app| service.consume(window, app.tick_id(), &command),
+        );
+        assert_eq!(pending, None);
+    }
+
+    #[test]
+    fn repeated_same_command_preserves_fifo_when_legacy_hook_consumes_its_source() {
+        let mut app = App::new();
+        let window = AppWindowId::default();
+        let mut services = FakeUiServices;
+        let mut driver = UiAppDriver::new(
+            "legacy-command-source-fifo-smoke",
+            frame_harness_init,
+            frame_harness_view,
+        )
+        .on_command_before_ui(frame_harness_legacy_hook_consumes_source);
+        let mut state = ui_app_create_window_state(&mut driver, &mut app, window);
+        let command = CommandId::new("workspace.smoke.before_ui.legacy-repeated");
+
+        app.with_global_mut(
+            fret_runtime::WindowPendingCommandDispatchSourceService::default,
+            |service, app| {
+                for element in [1, 2] {
+                    service.record(
+                        window,
+                        app.tick_id(),
+                        command.clone(),
+                        fret_runtime::CommandDispatchSourceV1 {
+                            kind: fret_runtime::CommandDispatchSourceKindV1::Pointer,
+                            element: Some(element),
+                            test_id: None,
+                        },
+                    );
+                }
+            },
+        );
+
+        for _ in 0..2 {
+            ui_app_handle_command(
+                &mut driver,
+                WinitCommandContext {
+                    app: &mut app,
+                    services: &mut services,
+                    window,
+                    state: &mut state,
+                },
+                command.clone(),
+            );
+        }
+
+        assert_eq!(state.state.app_command_sources, vec![Some(1), Some(2)]);
+        let traced_sources = app
+            .global::<fret_runtime::WindowCommandDispatchDiagnosticsStore>()
+            .expect("legacy hook commands should record diagnostics")
+            .snapshot_since(window, 0, 10)
+            .into_iter()
+            .filter(|decision| decision.command == command)
+            .map(|decision| decision.source.element)
+            .collect::<Vec<_>>();
+        assert_eq!(traced_sources, vec![Some(1), Some(2)]);
+        let pending = app.with_global_mut(
+            fret_runtime::WindowPendingCommandDispatchSourceService::default,
+            |service, app| service.consume(window, app.tick_id(), &command),
+        );
+        assert_eq!(pending, None);
+    }
+
+    #[test]
+    fn command_before_first_frame_discards_only_its_restored_source() {
+        let mut app = App::new();
+        let window = AppWindowId::default();
+        let mut services = FakeUiServices;
+        let mut driver = UiAppDriver::new(
+            "pre-frame-command-source-smoke",
+            frame_harness_init,
+            frame_harness_view,
+        );
+        let mut state = ui_app_create_window_state(&mut driver, &mut app, window);
+        let command = CommandId::new("workspace.smoke.before_first_frame");
+
+        app.with_global_mut(
+            fret_runtime::WindowPendingCommandDispatchSourceService::default,
+            |service, app| {
+                for element in [1, 2] {
+                    service.record(
+                        window,
+                        app.tick_id(),
+                        command.clone(),
+                        fret_runtime::CommandDispatchSourceV1 {
+                            kind: fret_runtime::CommandDispatchSourceKindV1::Pointer,
+                            element: Some(element),
+                            test_id: None,
+                        },
+                    );
+                }
+            },
+        );
+
+        ui_app_handle_command(
+            &mut driver,
+            WinitCommandContext {
+                app: &mut app,
+                services: &mut services,
+                window,
+                state: &mut state,
+            },
+            command.clone(),
+        );
+
+        let remaining = app.with_global_mut(
+            fret_runtime::WindowPendingCommandDispatchSourceService::default,
+            |service, app| service.consume(window, app.tick_id(), &command),
+        );
+        assert_eq!(remaining.and_then(|source| source.element), Some(2));
+        let exhausted = app.with_global_mut(
+            fret_runtime::WindowPendingCommandDispatchSourceService::default,
+            |service, app| service.consume(window, app.tick_id(), &command),
+        );
+        assert_eq!(exhausted, None);
     }
 
     #[cfg(feature = "diagnostics")]

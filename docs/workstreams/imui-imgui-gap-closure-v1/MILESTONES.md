@@ -3588,7 +3588,7 @@ Palette channel selection, shared boolean label mounting, and public checkbox/ra
 remain unchanged.
 
 2026-05-31 editor style/theme picker density status result:
-`ecosystem/fret-ui-editor/src/theme.rs` now exposes `EditorThemePresetV1::picker_status_label()` as
+`ecosystem/fret-ui-editor/src/theme.rs` now exposes `EditorThemePreset::picker_status_label()` as
 stable picker metadata, and `controls/editor_theme_preset_picker/render.rs` renders compact
 `24px`/`22px` density status labels in each preset row. This improves the Dear ImGui-style
 style/theme picker affordance while keeping editor policy in `fret-ui-editor` and leaving
@@ -6805,7 +6805,7 @@ Exit criteria:
   response-bearing image item / image button authoring. It is intentionally a `fret-ui-kit::imui`
   additive helper over existing `ImageId` / `ImageProps`, not a `fret-imui` runtime texture stack.
   Current design-surface audit result: keep imgui-class density as an opt-in editor token/preset
-  outcome. `EditorThemePresetV1::ImguiLikeDense` is sufficient for the active proof; do not copy
+  outcome. `EditorThemePreset::ImguiLikeDense` is sufficient for the active proof; do not copy
   Dear ImGui's mutable style stack or make a generic style editor without visual/tooling proof.
   2026-05-14 cleanup result: the unused `apply_editor_theme_patch_v1` compatibility wrapper was
   deleted; explicit preset entry points remain the only editor theme patch authoring path.

@@ -1317,7 +1317,7 @@ Last updated: 2026-06-12
       editor theme preset picker semantics.
       Result: `theme/patches.rs` keeps the default editor patch, preset override dispatch, and
       shared patch insertion helpers. `theme/patches/dense.rs` owns
-      `imgui_like_dense_patch_v1(...)` and all dense override metric/color tokens. The source gate
+      `imgui_like_dense_patch(...)` and all dense override metric/color tokens. The source gate
       prevents dense override token construction from drifting back into the default patch owner.
 - [x] Split IMUI textarea policy command snapshot and key resolution out of
       `ecosystem/fret-ui-kit/src/imui/text_controls/policy_commands/textarea.rs` into private child
@@ -3852,7 +3852,7 @@ Last updated: 2026-06-12
 - [x] Productize the editor-owned IMUI style/theme preset picker rows with stable density status
       labels without adding Dear ImGui `GetStyle`, `PushStyleVar`, a global style stack, or
       `fret-ui-kit::imui` theme-editor policy.
-      Result: `EditorThemePresetV1::picker_status_label()` exposes stable row status metadata, and
+      Result: `EditorThemePreset::picker_status_label()` exposes stable row status metadata, and
       `controls/editor_theme_preset_picker/render.rs` renders `24px`/`22px` density labels in the
       picker status slot with selected-row accenting.
 - [x] Split editor-owned theme preset patch construction into a private owner without changing
@@ -8464,7 +8464,7 @@ opening the slice.
       reversible preset replay tests.
       Result: `editor_theme_preset_picker/render/row.rs` keeps row layout, labels, status text,
       test IDs, and activation routing; `render/row/behavior.rs` owns the activate handler that
-      writes the selected `EditorThemePresetV1` model and requests redraw.
+      writes the selected `EditorThemePreset` model and requests redraw.
 - [x] Split editor theme-preset picker row visual projection out of
       `ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker/render/row.rs` into a
       private visual owner without changing ListBoxOption semantics, focusability, row activation,

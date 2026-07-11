@@ -29,7 +29,7 @@ use fret_ui_editor::controls::{
     TransformEditPresentations, Vec2Edit, Vec3Edit, Vec4Edit, VecEditAxisOutcome, VecEditOptions,
 };
 use fret_ui_editor::imui;
-use fret_ui_editor::theme::EditorThemePresetV1;
+use fret_ui_editor::theme::EditorThemePreset;
 
 #[allow(dead_code)]
 fn editor_imui_adapters_compile<H: UiHost + 'static>(
@@ -42,7 +42,7 @@ fn editor_imui_adapters_compile<H: UiHost + 'static>(
     search_model: &Model<String>,
     search_dismissed_query_model: &Model<String>,
     search_active_item_id_model: &Model<Option<Arc<str>>>,
-    theme_preset_model: &Model<EditorThemePresetV1>,
+    theme_preset_model: &Model<EditorThemePreset>,
 ) {
     let value_presentation = NumericPresentation::<f64>::fixed_decimals(3);
     let blend_presentation = NumericPresentation::<f64>::percent_0_1(0);

@@ -1019,6 +1019,77 @@ Supported selectors (v1 MVP):
 - `inject_incoming_open` (schema v2 only; simulates "open in..." / share-target flows; capability-gated behind `diag.incoming_open_inject`)
 - `drag_pointer_until` (schema v2 only; optional `window` target; drag across frames until a predicate passes or timeout; intended for cross-window routing; optional `release_on_success` to end while keeping the pointer pressed)
 
+### Command dispatch trace waits
+
+`wait_command_dispatch_trace` correlates with the most recently injected input step when one is
+available. A trace entry from an older step cannot satisfy the wait merely because its frame ID is
+still current (for example, after a failed present that did not advance `FrameId`). Multiple command
+dispatches recorded for the same input step remain independent candidates, including a
+driver-handled entry followed by a widget/root-fallback entry. Before any input step has been
+injected, the wait retains the frame-based compatibility fallback.
+
+All query fields are optional and combine with logical AND:
+
+| Field | Meaning |
+| --- | --- |
+| `command` | Routed command ID. This may be an alias or shell command. |
+| `action_id` | Canonical typed action identity from the domain outcome; not source provenance. |
+| `target` | Domain-owned target identity, such as `pane-a/doc-a`. |
+| `applied` | Whether the domain mutation was applied. |
+| `blocked_dirty_close` | Whether dirty-close policy blocked the requested mutation. |
+| `source_kind` | Dispatch origin class: `pointer`, `keyboard`, `shortcut`, or `programmatic`. |
+| `source_test_id` | Best-effort stable selector for the dispatch source. Pointer dispatch may use hit-test attribution; other source kinds require direct or semantics-backed source metadata. |
+| `handled` | Whether any routing layer handled the command. |
+| `handled_by_scope` | Best-effort handler scope: `widget`, `window`, or `app`. |
+| `handled_by_driver` | Whether runner/driver integration handled the command. |
+| `handled_by_test_id` | Best-effort selector for the first widget handler. |
+| `started_from_focus` | Whether widget routing started from the focused element. |
+| `used_default_root_fallback` | Whether widget routing fell back to the default root. |
+
+For example, a dirty-close gate can distinguish the routed command from its canonical action and
+assert the domain result:
+
+```json
+{
+  "type": "wait_command_dispatch_trace",
+  "query": {
+    "command": "workspace.tab.close.request",
+    "action_id": "workspace.tab.close",
+    "target": "pane-a/doc-a",
+    "applied": false,
+    "blocked_dirty_close": true,
+    "source_kind": "pointer",
+    "source_test_id": "workspace.tab.close-button",
+    "handled": true,
+    "handled_by_scope": "window",
+    "handled_by_driver": true
+  },
+  "timeout_frames": 240
+}
+```
+
+The public Rust entry and query structs are non-exhaustive because trace fields are additive. Code
+that previously used a complete struct literal should migrate to the stable constructor and assign
+only the fields it owns:
+
+```rust
+use fret_diag_protocol::{
+    UiCommandDispatchTraceEntryV1, UiCommandDispatchTraceQueryV1,
+};
+
+let mut query = UiCommandDispatchTraceQueryV1::for_command("workspace.tab.close.request");
+query.action_id = Some("workspace.tab.close".into());
+query.blocked_dirty_close = Some(true);
+
+let mut entry = UiCommandDispatchTraceEntryV1::for_command(
+    12,
+    480,
+    "workspace.tab.close.request",
+);
+entry.action_id = Some("workspace.tab.close".into());
+entry.blocked_dirty_close = Some(true);
+```
+
 Pointer kind note (as of 2026-02-27):
 
 - Pointer-driven steps support an optional `pointer_kind` field: `mouse` (default), `touch`, or `pen`.

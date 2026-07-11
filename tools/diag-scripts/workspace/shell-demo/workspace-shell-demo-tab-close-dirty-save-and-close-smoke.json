@@ -1,0 +1,166 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "Workspace shell demo: dirty tab save and close (smoke)",
+    "tags": ["app_facing", "workspace", "tabstrip", "dirty", "close", "save", "semantics", "smoke", "gate"],
+    "required_capabilities": ["diag.script_v2", "diag.command_dispatch_trace"],
+    "env_defaults": {
+      "FRET_WORKSPACE_SHELL_DEBUG_PREVIEW": "1",
+      "FRET_WORKSPACE_SHELL_DEBUG_DIRTY_CLOSE_POLICY": "1"
+    },
+    "target_hints": [
+      "Marks doc-a-2 dirty, requests close through its real tab close button, and asserts the prompt is a dialog.",
+      "Uses reverse modal focus trapping to reach Save & Close and proves the keyboard activation dispatches the save command through the window driver.",
+      "Asserts focus moves to the surviving active tab; a Rust behavior gate separately proves Save clears dirty state while Discard preserves it."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 10 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "selected_is",
+        "selected": true,
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2" }
+      },
+      "timeout_frames": 120
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-debug-mark-dirty" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2.dirty" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2.close" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "workspace-shell-dirty-close-prompt" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "role_is",
+        "target": { "kind": "test_id", "id": "workspace-shell-dirty-close-prompt" },
+        "role": "dialog"
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "workspace-shell-dirty-close-prompt" },
+        "text": "dirty=[doc-a-2]"
+      }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focused_descendant_is",
+        "scope": { "kind": "test_id", "id": "workspace-shell-dirty-close-prompt" },
+        "target": { "kind": "test_id", "id": "workspace-shell-dirty-close-prompt.cancel" }
+      },
+      "timeout_frames": 120
+    },
+    { "type": "press_key", "key": "tab", "modifiers": { "shift": true } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focused_descendant_is",
+        "scope": { "kind": "test_id", "id": "workspace-shell-dirty-close-prompt" },
+        "target": { "kind": "test_id", "id": "workspace-shell-dirty-close-prompt.save_and_close" }
+      },
+      "timeout_frames": 60
+    },
+    { "type": "press_key", "key": "enter" },
+    {
+      "type": "wait_command_dispatch_trace",
+      "query": {
+        "command": "workspace.dirty_close.save_and_close",
+        "action_id": "workspace.dirty_close.save_and_close",
+        "target": "pane-a/doc-a-2",
+        "applied": true,
+        "blocked_dirty_close": false,
+        "handled": true,
+        "handled_by_scope": "window",
+        "handled_by_driver": true,
+        "source_kind": "keyboard",
+        "source_test_id": "workspace-shell-dirty-close-prompt.save_and_close"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_command_dispatch_trace",
+      "query": {
+        "command": "workspace.pane.focus_tab_strip",
+        "source_kind": "programmatic",
+        "handled": true,
+        "handled_by_scope": "widget",
+        "handled_by_driver": false
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "workspace-shell-dirty-close-prompt" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-1" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "capture_bundle",
+      "label": "workspace-shell-demo-tab-close-dirty-save-and-close-smoke"
+    }
+  ]
+}

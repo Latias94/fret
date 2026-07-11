@@ -2,12 +2,16 @@
   "schema_version": 2,
   "meta": {
     "name": "Workspace shell demo: tab cycle commands via Ctrl+Tab (smoke)",
-    "tags": ["workspace", "tabstrip", "keyboard", "smoke", "gate"],
-    "required_capabilities": ["diag.script_v2", "diag.command_dispatch_trace"],
+    "tags": ["app_facing", "workspace", "tabstrip", "keyboard", "smoke", "gate"],
+    "required_capabilities": [
+      "diag.script_v2",
+      "diag.shortcut_routing_trace",
+      "diag.command_dispatch_trace"
+    ],
     "target_hints": [
-      "Closes doc-a-0 so only two tabs remain (deterministic MRU).",
-      "Activates doc-a-1, focuses pane content, then uses Ctrl+Tab / Ctrl+Shift+Tab.",
-      "Asserts workspace.tab.next/prev dispatch traces and selected tab changes."
+      "Closes the visible active doc-a-2 so only two tabs remain (deterministic MRU).",
+      "Uses Ctrl+F6 and Home to activate offscreen doc-a-0 without pointer-coordinate assumptions, restores content focus, then uses Ctrl+Tab / Ctrl+Shift+Tab.",
+      "Asserts shortcut routing separately from window-scope driver handling for workspace.tab.next/prev, then checks selected tab changes."
     ]
   },
   "steps": [
@@ -27,19 +31,19 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-0.close" }
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2.close" }
       },
       "timeout_frames": 240
     },
     {
       "type": "move_pointer",
-      "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-0.close" }
+      "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2.close" }
     },
     { "type": "wait_frames", "n": 1 },
     {
       "type": "pointer_down",
       "window": { "kind": "current" },
-      "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-0.close" },
+      "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2.close" },
       "button": "left"
     },
     { "type": "wait_frames", "n": 1 },
@@ -47,10 +51,15 @@
     {
       "type": "wait_command_dispatch_trace",
       "query": {
-        "command": "workspace.tab.close.doc-a-0",
+        "command": "workspace.tab.close.doc-a-2",
+        "target": "pane-a/doc-a-2",
+        "applied": true,
+        "blocked_dirty_close": false,
         "handled": true,
+        "handled_by_scope": "window",
+        "handled_by_driver": true,
         "source_kind": "pointer",
-        "source_test_id": "workspace-shell-pane-pane-a-tab-doc-a-0.close"
+        "source_test_id": "workspace-shell-pane-pane-a-tab-doc-a-2.close"
       },
       "timeout_frames": 240
     },
@@ -58,22 +67,7 @@
       "type": "wait_until",
       "predicate": {
         "kind": "not_exists",
-        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-0" }
-      },
-      "timeout_frames": 240
-    },
-
-    {
-      "type": "click",
-      "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-1" }
-    },
-    { "type": "wait_frames", "n": 4 },
-    {
-      "type": "wait_until",
-      "predicate": {
-        "kind": "selected_is",
-        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-1" },
-        "selected": true
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2" }
       },
       "timeout_frames": 240
     },
@@ -92,17 +86,66 @@
       "timeout_frames": 240
     },
 
+    { "type": "press_key", "key": "f6", "modifiers": { "ctrl": true }, "repeat": false },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-1" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "press_key", "key": "home", "repeat": false },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "selected_is",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-0" },
+        "selected": true
+      },
+      "timeout_frames": 240
+    },
+    { "type": "press_key", "key": "escape", "repeat": false },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-content" }
+      },
+      "timeout_frames": 240
+    },
+
     { "type": "press_key", "key": "tab", "modifiers": { "ctrl": true }, "repeat": false },
     {
+      "type": "wait_shortcut_routing_trace",
+      "query": {
+        "outcome": "command_dispatched",
+        "key": "Tab",
+        "command": "workspace.tab.next"
+      },
+      "timeout_frames": 240
+    },
+    {
       "type": "wait_command_dispatch_trace",
-      "query": { "command": "workspace.tab.next", "handled": true, "started_from_focus": true },
+      "query": {
+        "command": "workspace.tab.next",
+        "action_id": "workspace.tab.next",
+        "target": "pane-a/doc-a-0",
+        "applied": true,
+        "blocked_dirty_close": false,
+        "source_kind": "shortcut",
+        "handled": true,
+        "handled_by_scope": "window",
+        "handled_by_driver": true,
+        "started_from_focus": true
+      },
       "timeout_frames": 240
     },
     {
       "type": "wait_until",
       "predicate": {
         "kind": "selected_is",
-        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2" },
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-1" },
         "selected": true
       },
       "timeout_frames": 240
@@ -115,15 +158,35 @@
       "repeat": false
     },
     {
+      "type": "wait_shortcut_routing_trace",
+      "query": {
+        "outcome": "command_dispatched",
+        "key": "Tab",
+        "command": "workspace.tab.prev"
+      },
+      "timeout_frames": 240
+    },
+    {
       "type": "wait_command_dispatch_trace",
-      "query": { "command": "workspace.tab.prev", "handled": true, "started_from_focus": true },
+      "query": {
+        "command": "workspace.tab.prev",
+        "action_id": "workspace.tab.prev",
+        "target": "pane-a/doc-a-1",
+        "applied": true,
+        "blocked_dirty_close": false,
+        "source_kind": "shortcut",
+        "handled": true,
+        "handled_by_scope": "window",
+        "handled_by_driver": true,
+        "started_from_focus": true
+      },
       "timeout_frames": 240
     },
     {
       "type": "wait_until",
       "predicate": {
         "kind": "selected_is",
-        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-1" },
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-0" },
         "selected": true
       },
       "timeout_frames": 240

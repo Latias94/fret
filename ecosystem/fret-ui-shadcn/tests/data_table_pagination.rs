@@ -208,6 +208,18 @@ fn data_table_pagination_buttons_update_page_index_and_disabled_states() {
         snapshot_button_labels(&snap)
     );
     assert!(
+        !find_by_role_and_label(&snap, SemanticsRole::Button, "Go to next page")
+            .flags
+            .disabled,
+        "next should be enabled on the first page of a multi-page result"
+    );
+    assert!(
+        !find_by_role_and_label(&snap, SemanticsRole::Button, "Go to last page")
+            .flags
+            .disabled,
+        "last should be enabled on the first page of a multi-page result"
+    );
+    assert!(
         snap.nodes.iter().any(|n| {
             n.label
                 .as_deref()
@@ -242,12 +254,31 @@ fn data_table_pagination_buttons_update_page_index_and_disabled_states() {
             .page_index,
         1
     );
-
-    // Last page.
+    let middle_output = app
+        .models()
+        .get_cloned(&output)
+        .expect("table output on middle page");
+    assert!(middle_output.pagination.can_prev);
+    assert!(middle_output.pagination.can_next);
     let snap = ui
         .semantics_snapshot()
         .cloned()
-        .expect("expected semantics snapshot");
+        .expect("expected middle-page semantics snapshot");
+    for label in [
+        "Go to first page",
+        "Go to previous page",
+        "Go to next page",
+        "Go to last page",
+    ] {
+        assert!(
+            !find_by_role_and_label(&snap, SemanticsRole::Button, label)
+                .flags
+                .disabled,
+            "{label} should be enabled on a middle page"
+        );
+    }
+
+    // Last page.
     let last = find_by_role_and_label(&snap, SemanticsRole::Button, "Go to last page");
     click_at(&mut ui, &mut app, &mut services, rect_center(last.bounds));
     for _ in 0..2 {
@@ -273,6 +304,12 @@ fn data_table_pagination_buttons_update_page_index_and_disabled_states() {
         2,
         "expected last page index for 23 rows @ page_size=10"
     );
+    let last_output = app
+        .models()
+        .get_cloned(&output)
+        .expect("table output on last page");
+    assert!(last_output.pagination.can_prev);
+    assert!(!last_output.pagination.can_next);
 
     let snap = ui
         .semantics_snapshot()
@@ -287,6 +324,18 @@ fn data_table_pagination_buttons_update_page_index_and_disabled_states() {
         is_missing_or_disabled_button(&snap, "Go to last page"),
         "last should be disabled (or absent) on last page; button labels={:?}",
         snapshot_button_labels(&snap)
+    );
+    assert!(
+        !find_by_role_and_label(&snap, SemanticsRole::Button, "Go to first page")
+            .flags
+            .disabled,
+        "first should remain enabled on the last page"
+    );
+    assert!(
+        !find_by_role_and_label(&snap, SemanticsRole::Button, "Go to previous page")
+            .flags
+            .disabled,
+        "previous should remain enabled on the last page"
     );
 
     // Prev page.

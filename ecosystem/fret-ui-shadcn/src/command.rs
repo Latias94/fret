@@ -107,6 +107,44 @@ struct PendingCommandDispatch {
     reason: ActivateReason,
 }
 
+fn dispatch_pending_command_after_dialog_close<H: UiHost>(
+    app: &mut H,
+    window: fret_core::AppWindowId,
+    pending: PendingCommandDispatch,
+) -> bool {
+    if app
+        .global::<fret_runtime::WindowCommandEnabledService>()
+        .is_some_and(|service| service.enabled(window, &pending.command) == Some(false))
+    {
+        return false;
+    }
+
+    let kind = match pending.reason {
+        ActivateReason::Pointer => fret_runtime::CommandDispatchSourceKindV1::Pointer,
+        ActivateReason::Keyboard => fret_runtime::CommandDispatchSourceKindV1::Keyboard,
+    };
+    app.with_global_mut(
+        fret_runtime::WindowPendingCommandDispatchSourceService::default,
+        |service, app| {
+            service.record(
+                window,
+                app.tick_id(),
+                pending.command.clone(),
+                fret_runtime::CommandDispatchSourceV1 {
+                    kind,
+                    element: None,
+                    test_id: None,
+                },
+            );
+        },
+    );
+    app.push_effect(fret_runtime::Effect::Command {
+        window: Some(window),
+        command: pending.command,
+    });
+    true
+}
+
 pub use fret_ui_kit::command::CommandCatalogOptions;
 
 pub fn command_entries_from_host_commands<H: UiHost>(
@@ -4399,29 +4437,7 @@ impl CommandDialog {
             && let Ok(mut slot) = pending_dispatch_cell.lock()
             && let Some(pending) = slot.take()
         {
-            let kind = match pending.reason {
-                ActivateReason::Pointer => fret_runtime::CommandDispatchSourceKindV1::Pointer,
-                ActivateReason::Keyboard => fret_runtime::CommandDispatchSourceKindV1::Keyboard,
-            };
-            cx.app.with_global_mut(
-                fret_runtime::WindowPendingCommandDispatchSourceService::default,
-                |svc, app| {
-                    svc.record(
-                        cx.window,
-                        app.tick_id(),
-                        pending.command.clone(),
-                        fret_runtime::CommandDispatchSourceV1 {
-                            kind,
-                            element: None,
-                            test_id: None,
-                        },
-                    );
-                },
-            );
-            cx.app.push_effect(fret_runtime::Effect::Command {
-                window: Some(cx.window),
-                command: pending.command,
-            });
+            dispatch_pending_command_after_dialog_close(cx.app, cx.window, pending);
         }
 
         let dialog_on_open_change: Option<OnOpenChange> = if on_open_change_for_dialog.is_none()
@@ -4672,6 +4688,32 @@ mod tests {
     use fret_core::{PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService};
     use fret_ui::tree::UiTree;
+
+    #[test]
+    fn command_dialog_close_complete_drops_disabled_dispatch_metadata() {
+        let mut app = App::new();
+        let window = AppWindowId::default();
+        let command = CommandId::from("workspace.dirty_close.discard");
+        app.with_global_mut(
+            fret_runtime::WindowCommandEnabledService::default,
+            |service, _app| service.set_enabled(window, command.clone(), false),
+        );
+
+        assert!(!dispatch_pending_command_after_dialog_close(
+            &mut app,
+            window,
+            PendingCommandDispatch {
+                command: command.clone(),
+                reason: ActivateReason::Pointer,
+            },
+        ));
+        assert!(app.flush_effects().is_empty());
+        let source = app.with_global_mut(
+            fret_runtime::WindowPendingCommandDispatchSourceService::default,
+            |service, app| service.consume(window, app.tick_id(), &command),
+        );
+        assert_eq!(source, None);
+    }
 
     fn snapshot_contains_text(snap: &fret_core::SemanticsSnapshot, text: &str) -> bool {
         snap.nodes.iter().any(|n| {

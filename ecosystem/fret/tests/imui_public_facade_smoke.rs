@@ -10,7 +10,7 @@ use fret::imui::{
         self,
         composites::{PropertyRow, PropertyRowOptions},
         controls::{EditorThemePresetPicker, EditorThemePresetPickerOptions},
-        theme::EditorThemePresetV1,
+        theme::EditorThemePreset,
     },
     kit::ListBoxOptions,
 };
@@ -18,7 +18,7 @@ use fret::imui::{
 #[allow(dead_code)]
 fn root_imui_editor_composites_compile<H: UiHost + 'static>(
     ui: &mut impl UiWriter<H>,
-    theme_preset_model: &Model<EditorThemePresetV1>,
+    theme_preset_model: &Model<EditorThemePreset>,
 ) {
     editor::editor_theme_preset_picker(
         ui,
@@ -46,8 +46,8 @@ fn root_imui_editor_composites_compile<H: UiHost + 'static>(
 #[test]
 fn root_imui_facade_exposes_editor_composites_and_kit_sugar() {
     assert_eq!(
-        EditorThemePresetV1::from_key("imgui-like-dense"),
-        Some(EditorThemePresetV1::ImguiLikeDense)
+        EditorThemePreset::from_key("imgui-like-dense"),
+        Some(EditorThemePreset::ImguiLikeDense)
     );
 
     let _ = EditorThemePresetPickerOptions::new()

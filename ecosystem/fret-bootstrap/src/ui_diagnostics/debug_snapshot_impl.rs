@@ -444,6 +444,21 @@ impl UiTreeDebugSnapshotV1 {
                          .into_iter()
                          .map(|decision| UiCommandDispatchTraceEntryV1 {
                              command: decision.command.as_str().to_string(),
+                             action_id: decision
+                                 .outcome
+                                 .as_ref()
+                                 .and_then(|outcome| outcome.action_id.as_ref())
+                                 .map(|action| action.as_str().to_string()),
+                             target: decision
+                                 .outcome
+                                 .as_ref()
+                                 .and_then(|outcome| outcome.target.as_deref())
+                                 .map(str::to_string),
+                             applied: decision.outcome.as_ref().map(|outcome| outcome.applied),
+                             blocked_dirty_close: decision
+                                 .outcome
+                                 .as_ref()
+                                 .map(|outcome| outcome.blocked_dirty_close),
                              handled: decision.handled,
                              handled_by_scope: decision.handled_by_scope.map(|s| match s {
                                  fret_runtime::CommandScope::Widget => "widget".to_string(),

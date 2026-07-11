@@ -82,7 +82,10 @@ replay). That is out of scope for this prototype.
 The mechanism layer exposes two object-safe operations on the action host:
 
 - record a pending payload for a given `(window, ActionId)`,
-- consume the most recent pending payload for a given `(window, ActionId)` within TTL.
+- consume the next pending payload for a given `(window, ActionId)` within TTL.
+
+Repeated payloads for the same action are consumed in record order (FIFO), matching pending
+command-source provenance and preserving occurrence-by-occurrence pairing.
 
 Typed conveniences (downcast to `T`) are provided as extension traits in ecosystem.
 
@@ -90,8 +93,10 @@ Typed conveniences (downcast to `T`) are provided as extension traits in ecosyst
 
 Normative semantics:
 
-- payload is **best-effort** and transient; it may be dropped if it expires (TTL) or if a later
-  dispatch consumes it first,
+- payload is **best-effort** and transient; it may be dropped if it expires (TTL), exceeds the
+  bounded pending capacity, or its corresponding dispatch never consumes it,
+- repeated dispatches of the same action consume pending payloads in FIFO order; a later dispatch
+  must not overtake an earlier pending occurrence,
 - payload actions must remain safe when payload is missing:
   - handlers should treat missing/invalid payload as “not handled” (recommended default),
   - diagnostics should allow correlating “payload expected but missing” when feasible.

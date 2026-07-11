@@ -77,12 +77,12 @@ LOW_LEVEL_INTEROP_DIRECT_LEAF_SOURCES = [
         "chart_declarative_demo.rs",
         [
             "fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui",
-            "let _ = self.engine.paint(cx).read_ref(|_| ());",
+            "self.chart.observe_engine_paint(cx);",
             "chart_canvas_panel_in(cx, props).into()",
         ],
         [
             "fn chart_declarative_root(",
-            "cx.elements().observe_model(&self.engine, Invalidation::Paint);",
+            "cx.elements().observe_model(",
             "chart_canvas_panel(cx.elements(), props).into()",
         ],
     ),

@@ -3,7 +3,7 @@ use super::*;
 #[test]
 fn default_preset_keeps_existing_editor_patch_baseline() {
     let mut app = App::new();
-    apply_editor_theme_preset_v1(&mut app, EditorThemePresetV1::Default);
+    apply_editor_theme_preset(&mut app, EditorThemePreset::Default);
 
     let theme = Theme::global(&app);
     assert_eq!(
@@ -185,7 +185,7 @@ fn default_preset_keeps_existing_editor_patch_baseline() {
 #[test]
 fn imgui_like_dense_preset_overrides_density_and_field_chrome() {
     let mut app = App::new();
-    apply_editor_theme_preset_v1(&mut app, EditorThemePresetV1::ImguiLikeDense);
+    apply_editor_theme_preset(&mut app, EditorThemePreset::ImguiLikeDense);
 
     let theme = Theme::global(&app);
     assert_eq!(
@@ -363,7 +363,7 @@ fn imgui_like_dense_preset_overrides_density_and_field_chrome() {
 #[test]
 fn default_preset_resets_dense_numeric_scrub_tokens() {
     let mut app = App::new();
-    apply_editor_theme_preset_v1(&mut app, EditorThemePresetV1::ImguiLikeDense);
+    apply_editor_theme_preset(&mut app, EditorThemePreset::ImguiLikeDense);
     assert_eq!(
         Theme::global(&app).metric_by_key(EditorTokenKeys::NUMERIC_SCRUB_SPEED),
         Some(Px(0.035))
@@ -373,7 +373,7 @@ fn default_preset_resets_dense_numeric_scrub_tokens() {
         Some(Px(2.0))
     );
 
-    apply_editor_theme_preset_v1(&mut app, EditorThemePresetV1::Default);
+    apply_editor_theme_preset(&mut app, EditorThemePreset::Default);
     assert_eq!(
         Theme::global(&app).metric_by_key(EditorTokenKeys::NUMERIC_SCRUB_SPEED),
         Some(Px(0.02))

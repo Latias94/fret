@@ -22,7 +22,7 @@ Default-path docs/templates:
 
 - `docs/README.md`
 - `docs/roadmap.md`
-- `docs/authoring-golden-path-v2.md`
+- `docs/authoring-golden-path.md`
 - `docs/examples/todo-app-golden-path.md`
 - `ecosystem/fret/README.md`
 - `apps/fretboard/src/scaffold/templates.rs`
@@ -111,7 +111,7 @@ Conclusion:
 
 The closeout is not just a code patch:
 
-- `docs/authoring-golden-path-v2.md` now teaches the `1-2 inline / 3+ bundle` rule,
+- `docs/authoring-golden-path.md` now teaches the `1-2 inline / 3+ bundle` rule,
 - `docs/examples/todo-app-golden-path.md` and `ecosystem/fret/README.md` teach the same grouped
   locals posture,
 - scaffold README text now names `*Locals` and optional `bind_actions(&self, cx)`,

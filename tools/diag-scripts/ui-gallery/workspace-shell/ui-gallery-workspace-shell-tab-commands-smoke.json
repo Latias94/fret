@@ -2,7 +2,7 @@
   "schema_version": 2,
   "meta": {
     "name": "UI gallery: workspace shell tab commands smoke",
-    "tags": ["keyboard", "smoke", "tabs", "ui-gallery", "workspace", "workspace_shell"],
+    "tags": ["command_dispatch", "context_menu", "keyboard", "pointer", "semantics", "smoke", "tabs", "ui-gallery", "workspace", "workspace_shell"],
     "env_defaults": {
       "FRET_UI_GALLERY_DIAG_PROFILE": "workspace_shell",
       "FRET_UI_GALLERY_START_PAGE": "field"
@@ -11,8 +11,9 @@
     "target_hints": [
       "Boots ui_gallery with the workspace_shell diag profile so the tab strip is enabled.",
       "Selects the Field tab explicitly so the command smoke is independent of launch-time start-page routing.",
-      "Focuses the workspace content surface, then exercises next/previous/close tab commands from the workspace command scope.",
-      "Asserts the single-pane workspace layout mirror updates the selected tab and removes the closed tab."
+      "Asserts tablist/tab semantics and enabled invoke actions before keyboard dispatch.",
+      "Pins Field through the real modal tab context menu, then proves next/previous shortcuts remain window-owned.",
+      "Closes Field through the same modal menu and asserts complete Workbench outcomes, source selectors, selected-page projection, focus preservation, and closed-tab removal."
     ]
   },
   "steps": [
@@ -54,7 +55,49 @@
       "timeout_frames": 240
     },
     {
-      "type": "click",
+      "type": "assert",
+      "predicate": {
+        "kind": "role_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-workspace-tabstrip" },
+        "role": "tab_list"
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "role_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-workspace-tab-field" },
+        "role": "tab"
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "role_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-workspace-tab-command" },
+        "role": "tab"
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-workspace-tab-field" },
+        "action": "invoke",
+        "enabled": true
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-workspace-tab-command" },
+        "action": "invoke",
+        "enabled": true
+      }
+    },
+    {
+      "type": "click_stable",
       "target": { "kind": "test_id", "id": "ui-gallery-workspace-tab-field" }
     },
     {
@@ -69,9 +112,58 @@
     {
       "type": "wait_until",
       "predicate": {
+        "kind": "selected_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-workspace-tab-command" },
+        "selected": false
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
         "kind": "app_snapshot_field_equals",
         "pointer": "/selected_page",
         "value": "field"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click",
+      "button": "right",
+      "target": { "kind": "test_id", "id": "ui-gallery-workspace-tab-field" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-workspace-tab-field.menu.pin" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-workspace-tab-field.menu.pin" }
+    },
+    {
+      "type": "wait_command_dispatch_trace",
+      "query": {
+        "command": "workspace.tab.pin.field",
+        "target": "ui-gallery-main-pane/field",
+        "applied": true,
+        "blocked_dirty_close": false,
+        "source_kind": "pointer",
+        "source_test_id": "ui-gallery-workspace-tab-field.menu.pin",
+        "handled": true,
+        "handled_by_scope": "window",
+        "handled_by_driver": true
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-workspace-tab-field.pinned" }
       },
       "timeout_frames": 240
     },
@@ -92,7 +184,14 @@
       "type": "wait_command_dispatch_trace",
       "query": {
         "command": "workspace.tab.next",
+        "action_id": "workspace.tab.next",
+        "target": "ui-gallery-main-pane/field",
+        "applied": true,
+        "blocked_dirty_close": false,
+        "source_kind": "shortcut",
         "handled": true,
+        "handled_by_scope": "window",
+        "handled_by_driver": true,
         "started_from_focus": true
       },
       "timeout_frames": 240
@@ -101,8 +200,25 @@
       "type": "wait_until",
       "predicate": {
         "kind": "selected_is",
-        "target": { "kind": "test_id", "id": "ui-gallery-workspace-tab-command" },
+        "target": { "kind": "test_id", "id": "ui-gallery-workspace-tab-intro" },
         "selected": true
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/selected_page",
+        "value": "intro"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-workspace-content" }
       },
       "timeout_frames": 240
     },
@@ -111,7 +227,14 @@
       "type": "wait_command_dispatch_trace",
       "query": {
         "command": "workspace.tab.prev",
+        "action_id": "workspace.tab.prev",
+        "target": "ui-gallery-main-pane/intro",
+        "applied": true,
+        "blocked_dirty_close": false,
+        "source_kind": "shortcut",
         "handled": true,
+        "handled_by_scope": "window",
+        "handled_by_driver": true,
         "started_from_focus": true
       },
       "timeout_frames": 240
@@ -125,12 +248,52 @@
       },
       "timeout_frames": 240
     },
-    { "type": "press_shortcut", "shortcut": "primary+w", "repeat": false },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/selected_page",
+        "value": "field"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-workspace-content" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click",
+      "button": "right",
+      "target": { "kind": "test_id", "id": "ui-gallery-workspace-tab-field" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-workspace-tab-field.menu.close_tab" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-workspace-tab-field.menu.close_tab" }
+    },
     {
       "type": "wait_command_dispatch_trace",
       "query": {
-        "command": "workspace.tab.close",
+        "command": "workspace.tab.close.field",
+        "target": "ui-gallery-main-pane/field",
+        "applied": true,
+        "blocked_dirty_close": false,
+        "source_kind": "pointer",
+        "source_test_id": "ui-gallery-workspace-tab-field.menu.close_tab",
         "handled": true,
+        "handled_by_scope": "window",
+        "handled_by_driver": true,
         "started_from_focus": true
       },
       "timeout_frames": 240
@@ -146,8 +309,25 @@
     {
       "type": "wait_until",
       "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/selected_page",
+        "value": "intro"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-workspace-content" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
         "kind": "selected_is",
-        "target": { "kind": "test_id", "id": "ui-gallery-workspace-tab-command" },
+        "target": { "kind": "test_id", "id": "ui-gallery-workspace-tab-intro" },
         "selected": true
       },
       "timeout_frames": 240

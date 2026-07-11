@@ -14,7 +14,7 @@
     ],
     "target_hints": [
       "Shrinks the window to force tab strip overflow.",
-      "Enters the tab strip (Ctrl+F6).",
+      "Selects the hidden first tab through the overflow menu, then enters the tab strip (Ctrl+F6).",
       "Uses End to activate an overflowed tab (scroll right).",
       "Uses Home to activate the first tab (scroll back left)."
     ]
@@ -24,7 +24,7 @@
     {
       "height_px": 720.0,
       "type": "set_window_inner_size",
-      "width_px": 420.0
+      "width_px": 1280.0
     },
     {
       "n": 10,
@@ -43,13 +43,35 @@
     },
     {
       "target": {
-        "id": "workspace-shell-pane-pane-a-tab-doc-a-0",
+        "id": "workspace-shell-pane-pane-a-tab-strip.overflow_button",
         "kind": "test_id"
       },
       "type": "click"
     },
     {
-      "n": 6,
+      "n": 20,
+      "type": "wait_frames"
+    },
+    {
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "id": "workspace-shell-pane-pane-a-tab-strip.overflow_entry.doc-a-0",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "target": {
+        "id": "workspace-shell-pane-pane-a-tab-strip.overflow_entry.doc-a-0",
+        "kind": "test_id"
+      },
+      "type": "click"
+    },
+    {
+      "n": 20,
       "type": "wait_frames"
     },
     {

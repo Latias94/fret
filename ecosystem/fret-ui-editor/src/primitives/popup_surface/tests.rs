@@ -4,7 +4,7 @@ use fret_ui::{Theme, ThemeConfig};
 
 use super::resolve_editor_popup_surface_chrome;
 use crate::primitives::EditorTokenKeys;
-use crate::theme::{EditorThemePresetV1, apply_editor_theme_preset_v1};
+use crate::theme::{EditorThemePreset, apply_editor_theme_preset};
 
 #[test]
 fn overlay_popup_surface_adds_shadow() {
@@ -29,7 +29,7 @@ fn editor_popup_surface_prefers_editor_owned_popup_tokens() {
             .insert("popover".to_string(), "#ffffff".to_string());
         theme.apply_config_patch(&cfg);
     });
-    apply_editor_theme_preset_v1(&mut app, EditorThemePresetV1::Default);
+    apply_editor_theme_preset(&mut app, EditorThemePreset::Default);
 
     let chrome = resolve_editor_popup_surface_chrome(Theme::global(&app), true);
     assert_eq!(
@@ -91,11 +91,11 @@ fn popup_surface_respects_editor_shadow_color_token() {
 #[test]
 fn dense_preset_uses_tighter_popup_radius_than_default() {
     let mut default_app = App::new();
-    apply_editor_theme_preset_v1(&mut default_app, EditorThemePresetV1::Default);
+    apply_editor_theme_preset(&mut default_app, EditorThemePreset::Default);
     let default_chrome = resolve_editor_popup_surface_chrome(Theme::global(&default_app), true);
 
     let mut dense_app = App::new();
-    apply_editor_theme_preset_v1(&mut dense_app, EditorThemePresetV1::ImguiLikeDense);
+    apply_editor_theme_preset(&mut dense_app, EditorThemePreset::ImguiLikeDense);
     let dense_chrome = resolve_editor_popup_surface_chrome(Theme::global(&dense_app), true);
 
     assert!(dense_chrome.radius.0 < default_chrome.radius.0);

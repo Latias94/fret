@@ -49,6 +49,18 @@ pub struct WorkspaceTabs {
     cycle_mode: TabCycleMode,
 }
 
+/// Complete per-tab state carried while moving a tab between workspace panes.
+///
+/// A transfer is extracted from exactly one `WorkspaceTabs` and is then consumed by the target.
+/// Pane-local policy such as cycle mode and preview enablement intentionally stays with the pane.
+#[derive(Debug, PartialEq, Eq)]
+pub(crate) struct WorkspaceTabTransfer {
+    id: Arc<str>,
+    dirty: bool,
+    pinned: bool,
+    preview: bool,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WorkspaceApplyCommandOutcome {
     pub applied: bool,
@@ -397,37 +409,101 @@ impl WorkspaceTabs {
         }
     }
 
-    pub fn close(&mut self, id: &str) -> bool {
-        let Some(index) = self.tabs.iter().position(|t| t.as_ref() == id) else {
-            return false;
+    pub(crate) fn extract_for_transfer(&mut self, id: &str) -> Option<WorkspaceTabTransfer> {
+        let index = self.tabs.iter().position(|tab| tab.as_ref() == id)?;
+        let pinned_count = self.pinned_count();
+        let transfer = WorkspaceTabTransfer {
+            id: self.tabs[index].clone(),
+            dirty: self.is_dirty(id),
+            pinned: index < pinned_count,
+            preview: self.is_tab_preview(id),
         };
 
         let removed = self.tabs.remove(index);
-        if self.is_tab_preview(removed.as_ref()) {
+        if transfer.preview {
             self.preview_tab_id = None;
         }
-        let pinned_count = self.pinned_count();
-        if index < pinned_count {
+        if transfer.pinned {
             self.pinned_tab_count = pinned_count.saturating_sub(1);
         }
         self.pinned_tab_count = self.pinned_tab_count.min(self.tabs.len());
         self.dirty.remove(&removed);
-        self.mru.retain(|t| t.as_ref() != removed.as_ref());
+        self.mru.retain(|tab| tab.as_ref() != removed.as_ref());
 
         if self.active.as_deref() == Some(removed.as_ref()) {
-            self.active = None;
-            if let Some(next) = self.mru.first().cloned() {
-                self.active = Some(next);
-            } else if let Some(fallback) = self
-                .tabs
-                .get(index.min(self.tabs.len().saturating_sub(1)))
-                .cloned()
+            self.active = self.mru.first().cloned();
+            if self.active.is_none()
+                && let Some(fallback) = self
+                    .tabs
+                    .get(index.min(self.tabs.len().saturating_sub(1)))
+                    .cloned()
             {
                 let _ = self.activate(fallback);
             }
         }
 
-        true
+        Some(transfer)
+    }
+
+    pub(crate) fn insert_transfer_and_activate(&mut self, transfer: WorkspaceTabTransfer) {
+        let WorkspaceTabTransfer {
+            id,
+            dirty: incoming_dirty,
+            pinned: incoming_pinned,
+            preview: incoming_preview,
+        } = transfer;
+
+        let existing_index = self.tabs.iter().position(|tab| tab.as_ref() == id.as_ref());
+        let pinned_count = self.pinned_count();
+        let existing_pinned = existing_index.is_some_and(|index| index < pinned_count);
+        let existing_dirty = self.is_dirty(id.as_ref());
+        let existing_preview = self.is_tab_preview(id.as_ref());
+
+        let merged_dirty = existing_dirty || incoming_dirty;
+        let merged_pinned = existing_pinned || incoming_pinned;
+        // A committed copy wins over a preview copy. Dirty and pinned tabs cannot be previews.
+        let merged_preview = self.preview_enabled
+            && !merged_dirty
+            && !merged_pinned
+            && if existing_index.is_some() {
+                existing_preview && incoming_preview
+            } else {
+                incoming_preview
+            };
+
+        match existing_index {
+            None if merged_pinned => {
+                self.tabs.insert(pinned_count, id.clone());
+                self.pinned_tab_count = pinned_count + 1;
+            }
+            None => self.tabs.push(id.clone()),
+            Some(index) if merged_pinned && !existing_pinned => {
+                let existing = self.tabs.remove(index);
+                self.tabs.insert(pinned_count, existing);
+                self.pinned_tab_count = pinned_count + 1;
+            }
+            Some(_) => {}
+        }
+
+        if merged_dirty {
+            self.dirty.insert(id.clone());
+        } else {
+            self.dirty.retain(|tab| tab.as_ref() != id.as_ref());
+        }
+
+        if merged_preview {
+            // Preserve the incoming preview without deleting an existing preview tab.
+            self.preview_tab_id = Some(id.clone());
+        } else if existing_preview {
+            self.preview_tab_id = None;
+        }
+
+        let activated = self.activate(id);
+        debug_assert!(activated, "transferred tab must exist before activation");
+    }
+
+    pub fn close(&mut self, id: &str) -> bool {
+        self.extract_for_transfer(id).is_some()
     }
 
     pub fn close_others(&mut self) -> bool {
@@ -1112,6 +1188,150 @@ mod tests {
         assert!(state.apply_command(&CommandId::from(CMD_WORKSPACE_TAB_CLOSE)));
         assert_eq!(state.active().unwrap().as_ref(), "a");
         assert_eq!(state.tabs().len(), 2);
+    }
+
+    #[test]
+    fn transfer_preserves_dirty_pinned_and_both_panes_mru_order() {
+        let mut source = WorkspaceTabs::new().with_cycle_mode(TabCycleMode::Mru);
+        for id in tabs(&["a", "b", "c"]) {
+            source.open_and_activate(id);
+        }
+        assert!(source.pin_tab("a"));
+        source.set_dirty(Arc::<str>::from("a"), true);
+        assert!(source.activate_str("b"));
+        assert!(source.activate_str("a"));
+
+        let mut target = WorkspaceTabs::new().with_cycle_mode(TabCycleMode::Mru);
+        for id in tabs(&["x", "y"]) {
+            target.open_and_activate(id);
+        }
+
+        let transfer = source
+            .extract_for_transfer("a")
+            .expect("active source tab should be transferable");
+        target.insert_transfer_and_activate(transfer);
+
+        assert_eq!(
+            source
+                .tabs()
+                .iter()
+                .map(|id| id.as_ref())
+                .collect::<Vec<_>>(),
+            vec!["b", "c"]
+        );
+        assert_eq!(source.active().map(AsRef::as_ref), Some("b"));
+        assert_eq!(
+            source
+                .mru()
+                .iter()
+                .map(|id| id.as_ref())
+                .collect::<Vec<_>>(),
+            vec!["b", "c"]
+        );
+        assert_eq!(source.pinned_count(), 0);
+        assert!(!source.is_dirty("a"));
+
+        assert_eq!(
+            target
+                .tabs()
+                .iter()
+                .map(|id| id.as_ref())
+                .collect::<Vec<_>>(),
+            vec!["a", "x", "y"]
+        );
+        assert_eq!(target.active().map(AsRef::as_ref), Some("a"));
+        assert_eq!(
+            target
+                .mru()
+                .iter()
+                .map(|id| id.as_ref())
+                .collect::<Vec<_>>(),
+            vec!["a", "y", "x"]
+        );
+        assert!(target.is_dirty("a"));
+        assert!(target.is_tab_pinned("a"));
+    }
+
+    #[test]
+    fn transfer_preserves_preview_without_deleting_target_preview_tab() {
+        let mut source = WorkspaceTabs::new();
+        source.open_and_activate(Arc::<str>::from("stable"));
+        assert!(source.open_preview_and_activate(Arc::<str>::from("incoming")));
+
+        let mut target = WorkspaceTabs::new();
+        target.open_and_activate(Arc::<str>::from("target-stable"));
+        assert!(target.open_preview_and_activate(Arc::<str>::from("target-preview")));
+
+        let transfer = source
+            .extract_for_transfer("incoming")
+            .expect("preview tab should be transferable");
+        target.insert_transfer_and_activate(transfer);
+
+        assert_eq!(source.active().map(AsRef::as_ref), Some("stable"));
+        assert!(source.preview_tab_id().is_none());
+        assert_eq!(target.active().map(AsRef::as_ref), Some("incoming"));
+        assert_eq!(target.preview_tab_id().map(AsRef::as_ref), Some("incoming"));
+        assert!(
+            target
+                .tabs()
+                .iter()
+                .any(|id| id.as_ref() == "target-preview"),
+            "the displaced preview must be committed rather than deleted"
+        );
+    }
+
+    #[test]
+    fn transfer_duplicate_merge_never_downgrades_dirty_or_pinned() {
+        let mut source = WorkspaceTabs::new();
+        source.open_and_activate(Arc::<str>::from("shared"));
+
+        let mut target = WorkspaceTabs::new();
+        target.open_and_activate(Arc::<str>::from("shared"));
+        target.set_dirty(Arc::<str>::from("shared"), true);
+        assert!(target.pin_tab("shared"));
+
+        let transfer = source
+            .extract_for_transfer("shared")
+            .expect("duplicate source tab should be transferable");
+        target.insert_transfer_and_activate(transfer);
+
+        assert_eq!(
+            target
+                .tabs()
+                .iter()
+                .filter(|id| id.as_ref() == "shared")
+                .count(),
+            1
+        );
+        assert!(target.is_dirty("shared"));
+        assert!(target.is_tab_pinned("shared"));
+        assert_eq!(target.active().map(AsRef::as_ref), Some("shared"));
+        assert_eq!(target.mru().first().map(AsRef::as_ref), Some("shared"));
+    }
+
+    #[test]
+    fn transfer_duplicate_merge_keeps_committed_status_over_preview() {
+        let mut preview_source = WorkspaceTabs::new();
+        assert!(preview_source.open_preview_and_activate(Arc::<str>::from("shared")));
+        let mut committed_target = WorkspaceTabs::new();
+        committed_target.open_and_activate(Arc::<str>::from("shared"));
+
+        let transfer = preview_source
+            .extract_for_transfer("shared")
+            .expect("preview source tab should be transferable");
+        committed_target.insert_transfer_and_activate(transfer);
+        assert!(!committed_target.is_tab_preview("shared"));
+
+        let mut committed_source = WorkspaceTabs::new();
+        committed_source.open_and_activate(Arc::<str>::from("other"));
+        let mut preview_target = WorkspaceTabs::new();
+        assert!(preview_target.open_preview_and_activate(Arc::<str>::from("other")));
+
+        let transfer = committed_source
+            .extract_for_transfer("other")
+            .expect("committed source tab should be transferable");
+        preview_target.insert_transfer_and_activate(transfer);
+        assert!(!preview_target.is_tab_preview("other"));
     }
 
     #[test]

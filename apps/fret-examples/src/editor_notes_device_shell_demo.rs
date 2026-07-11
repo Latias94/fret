@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use fret::adaptive::{DeviceShellSwitchPolicy, device_shell_switch};
 use fret::app::LocalState;
-use fret::app::editor::{EditorThemePresetV1, InspectorTextFieldSnapshot};
+use fret::app::editor::{EditorThemePreset, InspectorTextFieldSnapshot};
 use fret::app::prelude::*;
 use fret::app::{AppElement, AppRenderContext, RenderContextAccess as _, text};
 use fret::{Defaults, FretApp, shadcn};
@@ -31,7 +31,7 @@ const MOBILE_COMMITTED_NOTES_INTRO: &str = "This center region stays app-local o
 
 struct EditorNotesDeviceShellDemoView {
     assets: Arc<[EditorAssetState]>,
-    theme: LocalState<EditorThemePresetV1>,
+    theme: LocalState<EditorThemePreset>,
 }
 
 fn device_shell_section_text<'a, Cx, T>(cx: &mut Cx, text: T) -> AppElement

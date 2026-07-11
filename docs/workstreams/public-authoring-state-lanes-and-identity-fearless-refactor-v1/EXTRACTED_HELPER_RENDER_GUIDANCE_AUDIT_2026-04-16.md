@@ -11,7 +11,7 @@ Related:
 - `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/APP_UI_DEREF_PRESSURE_CLASSIFICATION_AUDIT_2026-04-15.md`
 - `docs/adr/0319-public-authoring-state-lanes-and-identity-contract-v1.md`
 - `docs/first-hour.md`
-- `docs/authoring-golden-path-v2.md`
+- `docs/authoring-golden-path.md`
 - `docs/examples/todo-app-golden-path.md`
 - `docs/crate-usage-guide.md`
 - `ecosystem/fret/src/lib.rs`
@@ -132,7 +132,7 @@ The current evidence **does** justify:
 This audit lands the wording freeze in:
 
 - `docs/first-hour.md`
-- `docs/authoring-golden-path-v2.md`
+- `docs/authoring-golden-path.md`
 - `docs/examples/todo-app-golden-path.md`
 - `docs/crate-usage-guide.md`
 - `docs/adr/0319-public-authoring-state-lanes-and-identity-contract-v1.md`

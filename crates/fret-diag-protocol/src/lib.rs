@@ -4059,11 +4059,27 @@ pub struct UiShortcutRoutingTraceQueryV1 {
     pub key_context: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[non_exhaustive]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct UiCommandDispatchTraceEntryV1 {
     pub step_index: u32,
     pub frame_id: u64,
     pub command: String,
+    /// Canonical typed action identity reported by the dispatch outcome, when known.
+    ///
+    /// This is not dispatch-source provenance. `source_kind`, `source_element`, and
+    /// `source_test_id` describe where the dispatch came from.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub action_id: Option<String>,
+    /// Domain-owned target identity, such as `pane-a/doc-a` for a workspace action.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub target: Option<String>,
+    /// Whether the domain mutation represented by the outcome was applied.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub applied: Option<bool>,
+    /// Whether dirty-close policy blocked the requested mutation.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub blocked_dirty_close: Option<bool>,
     pub handled: bool,
     /// Best-effort handler scope classification (ADR 0307).
     ///
@@ -4079,7 +4095,7 @@ pub struct UiCommandDispatchTraceEntryV1 {
     pub source_kind: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub source_element: Option<u64>,
-    /// Best-effort stable selector attribution for pointer-triggered dispatch.
+    /// Best-effort stable selector attribution for the dispatch source.
     ///
     /// This is intended to help scripted diagnostics answer:
     /// “which `test_id` caused this command to dispatch?”
@@ -4087,8 +4103,9 @@ pub struct UiCommandDispatchTraceEntryV1 {
     /// Notes:
     /// - This is a best-effort hint (additive). Tooling should fall back to correlating
     ///   `source_element` with the semantics snapshot if needed.
-    /// - When available, this is usually populated from the hit-test trace recorded for the
-    ///   injected pointer step.
+    /// - Pointer dispatch may fall back to the hit-test trace recorded for the injected step.
+    /// - Keyboard, shortcut, and programmatic dispatch only report a selector when their source
+    ///   metadata identifies one directly or through the current semantics snapshot.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub source_test_id: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -4102,10 +4119,34 @@ pub struct UiCommandDispatchTraceEntryV1 {
     pub used_default_root_fallback: bool,
 }
 
+impl UiCommandDispatchTraceEntryV1 {
+    /// Creates a trace entry for `command` with additive fields at their compatibility defaults.
+    ///
+    /// Set optional outcome and attribution fields by mutation before serializing the entry.
+    pub fn for_command(step_index: u32, frame_id: u64, command: impl Into<String>) -> Self {
+        Self {
+            step_index,
+            frame_id,
+            command: command.into(),
+            ..Self::default()
+        }
+    }
+}
+
+#[non_exhaustive]
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct UiCommandDispatchTraceQueryV1 {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub command: Option<String>,
+    /// Match the canonical typed action identity, not dispatch-source provenance.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub action_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub target: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub applied: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub blocked_dirty_close: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub source_kind: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -4122,6 +4163,16 @@ pub struct UiCommandDispatchTraceQueryV1 {
     pub started_from_focus: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub used_default_root_fallback: Option<bool>,
+}
+
+impl UiCommandDispatchTraceQueryV1 {
+    /// Creates a query matching `command`; refine it by assigning any optional fields.
+    pub fn for_command(command: impl Into<String>) -> Self {
+        Self {
+            command: Some(command.into()),
+            ..Self::default()
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]

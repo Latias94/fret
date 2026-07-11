@@ -22,6 +22,15 @@ pub use fret_app::App;
 /// `ElementContext` ownership.
 pub use fret_ui::ElementContextAccess;
 
+/// App-facing frame-pipeline observations for harnesses and diagnostics.
+///
+/// These types expose ordered stage metadata without handing app code the retained tree or raw
+/// frame context.
+#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+pub use fret_bootstrap::ui_app_driver::{
+    UiAppFrameObservation, UiAppFrameStage, UiAppFrameStageSink,
+};
+
 /// App-facing editor bindings for `LocalState`-owned inspector controls.
 ///
 /// This lane adapts editor controls to the default app state surface without moving editor
@@ -38,7 +47,7 @@ pub mod editor {
         TextFieldBlurBehavior, TextFieldDraftSnapshot, TextFieldMode, TextFieldOptions,
         TextFieldOutcome,
     };
-    pub use fret_ui_editor::theme::EditorThemePresetV1;
+    pub use fret_ui_editor::theme::EditorThemePreset;
 }
 
 /// Request that the runner close a window.

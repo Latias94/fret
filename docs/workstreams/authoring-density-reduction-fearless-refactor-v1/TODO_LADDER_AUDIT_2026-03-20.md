@@ -21,7 +21,7 @@ Runnable examples and scaffolds:
 Docs that teach the ladder:
 
 - `docs/examples/todo-app-golden-path.md`
-- `docs/authoring-golden-path-v2.md`
+- `docs/authoring-golden-path.md`
 
 Cross-check for "is this only a Todo problem?":
 

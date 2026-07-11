@@ -1165,7 +1165,7 @@ Current sequencing note (as of 2026-03-09):
     - `docs/workstreams/action-first-authoring-fearless-refactor-v1/EVENT_SURFACE_UNIFICATION_DESIGN.md`
     - `ecosystem/fret/src/view.rs` (`AppUiActions::{action, action_payload, dispatch, dispatch_payload, listen, listener}`)
     - `docs/crate-usage-guide.md`
-    - `docs/authoring-golden-path-v2.md`
+    - `docs/authoring-golden-path.md`
 - [x] AFA-postv1-024 Add only thin activatable-widget sugar after the docs/template rewrite proves it is still needed.
   - Goal: if activation-only surfaces still feel materially noisier than `.action(...)`-capable widgets, add a single app-facing extension trait in `ecosystem/fret` rather than another helper family.
   - Landed target: `widget.action(act::Save)`, `widget.action_payload(act::Remove, payload)`, and `widget.listen(|host, acx| ...)` for types that already expose `on_activate(...)`, with `widget.dispatch::<A>()` / `widget.dispatch_payload::<A>(payload)` kept as explicit aliases.

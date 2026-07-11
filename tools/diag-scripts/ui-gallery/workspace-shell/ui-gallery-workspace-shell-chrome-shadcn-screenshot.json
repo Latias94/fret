@@ -1,18 +1,19 @@
 {
   "schema_version": 2,
   "meta": {
-    "name": "UI gallery: workspace shell chrome under shadcn preset (screenshot)",
-    "tags": ["screenshots", "shadcn", "ui-gallery", "workspace", "workspace_shell"],
+    "name": "UI gallery: workspace shell chrome under shadcn preset (layout + screenshot)",
+    "tags": ["layout", "screenshots", "semantics", "shadcn", "ui-gallery", "workspace", "workspace_shell"],
     "env_defaults": {
       "FRET_UI_GALLERY_DIAG_PROFILE": "workspace_shell",
-      "FRET_UI_GALLERY_START_PAGE": "overlay",
+      "FRET_UI_GALLERY_START_PAGE": "dialog",
       "FRET_UI_GALLERY_STATUS_BAR": "1"
     },
     "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
     "target_hints": [
-      "Boots ui_gallery with the workspace_shell diag profile so the shell starts on the overlay page under zinc/dark with the tab strip enabled.",
+      "Boots the default ui_gallery release binary with the workspace_shell profile on the dialog page under zinc/dark with the tab strip enabled.",
       "Waits for the workspace shell chrome surfaces without opening theme or settings UI.",
-      "Captures a screenshot + diagnostics bundle for the workspace frame/top bar/status bar/tabstrip proof surface."
+      "Asserts the frame/top bar/status bar/tabstrip roles and the stable, non-overlapping vertical shell layout.",
+      "Captures a layout sidecar, diagnostics bundle, and screenshot for the same app-facing proof surface."
     ]
   },
   "steps": [
@@ -52,6 +53,164 @@
         "target": { "kind": "test_id", "id": "ui-gallery-workspace-tabstrip" }
       },
       "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-workspace-center" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-workspace-content" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_bounds_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-top-bar" },
+      "stable_frames": 6,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_bounds_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-workspace-center" },
+      "stable_frames": 6,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_bounds_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-status-bar" },
+      "stable_frames": 6,
+      "timeout_frames": 600
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "role_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-workspace-frame" },
+        "role": "panel"
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "role_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-top-bar" },
+        "role": "toolbar"
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "role_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-status-bar" },
+        "role": "group"
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "role_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-workspace-tabstrip" },
+        "role": "tab_list"
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "role_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-workspace-content" },
+        "role": "generic"
+      }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-workspace-frame" },
+        "padding_px": 0.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-top-bar" },
+        "padding_px": 0.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-workspace-center" },
+        "padding_px": 0.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-status-bar" },
+        "padding_px": 0.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_non_overlapping",
+        "a": { "kind": "test_id", "id": "ui-gallery-top-bar" },
+        "b": { "kind": "test_id", "id": "ui-gallery-workspace-center" },
+        "eps_px": 1.0
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_non_overlapping",
+        "a": { "kind": "test_id", "id": "ui-gallery-workspace-center" },
+        "b": { "kind": "test_id", "id": "ui-gallery-status-bar" },
+        "eps_px": 1.0
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_overlapping_x",
+        "a": { "kind": "test_id", "id": "ui-gallery-top-bar" },
+        "b": { "kind": "test_id", "id": "ui-gallery-workspace-center" },
+        "eps_px": 1.0
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_overlapping_x",
+        "a": { "kind": "test_id", "id": "ui-gallery-workspace-center" },
+        "b": { "kind": "test_id", "id": "ui-gallery-status-bar" },
+        "eps_px": 1.0
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "capture_layout_sidecar",
+      "label": "ui-gallery-workspace-shell-chrome-shadcn-screenshot.layout"
     },
     { "type": "capture_bundle", "label": "ui-gallery-workspace-shell-chrome-shadcn-screenshot" },
     {

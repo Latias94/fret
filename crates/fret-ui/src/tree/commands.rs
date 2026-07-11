@@ -2446,6 +2446,7 @@ impl<H: UiHost> UiTree<H> {
                         window,
                         command: command.clone(),
                         source,
+                        outcome: None,
                         handled,
                         handled_by_element,
                         handled_by_scope,

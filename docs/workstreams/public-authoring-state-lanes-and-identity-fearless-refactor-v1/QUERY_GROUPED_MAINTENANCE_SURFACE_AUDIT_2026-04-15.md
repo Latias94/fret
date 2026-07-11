@@ -8,7 +8,7 @@ Related:
 - `TODO.md`
 - `MILESTONES.md`
 - `docs/crate-usage-guide.md`
-- `docs/authoring-golden-path-v2.md`
+- `docs/authoring-golden-path.md`
 - `ecosystem/fret/src/view.rs`
 - `ecosystem/fret/src/lib.rs`
 - `ecosystem/fret/tests/app_render_data_surface.rs`
@@ -39,7 +39,7 @@ Owner and teaching posture evidence:
 
 - `ecosystem/fret/src/view.rs`
 - `docs/crate-usage-guide.md`
-- `docs/authoring-golden-path-v2.md`
+- `docs/authoring-golden-path.md`
 - `docs/workstreams/app-composition-density-follow-on-v1/QUERY_INVALIDATION_SHELL_AUDIT_2026-03-17.md`
 
 Boundary evidence:

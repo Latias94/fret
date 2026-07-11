@@ -9,7 +9,7 @@ Related:
 - `MILESTONES.md`
 - `TODO.md`
 - `docs/examples/todo-app-golden-path.md`
-- `docs/authoring-golden-path-v2.md`
+- `docs/authoring-golden-path.md`
 - `apps/fretboard/src/scaffold/templates.rs`
 - `apps/fret-cookbook/examples/simple_todo.rs`
 - `apps/fret-examples/src/simple_todo_demo.rs`

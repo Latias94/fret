@@ -11,7 +11,7 @@
     "target_hints": [
       "Marks doc-a-0 and doc-a-1 dirty, activates doc-a-2, and invokes Close Other Tabs from the real tab context menu.",
       "Asserts the dirty-close prompt reports a CloseOthers aggregate with two targets and two dirty tabs.",
-      "Cancels once to prove the aggregate close is blocked, then discards to close only the aggregate targets."
+      "Dismisses once with Escape to prove the aggregate close is blocked and the shared Cancel state machine restores focus from the unmounted context menu to active doc-a-2, then discards to close only the aggregate targets."
     ]
   },
   "steps": [
@@ -109,7 +109,13 @@
       "type": "wait_command_dispatch_trace",
       "query": {
         "command": "workspace.tab.close.others",
+        "action_id": "workspace.tab.close.others",
+        "target": "pane-a/doc-a-2",
+        "applied": false,
+        "blocked_dirty_close": true,
         "handled": true,
+        "handled_by_scope": "window",
+        "handled_by_driver": true,
         "source_kind": "pointer",
         "source_test_id": "workspace-shell-pane-pane-a-tab-doc-a-2.menu.close_others"
       },
@@ -134,7 +140,22 @@
       "timeout_frames": 240
     },
 
-    { "type": "click", "target": { "kind": "test_id", "id": "workspace-shell-dirty-close-prompt.cancel" } },
+    { "type": "press_key", "key": "escape" },
+    {
+      "type": "wait_command_dispatch_trace",
+      "query": {
+        "command": "workspace.dirty_close.cancel",
+        "action_id": "workspace.dirty_close.cancel",
+        "target": "pane-a/doc-a-2",
+        "applied": false,
+        "blocked_dirty_close": false,
+        "handled": true,
+        "handled_by_scope": "window",
+        "handled_by_driver": true,
+        "source_kind": "keyboard"
+      },
+      "timeout_frames": 240
+    },
     {
       "type": "wait_until",
       "predicate": { "kind": "not_exists", "target": { "kind": "test_id", "id": "workspace-shell-dirty-close-prompt" } },
@@ -155,6 +176,11 @@
       "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2" } },
       "timeout_frames": 240
     },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "focus_is", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2" } },
+      "timeout_frames": 240
+    },
 
     { "type": "reset_diagnostics" },
     { "type": "click", "button": "right", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2" } },
@@ -168,7 +194,13 @@
       "type": "wait_command_dispatch_trace",
       "query": {
         "command": "workspace.tab.close.others",
+        "action_id": "workspace.tab.close.others",
+        "target": "pane-a/doc-a-2",
+        "applied": false,
+        "blocked_dirty_close": true,
         "handled": true,
+        "handled_by_scope": "window",
+        "handled_by_driver": true,
         "source_kind": "pointer",
         "source_test_id": "workspace-shell-pane-pane-a-tab-doc-a-2.menu.close_others"
       },

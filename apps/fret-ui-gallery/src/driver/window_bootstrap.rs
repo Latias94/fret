@@ -141,8 +141,7 @@ fn register_harness_model_ids(app: &mut App, window: AppWindowId, state: &UiGall
             window,
             UiGalleryHarnessModelIds {
                 selected_page: state.selected_page.clone(),
-                workspace_tabs: state.workspace_tabs.clone(),
-                workspace_dirty_tabs: state.workspace_dirty_tabs.clone(),
+                workspace_window_layout: state.workspace_workbench.window_layout().clone(),
                 nav_query: state.nav_query.clone(),
                 theme_preset: state.theme_preset.clone(),
                 theme_preset_open: state.theme_preset_open.clone(),
@@ -240,24 +239,22 @@ impl UiGalleryDriver {
             workspace_tabs_init.push(start_page.clone());
         }
 
-        let workspace_tab_close_by_command: HashMap<Arc<str>, Arc<str>> = workspace_tabs_init
-            .iter()
-            .cloned()
-            .map(|tab_id| (Self::workspace_tab_close_command(tab_id.as_ref()), tab_id))
-            .collect();
-        let workspace_tabs_init_for_layout = workspace_tabs_init.clone();
         #[cfg(feature = "gallery-dev")]
         let workspace_dirty_tabs_init = vec![Arc::<str>::from(PAGE_OVERLAY)];
         #[cfg(not(feature = "gallery-dev"))]
         let workspace_dirty_tabs_init = vec![Arc::<str>::from(PAGE_COMMAND)];
         let workspace_window_layout_init = Self::build_workspace_window_layout(
             start_page.clone(),
-            &workspace_tabs_init_for_layout,
+            &workspace_tabs_init,
             &workspace_dirty_tabs_init,
         );
-        let workspace_tabs = app.models_mut().insert(workspace_tabs_init);
-        let workspace_dirty_tabs = app.models_mut().insert(workspace_dirty_tabs_init);
         let workspace_window_layout = app.models_mut().insert(workspace_window_layout_init);
+        let workspace_workbench = WorkspaceWorkbench::new(
+            app.models_mut(),
+            workspace_window_layout,
+            false,
+        )
+        .with_last_tab_close_policy(WorkspaceLastTabClosePolicy::PreserveLastTab);
         let nav_query_default = std::env::var_os(ENV_UI_GALLERY_NAV_QUERY)
             .and_then(|value| (!value.is_empty()).then_some(value))
             .map(|value| value.to_string_lossy().trim().to_string())
@@ -417,10 +414,7 @@ impl UiGalleryDriver {
             pending_file_dialog: None,
             page_router,
             selected_page,
-            workspace_tabs,
-            workspace_dirty_tabs,
-            workspace_window_layout,
-            workspace_tab_close_by_command,
+            workspace_workbench,
             nav_query,
             theme_preset,
             theme_preset_open,

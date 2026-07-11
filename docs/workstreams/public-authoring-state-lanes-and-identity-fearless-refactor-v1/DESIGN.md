@@ -10,7 +10,7 @@ Related:
 - `docs/adr/0223-authoring-paradigm-app-owned-models-and-state-helpers-v1.md`
 - `docs/adr/0308-view-authoring-runtime-and-hooks-v1.md`
 - `docs/adr/0319-public-authoring-state-lanes-and-identity-contract-v1.md`
-- `docs/authoring-golden-path-v2.md`
+- `docs/authoring-golden-path.md`
 - `docs/examples/todo-app-golden-path.md`
 - `docs/workstreams/local-state-architecture-fearless-refactor-v1/DESIGN.md`
 - `docs/workstreams/local-state-facade-boundary-hardening-v1/DESIGN.md`

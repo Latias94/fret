@@ -6,7 +6,7 @@ use fret_ui_editor::controls::{
     EditorThemePresetPicker, TextField, TextFieldDraftController, TextFieldDraftSnapshot,
     TextFieldOptions, TextFieldOutcome,
 };
-use fret_ui_editor::theme::EditorThemePresetV1;
+use fret_ui_editor::theme::EditorThemePreset;
 
 use super::{
     AppLocalStateExt as _, LocalState, LocalStateRawModelExt as _, RenderContextAccess,
@@ -224,7 +224,7 @@ pub trait EditorThemePresetPickerLocalStateExt {
     fn editor_theme_preset_picker(&self) -> EditorThemePresetPicker;
 }
 
-impl EditorThemePresetPickerLocalStateExt for LocalState<EditorThemePresetV1> {
+impl EditorThemePresetPickerLocalStateExt for LocalState<EditorThemePreset> {
     fn editor_theme_preset_picker(&self) -> EditorThemePresetPicker {
         EditorThemePresetPicker::new(self.clone_model())
     }

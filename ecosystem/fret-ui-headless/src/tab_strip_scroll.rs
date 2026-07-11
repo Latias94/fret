@@ -8,6 +8,8 @@ use fret_core::Px;
 /// - `child_start_x`/`child_end_x` are the child's bounds in content space
 ///
 /// `margin` reserves extra space on both edges (useful for keyboard-driven activation).
+/// Ranges wider than the available viewport are aligned to their leading edge so repeated calls
+/// remain stable and preserve the start of the content.
 pub fn ensure_range_visible_x(
     current_scroll_x: Px,
     max_scroll_x: Px,
@@ -27,8 +29,10 @@ pub fn ensure_range_visible_x(
     let margin = margin.0.max(0.0);
     let view_start = next.0 + margin;
     let view_end = next.0 + view_width.0 - margin;
+    let available_width = (view_width.0 - margin * 2.0).max(0.0);
+    let child_width = child_end - child_start;
 
-    if child_start < view_start {
+    if child_width > available_width || child_start < view_start {
         next = Px((child_start - margin).max(0.0));
     } else if child_end > view_end {
         next = Px((child_end - (view_width.0 - margin)).max(0.0));
@@ -69,5 +73,37 @@ mod tests {
         let next =
             ensure_range_visible_x(Px(0.0), Px(300.0), Px(100.0), Px(70.0), Px(100.0), Px(10.0));
         assert_eq!(next, Px(10.0));
+    }
+
+    #[test]
+    fn ensure_range_visible_x_keeps_oversized_range_start_stable() {
+        for (margin, expected) in [(Px(0.0), Px(282.0)), (Px(12.0), Px(270.0))] {
+            for current in [Px(0.0), Px(282.0), Px(438.5)] {
+                let next = ensure_range_visible_x(
+                    current,
+                    Px(438.5),
+                    Px(123.5),
+                    Px(282.0),
+                    Px(562.0),
+                    margin,
+                );
+                assert_eq!(
+                    next, expected,
+                    "an oversized active tab must not alternate between its leading and trailing edges"
+                );
+                assert_eq!(
+                    ensure_range_visible_x(
+                        next,
+                        Px(438.5),
+                        Px(123.5),
+                        Px(282.0),
+                        Px(562.0),
+                        margin,
+                    ),
+                    next,
+                    "oversized range reveal must be idempotent"
+                );
+            }
+        }
     }
 }

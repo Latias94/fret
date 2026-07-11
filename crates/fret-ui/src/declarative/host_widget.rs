@@ -352,11 +352,8 @@ impl<H: UiHost + 'static> Widget<H> for ElementHostWidget {
                     action: &fret_runtime::ActionId,
                     payload: Box<dyn std::any::Any + Send + Sync>,
                 ) {
-                    self.app.with_global_mut(
-                        fret_runtime::WindowPendingActionPayloadService::default,
-                        |svc, app| {
-                            svc.record(cx.window, app.tick_id(), action.clone(), payload);
-                        },
+                    crate::action::record_pending_action_payload_if_enabled(
+                        self.app, cx, action, payload,
                     );
                 }
 

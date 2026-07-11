@@ -1613,7 +1613,7 @@ mod tests {
     }
 
     #[test]
-    fn command_dispatch_trace_infers_pointer_source_test_id_from_semantics_snapshot() {
+    fn command_dispatch_trace_infers_source_test_id_from_semantics_snapshot() {
         use fret_ui::elements::GlobalElementId;
 
         let mut app = fret_app::App::new();
@@ -1663,13 +1663,24 @@ mod tests {
             .global::<ElementRuntime>()
             .expect("element runtime must exist after rendering");
 
-        let inferred = infer_pointer_source_test_id_from_semantics(
+        let inferred = infer_source_test_id_from_semantics(
             window,
             source_element.map(|e| e.0),
             Some(semantics),
             Some(element_runtime),
         );
         assert_eq!(inferred.as_deref(), Some("test.pointer.source"));
+    }
+
+    #[test]
+    fn command_dispatch_trace_preserves_keyboard_source_test_id() {
+        let source_test_id = resolve_command_dispatch_source_test_id(
+            fret_runtime::CommandDispatchSourceKindV1::Keyboard,
+            Some("test.keyboard.source".to_owned()),
+            None,
+        );
+
+        assert_eq!(source_test_id.as_deref(), Some("test.keyboard.source"));
     }
 
     #[cfg(feature = "diagnostics-ws")]

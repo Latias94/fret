@@ -17,7 +17,7 @@ use fret::imui::{
             TextAssistField, TextAssistFieldLocalStateExt, TextAssistFieldOptions,
             TextAssistFieldSurface, TextAssistItem, TextFieldOptions,
         },
-        theme::{EditorThemePresetV1, install_editor_theme_preset_v1},
+        theme::{EditorThemePreset, install_editor_theme_preset},
     },
     prelude::*,
 };
@@ -281,7 +281,7 @@ impl View for ImUiEditorControlsBasicsView {
 
 fn install_editor_cookbook_defaults(app: &mut App) {
     fret_cookbook::install_cookbook_defaults(app);
-    install_editor_theme_preset_v1(app, EditorThemePresetV1::ImguiLikeDense);
+    install_editor_theme_preset(app, EditorThemePreset::ImguiLikeDense);
 }
 
 fn main() -> anyhow::Result<()> {

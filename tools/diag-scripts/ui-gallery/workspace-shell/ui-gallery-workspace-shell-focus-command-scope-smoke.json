@@ -2,16 +2,21 @@
   "schema_version": 2,
   "meta": {
     "name": "UI gallery: workspace shell focus/command scope smoke",
-    "tags": ["focus", "keyboard", "smoke", "ui-gallery", "workspace", "workspace_shell"],
+    "tags": ["command_dispatch", "focus", "keyboard", "semantics", "smoke", "ui-gallery", "workspace", "workspace_shell"],
     "env_defaults": {
       "FRET_UI_GALLERY_DIAG_PROFILE": "workspace_shell",
-      "FRET_UI_GALLERY_START_PAGE": "overlay"
+      "FRET_UI_GALLERY_START_PAGE": "field"
     },
-    "required_capabilities": ["diag.script_v2"],
+    "required_capabilities": [
+      "diag.script_v2",
+      "diag.shortcut_routing_trace",
+      "diag.command_dispatch_trace"
+    ],
     "target_hints": [
-      "Boots ui_gallery with the workspace_shell diag profile so the shell starts on the overlay page under zinc/dark with the tab strip enabled.",
-      "Focuses the workspace content surface, presses Ctrl+F6, and asserts focus moves into the active tab.",
-      "Presses Escape and asserts focus returns to the workspace content surface."
+      "Boots the default ui_gallery release binary with the workspace_shell profile on the Field page under zinc/dark with the tab strip enabled.",
+      "Asserts the tablist and active tab expose stable roles, selected state, and an enabled invoke action.",
+      "Focuses the workspace content surface and proves Ctrl+F6 dispatches through the widget command scope in both directions.",
+      "Re-enters the active tab, then proves Escape dispatches focus-content and restores the workspace content target."
     ]
   },
   "steps": [
@@ -37,6 +42,39 @@
       "timeout_frames": 600
     },
     {
+      "type": "assert",
+      "predicate": {
+        "kind": "role_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-workspace-tabstrip" },
+        "role": "tab_list"
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "role_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-workspace-tab-field" },
+        "role": "tab"
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "selected_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-workspace-tab-field" },
+        "selected": true
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-workspace-tab-field" },
+        "action": "invoke",
+        "enabled": true
+      }
+    },
+    {
       "type": "click_stable",
       "target": { "kind": "test_id", "id": "ui-gallery-workspace-content" }
     },
@@ -49,17 +87,108 @@
       "timeout_frames": 240
     },
     { "type": "press_key", "key": "f6", "modifiers": { "ctrl": true }, "repeat": false },
-    { "type": "wait_frames", "n": 6 },
+    {
+      "type": "wait_shortcut_routing_trace",
+      "query": {
+        "outcome": "command_dispatched",
+        "key": "F6",
+        "command": "workspace.pane.toggle_tab_strip_focus"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_command_dispatch_trace",
+      "query": {
+        "command": "workspace.pane.toggle_tab_strip_focus",
+        "source_kind": "shortcut",
+        "handled": true,
+        "handled_by_scope": "widget",
+        "handled_by_driver": false,
+        "started_from_focus": true
+      },
+      "timeout_frames": 240
+    },
     {
       "type": "wait_until",
       "predicate": {
         "kind": "focus_is",
-        "target": { "kind": "test_id", "id": "ui-gallery-workspace-tab-overlay" }
+        "target": { "kind": "test_id", "id": "ui-gallery-workspace-tab-field" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "press_key", "key": "f6", "modifiers": { "ctrl": true }, "repeat": false },
+    {
+      "type": "wait_shortcut_routing_trace",
+      "query": {
+        "outcome": "command_dispatched",
+        "key": "F6",
+        "command": "workspace.pane.toggle_tab_strip_focus"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_command_dispatch_trace",
+      "query": {
+        "command": "workspace.pane.toggle_tab_strip_focus",
+        "source_kind": "shortcut",
+        "handled": true,
+        "handled_by_scope": "widget",
+        "handled_by_driver": false,
+        "started_from_focus": true
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-workspace-content" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "press_key", "key": "f6", "modifiers": { "ctrl": true }, "repeat": false },
+    {
+      "type": "wait_shortcut_routing_trace",
+      "query": {
+        "outcome": "command_dispatched",
+        "key": "F6",
+        "command": "workspace.pane.toggle_tab_strip_focus"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_command_dispatch_trace",
+      "query": {
+        "command": "workspace.pane.toggle_tab_strip_focus",
+        "source_kind": "shortcut",
+        "handled": true,
+        "handled_by_scope": "widget",
+        "handled_by_driver": false,
+        "started_from_focus": true
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-workspace-tab-field" }
       },
       "timeout_frames": 240
     },
     { "type": "press_key", "key": "escape", "repeat": false },
-    { "type": "wait_frames", "n": 6 },
+    {
+      "type": "wait_command_dispatch_trace",
+      "query": {
+        "command": "workspace.pane.focus_content",
+        "source_kind": "keyboard",
+        "handled": true,
+        "handled_by_scope": "widget",
+        "handled_by_driver": false,
+        "started_from_focus": true
+      },
+      "timeout_frames": 240
+    },
     {
       "type": "wait_until",
       "predicate": {

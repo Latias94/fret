@@ -59,7 +59,7 @@ another default query-helper family.
 - `apps/fret-examples/src/query_demo.rs`
 - `apps/fret-examples/src/query_async_tokio_demo.rs`
 - `apps/fretboard/src/scaffold/templates.rs`
-- `docs/authoring-golden-path-v2.md`
+- `docs/authoring-golden-path.md`
 - `docs/crate-usage-guide.md`
 - `docs/integrating-tokio-and-reqwest.md`
 

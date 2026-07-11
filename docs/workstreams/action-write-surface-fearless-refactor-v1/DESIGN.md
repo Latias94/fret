@@ -13,7 +13,7 @@ Related:
 - `CLOSEOUT_AUDIT_2026-03-17.md`
 - `ONE_SLOT_WRITE_AUDIT_2026-03-17.md`
 - `PAYLOAD_ROW_WRITE_AUDIT_2026-03-17.md`
-- `docs/authoring-golden-path-v2.md`
+- `docs/authoring-golden-path.md`
 - `docs/examples/todo-app-golden-path.md`
 - `docs/crate-usage-guide.md`
 
@@ -161,7 +161,7 @@ The question is whether this is the correct final default budget for:
 ### Ecosystem / teaching surfaces
 
 - `docs/crate-usage-guide.md`
-- `docs/authoring-golden-path-v2.md`
+- `docs/authoring-golden-path.md`
 - `docs/examples/todo-app-golden-path.md`
 - `docs/first-hour.md`
 

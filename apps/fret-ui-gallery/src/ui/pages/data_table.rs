@@ -25,6 +25,9 @@ pub(super) fn preview_data_table(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement>
         "No extra root `children` API is required here: upstream's reusable DataTable helper is already an extracted wrapper around headless columns + table primitives, so the right seams stay `header_label` / `header_cell_at`, extracted helper functions, and companion recipes such as `DataTableViewOptions` and `DataTablePagination`.",
         "If you need extra top-right controls, extend the companion recipe with `DataTableToolbar::trailing(...)` instead of widening `DataTable` itself to arbitrary root children.",
         "Ownership: recipe owns chrome/row heights/selection/pagination/column-action menus; callers own data shape, filtering rules, and page width/height negotiation.",
+        "Sorting is in scope: sortable headers and column-action menu items mutate the caller-visible TableState.sorting; callers still provide sortable accessors/comparators for domain columns.",
+        "Row keyboard focus follows the composite-list contract: row activation focuses the active ListItem, the table List exposes that row through active-descendant semantics, and TableState.row_selection remains caller-visible.",
+        "Stable automation identity is derived from caller-owned TableDebugIds: a row prefix yields <prefix><RowKey> for rows and <prefix><RowKey>-cell-<ColumnId> for cells when row_cell_test_ids is enabled.",
         "Selection-column examples now keep typed `.action(...)` / `.action_payload(...)` on the checkbox surface and grouped `cx.actions().models::<A>(...)` / `payload_models::<A>(...)` at the view layer instead of routing through root command ids.",
         "`DataGrid` remains the canvas-first option for dense editor surfaces; use `experimental::DataGridElement` when you need richer per-cell UI than the guide-style table surface.",
     ]);

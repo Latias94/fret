@@ -1,4 +1,4 @@
-# Authoring Golden Path (v2) — LocalState-first
+# Authoring Golden Path - LocalState-first
 
 This document defines the **recommended authoring surface** for general-purpose apps built with
 Fret's golden path (`fret` + shadcn).
@@ -60,6 +60,108 @@ use fret::advanced::raw::AppUiRawModelExt;
 
 let shared = cx.raw_model::<MyState>();
 ```
+
+## Second-hour canonical slices
+
+These bounded slices are the public starting points for workspace, data-table, and inspector
+authoring. They deliberately keep app-owned state and persistence visible. The linked probes show
+the surrounding product UI without turning their app-specific chrome into framework API.
+
+### Workspace app
+
+```rust,ignore
+pub fn run() -> anyhow::Result<()> {
+    fret::workspace::WorkspaceApp::new("my-workspace")
+        .window("My workspace", (1280.0, 720.0))
+        .setup(install_theme)
+        .ui(create_window_state, render_workspace)?
+        .run()
+        .map_err(anyhow::Error::from)
+}
+```
+
+`WorkspaceWindowState::save_workspace_dirty_close` is the persistence boundary for
+`SaveAndClose`. Its default returns `false`; the Workbench keeps the prompt open and does not
+commit the candidate layout until the app confirms that every requested dirty document was
+persisted. `WorkspaceState` also implements `UiAppFrameStageSink`; the complete probe shows the
+small stage-recorder delegation.
+
+```rust,ignore
+impl fret::workspace::WorkspaceWindowState for WorkspaceState {
+    fn workspace_workbench(&self) -> &fret::workspace::WorkspaceWorkbench {
+        &self.workbench
+    }
+
+    fn save_workspace_dirty_close(
+        &mut self,
+        _app: &mut fret::app::App,
+        _window: fret::WindowId,
+        request: &fret_workspace::close_policy::WorkspaceDirtyCloseRequest,
+    ) -> bool {
+        let mut saved_all = true;
+        for tab_id in &request.dirty_tabs_in_order {
+            if self.documents.save(tab_id).is_err() {
+                saved_all = false;
+            }
+        }
+        saved_all
+    }
+}
+```
+
+Complete probe: `apps/fret-examples/src/workspace_shell_demo/`. Its synthetic documents have no
+backing store, so its hook explicitly returns `true`; production apps must not copy that shortcut.
+
+### DataTable recipe
+
+Construct the recipe once with the app-owned window/view state; clone it when rendering.
+
+```rust,ignore
+let table_state = app.local_state(shadcn::TableState::default());
+let table_output = app.local_state(shadcn::DataTableViewOutput::default());
+let recipe = shadcn::DataTableRecipe::new(
+    &table_state,
+    &table_output,
+    columns,
+    |row, _index, _parent| shadcn::RowKey(row.id),
+)
+.column_labels(column_labels)
+.debug_ids(debug_ids)
+.toolbar_test_id_prefix("users-table")
+.page_sizes(Arc::from([25usize, 50, 100]));
+
+let parts = recipe.into_elements(cx, rows, revision, render_cell);
+```
+
+The caller retains `table_state`, `table_output`, column definitions, row identity, and debug IDs;
+the recipe only assembles toolbar, table, and pagination. Complete probe:
+`apps/fret-examples/src/datatable_demo.rs`.
+
+### Inspector text binding
+
+Construct the binding once with the inspector's window/view state, then reuse it across rebuilds.
+
+```rust,ignore
+let notes = InspectorTextFieldBinding::new(app, document.notes.clone(), "Ready")
+    .outcome_statuses("Draft committed", "Draft discarded");
+let field = notes.text_field(TextFieldOptions {
+    id_source: Some(Arc::from("inspector.notes")),
+    multiline: true,
+    blur_behavior: TextFieldBlurBehavior::PreserveDraft,
+    a11y_label: Some(Arc::from("Document notes")),
+    test_id: Some(Arc::from("inspector.notes")),
+    ..Default::default()
+});
+let commit = shadcn::Button::new("Commit draft")
+    .on_activate(notes.commit_activate());
+let discard = shadcn::Button::new("Discard draft")
+    .on_activate(notes.discard_activate());
+let snapshot = notes.paint_snapshot(cx);
+```
+
+The binding keeps the committed value, outcome, and status as inspectable `LocalState` handles and
+owns only the buffered draft controller. Complete probe:
+`apps/fret-examples/src/editor_notes_demo.rs`.
 
 ## Example: payload + keyed list (row toggle)
 

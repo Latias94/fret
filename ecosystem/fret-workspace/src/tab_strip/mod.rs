@@ -186,6 +186,38 @@ fn workspace_tab_strip_resolve_end_drop_target(
     }
 }
 
+fn workspace_cross_pane_drop_target_for_pinned_group(
+    drop_target: WorkspaceTabStripDropTarget,
+    dragged_is_pinned: bool,
+    pinned_by_id: &std::collections::HashMap<Arc<str>, bool>,
+    canonical_order: &[Arc<str>],
+) -> WorkspaceTabStripDropTarget {
+    let WorkspaceTabStripDropTarget::Tab(target, side) = drop_target else {
+        return drop_target;
+    };
+    let target_is_pinned = pinned_by_id.get(&target).copied().unwrap_or(false);
+    if dragged_is_pinned == target_is_pinned {
+        return WorkspaceTabStripDropTarget::Tab(target, side);
+    }
+
+    if dragged_is_pinned {
+        canonical_order
+            .iter()
+            .rev()
+            .find(|id| pinned_by_id.get(*id).copied().unwrap_or(false))
+            .cloned()
+            .map(|id| WorkspaceTabStripDropTarget::Tab(id, WorkspaceTabInsertionSide::After))
+            .unwrap_or(WorkspaceTabStripDropTarget::None)
+    } else {
+        canonical_order
+            .iter()
+            .find(|id| !pinned_by_id.get(*id).copied().unwrap_or(false))
+            .cloned()
+            .map(|id| WorkspaceTabStripDropTarget::Tab(id, WorkspaceTabInsertionSide::Before))
+            .unwrap_or(WorkspaceTabStripDropTarget::None)
+    }
+}
+
 fn workspace_tab_strip_clear_cross_pane_drag_on_local_release(
     state: &mut WorkspaceTabDragState,
     pointer_id: fret_core::PointerId,
@@ -594,10 +626,14 @@ impl WorkspaceTabStrip {
                                     if down.key != KeyCode::Escape {
                                         return false;
                                     }
-                                    host.dispatch_command(
-                                        Some(acx.window),
-                                        CommandId::from(CMD_WORKSPACE_PANE_FOCUS_CONTENT),
+                                    let command =
+                                        CommandId::from(CMD_WORKSPACE_PANE_FOCUS_CONTENT);
+                                    host.record_pending_command_dispatch_source(
+                                        acx,
+                                        &command,
+                                        ActivateReason::Keyboard,
                                     );
+                                    host.dispatch_command(Some(acx.window), command);
                                     true
                                 }),
                             );
@@ -1049,6 +1085,7 @@ impl WorkspaceTabStrip {
                                                                                 Some(acx.window);
                                                                             st.source_pane = Some(source.clone());
                                                                             st.dragged_tab = Some(dragged_tab_id);
+                                                                            st.dragged_tab_pinned = tab_pinned;
                                                                             st.hovered_pane = Some(source);
                                                                             st.hovered_zone = Some(
                                                                                 WorkspaceTabDropZone::Center,
@@ -2601,24 +2638,15 @@ impl WorkspaceTabStrip {
                                             drop = WorkspaceTabStripDropTarget::None;
                                         }
 
-                                        // Cross-pane drag policy: avoid implicitly pinning tabs by inserting into
-                                        // the pinned region. If the drop target lands on a pinned tab, clamp the
-                                        // insertion to the pinned boundary (insert after the last pinned tab).
-                                        if let WorkspaceTabStripDropTarget::Tab(target, _side) = &drop
-                                            && pinned_by_id.get(target).copied().unwrap_or(false)
-                                        {
-                                            let pinned_count =
-                                                tabs.iter().take_while(|t| t.pinned).count();
-                                            if pinned_count > 0
-                                                && let Some(last_pinned) = canonical_tab_order
-                                                    .get(pinned_count.saturating_sub(1))
-                                            {
-                                                drop = WorkspaceTabStripDropTarget::Tab(
-                                                    last_pinned.clone(),
-                                                    WorkspaceTabInsertionSide::After,
-                                                );
-                                            }
-                                        }
+                                        // Transfer preserves the source tab's pinned group. Keep the insertion
+                                        // indicator inside that group so the follow-up relative move cannot be
+                                        // rejected after the tab lands in the target pane.
+                                        drop = workspace_cross_pane_drop_target_for_pinned_group(
+                                            drop,
+                                            tab_drag_snapshot.dragged_tab_pinned,
+                                            pinned_by_id.as_ref(),
+                                            canonical_tab_order.as_ref(),
+                                        );
 
                                         if let WorkspaceTabStripDropTarget::Tab(id, side) = drop {
                                             next_tab = Some(id);
@@ -2963,7 +2991,6 @@ impl WorkspaceTabStrip {
                         let pane_id_for_hook = pane_id.clone();
                         let tab_element_registry_for_timer = tab_element_registry.clone();
                         let focus_restore_model_for_timer = focus_restore_model.clone();
-                        let tab_element_registry_for_command = tab_element_registry.clone();
                         let focus_restore_model_for_command = focus_restore_model.clone();
                         let reveal_hint_model_for_command = reveal_hint_model.clone();
 
@@ -3087,19 +3114,6 @@ impl WorkspaceTabStrip {
                                             st.reason = Some(ActivateReason::Keyboard);
                                         },
                                     );
-
-                                    // Drop the closing tab entry (best-effort) so the registry
-                                    // doesn't grow unbounded in long sessions.
-                                    let closing_key = WorkspaceTabElementKey {
-                                        window: acx.window,
-                                        pane_id: pane_id_for_hook.clone(),
-                                        tab_id: active_id.clone(),
-                                    };
-                                    let _ = host
-                                        .models_mut()
-                                        .update(&tab_element_registry_for_command, |reg| {
-                                            reg.remove(&closing_key);
-                                        });
 
                                     let target = tab_elements_for_hook
                                         .borrow()
@@ -3356,6 +3370,110 @@ mod tests {
             Point::new(Px(220.0), Px(120.0)),
             &WorkspaceTabStripDropTarget::None,
         ));
+    }
+
+    #[test]
+    fn cross_pane_pinned_drop_uses_the_target_pinned_boundary() {
+        let pinned = Arc::<str>::from("target-pinned");
+        let first_unpinned = Arc::<str>::from("target-first-unpinned");
+        let last_unpinned = Arc::<str>::from("target-last-unpinned");
+        let order = vec![
+            pinned.clone(),
+            first_unpinned.clone(),
+            last_unpinned.clone(),
+        ];
+        let pinned_by_id = std::collections::HashMap::from([
+            (pinned.clone(), true),
+            (first_unpinned.clone(), false),
+            (last_unpinned.clone(), false),
+        ]);
+        let drop_target = workspace_cross_pane_drop_target_for_pinned_group(
+            WorkspaceTabStripDropTarget::Tab(last_unpinned, WorkspaceTabInsertionSide::After),
+            true,
+            &pinned_by_id,
+            &order,
+        );
+        assert_eq!(
+            drop_target,
+            WorkspaceTabStripDropTarget::Tab(pinned.clone(), WorkspaceTabInsertionSide::After,)
+        );
+
+        let mut source = crate::tabs::WorkspaceTabs::new();
+        source.open_and_activate(Arc::<str>::from("incoming"));
+        assert!(source.pin_tab("incoming"));
+        let mut target = crate::tabs::WorkspaceTabs::new();
+        for id in &order {
+            target.open_and_activate(id.clone());
+        }
+        assert!(target.pin_tab(pinned.as_ref()));
+        let transfer = source
+            .extract_for_transfer("incoming")
+            .expect("pinned tab should transfer");
+        target.insert_transfer_and_activate(transfer);
+        let move_after = tab_move_active_after_command(pinned.as_ref()).unwrap();
+        assert!(target.apply_command(&move_after));
+        assert_eq!(
+            target.tabs().iter().map(AsRef::as_ref).collect::<Vec<_>>(),
+            vec![
+                "target-pinned",
+                "incoming",
+                "target-first-unpinned",
+                "target-last-unpinned",
+            ]
+        );
+    }
+
+    #[test]
+    fn cross_pane_unpinned_drop_uses_the_target_unpinned_boundary() {
+        let pinned = Arc::<str>::from("target-pinned");
+        let first_unpinned = Arc::<str>::from("target-first-unpinned");
+        let last_unpinned = Arc::<str>::from("target-last-unpinned");
+        let order = vec![
+            pinned.clone(),
+            first_unpinned.clone(),
+            last_unpinned.clone(),
+        ];
+        let pinned_by_id = std::collections::HashMap::from([
+            (pinned.clone(), true),
+            (first_unpinned.clone(), false),
+            (last_unpinned.clone(), false),
+        ]);
+        let drop_target = workspace_cross_pane_drop_target_for_pinned_group(
+            WorkspaceTabStripDropTarget::Tab(pinned.clone(), WorkspaceTabInsertionSide::Before),
+            false,
+            &pinned_by_id,
+            &order,
+        );
+        assert_eq!(
+            drop_target,
+            WorkspaceTabStripDropTarget::Tab(
+                first_unpinned.clone(),
+                WorkspaceTabInsertionSide::Before,
+            )
+        );
+
+        let mut source = crate::tabs::WorkspaceTabs::new();
+        source.open_and_activate(Arc::<str>::from("incoming"));
+        let mut target = crate::tabs::WorkspaceTabs::new();
+        for id in &order {
+            target.open_and_activate(id.clone());
+        }
+        assert!(target.pin_tab(pinned.as_ref()));
+        let transfer = source
+            .extract_for_transfer("incoming")
+            .expect("unpinned tab should transfer");
+        target.insert_transfer_and_activate(transfer);
+        let move_before = tab_move_active_before_command(first_unpinned.as_ref()).unwrap();
+        assert!(target.apply_command(&move_before));
+        assert_eq!(
+            target.tabs().iter().map(AsRef::as_ref).collect::<Vec<_>>(),
+            vec![
+                "target-pinned",
+                "incoming",
+                "target-first-unpinned",
+                "target-last-unpinned",
+            ]
+        );
     }
 
     #[test]

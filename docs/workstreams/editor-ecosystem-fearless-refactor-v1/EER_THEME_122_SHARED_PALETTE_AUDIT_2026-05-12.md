@@ -42,7 +42,7 @@ surfaces still read generic palette keys directly:
 - `primitives/popup_surface.rs` now uses `editor.popup.shadow.color` before the generic `muted`
   compatibility fallback.
 
-That means the shared writes in `editor_theme_patch_v1` and `imgui_like_dense_patch_v1` are still
+That means the shared writes in `editor_theme_patch` and `imgui_like_dense_patch` are still
 serving two different jobs:
 
 1. editor-owned token seeding for reusable editor widgets, and

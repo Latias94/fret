@@ -14,8 +14,8 @@
     ],
     "target_hints": [
       "Shrinks the window to force tab strip overflow.",
-      "Selects the first tab so diagnostics track its active scroll.",
-      "Drags the tab far to the right to trigger horizontal autoscroll.",
+      "Selects the hidden first tab through the overflow menu so diagnostics track its active scroll.",
+      "Parks the tab drag in the right-edge zone across frames to trigger horizontal autoscroll.",
       "Asserts tabstrip scroll_x increased."
     ]
   },
@@ -24,7 +24,7 @@
     {
       "height_px": 720.0,
       "type": "set_window_inner_size",
-      "width_px": 420.0
+      "width_px": 1280.0
     },
     {
       "n": 10,
@@ -43,13 +43,35 @@
     },
     {
       "target": {
-        "id": "workspace-shell-pane-pane-a-tab-doc-a-0",
+        "id": "workspace-shell-pane-pane-a-tab-strip.overflow_button",
         "kind": "test_id"
       },
       "type": "click"
     },
     {
-      "n": 6,
+      "n": 20,
+      "type": "wait_frames"
+    },
+    {
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "id": "workspace-shell-pane-pane-a-tab-strip.overflow_entry.doc-a-0",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "target": {
+        "id": "workspace-shell-pane-pane-a-tab-strip.overflow_entry.doc-a-0",
+        "kind": "test_id"
+      },
+      "type": "click"
+    },
+    {
+      "n": 20,
       "type": "wait_frames"
     },
     {
@@ -65,19 +87,32 @@
       "type": "wait_until"
     },
     {
-      "button": "left",
-      "delta_x": 900.0,
-      "delta_y": 0.0,
-      "steps": 180,
+      "type": "drag_pointer_until",
+      "window": { "kind": "current" },
       "target": {
         "id": "workspace-shell-pane-pane-a-tab-doc-a-0",
         "kind": "test_id"
       },
-      "type": "drag_pointer"
+      "button": "left",
+      "release_on_success": false,
+      "delta_x": 180.0,
+      "delta_y": 0.0,
+      "steps": 90,
+      "predicate": {
+        "kind": "workspace_tab_strip_active_scroll_px_ge",
+        "pane_id": "pane-a",
+        "px": 1.0
+      },
+      "timeout_frames": 480
     },
     {
-      "n": 12,
-      "type": "wait_frames"
+      "predicate": {
+        "kind": "workspace_tab_strip_drag_active_is",
+        "active": true,
+        "pane_id": "pane-a"
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
     },
     {
       "predicate": {
@@ -100,6 +135,27 @@
     {
       "label": "workspace-shell-demo-tabstrip-drag-autoscroll-smoke",
       "type": "capture_bundle"
+    },
+    {
+      "type": "press_key",
+      "key": "escape"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "type": "pointer_up",
+      "window": { "kind": "current" }
+    },
+    {
+      "predicate": {
+        "kind": "workspace_tab_strip_drag_active_is",
+        "active": false,
+        "pane_id": "pane-a"
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
     }
   ]
 }

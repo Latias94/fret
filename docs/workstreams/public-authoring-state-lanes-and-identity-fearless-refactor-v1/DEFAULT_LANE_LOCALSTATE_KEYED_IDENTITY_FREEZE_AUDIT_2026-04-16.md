@@ -6,7 +6,7 @@ Related:
 
 - `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/TODO.md`
 - `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/MILESTONES.md`
-- `docs/authoring-golden-path-v2.md`
+- `docs/authoring-golden-path.md`
 - `docs/first-hour.md`
 - `docs/examples/README.md`
 - `docs/examples/todo-app-golden-path.md`
@@ -26,7 +26,7 @@ This audit does not reopen the advanced raw-model lane, runtime substrate conver
 
 1. The remaining gap is wording/gates, not runtime mechanism.
    Confidence: Confident.
-   Evidence: `docs/authoring-golden-path-v2.md`, `docs/first-hour.md`,
+   Evidence: `docs/authoring-golden-path.md`, `docs/first-hour.md`,
    `docs/examples/todo-app-golden-path.md`, `apps/fret-examples/src/lib.rs`,
    `crates/fretboard/src/scaffold/templates.rs`.
 2. Raw `Model<T>` and `clone_model()` are still valid, but only as explicit advanced/shared-owner
@@ -47,7 +47,7 @@ This audit does not reopen the advanced raw-model lane, runtime substrate conver
 
 The current first-contact docs all point at the same default authoring posture:
 
-- `docs/authoring-golden-path-v2.md` explicitly says this is the only blessed first-contact
+- `docs/authoring-golden-path.md` explicitly says this is the only blessed first-contact
   local-state story.
 - `docs/first-hour.md` teaches `simple-todo` as `LocalState + view runtime + typed actions +
   keyed lists` only.
@@ -76,7 +76,7 @@ teach the same contract.
 
 The default-lane identity teaching surface is now coherent:
 
-- `docs/authoring-golden-path-v2.md` teaches keyed lists via `ui::for_each_keyed(...)` by default.
+- `docs/authoring-golden-path.md` teaches keyed lists via `ui::for_each_keyed(...)` by default.
 - `docs/first-hour.md` says lists that can change shape should assume keys.
 - `docs/examples/todo-app-golden-path.md` teaches stable keys for dynamic lists.
 - `docs/examples/README.md` keeps unkeyed iteration only as an explicit static-list exception.
@@ -89,7 +89,7 @@ Therefore the contract is:
 
 ## Evidence
 
-- `docs/authoring-golden-path-v2.md`
+- `docs/authoring-golden-path.md`
 - `docs/first-hour.md`
 - `docs/examples/README.md`
 - `docs/examples/todo-app-golden-path.md`

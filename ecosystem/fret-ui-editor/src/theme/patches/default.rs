@@ -4,7 +4,7 @@ use crate::primitives::EditorTokenKeys;
 
 use super::{color, metric};
 
-pub(crate) fn editor_theme_patch_v1() -> ThemeConfig {
+pub(crate) fn editor_theme_patch() -> ThemeConfig {
     let mut cfg = ThemeConfig::default();
 
     // Editor density defaults (used by most controls).

@@ -363,18 +363,23 @@ impl WorkspaceWindowLayout {
         else {
             return false;
         };
-
-        let Some(source) = self.pane_tree.find_pane_mut(source_id.as_ref()) else {
-            return false;
-        };
-        if !source.tabs.close(active_tab.as_ref()) {
+        if self.pane_tree.find_pane(target_pane_id).is_none() {
             return false;
         }
 
-        let Some(target) = self.pane_tree.find_pane_mut(target_pane_id) else {
+        let Some(transfer) = self
+            .pane_tree
+            .find_pane_mut(source_id.as_ref())
+            .and_then(|source| source.tabs.extract_for_transfer(active_tab.as_ref()))
+        else {
             return false;
         };
-        target.tabs.open_and_activate(active_tab);
+
+        let target = self
+            .pane_tree
+            .find_pane_mut(target_pane_id)
+            .expect("target pane was validated before transfer extraction");
+        target.tabs.insert_transfer_and_activate(transfer);
         self.active_pane = Some(target.id.clone());
         true
     }
@@ -1365,12 +1370,11 @@ mod tests {
         );
         window.active_pane = Some(Arc::<str>::from("p1"));
 
-        window
-            .pane_tree
-            .find_pane_mut("p1")
-            .unwrap()
-            .tabs
-            .open_and_activate(Arc::<str>::from("a"));
+        let source = window.pane_tree.find_pane_mut("p1").unwrap();
+        source.tabs.open_and_activate(Arc::<str>::from("c"));
+        source.tabs.open_and_activate(Arc::<str>::from("a"));
+        assert!(source.tabs.pin_tab("a"));
+        source.tabs.set_dirty(Arc::<str>::from("a"), true);
         window
             .pane_tree
             .find_pane_mut("p2")
@@ -1380,26 +1384,152 @@ mod tests {
 
         assert!(window.move_active_tab_to_pane("p2"));
         assert_eq!(window.active_pane_id().unwrap().as_ref(), "p2");
-        assert!(window.pane_tree.find_pane("p2").unwrap().tabs.is_dirty("a") == false);
-        assert!(
-            window
-                .pane_tree
-                .find_pane("p1")
-                .unwrap()
-                .tabs
-                .tabs()
-                .is_empty()
-        );
-        assert!(
-            window
-                .pane_tree
-                .find_pane("p2")
-                .unwrap()
-                .tabs
+        let source = &window.pane_tree.find_pane("p1").unwrap().tabs;
+        assert_eq!(
+            source
                 .tabs()
                 .iter()
-                .any(|t| t.as_ref() == "a")
+                .map(|tab| tab.as_ref())
+                .collect::<Vec<_>>(),
+            vec!["c"]
         );
+        assert_eq!(source.active().map(AsRef::as_ref), Some("c"));
+        assert_eq!(
+            source
+                .mru()
+                .iter()
+                .map(|tab| tab.as_ref())
+                .collect::<Vec<_>>(),
+            vec!["c"]
+        );
+
+        let target = &window.pane_tree.find_pane("p2").unwrap().tabs;
+        assert_eq!(
+            target
+                .tabs()
+                .iter()
+                .map(|tab| tab.as_ref())
+                .collect::<Vec<_>>(),
+            vec!["a", "b"]
+        );
+        assert_eq!(target.active().map(AsRef::as_ref), Some("a"));
+        assert_eq!(
+            target
+                .mru()
+                .iter()
+                .map(|tab| tab.as_ref())
+                .collect::<Vec<_>>(),
+            vec!["a", "b"]
+        );
+        assert!(target.is_dirty("a"));
+        assert!(target.is_tab_pinned("a"));
+    }
+
+    #[test]
+    fn move_active_tab_into_split_clone_merges_metadata_without_duplicate() {
+        let mut window = WorkspaceWindowLayout::new("main", "p1");
+        let source = window.pane_tree.find_pane_mut("p1").unwrap();
+        source.tabs.open_and_activate(Arc::<str>::from("shared"));
+        assert!(source.tabs.pin_tab("shared"));
+        source.tabs.set_dirty(Arc::<str>::from("shared"), true);
+
+        assert!(window.split_active_pane_auto(
+            Axis::Horizontal,
+            SplitSide::Second,
+            0.5,
+            SplitMode::CloneActiveTab,
+        ));
+        let clone_pane_id = window.active_pane_id().unwrap().clone();
+        assert_eq!(
+            window
+                .pane_tree
+                .find_pane(clone_pane_id.as_ref())
+                .unwrap()
+                .tabs
+                .tabs()
+                .len(),
+            1
+        );
+
+        assert!(window.activate_pane("p1"));
+        assert!(window.move_active_tab_to_pane(clone_pane_id.as_ref()));
+
+        let source = &window.pane_tree.find_pane("p1").unwrap().tabs;
+        assert!(source.tabs().is_empty());
+        assert!(source.active().is_none());
+
+        let target = &window
+            .pane_tree
+            .find_pane(clone_pane_id.as_ref())
+            .unwrap()
+            .tabs;
+        assert_eq!(
+            target
+                .tabs()
+                .iter()
+                .filter(|tab| tab.as_ref() == "shared")
+                .count(),
+            1
+        );
+        assert!(target.is_dirty("shared"));
+        assert!(target.is_tab_pinned("shared"));
+        assert_eq!(target.active().map(AsRef::as_ref), Some("shared"));
+        assert_eq!(target.mru().first().map(AsRef::as_ref), Some("shared"));
+    }
+
+    #[test]
+    fn move_active_preview_tab_preserves_preview_in_target_pane() {
+        let mut window = WorkspaceWindowLayout::new("main", "p1");
+        window.pane_tree = WorkspacePaneTree::split(
+            Axis::Horizontal,
+            0.5,
+            WorkspacePaneTree::leaf("p1"),
+            WorkspacePaneTree::leaf("p2"),
+        );
+        window.active_pane = Some(Arc::<str>::from("p1"));
+
+        let source = window.pane_tree.find_pane_mut("p1").unwrap();
+        source.tabs.open_and_activate(Arc::<str>::from("stable"));
+        assert!(
+            source
+                .tabs
+                .open_preview_and_activate(Arc::<str>::from("preview"))
+        );
+        let target = window.pane_tree.find_pane_mut("p2").unwrap();
+        target.tabs.open_and_activate(Arc::<str>::from("target"));
+
+        assert!(window.move_active_tab_to_pane("p2"));
+
+        let source = &window.pane_tree.find_pane("p1").unwrap().tabs;
+        assert_eq!(source.active().map(AsRef::as_ref), Some("stable"));
+        assert!(source.preview_tab_id().is_none());
+        let target = &window.pane_tree.find_pane("p2").unwrap().tabs;
+        assert_eq!(target.active().map(AsRef::as_ref), Some("preview"));
+        assert_eq!(target.preview_tab_id().map(AsRef::as_ref), Some("preview"));
+        assert_eq!(target.mru().first().map(AsRef::as_ref), Some("preview"));
+    }
+
+    #[test]
+    fn move_active_tab_to_missing_pane_preserves_source_tabs() {
+        let mut window = WorkspaceWindowLayout::new("main", "p1");
+        window.pane_tree = WorkspacePaneTree::leaf("p1");
+        let pane = window.pane_tree.find_pane_mut("p1").unwrap();
+        pane.tabs.open_and_activate(Arc::<str>::from("a"));
+        pane.tabs.open_and_activate(Arc::<str>::from("b"));
+
+        assert!(!window.move_active_tab_to_pane("missing"));
+
+        let pane = window.pane_tree.find_pane("p1").unwrap();
+        assert_eq!(
+            pane.tabs
+                .tabs()
+                .iter()
+                .map(|tab| tab.as_ref())
+                .collect::<Vec<_>>(),
+            vec!["a", "b"]
+        );
+        assert_eq!(pane.tabs.active().map(AsRef::as_ref), Some("b"));
+        assert_eq!(window.active_pane_id().map(AsRef::as_ref), Some("p1"));
     }
 
     #[test]

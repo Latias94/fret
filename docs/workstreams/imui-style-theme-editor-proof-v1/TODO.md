@@ -38,6 +38,6 @@ Last updated: 2026-05-25
 - [x] Mount `EditorThemePresetPicker` in the canonical editor-notes inspector with a stable test id.
 - [x] Reuse the installed preset as the initial model in both the canonical workbench and the
       device-shell variant.
-- [x] Route examples preset parsing through `EditorThemePresetV1::from_key`.
+- [x] Route examples preset parsing through `EditorThemePreset::from_key`.
 - [x] Add source-policy tests and gates proving the picker stays in editor/examples policy, not
       runtime mechanism or `fret-ui-kit::imui`.

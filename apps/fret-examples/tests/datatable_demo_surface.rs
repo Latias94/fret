@@ -39,3 +39,32 @@ fn datatable_demo_keeps_fixed_table_text_on_roles() {
         );
     }
 }
+
+#[test]
+fn datatable_demo_keeps_recipe_state_output_and_debug_identity_explicit() {
+    let source = include_str!("../src/datatable_demo.rs");
+    let source = compact(source);
+
+    for needle in [
+        "table_state:LocalState<shadcn::TableState>",
+        "table_output:LocalState<shadcn::DataTableViewOutput>",
+        "table_recipe:shadcn::DataTableRecipe<DemoRow>",
+        "letcolumns=datatable_columns();",
+        "shadcn::DataTableRecipe::new(&table_state,&table_output,columns,|row,_i,_parent|{shadcn::RowKey(row.id)})",
+        ".debug_ids(datatable_debug_ids())",
+        ".toolbar_test_id_prefix(\"datatable-demo-toolbar\")",
+        ".page_sizes(Arc::from([25usize,50,100,250]))",
+        ".table(shadcn::DataTable::new().column_actions_menu(true))",
+        "header_row_test_id:Some(Arc::<str>::from(\"datatable-demo-header-row\"))",
+        "body_test_id:Some(Arc::<str>::from(\"datatable-demo-body\"))",
+        "header_cell_test_id_prefix:Some(Arc::<str>::from(\"datatable-demo-header-\"))",
+        "row_test_id_prefix:Some(Arc::<str>::from(\"datatable-demo-row-\"))",
+        "row_cell_test_ids:true",
+        "lettable_parts=table_recipe.into_elements(cx,rows,1,|cx,col,row|",
+    ] {
+        assert!(
+            source.contains(needle),
+            "datatable demo should keep recipe state/output/columns/row keys/debug ids app-visible; missing `{needle}`"
+        );
+    }
+}

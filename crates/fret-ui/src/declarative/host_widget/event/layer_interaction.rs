@@ -2,6 +2,17 @@ use super::ElementHostWidget;
 use crate::declarative::frame::LayerInteractionRootProps;
 use crate::declarative::prelude::*;
 
+fn record_layer_interaction_command_source<H: UiHost>(
+    app: &mut H,
+    cx: action::ActionCx,
+    command: &fret_runtime::CommandId,
+    reason: action::ActivateReason,
+) {
+    crate::action::record_pending_command_dispatch_source_if_enabled(
+        app, cx, command, reason, None,
+    );
+}
+
 pub(super) fn handle_layer_interaction_root_observer<H: UiHost>(
     this: &mut ElementHostWidget,
     cx: &mut crate::widget::ObserverCx<'_, H>,
@@ -62,6 +73,15 @@ pub(super) fn handle_layer_interaction_root_observer<H: UiHost>(
 
         fn next_share_sheet_token(&mut self) -> fret_runtime::ShareSheetToken {
             self.app.next_share_sheet_token()
+        }
+
+        fn record_pending_command_dispatch_source(
+            &mut self,
+            cx: action::ActionCx,
+            command: &fret_runtime::CommandId,
+            reason: action::ActivateReason,
+        ) {
+            record_layer_interaction_command_source(&mut *self.app, cx, command, reason);
         }
 
         #[track_caller]
@@ -269,6 +289,15 @@ pub(super) fn handle_layer_interaction_root<H: UiHost>(
 
         fn next_share_sheet_token(&mut self) -> fret_runtime::ShareSheetToken {
             self.app.next_share_sheet_token()
+        }
+
+        fn record_pending_command_dispatch_source(
+            &mut self,
+            cx: action::ActionCx,
+            command: &fret_runtime::CommandId,
+            reason: action::ActivateReason,
+        ) {
+            record_layer_interaction_command_source(&mut *self.app, cx, command, reason);
         }
 
         #[track_caller]

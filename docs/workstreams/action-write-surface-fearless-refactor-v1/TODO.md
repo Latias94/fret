@@ -60,7 +60,7 @@ Post-closeout update on 2026-03-18:
 ### Ecosystem / teaching proof surfaces
 
 - [x] `docs/crate-usage-guide.md`
-- [x] `docs/authoring-golden-path-v2.md`
+- [x] `docs/authoring-golden-path.md`
 - [x] `docs/examples/todo-app-golden-path.md`
 - [x] `docs/first-hour.md`
 

@@ -113,6 +113,8 @@ fn layer_interaction_on_request_hook_runs_on_escape() {
     let mut services = FakeTextService::default();
 
     let dismissed = app.models_mut().insert(false);
+    let dismiss_command = fret_runtime::CommandId::from("test.layer_interaction.dismiss");
+    let dismiss_command_for_hook = dismiss_command.clone();
 
     let base_root = ui.create_node(FillStack);
     ui.set_root(base_root);
@@ -126,8 +128,13 @@ fn layer_interaction_on_request_hook_runs_on_escape() {
         "layer-interaction-hook-escape",
         |cx| {
             let dismissed = dismissed.clone();
-            cx.layer_interaction_on_request(Arc::new(move |host, _cx, req| {
+            cx.layer_interaction_on_request(Arc::new(move |host, acx, req| {
                 assert_eq!(req.reason, LayerInteractionReason::Escape);
+                host.record_pending_command_dispatch_source(
+                    acx,
+                    &dismiss_command_for_hook,
+                    crate::action::ActivateReason::Keyboard,
+                );
                 let _ = host
                     .models_mut()
                     .update(&dismissed, |v: &mut bool| *v = true);
@@ -161,6 +168,14 @@ fn layer_interaction_on_request_hook_runs_on_escape() {
     );
 
     assert_eq!(app.models().get_copied(&dismissed), Some(true));
+    let source = app.with_global_mut(
+        fret_runtime::WindowPendingCommandDispatchSourceService::default,
+        |service, app| service.consume(window, app.tick_id(), &dismiss_command),
+    );
+    assert_eq!(
+        source.map(|source| source.kind),
+        Some(fret_runtime::CommandDispatchSourceKindV1::Keyboard)
+    );
 }
 
 #[test]

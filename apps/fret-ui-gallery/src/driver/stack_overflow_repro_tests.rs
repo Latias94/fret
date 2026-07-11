@@ -73,9 +73,11 @@ fn run_datatable_layout(configure_stacksafe: bool) {
     let mut app = App::new();
     let window = AppWindowId::default();
     let mut state = UiGalleryDriver::build_ui(&mut app, window);
-    let _ = app.models_mut().update(&state.selected_page, |v| {
-        *v = Arc::<str>::from(PAGE_DATA_TABLE);
-    });
+    UiGalleryDriver::select_gallery_page_in_models(
+        &mut app,
+        &mut state,
+        Arc::<str>::from(PAGE_DATA_TABLE),
+    );
 
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),

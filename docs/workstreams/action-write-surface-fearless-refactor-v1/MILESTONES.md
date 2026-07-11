@@ -130,7 +130,7 @@ Exit criteria:
 
 - the same write-side story appears in:
   - `docs/first-hour.md`
-  - `docs/authoring-golden-path-v2.md`
+  - `docs/authoring-golden-path.md`
   - `docs/examples/todo-app-golden-path.md`
   - `docs/crate-usage-guide.md`
   - `apps/fretboard/src/scaffold/templates.rs`

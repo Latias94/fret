@@ -115,7 +115,7 @@ const REAL_PERF_SPANS_EXTENSION_KEY_V1: &str = "fret.perf.spans.v1";
 const REAL_PERF_SPAN_DIAGNOSTICS_SNAPSHOT: &str = "fret.ui.diagnostics.snapshot";
 const REAL_PERF_SPAN_SOURCE_DIAGNOSTICS_SERVICE: &str = "ui_diagnostics_service";
 
-fn infer_pointer_source_test_id_from_semantics(
+fn infer_source_test_id_from_semantics(
     window: AppWindowId,
     source_element: Option<u64>,
     semantics_snapshot: Option<&fret_core::SemanticsSnapshot>,
@@ -130,6 +130,19 @@ fn infer_pointer_source_test_id_from_semantics(
         .iter()
         .find(|n| n.id == node)
         .and_then(|n| n.test_id.clone())
+}
+
+fn resolve_command_dispatch_source_test_id(
+    source_kind: fret_runtime::CommandDispatchSourceKindV1,
+    direct_or_inferred: Option<String>,
+    pointer_step_fallback: Option<&str>,
+) -> Option<String> {
+    match source_kind {
+        fret_runtime::CommandDispatchSourceKindV1::Pointer => {
+            direct_or_inferred.or_else(|| pointer_step_fallback.map(str::to_owned))
+        }
+        _ => direct_or_inferred,
+    }
 }
 
 fn real_perf_spans_extension_value_v1(
@@ -185,11 +198,7 @@ impl UiDiagnosticsService {
             .register_best_effort(key, writer);
     }
 
-    pub(crate) fn record_perf_spans_v1(
-        &mut self,
-        window: AppWindowId,
-        spans: Vec<UiPerfSpanV1>,
-    ) {
+    pub(crate) fn record_perf_spans_v1(&mut self, window: AppWindowId, spans: Vec<UiPerfSpanV1>) {
         if !self.is_enabled() || spans.is_empty() {
             return;
         }
@@ -1745,7 +1754,7 @@ impl UiDiagnosticsService {
 
             let direct_source_test_id = decision.source.test_id.as_deref().map(str::to_string);
             let inferred_source_test_id = direct_source_test_id.or_else(|| {
-                infer_pointer_source_test_id_from_semantics(
+                infer_source_test_id_from_semantics(
                     window,
                     decision.source.element,
                     semantics_snapshot,
@@ -1753,12 +1762,11 @@ impl UiDiagnosticsService {
                 )
             });
 
-            let source_test_id = match decision.source.kind {
-                fret_runtime::CommandDispatchSourceKindV1::Pointer => {
-                    inferred_source_test_id.or_else(|| pointer_source_test_id_for_step.clone())
-                }
-                _ => None,
-            };
+            let source_test_id = resolve_command_dispatch_source_test_id(
+                decision.source.kind,
+                inferred_source_test_id,
+                pointer_source_test_id_for_step.as_deref(),
+            );
             let handled_by_test_id = if decision.handled_by_element.is_some()
                 && decision.handled_by_element == decision.source.element
             {
@@ -1767,29 +1775,43 @@ impl UiDiagnosticsService {
                 None
             };
 
-            push_command_dispatch_trace(
-                &mut active.command_dispatch_trace,
-                UiScriptCommandDispatchTraceEntryV1 {
-                    step_index,
-                    frame_id: decision.frame_id.0,
-                    command: decision.command.as_str().to_string(),
-                    handled: decision.handled,
-                    handled_by_scope: decision.handled_by_scope.map(|s| match s {
-                        fret_runtime::CommandScope::Widget => "widget".to_string(),
-                        fret_runtime::CommandScope::Window => "window".to_string(),
-                        fret_runtime::CommandScope::App => "app".to_string(),
-                    }),
-                    handled_by_driver: decision.handled_by_driver,
-                    stopped: decision.stopped,
-                    source_kind: source_kind.to_string(),
-                    source_element: decision.source.element,
-                    source_test_id,
-                    handled_by_element: decision.handled_by_element,
-                    handled_by_test_id,
-                    started_from_focus: decision.started_from_focus,
-                    used_default_root_fallback: decision.used_default_root_fallback,
-                },
+            let mut trace_entry = UiScriptCommandDispatchTraceEntryV1::for_command(
+                step_index,
+                decision.frame_id.0,
+                decision.command.as_str(),
             );
+            trace_entry.action_id = decision
+                .outcome
+                .as_ref()
+                .and_then(|outcome| outcome.action_id.as_ref())
+                .map(|action| action.as_str().to_string());
+            trace_entry.target = decision
+                .outcome
+                .as_ref()
+                .and_then(|outcome| outcome.target.as_deref())
+                .map(str::to_string);
+            trace_entry.applied = decision.outcome.as_ref().map(|outcome| outcome.applied);
+            trace_entry.blocked_dirty_close = decision
+                .outcome
+                .as_ref()
+                .map(|outcome| outcome.blocked_dirty_close);
+            trace_entry.handled = decision.handled;
+            trace_entry.handled_by_scope = decision.handled_by_scope.map(|s| match s {
+                fret_runtime::CommandScope::Widget => "widget".to_string(),
+                fret_runtime::CommandScope::Window => "window".to_string(),
+                fret_runtime::CommandScope::App => "app".to_string(),
+            });
+            trace_entry.handled_by_driver = decision.handled_by_driver;
+            trace_entry.stopped = decision.stopped;
+            trace_entry.source_kind = source_kind.to_string();
+            trace_entry.source_element = decision.source.element;
+            trace_entry.source_test_id = source_test_id;
+            trace_entry.handled_by_element = decision.handled_by_element;
+            trace_entry.handled_by_test_id = handled_by_test_id;
+            trace_entry.started_from_focus = decision.started_from_focus;
+            trace_entry.used_default_root_fallback = decision.used_default_root_fallback;
+
+            push_command_dispatch_trace(&mut active.command_dispatch_trace, trace_entry);
         }
     }
 
@@ -1991,17 +2013,27 @@ mod service_tests {
         perf.geometry_upload.resident_partial_write_dry_run_streams = 35;
         perf.geometry_upload
             .resident_partial_write_dry_run_write_count_estimate = 36;
-        perf.geometry_upload.resident_partial_write_dry_run_bytes_estimate = 2048;
+        perf.geometry_upload
+            .resident_partial_write_dry_run_bytes_estimate = 2048;
         perf.geometry_upload.resident_full_upload_fallbacks = 37;
-        perf.geometry_upload.resident_full_upload_fallbacks_no_candidate = 38;
-        perf.geometry_upload.resident_full_upload_fallbacks_missing_payload = 39;
-        perf.geometry_upload.resident_full_upload_fallbacks_reassembly_blocked = 40;
-        perf.geometry_upload.resident_full_upload_fallbacks_uninitialized = 41;
-        perf.geometry_upload.resident_full_upload_fallbacks_buffer_resized = 42;
-        perf.geometry_upload.resident_full_upload_fallbacks_stream_content_changed = 43;
-        perf.geometry_upload.resident_full_upload_fallbacks_stream_layout_changed = 44;
-        perf.scene_encoding_cache_miss_histogram.scene_fingerprint_changed = 3;
-        perf.scene_encoding_cache_miss_histogram.text_quality_key_changed = 1;
+        perf.geometry_upload
+            .resident_full_upload_fallbacks_no_candidate = 38;
+        perf.geometry_upload
+            .resident_full_upload_fallbacks_missing_payload = 39;
+        perf.geometry_upload
+            .resident_full_upload_fallbacks_reassembly_blocked = 40;
+        perf.geometry_upload
+            .resident_full_upload_fallbacks_uninitialized = 41;
+        perf.geometry_upload
+            .resident_full_upload_fallbacks_buffer_resized = 42;
+        perf.geometry_upload
+            .resident_full_upload_fallbacks_stream_content_changed = 43;
+        perf.geometry_upload
+            .resident_full_upload_fallbacks_stream_layout_changed = 44;
+        perf.scene_encoding_cache_miss_histogram
+            .scene_fingerprint_changed = 3;
+        perf.scene_encoding_cache_miss_histogram
+            .text_quality_key_changed = 1;
         perf.scene_chunk_input_chunks = 2;
         perf.scene_chunk_input_ops = 9;
         perf.scene_chunk_input_fingerprint = 0xCAFE;
@@ -2123,8 +2155,7 @@ mod service_tests {
             43
         );
         assert_eq!(
-            stats
-                .renderer_geometry_upload_resident_full_upload_fallbacks_stream_layout_changed,
+            stats.renderer_geometry_upload_resident_full_upload_fallbacks_stream_layout_changed,
             44
         );
         assert_eq!(
@@ -2219,14 +2250,8 @@ mod service_tests {
             21
         );
         assert_eq!(stats.renderer_render_plan_scene_chunk_candidate_draws, 11);
-        assert_eq!(
-            stats.renderer_render_plan_scene_chunk_candidates_stable,
-            3
-        );
-        assert_eq!(
-            stats.renderer_render_plan_scene_chunk_candidates_changed,
-            1
-        );
+        assert_eq!(stats.renderer_render_plan_scene_chunk_candidates_stable, 3);
+        assert_eq!(stats.renderer_render_plan_scene_chunk_candidates_changed, 1);
         assert_eq!(
             stats.renderer_render_plan_scene_chunk_candidate_upload_bytes_estimate,
             2048
@@ -2321,7 +2346,9 @@ mod service_tests {
             Some("fret.ui.view")
         );
         assert_eq!(
-            extension.pointer("/spans/0/args/source").and_then(|v| v.as_str()),
+            extension
+                .pointer("/spans/0/args/source")
+                .and_then(|v| v.as_str()),
             Some("service_test")
         );
     }
@@ -2362,7 +2389,9 @@ mod service_tests {
             Some(REAL_PERF_SPAN_DIAGNOSTICS_SNAPSHOT)
         );
         assert_eq!(
-            extension.pointer("/spans/0/start_us").and_then(|v| v.as_u64()),
+            extension
+                .pointer("/spans/0/start_us")
+                .and_then(|v| v.as_u64()),
             Some(321)
         );
         assert!(
@@ -2372,11 +2401,15 @@ mod service_tests {
                 .is_some_and(|dur| dur > 0)
         );
         assert_eq!(
-            extension.pointer("/spans/0/args/source").and_then(|v| v.as_str()),
+            extension
+                .pointer("/spans/0/args/source")
+                .and_then(|v| v.as_str()),
             Some(REAL_PERF_SPAN_SOURCE_DIAGNOSTICS_SERVICE)
         );
         assert_eq!(
-            extension.pointer("/spans/0/args/phase").and_then(|v| v.as_str()),
+            extension
+                .pointer("/spans/0/args/phase")
+                .and_then(|v| v.as_str()),
             Some("diagnostics_snapshot")
         );
     }
@@ -2386,10 +2419,14 @@ mod service_tests {
         let svc = UiDiagnosticsService::default();
         let app = App::new();
         let window = app_window(1);
-        let mut active = active_script_for_step(UiActionStepV2::CaptureBundle { label: None, max_snapshots: None });
+        let mut active = active_script_for_step(UiActionStepV2::CaptureBundle {
+            label: None,
+            max_snapshots: None,
+        });
         active.next_step = 1;
-        active.semantics_scroll_idle_stable_trace.push(
-            UiSemanticsScrollIdleStableTraceEntryV1 {
+        active
+            .semantics_scroll_idle_stable_trace
+            .push(UiSemanticsScrollIdleStableTraceEntryV1 {
                 step_index: 0,
                 selector: UiSelectorV1::TestId {
                     id: "ui-gallery-content-viewport".to_string(),
@@ -2406,8 +2443,7 @@ mod service_tests {
                 max_total_delta: 0.5,
                 bounds: None,
                 note: Some("assert_semantics_scroll_idle_stable.sample".to_string()),
-            },
-        );
+            });
 
         let step = UiActionStepV2::CaptureBundle {
             label: None,

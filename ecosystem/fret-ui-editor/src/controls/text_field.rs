@@ -1,6 +1,6 @@
 //! Reusable editor text field control.
 //!
-//! v1 scope:
+//! Scope:
 //! - single-line input (`TextInput`)
 //! - optional multiline mode (`TextArea`) with a minimum height
 //! - optional clear affordance

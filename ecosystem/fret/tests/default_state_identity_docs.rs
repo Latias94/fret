@@ -1,6 +1,6 @@
 const DOCS_INDEX: &str = include_str!("../../../docs/README.md");
 const EXAMPLES_README: &str = include_str!("../../../docs/examples/README.md");
-const AUTHORING_GOLDEN_PATH: &str = include_str!("../../../docs/authoring-golden-path-v2.md");
+const AUTHORING_GOLDEN_PATH: &str = include_str!("../../../docs/authoring-golden-path.md");
 const FIRST_HOUR: &str = include_str!("../../../docs/first-hour.md");
 const TODO_APP_GOLDEN_PATH: &str = include_str!("../../../docs/examples/todo-app-golden-path.md");
 const ADR_0319: &str =

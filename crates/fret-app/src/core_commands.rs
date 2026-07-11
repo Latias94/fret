@@ -7,7 +7,6 @@ use fret_runtime::{
 };
 
 pub const COMMAND_PALETTE: &str = "app.command_palette";
-pub const COMMAND_PALETTE_LEGACY: &str = "command_palette.toggle";
 pub const APP_ABOUT: &str = "app.about";
 pub const APP_PREFERENCES: &str = "app.preferences";
 pub const APP_LOCALE_SWITCH_NEXT: &str = "app.locale.switch_next";
@@ -30,7 +29,6 @@ pub const EDIT_REDO: &str = "edit.redo";
 
 pub fn register_core_commands(registry: &mut CommandRegistry) {
     register_command_palette(registry);
-    register_legacy_command_palette_alias(registry);
     register_app_commands(registry);
     register_focus_commands(registry);
     register_text_edit_commands(registry);
@@ -204,13 +202,6 @@ pub fn register_command_palette(registry: &mut CommandRegistry) {
         ]);
 
     registry.register(CommandId::new(COMMAND_PALETTE), meta);
-}
-
-pub fn register_legacy_command_palette_alias(registry: &mut CommandRegistry) {
-    registry.register(
-        CommandId::new(COMMAND_PALETTE_LEGACY),
-        CommandMeta::new("Command Palette").hidden(),
-    );
 }
 
 pub fn register_focus_commands(registry: &mut CommandRegistry) {

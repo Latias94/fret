@@ -10,7 +10,7 @@ Related:
 - `docs/workstreams/into-element-surface-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`
 - `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/SELECTOR_QUERY_DIRECTION_2026-03-16.md`
 - `docs/examples/todo-app-golden-path.md`
-- `docs/authoring-golden-path-v2.md`
+- `docs/authoring-golden-path.md`
 - `docs/first-hour.md`
 
 Closeout reading rule on 2026-03-16:
@@ -103,7 +103,7 @@ That means:
 - `apps/fret-examples/src/todo_demo.rs`
 - `apps/fretboard/src/scaffold/templates.rs`
 - `docs/examples/todo-app-golden-path.md`
-- `docs/authoring-golden-path-v2.md`
+- `docs/authoring-golden-path.md`
 - `docs/first-hour.md`
 
 ### Required secondary proof surface

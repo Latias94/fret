@@ -18,7 +18,7 @@ Related:
 - `docs/workstreams/ecosystem-integration-traits-v1/DESIGN.md`
 - `docs/workstreams/router-v1/router-v1.md`
 - `docs/workstreams/router-ui-v1/router-ui-v1.md`
-- `docs/authoring-golden-path-v2.md`
+- `docs/authoring-golden-path.md`
 - `docs/examples/todo-app-golden-path.md`
 - `docs/crate-usage-guide.md`
 
@@ -239,7 +239,7 @@ Current proof outcome (2026-03-17):
 ### Ecosystem / reusable-library proof surfaces
 
 - `docs/crate-usage-guide.md`
-- `docs/authoring-golden-path-v2.md`
+- `docs/authoring-golden-path.md`
 - `docs/examples/todo-app-golden-path.md`
 - any first-party reusable adapter point added under `ecosystem/*`
 

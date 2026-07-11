@@ -15453,40 +15453,48 @@
         "ui-gallery-workspace-shell"
       ],
       "tags": [
+        "layout",
         "screenshots",
+        "semantics",
         "shadcn",
         "ui-gallery",
         "workspace",
         "workspace_shell"
       ],
       "target_hints": [
-        "Boots ui_gallery with the workspace_shell diag profile so the shell starts on the overlay page under zinc/dark with the tab strip enabled.",
+        "Boots the default ui_gallery release binary with the workspace_shell profile on the dialog page under zinc/dark with the tab strip enabled.",
         "Waits for the workspace shell chrome surfaces without opening theme or settings UI.",
-        "Captures a screenshot + diagnostics bundle for the workspace frame/top bar/status bar/tabstrip proof surface."
+        "Asserts the frame/top bar/status bar/tabstrip roles and the stable, non-overlapping vertical shell layout.",
+        "Captures a layout sidecar, diagnostics bundle, and screenshot for the same app-facing proof surface."
       ]
     },
     {
       "id": "ui-gallery-workspace-shell-focus-command-scope-smoke",
       "path": "tools/diag-scripts/ui-gallery/workspace-shell/ui-gallery-workspace-shell-focus-command-scope-smoke.json",
       "required_capabilities": [
-        "diag.script_v2"
+        "diag.command_dispatch_trace",
+        "diag.script_v2",
+        "diag.shortcut_routing_trace"
       ],
       "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-workspace-shell"
       ],
       "tags": [
+        "command_dispatch",
         "focus",
         "keyboard",
+        "semantics",
         "smoke",
         "ui-gallery",
         "workspace",
         "workspace_shell"
       ],
       "target_hints": [
-        "Boots ui_gallery with the workspace_shell diag profile so the shell starts on the overlay page under zinc/dark with the tab strip enabled.",
-        "Focuses the workspace content surface, presses Ctrl+F6, and asserts focus moves into the active tab.",
-        "Presses Escape and asserts focus returns to the workspace content surface."
+        "Boots the default ui_gallery release binary with the workspace_shell profile on the Field page under zinc/dark with the tab strip enabled.",
+        "Asserts the tablist and active tab expose stable roles, selected state, and an enabled invoke action.",
+        "Focuses the workspace content surface and proves Ctrl+F6 dispatches through the widget command scope in both directions.",
+        "Re-enters the active tab, then proves Escape dispatches focus-content and restores the workspace content target."
       ]
     },
     {
@@ -15501,7 +15509,11 @@
         "ui-gallery-workspace-shell"
       ],
       "tags": [
+        "command_dispatch",
+        "context_menu",
         "keyboard",
+        "pointer",
+        "semantics",
         "smoke",
         "tabs",
         "ui-gallery",
@@ -15511,8 +15523,9 @@
       "target_hints": [
         "Boots ui_gallery with the workspace_shell diag profile so the tab strip is enabled.",
         "Selects the Field tab explicitly so the command smoke is independent of launch-time start-page routing.",
-        "Focuses the workspace content surface, then exercises next/previous/close tab commands from the workspace command scope.",
-        "Asserts the single-pane workspace layout mirror updates the selected tab and removes the closed tab."
+        "Asserts tablist/tab semantics and enabled invoke actions before keyboard dispatch.",
+        "Pins Field through the real modal tab context menu, then proves next/previous shortcuts remain window-owned.",
+        "Closes Field through the same modal menu and asserts complete Workbench outcomes, source selectors, selected-page projection, focus preservation, and closed-tab removal."
       ]
     },
     {
@@ -15553,6 +15566,65 @@
       "target_hints": []
     },
     {
+      "id": "workspace-shell-demo-pane-focus-and-move-keyboard-smoke",
+      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-pane-focus-and-move-keyboard-smoke.json",
+      "required_capabilities": [
+        "diag.command_dispatch_trace",
+        "diag.script_v2",
+        "diag.shortcut_routing_trace"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "workspace-shell-app-facing"
+      ],
+      "tags": [
+        "app_facing",
+        "cross_pane",
+        "focus",
+        "gate",
+        "keyboard",
+        "pane",
+        "smoke",
+        "tabstrip",
+        "workspace"
+      ],
+      "target_hints": [
+        "Starts with pane-a active and keyboard focus in pane-a content.",
+        "Uses the cross-platform primary+K, Shift+ArrowRight sequence to focus pane-b and asserts keyboard focus follows to pane-b content.",
+        "Moves focus into pane-b's tab strip with Ctrl+F6, then uses primary+K, Alt+ArrowLeft to move doc-b-1 into pane-a.",
+        "Asserts the moved tab is selected and keyboard focus follows its new pane-a tab element rather than remaining on a stale pane-b element.",
+        "Splits pane-a to the right from the tabstrip lane and asserts focus follows the cloned active tab into window-1.pane.1."
+      ]
+    },
+    {
+      "id": "workspace-shell-demo-rails-keyboard-semantics-smoke",
+      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-rails-keyboard-semantics-smoke.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "workspace-shell-app-facing"
+      ],
+      "tags": [
+        "a11y",
+        "app_facing",
+        "gate",
+        "keyboard",
+        "layout",
+        "rail",
+        "semantics",
+        "smoke",
+        "workspace"
+      ],
+      "target_hints": [
+        "Asserts the left file-tree rail root is a non-collapsed list and its first row is a focusable, invokable tree item.",
+        "Uses sequential Tab from the unfocused launch state to enter the first file-tree row, traverse to the next visible row, and return with Shift+Tab.",
+        "Activates the first branch with Enter and asserts selection plus collapsed expansion state.",
+        "Asserts the read-only right editor rail keeps stable root/header selectors, an accessible Editor Rail text label, visible bounds, and non-overlap with the center pane."
+      ]
+    },
+    {
       "id": "workspace-shell-demo-tab-close-button-closes-tab-smoke",
       "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-button-closes-tab-smoke.json",
       "required_capabilities": [
@@ -15586,13 +15658,16 @@
       ],
       "required_launch_features": [],
       "suite_memberships": [
+        "workspace-shell-app-facing",
         "workspace-shell-demo"
       ],
       "tags": [
+        "app_facing",
         "close",
         "dirty",
         "gate",
         "prompt",
+        "semantics",
         "smoke",
         "tabstrip",
         "workspace"
@@ -15600,7 +15675,9 @@
       "target_hints": [
         "Marks the active pane A tab dirty through the demo debug button.",
         "Clicks the real tab close button for doc-a-2 instead of the demo close-active button.",
-        "Asserts the widget command path dispatches workspace.tab.close.doc-a-2 and dirty-close policy shows the prompt before discard closes the tab."
+        "Asserts the widget command path dispatches workspace.tab.close.doc-a-2 and dirty-close policy shows a dialog.",
+        "Proves initial focus plus forward/reverse modal focus trapping, then activates Cancel from the keyboard and restores focus to the triggering tab.",
+        "Reopens the dialog, activates Discard from the keyboard, and restores focus to the surviving active tab."
       ]
     },
     {
@@ -15628,6 +15705,34 @@
         "Clicks the real close button for doc-b-1 in pane-b.",
         "Asserts the pointer path dispatches pane-b activation before closing doc-b-1.",
         "Proves the close removes only doc-b-1 and does not remove pane-a's active doc-a-2."
+      ]
+    },
+    {
+      "id": "workspace-shell-demo-tab-close-dirty-save-and-close-smoke",
+      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-dirty-save-and-close-smoke.json",
+      "required_capabilities": [
+        "diag.command_dispatch_trace",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "workspace-shell-app-facing"
+      ],
+      "tags": [
+        "app_facing",
+        "close",
+        "dirty",
+        "gate",
+        "save",
+        "semantics",
+        "smoke",
+        "tabstrip",
+        "workspace"
+      ],
+      "target_hints": [
+        "Marks doc-a-2 dirty, requests close through its real tab close button, and asserts the prompt is a dialog.",
+        "Uses reverse modal focus trapping to reach Save & Close and proves the keyboard activation dispatches the save command through the window driver.",
+        "Asserts focus moves to the surviving active tab; a Rust behavior gate separately proves Save clears dirty state while Discard preserves it."
       ]
     },
     {
@@ -15716,6 +15821,7 @@
       ],
       "required_launch_features": [],
       "suite_memberships": [
+        "workspace-shell-app-facing",
         "workspace-shell-demo"
       ],
       "tags": [
@@ -15731,7 +15837,7 @@
       "target_hints": [
         "Marks doc-a-0 and doc-a-1 dirty, activates doc-a-2, and invokes Close Other Tabs from the real tab context menu.",
         "Asserts the dirty-close prompt reports a CloseOthers aggregate with two targets and two dirty tabs.",
-        "Cancels once to prove the aggregate close is blocked, then discards to close only the aggregate targets."
+        "Dismisses once with Escape to prove the aggregate close is blocked and the shared Cancel state machine restores focus from the unmounted context menu to active doc-a-2, then discards to close only the aggregate targets."
       ]
     },
     {
@@ -15742,6 +15848,7 @@
       ],
       "required_launch_features": [],
       "suite_memberships": [
+        "workspace-shell-app-facing",
         "workspace-shell-demo"
       ],
       "tags": [
@@ -15751,6 +15858,32 @@
         "workspace"
       ],
       "target_hints": []
+    },
+    {
+      "id": "workspace-shell-demo-tab-cycle-commands-smoke",
+      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-cycle-commands-smoke.json",
+      "required_capabilities": [
+        "diag.command_dispatch_trace",
+        "diag.script_v2",
+        "diag.shortcut_routing_trace"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "workspace-shell-app-facing"
+      ],
+      "tags": [
+        "app_facing",
+        "gate",
+        "keyboard",
+        "smoke",
+        "tabstrip",
+        "workspace"
+      ],
+      "target_hints": [
+        "Closes the visible active doc-a-2 so only two tabs remain (deterministic MRU).",
+        "Uses Ctrl+F6 and Home to activate offscreen doc-a-0 without pointer-coordinate assumptions, restores content focus, then uses Ctrl+Tab / Ctrl+Shift+Tab.",
+        "Asserts shortcut routing separately from window-scope driver handling for workspace.tab.next/prev, then checks selected tab changes."
+      ]
     },
     {
       "id": "workspace-shell-demo-tab-drag-and-scroll",
@@ -15814,19 +15947,25 @@
       ],
       "required_launch_features": [],
       "suite_memberships": [
-        "diag-hardening-smoke-workspace"
+        "diag-hardening-smoke-workspace",
+        "workspace-shell-app-facing"
       ],
       "tags": [
+        "app_facing",
         "drop_preview",
+        "frame_pipeline",
         "gate",
+        "layout",
         "screenshots",
         "tabstrip",
         "workspace"
       ],
       "target_hints": [
+        "Waits for the complete app-facing frame-stage trace exposed by workspace_shell_demo.",
         "Drags a tab from pane A toward the right edge of pane B.",
         "Waits for the right-edge drop preview indicator to appear.",
-        "Captures a screenshot while the preview is visible (used to gate docking drop overlay tokens)."
+        "Captures a layout sidecar and screenshot while the preview is visible (used to gate docking drop overlay tokens).",
+        "Releases the pointer and asserts the split pane and moved tab are committed."
       ]
     },
     {
@@ -16080,6 +16219,59 @@
       ]
     },
     {
+      "id": "workspace-shell-demo-tab-text-during-dock-drag-stability",
+      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-text-during-dock-drag-stability.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "diag-hardening-smoke-workspace"
+      ],
+      "tags": [
+        "docking",
+        "drag",
+        "stability",
+        "tabstrip",
+        "visual",
+        "workspace"
+      ],
+      "target_hints": [
+        "Starts the real workspace cross-pane dock drag and keeps the right-edge preview active.",
+        "Requires the target active tab bounds to settle instead of alternating between oversized-range edges.",
+        "Captures layout, bundle, and screenshot evidence at drag t0 and after 120 fixed-delta frames."
+      ]
+    },
+    {
+      "id": "workspace-shell-demo-tabstrip-close-keeps-focus-smoke",
+      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tabstrip-close-keeps-focus-smoke.json",
+      "required_capabilities": [
+        "diag.command_dispatch_trace",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "workspace-shell-app-facing"
+      ],
+      "tags": [
+        "app_facing",
+        "close",
+        "focus",
+        "gate",
+        "smoke",
+        "tabstrip",
+        "workspace"
+      ],
+      "target_hints": [
+        "Sets MRU by activating doc-a-2 then doc-a-1.",
+        "Moves focus into pane content so command routing is focus-anchored.",
+        "Moves keyboard focus into the tab strip (Ctrl+F6).",
+        "Closes the active tab via the close button.",
+        "Asserts selection and focus stay within the tab strip (MRU fallback)."
+      ]
+    },
+    {
       "id": "workspace-shell-demo-tabstrip-escape-restores-content-focus-smoke",
       "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tabstrip-escape-restores-content-focus-smoke.json",
       "required_capabilities": [
@@ -16101,6 +16293,32 @@
         "Enters the tab strip (Ctrl+F6) from pane content.",
         "Presses Escape to restore focus to pane content.",
         "Asserts content focus is restored."
+      ]
+    },
+    {
+      "id": "workspace-shell-demo-tabstrip-keyboard-roving-smoke",
+      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tabstrip-keyboard-roving-smoke.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "workspace-shell-app-facing"
+      ],
+      "tags": [
+        "a11y",
+        "app_facing",
+        "gate",
+        "keyboard",
+        "smoke",
+        "tabstrip",
+        "workspace"
+      ],
+      "target_hints": [
+        "Asserts the tab strip and tab roles plus the tab invoke action before interaction.",
+        "Focuses pane A content, then enters the tab strip (Ctrl+F6).",
+        "Uses Arrow keys and Home/End to rove focus and activate tabs.",
+        "Asserts focus and selection track the roving target."
       ]
     },
     {

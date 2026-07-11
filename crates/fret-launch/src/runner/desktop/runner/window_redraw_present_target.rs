@@ -20,8 +20,12 @@ impl WindowRedrawPresentTarget {
             .expect("renderer perf fallback should provide a target view")
     }
 
-    pub(super) fn frame_view(&self) -> Option<&(wgpu::SurfaceTexture, wgpu::TextureView)> {
-        self.frame_view.as_ref()
+    pub(super) fn source_texture(&self) -> &wgpu::Texture {
+        self.frame_view
+            .as_ref()
+            .map(|(frame, _)| &frame.texture)
+            .or_else(|| self.fallback_target.as_ref().map(|(texture, _)| texture))
+            .expect("renderer perf fallback should provide a source texture")
     }
 
     pub(super) fn into_frame_view(self) -> Option<(wgpu::SurfaceTexture, wgpu::TextureView)> {
@@ -61,7 +65,7 @@ pub(super) fn prepare_window_redraw_present_target(
                 sample_count: 1,
                 dimension: wgpu::TextureDimension::D2,
                 format: input.surface.format(),
-                usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+                usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC,
                 view_formats: &[],
             });
         let view = target.create_view(&wgpu::TextureViewDescriptor::default());

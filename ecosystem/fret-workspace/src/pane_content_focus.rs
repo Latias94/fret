@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use fret_core::AppWindowId;
@@ -34,6 +34,36 @@ impl WorkspacePaneContentElementRegistry {
         }
         self.entries.insert(key, element);
         true
+    }
+
+    pub(crate) fn pane_elements_for_window(
+        &self,
+        window: AppWindowId,
+    ) -> Vec<(Arc<str>, GlobalElementId)> {
+        self.entries
+            .iter()
+            .filter(|(key, _)| key.window == window)
+            .map(|(key, element)| (key.pane_id.clone(), *element))
+            .collect()
+    }
+
+    pub(crate) fn needs_workspace_reconciliation(
+        &self,
+        window: AppWindowId,
+        live_pane_ids: &HashSet<Arc<str>>,
+    ) -> bool {
+        self.entries
+            .keys()
+            .any(|key| key.window == window && !live_pane_ids.contains(&key.pane_id))
+    }
+
+    pub(crate) fn reconcile_workspace_panes_for_window(
+        &mut self,
+        window: AppWindowId,
+        live_pane_ids: &HashSet<Arc<str>>,
+    ) {
+        self.entries
+            .retain(|key, _| key.window != window || live_pane_ids.contains(&key.pane_id));
     }
 }
 

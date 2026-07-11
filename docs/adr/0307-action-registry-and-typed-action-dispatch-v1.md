@@ -94,6 +94,11 @@ Implementation contract note:
 - typed action authoring surfaces must install handlers into an owner-scoped action route lane,
   distinct from the legacy generic command-hook slot, so multiple action surfaces can coexist on
   the same dispatch node without overwriting one another.
+- a window/app policy owner may claim a domain model action before retained UI dispatch when a UI
+  handler would create a second writer for the same model; this is still the existing action route,
+  not a parallel command bus.
+- owner-first handling must preserve the pending dispatch source, record the resolved scope and
+  `handled_by_driver`, and leave UI-only focus/interaction actions on the widget route.
 
 ### D4 — Availability is queryable and auditable
 
@@ -208,6 +213,40 @@ Pointer-triggered explainability (best-effort):
      through the pending dispatch source metadata).
   2) Fall back to correlating the pending source element ID with a semantics snapshot when a direct
      `test_id` is unavailable.
+
+Driver-owned domain outcomes:
+
+- A policy owner may record a versioned `CommandDispatchOutcomeV1` before the driver finalizes the
+  trace. The final entry consumes that outcome and preserves `action_id`, target, applied state, and
+  blocked-dirty-close state alongside source and handler attribution.
+- A handled no-op remains distinguishable from an unhandled command: it has
+  `handled_by_driver=true` and `applied=false`.
+- UI-only focus actions share the canonical ID/source/scope/handler trace contract but do not need
+  to invent a domain outcome.
+- Owner-first dispatch captures one FIFO source for each command occurrence, including repeated
+  identical command IDs. Driver-owned finalization consumes that captured source; it is restored
+  only when dispatch continues into retained UI.
+- Modal authorization uses live source-element membership in the active input-barrier scope.
+  Source `test_id` remains diagnostic evidence and is never an authorization mechanism.
+
+## Implementation Status (as of 2026-07-11)
+
+`ActionId == CommandId` remains the compatibility identity in `fret-runtime`. Typed workspace unit
+markers in `ecosystem/fret-workspace/src/commands.rs` lower to that identity and are covered across
+registry, keymap, and menu surfaces by
+`ecosystem/fret-workspace/tests/workspace_command_identity_roundtrip.rs`.
+
+`WorkspaceWorkbench` implements the owner-first window route for workspace model actions and
+converts `WorkspaceWorkbenchCommandOutcome` into `CommandDispatchOutcomeV1`. Both the ordinary
+`WorkspaceApp` composition and UI Gallery's advanced driver finalize those traces through
+`fret_bootstrap::ui_app_driver::record_driver_handled_command_dispatch`; the original dispatch
+source is retained. `WorkspaceCommandScope` continues to own focus-only widget actions, so this
+convergence does not add a second workspace model owner.
+
+The `workspace-shell-app-facing` suite is the real app-chain gate. The
+`ui-gallery-workspace-shell` suite separately proves the advanced-driver/shared-chrome route and
+cannot replace the real app gate. Exact passing sessions and artifact roots are recorded in
+`docs/workstreams/workspace-shell-tabstrip-fearless-refactor-v1/EVIDENCE_AND_GATES.md`.
 
 ## Consequences
 

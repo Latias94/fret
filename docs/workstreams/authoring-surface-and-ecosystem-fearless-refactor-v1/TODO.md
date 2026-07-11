@@ -212,7 +212,7 @@ Audit reconciliation note on 2026-03-16:
       `cx.actions().payload_local_update_if::<A, _>(...)` for the common keyed-row payload update
       path,
     - the default-path docs (`docs/examples/todo-app-golden-path.md`,
-      `docs/authoring-golden-path-v2.md`) and the first-party source gates were updated to teach
+      `docs/authoring-golden-path.md`) and the first-party source gates were updated to teach
       that shorter wording.
   - 2026-03-16 next batch scope:
     - audit the canonical trio plus the generated templates for remaining keyed/list/default

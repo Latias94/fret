@@ -31,7 +31,7 @@ Observed default-facing use:
 - `apps/fret-cookbook/examples/simple_todo.rs`
 - `apps/fret-examples/src/todo_demo.rs`
 - `apps/fretboard/src/scaffold/templates.rs`
-- `docs/authoring-golden-path-v2.md`
+- `docs/authoring-golden-path.md`
 - `docs/examples/todo-app-golden-path.md`
 - `docs/first-hour.md`
 - `docs/crate-usage-guide.md`

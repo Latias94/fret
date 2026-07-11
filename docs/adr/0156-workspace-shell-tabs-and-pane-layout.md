@@ -41,6 +41,10 @@ their own tab/document IDs without exposing internal IDs via generic payload enu
 - `workspace.tab.activate.<id>`
 - `workspace.tab.close.<id>`
 
+Ordinary Rust authoring uses typed unit markers from `fret_workspace::commands::act`; those markers
+lower to the same stable `ActionId == CommandId` identity used by the registry, keymaps, menus, and
+diagnostics. Dynamic prefix commands remain the explicit lower-level lane for app-defined IDs.
+
 ### 3) Persistence shapes are versioned and docking-independent
 
 Workspace persistence is versioned and intentionally avoids embedding dock layout details:
@@ -57,12 +61,57 @@ The canonical persisted format is `WorkspaceLayoutV1` (`layout_version = 1`) con
 
 Each leaf pane stores `WorkspaceTabsV1` (tabs + active + MRU + dirty + cycle mode).
 
+### 4) Workspace model commands have one window owner
+
+`WorkspaceWorkbench` is the default window-scoped owner for tab/pane model commands, dirty-close
+transactions, and post-transition focus requests. The app/advanced driver routes those commands to
+Workbench before retained UI dispatch and records the final driver-handled outcome.
+
+`WorkspaceCommandScope` does not provide a second workspace model writer. It owns focus-only
+commands and publishes pane tab-strip/content focus registries and the current focus lane so
+Workbench can preserve that lane across a model transition.
+
+While a modal input barrier is active, Workbench may claim a workspace model command only when a
+direct pointer or keyboard source is proven live inside the active barrier scope. Shortcut,
+programmatic, missing, stale, and underlay sources fail closed; focus-only commands and window
+close remain on the modal-gated UI route. The authority is live element membership reported by
+`UiTree::element_is_within_active_input_barrier_scope`, not diagnostic source metadata.
+
+### 5) Last-tab close behavior is an explicit app policy
+
+`WorkspaceLastTabClosePolicy::AllowEmptyPane` is the default, preserving the general workspace
+contract that a pane may become empty. Apps whose router/content projection requires a live tab may
+opt into `WorkspaceLastTabClosePolicy::PreserveLastTab`.
+
+The policy applies consistently to close, close-by-id, explicit-pane close, and dirty-close replay.
+A protected final close is handled but does not mutate layout state. This policy is owned by
+`fret-workspace` and selected by the app; it is not a mechanism knob in `crates/fret-ui`.
+
 ## Non-goals
 
 - Defining a document/buffer model. Tab IDs remain app-defined strings.
 - Replacing docking for panels. Docking remains the contract for panel tabs/splits/tear-off
   (ADR 0013 / ADR 0017).
 - Locking down visual styling. The provided widgets are intentionally minimal.
+
+## Implementation Status (as of 2026-07-12)
+
+The contract is implemented in `ecosystem/fret-workspace`, with the ordinary desktop composition
+provided by `fret::workspace::WorkspaceApp`. UI Gallery also installs a direct
+`WorkspaceWorkbench` in its explicitly advanced custom driver and opts into `PreserveLastTab`; the
+default Workbench remains `AllowEmptyPane`. Focus-only commands still dispatch through the Gallery
+`WorkspaceCommandScope`, while model commands report window scope, `handled_by_driver`, and typed
+domain outcomes through the shared diagnostics path.
+
+The two proof surfaces are intentionally non-interchangeable:
+
+- `ui-gallery-workspace-shell` passed 4/4 in session `1783801365683-65846` and proves shared chrome
+  plus the direct Workbench owner/trace path.
+- `workspace-shell-app-facing` passed 10/10 in session `1783801123285-47715` and proves the real
+  `WorkspaceApp` frame, split/move, dirty-close, focus, keyboard, semantics, and diagnostics chain.
+
+Artifact roots and exact rerun commands are recorded in
+`docs/workstreams/workspace-shell-tabstrip-fearless-refactor-v1/EVIDENCE_AND_GATES.md`.
 
 ## Consequences
 
@@ -78,4 +127,6 @@ Each leaf pane stores `WorkspaceTabsV1` (tabs + active + MRU + dirty + cycle mod
 - Tabs model + snapshots + tests: `ecosystem/fret-workspace/src/tabs.rs`.
 - Pane layout + snapshots: `ecosystem/fret-workspace/src/layout.rs`.
 - Menu bar helper: `ecosystem/fret-workspace/src/menu.rs`.
-
+- Window model owner, dirty-close transaction, and last-tab policy:
+  `ecosystem/fret-workspace/src/workbench.rs`.
+- App-facing driver composition: `ecosystem/fret/src/workspace.rs`.

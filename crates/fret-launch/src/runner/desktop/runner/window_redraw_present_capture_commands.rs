@@ -13,7 +13,7 @@ pub(super) struct WindowRedrawPresentCaptureCommandsInput<'a> {
     pub(super) bundle_screenshots: &'a mut DiagBundleScreenshotCapture,
     #[cfg(feature = "diag-screenshots")]
     pub(super) app_window: AppWindowId,
-    pub(super) frame_view: Option<&'a (wgpu::SurfaceTexture, wgpu::TextureView)>,
+    pub(super) source_texture: &'a wgpu::Texture,
     pub(super) device: &'a wgpu::Device,
     pub(super) surface_format: wgpu::TextureFormat,
     pub(super) surface_size: (u32, u32),
@@ -37,7 +37,7 @@ pub(super) fn prepare_window_redraw_present_capture_commands(
         super::window_redraw_diag_screenshots::begin_window_redraw_diag_screenshot_capture(
             input.diag_screenshots,
             input.app_window,
-            input.frame_view,
+            input.source_texture,
             input.device,
             input.surface_format,
             input.surface_size,
@@ -49,7 +49,7 @@ pub(super) fn prepare_window_redraw_present_capture_commands(
         super::window_redraw_diag_screenshots::begin_window_redraw_bundle_screenshot_readback(
             input.bundle_screenshots,
             screenshot_dir,
-            input.frame_view,
+            input.source_texture,
             input.device,
             input.surface_format,
             input.surface_size,

@@ -20,7 +20,7 @@ Every user-visible surface should end in one of these states:
 | `docs/first-hour.md` | onboarding guide now keeps the default path narrow while naming `AppUiRawModelExt::raw_model::<T>()` as an explicit advanced choice | Migrate | M3 | Done 2026-04-02. |
 | `docs/examples/README.md` | examples index now keeps the ladder/classification wording aligned with one default path and one explicit advanced raw-model escape hatch | Migrate | M3 | Done 2026-04-02. |
 | `docs/examples/todo-app-golden-path.md` | todo golden path now explicitly teaches one LocalState-first path and keeps raw `Model<T>` handles on the advanced lane | Migrate | M3 | Done 2026-04-02. |
-| `docs/authoring-golden-path-v2.md` | main public wording anchor now states that the LocalState-first lane is the only blessed first-contact story | Migrate | M3 | Done 2026-04-02. |
+| `docs/authoring-golden-path.md` | main public wording anchor now states that the LocalState-first lane is the only blessed first-contact story | Migrate | M3 | Done 2026-04-02. |
 | `docs/crate-usage-guide.md` | crate guidance now names the single advanced raw-model seam explicitly instead of leaving mixed-lane wording implied | Migrate | M3 | Done 2026-04-02. |
 | `docs/fearless-refactoring.md` | advanced guidance already points to `AppUiRawModelExt::raw_model::<T>()` and remains aligned after the naming cleanup audit | Migrate | M3 | Done 2026-04-02. |
 | `ecosystem/fret/README.md` | package README now states the same LocalState-first default path and explicit advanced raw-model seam as the canonical docs | Migrate | M3 | Done 2026-04-02. |

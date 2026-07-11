@@ -568,6 +568,7 @@ pub(super) struct WaitCommandDispatchTraceState {
     pub(super) remaining_frames: u32,
     pub(super) deadline_unix_ms: Option<u64>,
     pub(super) start_frame_id: u64,
+    pub(super) source_step_index: Option<u32>,
 }
 
 #[derive(Debug, Clone)]

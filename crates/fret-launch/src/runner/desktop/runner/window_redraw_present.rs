@@ -93,7 +93,7 @@ pub(super) fn present_window_redraw_frame<D: WinitAppDriver>(
                     bundle_screenshots: input.bundle_screenshots,
                     #[cfg(feature = "diag-screenshots")]
                     app_window: input.app_window,
-                    frame_view: present_target.frame_view(),
+                    source_texture: present_target.source_texture(),
                     device: &input.context.device,
                     surface_format: input.surface.format(),
                     surface_size: input.surface.size(),

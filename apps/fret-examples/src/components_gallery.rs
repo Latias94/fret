@@ -1749,9 +1749,7 @@ fn handle_command(
         state,
     } = context;
 
-    if command.as_str() == fret_app::core_commands::COMMAND_PALETTE
-        || command.as_str() == fret_app::core_commands::COMMAND_PALETTE_LEGACY
-    {
+    if command.as_str() == fret_app::core_commands::COMMAND_PALETTE {
         components_gallery_open_command_palette(app, state);
         app.request_redraw(window);
         return;

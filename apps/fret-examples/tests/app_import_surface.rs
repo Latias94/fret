@@ -190,7 +190,7 @@ fn app_state_demos_use_app_local_state_imports() {
         (
             "datatable_demo",
             include_str!("../src/datatable_demo.rs"),
-            "usefret::app::LocalState;",
+            "usefret::app::{self,App,AppLocalStateExtas_,LocalState,RenderContextAccessas_,text};",
         ),
         (
             "date_picker_demo",

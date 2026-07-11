@@ -71,7 +71,7 @@ git diff --check
 - `apps/fret-examples/src/editor_notes_device_shell_demo.rs` reuses the same inspector content and
   initializes the same installed preset model for both desktop rails and mobile drawer content.
 - `apps/fret-examples/src/lib.rs` delegates preset key parsing to
-  `EditorThemePresetV1::from_key`, so tools and demos share the editor-owned parser.
+  `EditorThemePreset::from_key`, so tools and demos share the editor-owned parser.
 - `apps/fret-examples/tests/imui_editor_workbench_golden_path_surface.rs` and
   `apps/fret-examples/tests/editor_notes_device_shell_surface.rs` now prove the canonical route and
   responsive shell cannot silently drop the theme picker path.

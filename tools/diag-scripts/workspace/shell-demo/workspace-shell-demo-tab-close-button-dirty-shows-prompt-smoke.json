@@ -2,7 +2,7 @@
   "schema_version": 2,
   "meta": {
     "name": "Workspace shell demo: dirty close button shows prompt (smoke)",
-    "tags": ["workspace", "tabstrip", "dirty", "close", "prompt", "smoke", "gate"],
+    "tags": ["app_facing", "workspace", "tabstrip", "dirty", "close", "prompt", "semantics", "smoke", "gate"],
     "required_capabilities": ["diag.script_v2", "diag.command_dispatch_trace"],
     "env_defaults": {
       "FRET_WORKSPACE_SHELL_DEBUG_PREVIEW": "1",
@@ -11,7 +11,9 @@
     "target_hints": [
       "Marks the active pane A tab dirty through the demo debug button.",
       "Clicks the real tab close button for doc-a-2 instead of the demo close-active button.",
-      "Asserts the widget command path dispatches workspace.tab.close.doc-a-2 and dirty-close policy shows the prompt before discard closes the tab."
+      "Asserts the widget command path dispatches workspace.tab.close.doc-a-2 and dirty-close policy shows a dialog.",
+      "Proves initial focus plus forward/reverse modal focus trapping, then activates Cancel from the keyboard and restores focus to the triggering tab.",
+      "Reopens the dialog, activates Discard from the keyboard, and restores focus to the surviving active tab."
     ]
   },
   "steps": [
@@ -62,6 +64,18 @@
       },
       "timeout_frames": 240
     },
+    {
+      "type": "focus",
+      "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2" }
+      },
+      "timeout_frames": 120
+    },
 
     {
       "type": "move_pointer",
@@ -80,7 +94,12 @@
       "type": "wait_command_dispatch_trace",
       "query": {
         "command": "workspace.tab.close.doc-a-2",
+        "target": "pane-a/doc-a-2",
+        "applied": false,
+        "blocked_dirty_close": true,
         "handled": true,
+        "handled_by_scope": "window",
+        "handled_by_driver": true,
         "source_kind": "pointer",
         "source_test_id": "workspace-shell-pane-pane-a-tab-doc-a-2.close"
       },
@@ -94,7 +113,74 @@
       },
       "timeout_frames": 240
     },
-    { "type": "click", "target": { "kind": "test_id", "id": "workspace-shell-dirty-close-prompt.cancel" } },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "role_is",
+        "target": { "kind": "test_id", "id": "workspace-shell-dirty-close-prompt" },
+        "role": "dialog"
+      }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focused_descendant_is",
+        "scope": { "kind": "test_id", "id": "workspace-shell-dirty-close-prompt" },
+        "target": { "kind": "test_id", "id": "workspace-shell-dirty-close-prompt.cancel" }
+      },
+      "timeout_frames": 120
+    },
+    { "type": "press_key", "key": "tab" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focused_descendant_is",
+        "scope": { "kind": "test_id", "id": "workspace-shell-dirty-close-prompt" },
+        "target": { "kind": "test_id", "id": "workspace-shell-dirty-close-prompt.discard" }
+      },
+      "timeout_frames": 60
+    },
+    { "type": "press_key", "key": "tab" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focused_descendant_is",
+        "scope": { "kind": "test_id", "id": "workspace-shell-dirty-close-prompt" },
+        "target": { "kind": "test_id", "id": "workspace-shell-dirty-close-prompt.save_and_close" }
+      },
+      "timeout_frames": 60
+    },
+    { "type": "press_key", "key": "tab" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focused_descendant_is",
+        "scope": { "kind": "test_id", "id": "workspace-shell-dirty-close-prompt" },
+        "target": { "kind": "test_id", "id": "workspace-shell-dirty-close-prompt.cancel" }
+      },
+      "timeout_frames": 60
+    },
+    { "type": "press_key", "key": "tab", "modifiers": { "shift": true } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focused_descendant_is",
+        "scope": { "kind": "test_id", "id": "workspace-shell-dirty-close-prompt" },
+        "target": { "kind": "test_id", "id": "workspace-shell-dirty-close-prompt.save_and_close" }
+      },
+      "timeout_frames": 60
+    },
+    { "type": "press_key", "key": "tab" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focused_descendant_is",
+        "scope": { "kind": "test_id", "id": "workspace-shell-dirty-close-prompt" },
+        "target": { "kind": "test_id", "id": "workspace-shell-dirty-close-prompt.cancel" }
+      },
+      "timeout_frames": 60
+    },
+    { "type": "press_key", "key": "enter" },
     {
       "type": "wait_until",
       "predicate": {
@@ -119,6 +205,14 @@
       },
       "timeout_frames": 240
     },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2" }
+      },
+      "timeout_frames": 240
+    },
 
     { "type": "reset_diagnostics" },
     {
@@ -138,7 +232,12 @@
       "type": "wait_command_dispatch_trace",
       "query": {
         "command": "workspace.tab.close.doc-a-2",
+        "target": "pane-a/doc-a-2",
+        "applied": false,
+        "blocked_dirty_close": true,
         "handled": true,
+        "handled_by_scope": "window",
+        "handled_by_driver": true,
         "source_kind": "pointer",
         "source_test_id": "workspace-shell-pane-pane-a-tab-doc-a-2.close"
       },
@@ -152,8 +251,34 @@
       },
       "timeout_frames": 240
     },
-
-    { "type": "click", "target": { "kind": "test_id", "id": "workspace-shell-dirty-close-prompt.discard" } },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "role_is",
+        "target": { "kind": "test_id", "id": "workspace-shell-dirty-close-prompt" },
+        "role": "dialog"
+      }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focused_descendant_is",
+        "scope": { "kind": "test_id", "id": "workspace-shell-dirty-close-prompt" },
+        "target": { "kind": "test_id", "id": "workspace-shell-dirty-close-prompt.cancel" }
+      },
+      "timeout_frames": 120
+    },
+    { "type": "press_key", "key": "tab" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focused_descendant_is",
+        "scope": { "kind": "test_id", "id": "workspace-shell-dirty-close-prompt" },
+        "target": { "kind": "test_id", "id": "workspace-shell-dirty-close-prompt.discard" }
+      },
+      "timeout_frames": 60
+    },
+    { "type": "press_key", "key": "enter" },
     {
       "type": "wait_until",
       "predicate": {
@@ -167,6 +292,14 @@
       "predicate": {
         "kind": "not_exists",
         "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-1" }
       },
       "timeout_frames": 240
     },

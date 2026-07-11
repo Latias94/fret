@@ -1,10 +1,10 @@
 use std::sync::Arc;
 
 use fret::app::editor::{
-    EditorTextSelectionBehavior, EditorThemePresetPickerLocalStateExt as _,
-    EditorThemePresetPickerOptions, EditorThemePresetV1, InspectorTextFieldBinding,
-    InspectorTextFieldOutcome, InspectorTextFieldSnapshot, TextFieldBlurBehavior,
-    TextFieldLocalStateExt as _, TextFieldOptions,
+    EditorTextSelectionBehavior, EditorThemePreset, EditorThemePresetPickerLocalStateExt as _,
+    EditorThemePresetPickerOptions, InspectorTextFieldBinding, InspectorTextFieldOutcome,
+    InspectorTextFieldSnapshot, TextFieldBlurBehavior, TextFieldLocalStateExt as _,
+    TextFieldOptions,
 };
 use fret::app::prelude::*;
 use fret::app::{AppRenderContext, LocalState, text};
@@ -83,21 +83,21 @@ pub(crate) struct EditorAssetState {
 
 pub(crate) struct EditorNotesDemoView {
     assets: Arc<[EditorAssetState]>,
-    theme: LocalState<EditorThemePresetV1>,
+    theme: LocalState<EditorThemePreset>,
 }
 
-pub(crate) fn editor_theme_preset_state(app: &mut App) -> LocalState<EditorThemePresetV1> {
-    let preset = fret_ui_editor::theme::installed_editor_theme_preset_v1(app)
-        .unwrap_or(EditorThemePresetV1::Default);
+pub(crate) fn editor_theme_preset_state(app: &mut App) -> LocalState<EditorThemePreset> {
+    let preset = fret_ui_editor::theme::installed_editor_theme_preset(app)
+        .unwrap_or(EditorThemePreset::Default);
     app.local_state(preset)
 }
 
 pub(crate) fn install_editor_notes_demo_theme(app: &mut App) {
     shadcn::themes::apply_shadcn_new_york(app, HOST_BASE_COLOR, HOST_DEFAULT_SCHEME);
-    fret_ui_editor::theme::install_editor_theme_preset_v1(
+    fret_ui_editor::theme::install_editor_theme_preset(
         app,
         crate::editor_theme_preset_from_env(ENV_EDITOR_PRESET)
-            .unwrap_or(fret_ui_editor::theme::EditorThemePresetV1::Default),
+            .unwrap_or(fret_ui_editor::theme::EditorThemePreset::Default),
     );
 }
 
@@ -530,7 +530,7 @@ where
 pub(crate) fn render_inspector_panel<'a, Cx>(
     cx: &mut Cx,
     asset: EditorAssetState,
-    theme: LocalState<EditorThemePresetV1>,
+    theme: LocalState<EditorThemePreset>,
     notes_snapshot: InspectorTextFieldSnapshot,
 ) -> AnyElement
 where

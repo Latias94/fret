@@ -1,0 +1,306 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "Workspace shell demo: rails keep stable semantics and keyboard entry (smoke)",
+    "tags": [
+      "a11y",
+      "app_facing",
+      "gate",
+      "keyboard",
+      "layout",
+      "rail",
+      "semantics",
+      "smoke",
+      "workspace"
+    ],
+    "required_capabilities": [
+      "diag.script_v2"
+    ],
+    "target_hints": [
+      "Asserts the left file-tree rail root is a non-collapsed list and its first row is a focusable, invokable tree item.",
+      "Uses sequential Tab from the unfocused launch state to enter the first file-tree row, traverse to the next visible row, and return with Shift+Tab.",
+      "Activates the first branch with Enter and asserts selection plus collapsed expansion state.",
+      "Asserts the read-only right editor rail keeps stable root/header selectors, an accessible Editor Rail text label, visible bounds, and non-overlap with the center pane."
+    ]
+  },
+  "steps": [
+    {
+      "type": "set_window_inner_size",
+      "width_px": 1280.0,
+      "height_px": 720.0
+    },
+    {
+      "type": "wait_frames",
+      "n": 10
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "workspace-shell-file-tree-root"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "workspace-shell-editor-rail"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "role_is",
+        "target": {
+          "kind": "test_id",
+          "id": "workspace-shell-file-tree-root"
+        },
+        "role": "list"
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_min_size",
+        "target": {
+          "kind": "test_id",
+          "id": "workspace-shell-file-tree-root"
+        },
+        "min_w_px": 250.0,
+        "min_h_px": 600.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": {
+          "kind": "test_id",
+          "id": "workspace-shell-file-tree-root"
+        }
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "role_is",
+        "target": {
+          "kind": "test_id",
+          "id": "workspace-shell-file-tree-node-0"
+        },
+        "role": "tree_item"
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": {
+          "kind": "test_id",
+          "id": "workspace-shell-file-tree-node-0"
+        },
+        "action": "focus",
+        "enabled": true
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": {
+          "kind": "test_id",
+          "id": "workspace-shell-file-tree-node-0"
+        },
+        "action": "invoke",
+        "enabled": true
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "expanded_is",
+        "target": {
+          "kind": "test_id",
+          "id": "workspace-shell-file-tree-node-0"
+        },
+        "expanded": true
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_min_size",
+        "target": {
+          "kind": "test_id",
+          "id": "workspace-shell-editor-rail"
+        },
+        "min_w_px": 280.0,
+        "min_h_px": 600.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": {
+          "kind": "test_id",
+          "id": "workspace-shell-editor-rail"
+        }
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_min_size",
+        "target": {
+          "kind": "test_id",
+          "id": "workspace-shell-editor-rail-header"
+        },
+        "min_w_px": 280.0,
+        "min_h_px": 40.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "role_and_name",
+          "role": "text",
+          "name": "Editor Rail"
+        }
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "role_is",
+        "target": {
+          "kind": "test_id",
+          "id": "workspace-shell-pane-pane-a-root"
+        },
+        "role": "panel"
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_non_overlapping",
+        "a": {
+          "kind": "test_id",
+          "id": "workspace-shell-file-tree-root"
+        },
+        "b": {
+          "kind": "test_id",
+          "id": "workspace-shell-pane-pane-a-root"
+        }
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_non_overlapping",
+        "a": {
+          "kind": "test_id",
+          "id": "workspace-shell-pane-pane-a-root"
+        },
+        "b": {
+          "kind": "test_id",
+          "id": "workspace-shell-editor-rail"
+        }
+      }
+    },
+    {
+      "type": "press_key",
+      "key": "tab"
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": {
+          "kind": "test_id",
+          "id": "workspace-shell-file-tree-node-0"
+        }
+      },
+      "timeout_frames": 120
+    },
+    {
+      "type": "press_key",
+      "key": "tab"
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": {
+          "kind": "test_id",
+          "id": "workspace-shell-file-tree-node-1000000"
+        }
+      },
+      "timeout_frames": 120
+    },
+    {
+      "type": "press_key",
+      "key": "tab",
+      "modifiers": {
+        "shift": true
+      }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": {
+          "kind": "test_id",
+          "id": "workspace-shell-file-tree-node-0"
+        }
+      },
+      "timeout_frames": 120
+    },
+    {
+      "type": "press_key",
+      "key": "enter"
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "selected_is",
+        "target": {
+          "kind": "test_id",
+          "id": "workspace-shell-file-tree-node-0"
+        },
+        "selected": true
+      },
+      "timeout_frames": 120
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "expanded_is",
+        "target": {
+          "kind": "test_id",
+          "id": "workspace-shell-file-tree-node-0"
+        },
+        "expanded": false
+      },
+      "timeout_frames": 120
+    },
+    {
+      "type": "capture_layout_sidecar",
+      "label": "workspace-shell-demo-rails-keyboard-semantics-smoke.layout"
+    },
+    {
+      "type": "capture_bundle",
+      "label": "workspace-shell-demo-rails-keyboard-semantics-smoke"
+    }
+  ]
+}

@@ -20,6 +20,7 @@ pub mod tab_drag;
 mod tab_strip;
 pub mod tabs;
 mod theme_tokens;
+mod workbench;
 
 pub use command_scope::WorkspaceCommandScope;
 pub use frame::{WorkspaceFrame, WorkspaceStatusBar, WorkspaceTopBar};
@@ -27,6 +28,11 @@ pub use pane_content_focus::WorkspacePaneContentFocusTarget;
 pub use panes::workspace_pane_tree_element_with_resize;
 pub use tab_drag::{DRAG_KIND_WORKSPACE_TAB, WorkspaceTabDragState};
 pub use tab_strip::{WorkspaceTab, WorkspaceTabStrip};
+pub use workbench::{
+    WorkspaceDirtyClosePrompt, WorkspaceLastTabClosePolicy, WorkspaceWorkbench,
+    WorkspaceWorkbenchCommandOutcome, WorkspaceWorkbenchFocusFallback,
+    WorkspaceWorkbenchFocusGuard, WorkspaceWorkbenchFocusRequest,
+};
 
 #[cfg(test)]
 mod source_policy_tests {

@@ -74,7 +74,7 @@ Key evidence anchors:
 - `ecosystem/fret/tests/app_render_actions_surface.rs`
 - `ecosystem/fret/tests/app_render_data_surface.rs`
 - `docs/crate-usage-guide.md`
-- `docs/authoring-golden-path-v2.md`
+- `docs/authoring-golden-path.md`
 - `CHANGELOG.md`
 - `docs/release/v0.1.0-release-checklist.md`
 - `docs/adr/0319-public-authoring-state-lanes-and-identity-contract-v1.md`

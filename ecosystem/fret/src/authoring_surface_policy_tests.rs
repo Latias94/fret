@@ -6,7 +6,7 @@ const ROOT_README: &str = include_str!("../../../README.md");
 const DOCS_README: &str = include_str!("../../../docs/README.md");
 const FIRST_HOUR: &str = include_str!("../../../docs/first-hour.md");
 const TODO_APP_GOLDEN_PATH: &str = include_str!("../../../docs/examples/todo-app-golden-path.md");
-const AUTHORING_GOLDEN_PATH_V2: &str = include_str!("../../../docs/authoring-golden-path-v2.md");
+const AUTHORING_GOLDEN_PATH: &str = include_str!("../../../docs/authoring-golden-path.md");
 const COMPONENT_AUTHOR_GUIDE: &str = include_str!("../../../docs/component-author-guide.md");
 const SHADCN_DECLARATIVE_PROGRESS: &str =
     include_str!("../../../docs/shadcn-declarative-progress.md");
@@ -47,6 +47,7 @@ const ADVANCED_PRELUDE_RS: &str = include_str!("advanced/prelude.rs");
 const ADVANCED_RAW_RS: &str = include_str!("advanced/raw.rs");
 const ADVANCED_DRIVER_RS: &str = include_str!("advanced/driver.rs");
 const BUILDER_RS: &str = include_str!("builder.rs");
+const WORKSPACE_RS: &str = include_str!("workspace.rs");
 const VIEW_RS: &str = include_str!("view.rs");
 const VIEW_CONTEXT_RS: &str = include_str!("view/context.rs");
 
@@ -882,27 +883,27 @@ fn usage_and_component_docs_keep_app_activate_surface_narrow() {
 
 #[test]
 fn authoring_docs_prefer_grouped_app_ui_data_helpers() {
-    assert!(AUTHORING_GOLDEN_PATH_V2.contains("`cx.data().selector_layout(...)`"));
-    assert!(AUTHORING_GOLDEN_PATH_V2.contains("`cx.data().selector(deps, compute)`"));
-    assert!(AUTHORING_GOLDEN_PATH_V2.contains("`cx.data().query(...)`"));
-    assert!(AUTHORING_GOLDEN_PATH_V2.contains("`handle.read_layout(cx)`"));
-    assert!(AUTHORING_GOLDEN_PATH_V2.contains("`cx.data().invalidate_query(...)`"));
-    assert!(AUTHORING_GOLDEN_PATH_V2.contains("`cx.data().cancel_query(...)`"));
-    assert!(AUTHORING_GOLDEN_PATH_V2.contains("`cx.data().query_snapshot_entry(...)`"));
-    assert!(AUTHORING_GOLDEN_PATH_V2.contains(
+    assert!(AUTHORING_GOLDEN_PATH.contains("`cx.data().selector_layout(...)`"));
+    assert!(AUTHORING_GOLDEN_PATH.contains("`cx.data().selector(deps, compute)`"));
+    assert!(AUTHORING_GOLDEN_PATH.contains("`cx.data().query(...)`"));
+    assert!(AUTHORING_GOLDEN_PATH.contains("`handle.read_layout(cx)`"));
+    assert!(AUTHORING_GOLDEN_PATH.contains("`cx.data().invalidate_query(...)`"));
+    assert!(AUTHORING_GOLDEN_PATH.contains("`cx.data().cancel_query(...)`"));
+    assert!(AUTHORING_GOLDEN_PATH.contains("`cx.data().query_snapshot_entry(...)`"));
+    assert!(AUTHORING_GOLDEN_PATH.contains(
         "`local.layout_read_ref(cx, |value| ...)` / `local.paint_read_ref(cx, |value| ...)`"
     ));
-    assert!(AUTHORING_GOLDEN_PATH_V2.contains("`ui::single(cx, child)`"));
-    assert!(AUTHORING_GOLDEN_PATH_V2.contains("`.action(act::Save)`"));
-    assert!(AUTHORING_GOLDEN_PATH_V2.contains(".action_payload(act::RemoveTodo, todo.id);"));
-    assert!(AUTHORING_GOLDEN_PATH_V2.contains("`.listen(|host, acx| { ... })`"));
-    assert!(AUTHORING_GOLDEN_PATH_V2.contains("`use fret::app::AppActivateExt as _;`"));
-    assert!(!AUTHORING_GOLDEN_PATH_V2.contains("`cx.actions().action(act::Save)`"));
-    assert!(!AUTHORING_GOLDEN_PATH_V2.contains("`cx.actions().action_payload("));
-    assert!(!AUTHORING_GOLDEN_PATH_V2.contains("`.dispatch::<A>()`"));
-    assert!(!AUTHORING_GOLDEN_PATH_V2.contains("`.dispatch_payload::<A>(payload)`"));
-    assert!(!AUTHORING_GOLDEN_PATH_V2.contains("`cx.use_selector(...)`"));
-    assert!(!AUTHORING_GOLDEN_PATH_V2.contains("`cx.use_query(...)`"));
+    assert!(AUTHORING_GOLDEN_PATH.contains("`ui::single(cx, child)`"));
+    assert!(AUTHORING_GOLDEN_PATH.contains("`.action(act::Save)`"));
+    assert!(AUTHORING_GOLDEN_PATH.contains(".action_payload(act::RemoveTodo, todo.id);"));
+    assert!(AUTHORING_GOLDEN_PATH.contains("`.listen(|host, acx| { ... })`"));
+    assert!(AUTHORING_GOLDEN_PATH.contains("`use fret::app::AppActivateExt as _;`"));
+    assert!(!AUTHORING_GOLDEN_PATH.contains("`cx.actions().action(act::Save)`"));
+    assert!(!AUTHORING_GOLDEN_PATH.contains("`cx.actions().action_payload("));
+    assert!(!AUTHORING_GOLDEN_PATH.contains("`.dispatch::<A>()`"));
+    assert!(!AUTHORING_GOLDEN_PATH.contains("`.dispatch_payload::<A>(payload)`"));
+    assert!(!AUTHORING_GOLDEN_PATH.contains("`cx.use_selector(...)`"));
+    assert!(!AUTHORING_GOLDEN_PATH.contains("`cx.use_query(...)`"));
 }
 
 #[test]
@@ -2637,4 +2638,32 @@ fn app_entry_builder_name_is_fret_app_only() {
     assert!(APP_ENTRY_RS.contains("pub struct FretApp"));
     assert!(APP_ENTRY_RS.contains("AssetBundleId::app(self.root_name)"));
     assert!(!APP_ENTRY_RS.contains("pub struct App"));
+}
+
+#[test]
+fn workspace_app_public_state_hooks_do_not_smuggle_retained_runtime_seams() {
+    let state_trait = module_block_source(WORKSPACE_RS, "pub trait WorkspaceWindowState");
+    assert!(state_trait.contains("fn workspace_workbench(&self) -> &WorkspaceWorkbench"));
+    assert!(state_trait.contains("fn handle_workspace_command("));
+    assert!(state_trait.contains("fn handle_workspace_event("));
+    assert!(state_trait.contains("fn handle_workspace_global_changes("));
+    for forbidden in [
+        "UiTree",
+        "UiServices",
+        "FnDriver",
+        "RenderRootContext",
+        "UiFrameCx",
+    ] {
+        assert!(
+            !state_trait.contains(forbidden),
+            "WorkspaceWindowState must not expose {forbidden}"
+        );
+    }
+
+    assert!(WORKSPACE_RS.contains("pub fn ui<S: WorkspaceWindowState + 'static>("));
+    assert!(
+        WORKSPACE_RS
+            .contains(".on_app_command_before_ui(handle_workbench_command_from_context::<S>)")
+    );
+    assert!(!WORKSPACE_RS.contains("pub fn ui_with_hooks<S:"));
 }

@@ -8,7 +8,7 @@ Last updated: 2026-03-20
 - [x] Add this lane to `docs/README.md`.
 - [x] Add this lane to `docs/roadmap.md`.
 - [x] Add this lane to `docs/workstreams/README.md`.
-- [x] Update `docs/authoring-golden-path-v2.md` with the `1-2 inline / 3+ bundle` rule.
+- [x] Update `docs/authoring-golden-path.md` with the `1-2 inline / 3+ bundle` rule.
 - [x] Update `docs/examples/todo-app-golden-path.md` to teach `*Locals::new(cx)` and optional
       `bind_actions(&self, cx)`.
 - [x] Update `ecosystem/fret/README.md` so the default action guidance matches the new rule.

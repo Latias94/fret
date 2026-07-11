@@ -66,9 +66,10 @@ fn datatable_column_labels() -> Vec<shadcn::DataTableColumnLabel> {
 fn datatable_debug_ids() -> shadcn::TableDebugIds {
     shadcn::TableDebugIds {
         header_row_test_id: Some(Arc::<str>::from("datatable-demo-header-row")),
+        body_test_id: Some(Arc::<str>::from("datatable-demo-body")),
         header_cell_test_id_prefix: Some(Arc::<str>::from("datatable-demo-header-")),
         row_test_id_prefix: Some(Arc::<str>::from("datatable-demo-row-")),
-        ..Default::default()
+        row_cell_test_ids: true,
     }
 }
 

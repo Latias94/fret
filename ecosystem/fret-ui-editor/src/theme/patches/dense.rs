@@ -4,7 +4,7 @@ use crate::primitives::EditorTokenKeys;
 
 use super::{color, metric};
 
-pub(super) fn imgui_like_dense_patch_v1() -> ThemeConfig {
+pub(super) fn imgui_like_dense_patch() -> ThemeConfig {
     let mut cfg = ThemeConfig::default();
 
     // Keep the editor visibly denser while preserving a usable hit target.

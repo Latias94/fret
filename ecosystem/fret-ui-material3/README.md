@@ -93,8 +93,8 @@ rustdoc, README guidance, public re-exports, style builders, copyable state help
   default-facing examples/docs.
 - Default-facing clickable families such as `Button`, `Fab`, `IconButton`, `Checkbox`, `Switch`,
   `Radio`, `AssistChip`, `SuggestionChip`, `FilterChip`, and `InputChip` now expose
-  `action(...)` directly; prefer that over wiring `.on_activate(cx.actions().dispatch::<A>())`
-  when you only need a stable unit action on the app-facing lane.
+  `action(...)` directly; use that canonical path when you only need a stable unit action on the
+  app-facing lane.
 
 ## Icons
 

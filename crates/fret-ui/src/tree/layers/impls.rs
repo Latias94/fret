@@ -556,6 +556,43 @@ impl<H: UiHost> UiTree<H> {
         (roots, barrier_root)
     }
 
+    /// Returns whether a visible layer currently blocks input to layers below it.
+    ///
+    /// This is the live tree authority for post-frame coordination. Published input-context
+    /// snapshots are intentionally not used here because they can describe an earlier frame.
+    pub fn has_active_input_barrier(&self) -> bool {
+        self.layer_order.iter().any(|&layer_id| {
+            self.layers
+                .get(layer_id)
+                .is_some_and(|layer| layer.visible && layer.blocks_underlay_input)
+        })
+    }
+
+    /// Returns whether `element` is live inside the input scope selected by the current modal
+    /// barrier.
+    ///
+    /// This is the live-tree authority for integrations that receive an element-backed action
+    /// before normal widget command dispatch. It includes the barrier layer and visible layers
+    /// above it, while excluding the inactive underlay. Missing, detached, or ambiguous element
+    /// identities fail closed.
+    pub fn element_is_within_active_input_barrier_scope(
+        &mut self,
+        app: &mut H,
+        element: GlobalElementId,
+    ) -> bool {
+        let (active_roots, barrier_root) = self.active_input_layers();
+        if barrier_root.is_none() {
+            return false;
+        }
+        let Some(node) = self.resolve_live_attached_node_for_element(app, self.window, element)
+        else {
+            return false;
+        };
+        active_roots
+            .into_iter()
+            .any(|root| self.is_reachable_from_root_via_children(root, node))
+    }
+
     pub(in crate::tree) fn active_pointer_down_outside_layer_roots(
         &self,
         barrier_root: Option<NodeId>,

@@ -1850,6 +1850,26 @@ pub(super) fn command_dispatch_trace_entry_matches_query(
     {
         return false;
     }
+    if let Some(action_id) = &query.action_id
+        && entry.action_id.as_ref() != Some(action_id)
+    {
+        return false;
+    }
+    if let Some(target) = &query.target
+        && entry.target.as_ref() != Some(target)
+    {
+        return false;
+    }
+    if let Some(applied) = query.applied
+        && entry.applied != Some(applied)
+    {
+        return false;
+    }
+    if let Some(blocked_dirty_close) = query.blocked_dirty_close
+        && entry.blocked_dirty_close != Some(blocked_dirty_close)
+    {
+        return false;
+    }
     if let Some(source_kind) = &query.source_kind
         && entry.source_kind != *source_kind
     {

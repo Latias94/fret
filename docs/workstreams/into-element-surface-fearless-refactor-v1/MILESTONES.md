@@ -916,7 +916,7 @@ Exit criteria:
   `for_each_keyed_with_cx` when the row needs the keyed scope) without introducing a broader
   `keyed_column(...)` abstraction yet.
 - the default user-facing docs now follow that same keyed-list rule:
-  `docs/first-hour.md`, `docs/authoring-golden-path-v2.md`, and
+  `docs/first-hour.md`, `docs/authoring-golden-path.md`, and
   `docs/examples/todo-app-golden-path.md` now teach `ui::for_each_keyed(...)` as the default
   identity helper, mention `ui::for_each_keyed_with_cx(...)` only as the keyed-scope escape hatch,
   and demote `*_build(...)` sink collection to an explicit advanced/manual seam.

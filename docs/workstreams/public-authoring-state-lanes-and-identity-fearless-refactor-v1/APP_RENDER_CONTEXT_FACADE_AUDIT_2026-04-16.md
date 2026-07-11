@@ -40,7 +40,7 @@ Evidence from first-party proof surfaces:
 - `apps/fret-cookbook/src/scaffold.rs`
 - `apps/fret-examples/src/api_workbench_lite_demo.rs`
 - `docs/first-hour.md`
-- `docs/authoring-golden-path-v2.md`
+- `docs/authoring-golden-path.md`
 
 These surfaces were already repeating `RenderContextAccess<'a, App>` as the default helper
 signature.

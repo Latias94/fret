@@ -194,6 +194,26 @@ fn data_table_row_click_selection_toggles_single_row_by_default() {
         1,
         "expected single-row selection by default"
     );
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("expected semantics snapshot after row selection");
+    let selected_row = find_by_test_id(&snap, "data-table-row/1");
+    assert!(
+        selected_row.flags.selected,
+        "selected TableState row should be exposed through row semantics"
+    );
+    assert!(
+        selected_row.flags.focused,
+        "row activation should move real keyboard focus to the active row"
+    );
+    assert!(
+        snap.nodes.iter().any(|node| {
+            node.role == fret_core::SemanticsRole::List
+                && node.active_descendant == Some(selected_row.id)
+        }),
+        "expected table list active-descendant semantics for the focused row"
+    );
 
     // Clicking row 0 should replace the selection (single-row selection).
     let snap = ui

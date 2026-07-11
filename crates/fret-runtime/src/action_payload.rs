@@ -70,7 +70,7 @@ impl WindowPendingActionPayloadService {
 
         let pos = entries
             .iter()
-            .rposition(|e| &e.action == action && e.window == window)?;
+            .position(|e| &e.action == action && e.window == window)?;
         Some(entries.remove(pos).payload)
     }
 }
@@ -106,7 +106,7 @@ mod tests {
     }
 
     #[test]
-    fn pending_payload_consumes_most_recent() {
+    fn pending_payload_preserves_fifo_for_repeated_actions() {
         let mut svc = WindowPendingActionPayloadService::default();
         let window = AppWindowId::default();
         let action = ActionId::from("test.payload_action");
@@ -124,10 +124,52 @@ mod tests {
             Box::new(2u32) as Box<dyn Any + Send + Sync>,
         );
 
-        let payload = svc
+        let first = svc
             .consume(window, TickId(11), &action)
             .expect("payload must exist");
-        let payload = payload.downcast::<u32>().expect("type must match");
-        assert_eq!(*payload, 2);
+        let first = first.downcast::<u32>().expect("type must match");
+        let second = svc
+            .consume(window, TickId(11), &action)
+            .expect("second payload must exist");
+        let second = second.downcast::<u32>().expect("type must match");
+
+        assert_eq!((*first, *second), (1, 2));
+    }
+
+    #[test]
+    fn repeated_action_sources_and_payloads_keep_occurrence_order() {
+        let mut payloads = WindowPendingActionPayloadService::default();
+        let mut sources = crate::WindowPendingCommandDispatchSourceService::default();
+        let window = AppWindowId::default();
+        let action = ActionId::from("test.payload_action");
+
+        for occurrence in [1u32, 2] {
+            sources.record(
+                window,
+                TickId(10),
+                action.clone(),
+                crate::CommandDispatchSourceV1 {
+                    kind: crate::CommandDispatchSourceKindV1::Pointer,
+                    element: Some(occurrence as u64),
+                    test_id: None,
+                },
+            );
+            payloads.record(window, TickId(10), action.clone(), Box::new(occurrence));
+        }
+
+        for expected in [1u32, 2] {
+            let source = sources
+                .consume(window, TickId(10), &action)
+                .expect("source must exist");
+            let payload = payloads
+                .consume(window, TickId(10), &action)
+                .expect("payload must exist")
+                .downcast::<u32>()
+                .expect("type must match");
+            assert_eq!(
+                (source.element, *payload),
+                (Some(expected as u64), expected)
+            );
+        }
     }
 }

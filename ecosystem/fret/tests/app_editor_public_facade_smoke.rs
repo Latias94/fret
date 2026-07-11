@@ -1,8 +1,8 @@
 #![cfg(feature = "editor")]
 
 use fret::app::editor::{
-    EditorTextCancelBehavior, EditorTextSelectionBehavior, EditorThemePresetPicker,
-    EditorThemePresetPickerLocalStateExt as _, EditorThemePresetV1, InspectorTextFieldBinding,
+    EditorTextCancelBehavior, EditorTextSelectionBehavior, EditorThemePreset,
+    EditorThemePresetPicker, EditorThemePresetPickerLocalStateExt as _, InspectorTextFieldBinding,
     TextField, TextFieldAssistiveSemantics, TextFieldBlurBehavior, TextFieldMode, TextFieldOptions,
     TextFieldOutcome,
 };
@@ -21,7 +21,7 @@ fn app_editor_facade_builds_inspector_controls_without_raw_model_imports() {
         assistive_semantics: TextFieldAssistiveSemantics::default(),
         ..Default::default()
     });
-    let preset = app.local_state(EditorThemePresetV1::Default);
+    let preset = app.local_state(EditorThemePreset::Default);
     let picker: EditorThemePresetPicker = preset.editor_theme_preset_picker();
 
     let _ = (field, picker);

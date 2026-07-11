@@ -1058,7 +1058,7 @@ mod authoring_surface_policy_tests {
                 "MiniSearchBox::new_local(",
                 "TextAssistField::new_local(",
                 "TextAssistFieldSurface::AnchoredOverlay",
-                "install_editor_theme_preset_v1(app, EditorThemePresetV1::ImguiLikeDense);",
+                "install_editor_theme_preset(app, EditorThemePreset::ImguiLikeDense);",
                 "cookbook.imui_editor_controls.grid",
                 "cookbook.imui_editor_controls.assist.list",
             ],

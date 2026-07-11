@@ -1,0 +1,147 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "Workspace shell demo: tab text stability during dock drag",
+    "tags": ["workspace", "tabstrip", "docking", "drag", "visual", "stability"],
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "env_defaults": { "FRET_DIAG_FIXED_FRAME_DELTA_MS": "16" },
+    "target_hints": [
+      "Starts the real workspace cross-pane dock drag and keeps the right-edge preview active.",
+      "Requires the target active tab bounds to settle instead of alternating between oversized-range edges.",
+      "Captures layout, bundle, and screenshot evidence at drag t0 and after 120 fixed-delta frames."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 10 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "drag_pointer_until",
+      "window": { "kind": "current" },
+      "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2" },
+      "button": "left",
+      "release_on_success": false,
+      "delta_x": 1200.0,
+      "delta_y": 140.0,
+      "steps": 160,
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "workspace-pane-pane-b.drop_preview.right" }
+      },
+      "timeout_frames": 480,
+      "timeout_ms": 15000
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "workspace_tab_strip_drag_active_is",
+        "active": true,
+        "pane_id": "pane-a"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "workspace-pane-pane-b.drop_preview.right" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-b-tab-doc-b-1" },
+        "text": "doc-b-1"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "selected_is",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-b-tab-doc-b-1" },
+        "selected": true
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_bounds_stable",
+      "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-b-tab-doc-b-1" },
+      "stable_frames": 6,
+      "max_move_px": 0.5,
+      "timeout_frames": 240
+    },
+    { "type": "capture_layout_sidecar", "label": "workspace-tab-text-drag-t0.layout" },
+    { "type": "capture_screenshot", "label": "workspace-tab-text-drag-t0" },
+    { "type": "capture_bundle", "label": "workspace-tab-text-drag-t0" },
+    { "type": "wait_frames", "n": 120 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "workspace_tab_strip_drag_active_is",
+        "active": true,
+        "pane_id": "pane-a"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "workspace-pane-pane-b.drop_preview.right" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-b-tab-doc-b-1" },
+        "text": "doc-b-1"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "selected_is",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-b-tab-doc-b-1" },
+        "selected": true
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_bounds_stable",
+      "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-b-tab-doc-b-1" },
+      "stable_frames": 6,
+      "max_move_px": 0.5,
+      "timeout_frames": 240
+    },
+    { "type": "capture_layout_sidecar", "label": "workspace-tab-text-drag-t2s.layout" },
+    { "type": "capture_screenshot", "label": "workspace-tab-text-drag-t2s" },
+    { "type": "capture_bundle", "label": "workspace-tab-text-drag-t2s" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "pointer_up", "window": { "kind": "current" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "workspace_tab_strip_drag_active_is",
+        "active": false,
+        "pane_id": "pane-a"
+      },
+      "timeout_frames": 240
+    },
+    { "type": "capture_bundle", "label": "workspace-tab-text-drag-cleanup" }
+  ]
+}

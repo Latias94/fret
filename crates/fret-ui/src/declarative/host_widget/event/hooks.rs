@@ -209,6 +209,17 @@ pub(super) fn try_key_hook<H: UiHost>(
                 crate::elements::record_transient_event(&mut *self.app, cx.window, cx.target, key);
             }
 
+            fn record_pending_command_dispatch_source(
+                &mut self,
+                cx: action::ActionCx,
+                command: &fret_runtime::CommandId,
+                reason: action::ActivateReason,
+            ) {
+                crate::action::record_pending_command_dispatch_source_if_enabled(
+                    self.app, cx, command, reason, None,
+                );
+            }
+
             #[track_caller]
             fn notify(&mut self, _cx: action::ActionCx) {
                 *self.notify_requested = true;

@@ -5,6 +5,7 @@
       "diag.script_v2"
     ],
     "tags": [
+      "app_facing",
       "workspace",
       "tabstrip",
       "keyboard",
@@ -13,6 +14,7 @@
       "gate"
     ],
     "target_hints": [
+      "Asserts the tab strip and tab roles plus the tab invoke action before interaction.",
       "Focuses pane A content, then enters the tab strip (Ctrl+F6).",
       "Uses Arrow keys and Home/End to rove focus and activate tabs.",
       "Asserts focus and selection track the roving target."
@@ -41,27 +43,38 @@
       "type": "wait_until"
     },
     {
-      "target": {
-        "id": "workspace-shell-pane-pane-a-tab-doc-a-0",
-        "kind": "test_id"
+      "predicate": {
+        "kind": "role_is",
+        "role": "tab_list",
+        "target": {
+          "id": "workspace-shell-pane-pane-a-tab-strip",
+          "kind": "test_id"
+        }
       },
-      "type": "click"
-    },
-    {
-      "n": 6,
-      "type": "wait_frames"
+      "type": "assert"
     },
     {
       "predicate": {
-        "kind": "selected_is",
-        "selected": true,
+        "kind": "role_is",
+        "role": "tab",
         "target": {
           "id": "workspace-shell-pane-pane-a-tab-doc-a-0",
           "kind": "test_id"
         }
       },
-      "timeout_frames": 240,
-      "type": "wait_until"
+      "type": "assert"
+    },
+    {
+      "predicate": {
+        "action": "invoke",
+        "enabled": true,
+        "kind": "semantics_action_is",
+        "target": {
+          "id": "workspace-shell-pane-pane-a-tab-doc-a-0",
+          "kind": "test_id"
+        }
+      },
+      "type": "assert"
     },
     {
       "target": {
@@ -100,6 +113,38 @@
     {
       "predicate": {
         "kind": "focus_is",
+        "target": {
+          "id": "workspace-shell-pane-pane-a-tab-doc-a-2",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "key": "home",
+      "repeat": false,
+      "type": "press_key"
+    },
+    {
+      "n": 6,
+      "type": "wait_frames"
+    },
+    {
+      "predicate": {
+        "kind": "focus_is",
+        "target": {
+          "id": "workspace-shell-pane-pane-a-tab-doc-a-0",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "predicate": {
+        "kind": "selected_is",
+        "selected": true,
         "target": {
           "id": "workspace-shell-pane-pane-a-tab-doc-a-0",
           "kind": "test_id"
@@ -173,7 +218,7 @@
       "type": "wait_until"
     },
     {
-      "key": "arrow_right",
+      "key": "home",
       "repeat": false,
       "type": "press_key"
     },

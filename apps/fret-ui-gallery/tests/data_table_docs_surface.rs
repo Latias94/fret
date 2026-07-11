@@ -20,6 +20,9 @@ fn data_table_page_documents_guide_mapping_and_children_api_decision() {
         "DataTableColumnHeader",
         "No extra root `children` API is required here",
         "DataTableToolbar::trailing(...)",
+        "Sorting is in scope",
+        "active-descendant semantics",
+        "<prefix><RowKey>-cell-<ColumnId>",
     ] {
         assert!(
             source.contains(needle),

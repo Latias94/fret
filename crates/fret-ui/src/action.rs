@@ -25,6 +25,72 @@ pub enum ActivateReason {
     Keyboard,
 }
 
+pub(crate) fn command_dispatch_is_enabled<H: UiHost>(
+    app: &H,
+    window: AppWindowId,
+    command: &CommandId,
+) -> bool {
+    app.global::<fret_runtime::WindowCommandEnabledService>()
+        .is_none_or(|service| service.enabled(window, command) != Some(false))
+}
+
+pub(crate) fn record_command_dispatch_source_if_enabled<H: UiHost>(
+    app: &mut H,
+    window: AppWindowId,
+    command: &CommandId,
+    source: fret_runtime::CommandDispatchSourceV1,
+) -> bool {
+    if !command_dispatch_is_enabled(app, window, command) {
+        return false;
+    }
+
+    app.with_global_mut(
+        fret_runtime::WindowPendingCommandDispatchSourceService::default,
+        |service, app| {
+            service.record(window, app.tick_id(), command.clone(), source);
+        },
+    );
+    true
+}
+
+pub(crate) fn record_pending_command_dispatch_source_if_enabled<H: UiHost>(
+    app: &mut H,
+    cx: ActionCx,
+    command: &CommandId,
+    reason: ActivateReason,
+    test_id: Option<Arc<str>>,
+) -> bool {
+    let kind = match reason {
+        ActivateReason::Pointer => fret_runtime::CommandDispatchSourceKindV1::Pointer,
+        ActivateReason::Keyboard => fret_runtime::CommandDispatchSourceKindV1::Keyboard,
+    };
+    let source = fret_runtime::CommandDispatchSourceV1 {
+        kind,
+        element: Some(cx.target.0),
+        test_id,
+    };
+    record_command_dispatch_source_if_enabled(app, cx.window, command, source)
+}
+
+pub(crate) fn record_pending_action_payload_if_enabled<H: UiHost>(
+    app: &mut H,
+    cx: ActionCx,
+    action: &ActionId,
+    payload: Box<dyn Any + Send + Sync>,
+) -> bool {
+    if !command_dispatch_is_enabled(app, cx.window, action) {
+        return false;
+    }
+
+    app.with_global_mut(
+        fret_runtime::WindowPendingActionPayloadService::default,
+        |service, app| {
+            service.record(cx.window, app.tick_id(), action.clone(), payload);
+        },
+    );
+    true
+}
+
 /// Result of a component-owned `Pressable` pointer down hook.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PressablePointerDownResult {
@@ -401,7 +467,7 @@ pub trait UiActionHost {
 
     /// Record best-effort diagnostics metadata for an upcoming command dispatch.
     ///
-    /// This is a mechanism-only hook intended to help explain pointer-triggered `Effect::Command`
+    /// This is a mechanism-only hook intended to help explain UI-triggered `Effect::Command`
     /// dispatches in `fretboard-dev diag` without changing the effect schema.
     ///
     /// Hosts that do not support diagnostics can leave this as a no-op.
@@ -428,7 +494,7 @@ pub trait UiActionHost {
     ) {
     }
 
-    /// Consume the most recent pending payload for a given action, if still available (ADR 0312).
+    /// Consume the next pending payload for a given action, if still available (ADR 0312).
     ///
     /// Recommended handler semantics when `None`:
     /// - treat as "not handled" (payload missing/expired/mismatched),
@@ -588,21 +654,7 @@ impl<'a, H: UiHost> UiActionHost for UiActionHostAdapter<'a, H> {
         command: &CommandId,
         reason: ActivateReason,
     ) {
-        let kind = match reason {
-            ActivateReason::Pointer => fret_runtime::CommandDispatchSourceKindV1::Pointer,
-            ActivateReason::Keyboard => fret_runtime::CommandDispatchSourceKindV1::Keyboard,
-        };
-        let source = fret_runtime::CommandDispatchSourceV1 {
-            kind,
-            element: Some(cx.target.0),
-            test_id: None,
-        };
-        self.app.with_global_mut(
-            fret_runtime::WindowPendingCommandDispatchSourceService::default,
-            |svc, app| {
-                svc.record(cx.window, app.tick_id(), command.clone(), source);
-            },
-        );
+        record_pending_command_dispatch_source_if_enabled(self.app, cx, command, reason, None);
     }
 }
 

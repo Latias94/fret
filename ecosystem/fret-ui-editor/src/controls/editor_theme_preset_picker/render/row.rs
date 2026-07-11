@@ -12,7 +12,7 @@ use crate::primitives::readout::{
     editor_theme_preset_picker_row_label_text_props,
     editor_theme_preset_picker_row_status_text_props,
 };
-use crate::theme::EditorThemePresetV1;
+use crate::theme::EditorThemePreset;
 
 mod behavior;
 mod visual;
@@ -20,8 +20,8 @@ mod visual;
 #[allow(clippy::too_many_arguments)]
 pub(super) fn preset_row<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    model: Model<EditorThemePresetV1>,
-    preset: EditorThemePresetV1,
+    model: Model<EditorThemePreset>,
+    preset: EditorThemePreset,
     selected: bool,
     index: usize,
     total: usize,

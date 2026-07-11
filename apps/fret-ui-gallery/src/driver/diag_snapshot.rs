@@ -23,7 +23,7 @@ use crate::harness::{
     UiGalleryMarkdownEditorHandlesStore,
 };
 
-use super::UiGalleryHarnessDiagnosticsStore;
+use super::{UiGalleryDriver, UiGalleryHarnessDiagnosticsStore};
 
 fn arc_str_len(value: &Arc<str>) -> u64 {
     value.len() as u64
@@ -788,8 +788,11 @@ pub(super) fn install_ui_gallery_snapshot_provider(app: &mut App) {
                 let ids = store.per_window.get(&window)?;
 
                 let selected_page = app.models().get_cloned(&ids.selected_page)?;
-                let workspace_tabs = app.models().get_cloned(&ids.workspace_tabs)?;
-                let workspace_dirty_tabs = app.models().get_cloned(&ids.workspace_dirty_tabs)?;
+                let workspace_layout = app
+                    .models()
+                    .get_cloned(&ids.workspace_window_layout)?;
+                let (workspace_tabs, _active_tab, workspace_dirty_tabs) =
+                    UiGalleryDriver::workspace_window_layout_snapshot(&workspace_layout)?;
                 let nav_query = app.models().get_cloned(&ids.nav_query)?;
                 let theme_preset = app.models().get_cloned(&ids.theme_preset)?;
                 let theme_preset_open = app.models().get_cloned(&ids.theme_preset_open)?;

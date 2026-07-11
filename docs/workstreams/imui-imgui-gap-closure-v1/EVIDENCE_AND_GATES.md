@@ -7653,10 +7653,10 @@ semantics.
 Evidence:
 
 - `ecosystem/fret-ui-editor/src/theme/patches.rs` keeps the default editor patch,
-  `editor_theme_preset_overrides_v1(...)`, and shared `metric(...)` / `color(...)` insertion
+  `editor_theme_preset_overrides(...)`, and shared `metric(...)` / `color(...)` insertion
   helpers.
 - `ecosystem/fret-ui-editor/src/theme/patches/dense.rs` owns
-  `imgui_like_dense_patch_v1(...)` and the dense override metric/color token construction.
+  `imgui_like_dense_patch(...)` and the dense override metric/color token construction.
 - `tools/gate_imui_workstream_source.py` tracks both owners and rejects dense override token
   construction from drifting back into `theme/patches.rs`.
 - `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new dense patch owner.
@@ -11292,7 +11292,7 @@ metadata, install/replay APIs, host theme sync behavior, or private token patch 
 
 Evidence:
 
-- `ecosystem/fret-ui-editor/src/theme.rs` now keeps public `EditorThemePresetV1` metadata,
+- `ecosystem/fret-ui-editor/src/theme.rs` now keeps public `EditorThemePreset` metadata,
   install/replay helpers, host-theme sync helpers, and a `#[cfg(test)] mod tests;` route only.
 - `ecosystem/fret-ui-editor/src/theme/tests.rs` owns the eight preset metadata, default/dense
   patch, installed-preset replay, and window-metrics sync regressions.
@@ -12250,7 +12250,7 @@ policy.
 Evidence:
 
 - `ecosystem/fret-ui-editor/src/theme.rs` owns
-  `EditorThemePresetV1::picker_status_label()` metadata for the existing `Default` and
+  `EditorThemePreset::picker_status_label()` metadata for the existing `Default` and
   `ImguiLikeDense` presets.
 - `ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker/render.rs` renders the preset
   status labels in the row status text slot and accents selected-row status text.
@@ -18700,7 +18700,7 @@ values, style/theme picker behavior, or the policy boundary that keeps style too
 
 Evidence:
 
-- `ecosystem/fret-ui-editor/src/theme.rs` keeps `EditorThemePresetV1`, stable preset metadata,
+- `ecosystem/fret-ui-editor/src/theme.rs` keeps `EditorThemePreset`, stable preset metadata,
   install/reapply APIs, and host theme sync helpers.
 - `ecosystem/fret-ui-editor/src/theme/patches.rs` owns default and ImGui-like dense token patch
   construction, including numeric scrub reset values and dense overrides.
@@ -29102,7 +29102,7 @@ Run evidence:
 Use these for the current design/theme readiness note:
 
 ```powershell
-rg -n "EditorThemePresetV1|ImguiLikeDense|install_editor_theme_preset_v1|reapply_installed_editor_theme_preset_v1" ecosystem/fret-ui-editor/src/theme.rs apps/fret-cookbook/examples/imui_editor_controls_basics.rs apps/fret-examples/src/imui_editor_proof_demo.rs
+rg -n "EditorThemePreset|ImguiLikeDense|install_editor_theme_preset|reapply_installed_editor_theme_preset" ecosystem/fret-ui-editor/src/theme.rs apps/fret-cookbook/examples/imui_editor_controls_basics.rs apps/fret-examples/src/imui_editor_proof_demo.rs
 rg -n "component\\.imui\\.disabled_alpha|imui_text_input_style_from_theme|input_text_model_uses_compact_imui_chrome_without_focus_ring|textarea_model_uses_compact_imui_chrome_without_focus_ring|hovered_like_imgui|ImUiHoveredFlags" ecosystem/fret-ui-kit/src/imui
 rg -n "ShowStyleEditor|ImGuiStyle|PushStyleColor|PushStyleVar|StyleColorsDark|StyleColorsLight|StyleColorsClassic" repo-ref/imgui/imgui.h repo-ref/imgui/imgui_demo.cpp
 cargo nextest run -p fret-ui-editor default_preset_keeps_existing_editor_patch_baseline imgui_like_dense_preset_overrides_density_and_field_chrome installed_preset_can_be_reapplied_after_base_theme_reset --no-fail-fast

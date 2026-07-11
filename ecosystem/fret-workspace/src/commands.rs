@@ -81,9 +81,13 @@ pub const CMD_WORKSPACE_PANE_FOCUS_TAB_STRIP: &str = "workspace.pane.focus_tab_s
 pub const CMD_WORKSPACE_PANE_FOCUS_CONTENT: &str = "workspace.pane.focus_content";
 pub const CMD_WORKSPACE_PANE_TOGGLE_TAB_STRIP_FOCUS: &str = "workspace.pane.toggle_tab_strip_focus";
 
-/// Typed unit actions for action-first authoring (v1).
+pub const CMD_WORKSPACE_DIRTY_CLOSE_CANCEL: &str = "workspace.dirty_close.cancel";
+pub const CMD_WORKSPACE_DIRTY_CLOSE_DISCARD: &str = "workspace.dirty_close.discard";
+pub const CMD_WORKSPACE_DIRTY_CLOSE_SAVE_AND_CLOSE: &str = "workspace.dirty_close.save_and_close";
+
+/// Typed unit actions for action-first authoring.
 ///
-/// v1 strategy: `ActionId` is an alias over `CommandId` (ADR 0307), so these marker types provide a
+/// `ActionId` is an alias over `CommandId` (ADR 0307), so these marker types provide a
 /// typed authoring surface without introducing new runtime schemas.
 pub mod act {
     use super::*;
@@ -171,10 +175,108 @@ pub mod act {
         WorkspacePaneToggleTabStripFocus,
         CMD_WORKSPACE_PANE_TOGGLE_TAB_STRIP_FOCUS
     );
+    workspace_unit_action!(WorkspaceDirtyCloseCancel, CMD_WORKSPACE_DIRTY_CLOSE_CANCEL);
+    workspace_unit_action!(
+        WorkspaceDirtyCloseDiscard,
+        CMD_WORKSPACE_DIRTY_CLOSE_DISCARD
+    );
+    workspace_unit_action!(
+        WorkspaceDirtyCloseSaveAndClose,
+        CMD_WORKSPACE_DIRTY_CLOSE_SAVE_AND_CLOSE
+    );
 }
 
 pub fn typed_command_id<A: TypedAction>() -> CommandId {
     A::action_id()
+}
+
+pub const TYPED_WORKSPACE_COMMAND_IDS: &[&str] = &[
+    CMD_WORKSPACE_TAB_NEXT,
+    CMD_WORKSPACE_TAB_PREV,
+    CMD_WORKSPACE_TAB_CLOSE,
+    CMD_WORKSPACE_TAB_CLOSE_OTHERS,
+    CMD_WORKSPACE_TAB_CLOSE_LEFT,
+    CMD_WORKSPACE_TAB_CLOSE_RIGHT,
+    CMD_WORKSPACE_TAB_MOVE_LEFT,
+    CMD_WORKSPACE_TAB_MOVE_RIGHT,
+    CMD_WORKSPACE_TAB_TOGGLE_PIN,
+    CMD_WORKSPACE_TAB_COMMIT_PREVIEW,
+    CMD_WORKSPACE_PANE_NEXT,
+    CMD_WORKSPACE_PANE_PREV,
+    CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_NEXT,
+    CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_PREV,
+    CMD_WORKSPACE_PANE_RESIZE_RIGHT,
+    CMD_WORKSPACE_PANE_RESIZE_LEFT,
+    CMD_WORKSPACE_PANE_RESIZE_UP,
+    CMD_WORKSPACE_PANE_RESIZE_DOWN,
+    CMD_WORKSPACE_PANE_SPLIT_RIGHT,
+    CMD_WORKSPACE_PANE_SPLIT_LEFT,
+    CMD_WORKSPACE_PANE_SPLIT_UP,
+    CMD_WORKSPACE_PANE_SPLIT_DOWN,
+    CMD_WORKSPACE_PANE_FOCUS_RIGHT,
+    CMD_WORKSPACE_PANE_FOCUS_LEFT,
+    CMD_WORKSPACE_PANE_FOCUS_UP,
+    CMD_WORKSPACE_PANE_FOCUS_DOWN,
+    CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_RIGHT,
+    CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_LEFT,
+    CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_UP,
+    CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_DOWN,
+    CMD_WORKSPACE_PANE_FOCUS_TAB_STRIP,
+    CMD_WORKSPACE_PANE_FOCUS_CONTENT,
+    CMD_WORKSPACE_PANE_TOGGLE_TAB_STRIP_FOCUS,
+    CMD_WORKSPACE_DIRTY_CLOSE_CANCEL,
+    CMD_WORKSPACE_DIRTY_CLOSE_DISCARD,
+    CMD_WORKSPACE_DIRTY_CLOSE_SAVE_AND_CLOSE,
+];
+
+pub fn is_typed_workspace_command(command: &CommandId) -> bool {
+    TYPED_WORKSPACE_COMMAND_IDS.contains(&command.as_str())
+}
+
+pub fn is_workspace_ui_command(command: &CommandId) -> bool {
+    matches!(
+        command.as_str(),
+        CMD_WORKSPACE_PANE_FOCUS_TAB_STRIP
+            | CMD_WORKSPACE_PANE_FOCUS_CONTENT
+            | CMD_WORKSPACE_PANE_TOGGLE_TAB_STRIP_FOCUS
+    )
+}
+
+pub fn is_workspace_dirty_close_resolution(command: &CommandId) -> bool {
+    matches!(
+        command.as_str(),
+        CMD_WORKSPACE_DIRTY_CLOSE_CANCEL
+            | CMD_WORKSPACE_DIRTY_CLOSE_DISCARD
+            | CMD_WORKSPACE_DIRTY_CLOSE_SAVE_AND_CLOSE
+    )
+}
+
+pub fn is_workspace_model_command(command: &CommandId) -> bool {
+    if is_typed_workspace_command(command) {
+        return !is_workspace_ui_command(command) && !is_workspace_dirty_close_resolution(command);
+    }
+
+    [
+        CMD_WORKSPACE_TAB_OPEN_PREVIEW_PREFIX,
+        CMD_WORKSPACE_TAB_MOVE_BEFORE_PREFIX,
+        CMD_WORKSPACE_TAB_MOVE_AFTER_PREFIX,
+        CMD_WORKSPACE_TAB_MOVE_BEFORE_ID_PREFIX,
+        CMD_WORKSPACE_TAB_MOVE_AFTER_ID_PREFIX,
+        CMD_WORKSPACE_TAB_ACTIVATE_PREFIX,
+        CMD_WORKSPACE_TAB_CLOSE_PREFIX,
+        CMD_WORKSPACE_TAB_PIN_PREFIX,
+        CMD_WORKSPACE_TAB_UNPIN_PREFIX,
+        CMD_WORKSPACE_PANE_ACTIVATE_PREFIX,
+        CMD_WORKSPACE_PANE_SPLIT_PREFIX,
+        CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_TO_PREFIX,
+    ]
+    .iter()
+    .any(|prefix| {
+        command
+            .as_str()
+            .strip_prefix(prefix)
+            .is_some_and(|payload| !payload.trim().is_empty())
+    })
 }
 
 /// Prefix for "activate a specific tab" commands.
@@ -1397,5 +1499,24 @@ pub fn register_workspace_commands(registry: &mut CommandRegistry) {
                     ],
                 ),
             ]),
+    );
+
+    registry.register(
+        typed_command_id::<act::WorkspaceDirtyCloseCancel>(),
+        CommandMeta::new("Cancel Dirty Close")
+            .with_category("Workspace")
+            .with_keywords(["dirty", "close", "cancel", "workspace"]),
+    );
+    registry.register(
+        typed_command_id::<act::WorkspaceDirtyCloseDiscard>(),
+        CommandMeta::new("Discard and Close")
+            .with_category("Workspace")
+            .with_keywords(["dirty", "close", "discard", "workspace"]),
+    );
+    registry.register(
+        typed_command_id::<act::WorkspaceDirtyCloseSaveAndClose>(),
+        CommandMeta::new("Save and Close")
+            .with_category("Workspace")
+            .with_keywords(["dirty", "close", "save", "workspace"]),
     );
 }

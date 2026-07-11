@@ -63,6 +63,13 @@ fn static_workspace_action_ids() -> Vec<CommandId> {
         assert_action::<act::WorkspacePaneToggleTabStripFocus>(
             commands::CMD_WORKSPACE_PANE_TOGGLE_TAB_STRIP_FOCUS,
         ),
+        assert_action::<act::WorkspaceDirtyCloseCancel>(commands::CMD_WORKSPACE_DIRTY_CLOSE_CANCEL),
+        assert_action::<act::WorkspaceDirtyCloseDiscard>(
+            commands::CMD_WORKSPACE_DIRTY_CLOSE_DISCARD,
+        ),
+        assert_action::<act::WorkspaceDirtyCloseSaveAndClose>(
+            commands::CMD_WORKSPACE_DIRTY_CLOSE_SAVE_AND_CLOSE,
+        ),
     ]
 }
 
@@ -81,6 +88,40 @@ fn typed_workspace_actions_match_canonical_command_ids() {
     let ids = static_workspace_action_ids();
     for id in ids {
         assert!(id.as_str().starts_with("workspace."));
+    }
+}
+
+#[test]
+fn dirty_close_actions_keep_their_resolution_lane_classification() {
+    for id in [
+        typed_command_id::<act::WorkspaceDirtyCloseCancel>(),
+        typed_command_id::<act::WorkspaceDirtyCloseDiscard>(),
+        typed_command_id::<act::WorkspaceDirtyCloseSaveAndClose>(),
+    ] {
+        assert!(commands::is_typed_workspace_command(&id));
+        assert!(!commands::is_workspace_model_command(&id));
+        assert!(!commands::is_workspace_ui_command(&id));
+        assert!(commands::is_workspace_dirty_close_resolution(&id));
+    }
+}
+
+#[test]
+fn every_typed_workspace_command_has_one_routing_lane() {
+    for id in static_workspace_action_ids() {
+        let lane_count = [
+            commands::is_workspace_model_command(&id),
+            commands::is_workspace_ui_command(&id),
+            commands::is_workspace_dirty_close_resolution(&id),
+        ]
+        .into_iter()
+        .filter(|matches| *matches)
+        .count();
+        assert_eq!(
+            lane_count,
+            1,
+            "workspace command `{}` must have one lane",
+            id.as_str()
+        );
     }
 }
 

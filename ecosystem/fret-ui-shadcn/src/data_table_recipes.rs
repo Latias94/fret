@@ -335,7 +335,7 @@ fn data_table_pagination_summary<H: UiHost>(
 
 /// shadcn/ui `DataTable` toolbar (recipe).
 ///
-/// This is a v1 convenience surface that wires common controls to `TableState`:
+/// This convenience surface wires common controls to `TableState`:
 /// - global filter input (`TableState.global_filter`)
 /// - column visibility dropdown (`TableState.column_visibility`)
 /// - selected row count (`TableState.row_selection`)
@@ -435,7 +435,7 @@ impl<TData> DataTableToolbar<TData> {
 
     /// Adds a single per-column text filter input bound to `TableState.column_filters`.
     ///
-    /// This is a v1 convenience surface intended to match the common TanStack/shadcn recipes
+    /// This convenience surface matches the common TanStack/shadcn recipes
     /// where one “primary” column gets a dedicated filter input (e.g. “Filter emails...”).
     pub fn column_filter(mut self, column_id: impl Into<ColumnId>) -> Self {
         self.column_filter = Some(column_id.into());
@@ -1812,7 +1812,7 @@ fn label_for_column<TData>(labels: &[DataTableColumnLabel], column: &ColumnDef<T
 
 /// shadcn/ui `DataTable` pagination (recipe).
 ///
-/// This is a v1 surface wired to `TableState.pagination`.
+/// This surface is wired to `TableState.pagination`.
 #[derive(Clone)]
 pub struct DataTablePagination {
     state: Model<TableState>,

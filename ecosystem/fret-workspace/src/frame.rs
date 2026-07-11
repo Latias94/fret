@@ -40,6 +40,7 @@ fn fill_grow_layout() -> LayoutStyle {
     let mut layout = LayoutStyle::default();
     layout.size.width = Length::Fill;
     layout.size.height = Length::Fill;
+    layout.size.min_width = Some(Length::Px(Px(0.0)));
     layout.flex.grow = 1.0;
     layout.flex.shrink = 1.0;
     layout.flex.basis = Length::Px(Px(0.0));

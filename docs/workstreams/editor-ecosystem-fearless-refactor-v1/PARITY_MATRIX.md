@@ -35,7 +35,7 @@ Legend:
 | Editor token namespace | one stable token vocabulary for editor surfaces | ⚠️ direction documented and partially implemented | ✅ | `ecosystem/fret-ui-editor` | `editor.*` should own the "editor feel". |
 | Workspace token namespace | one stable token vocabulary for shell chrome | ⚠️ direction documented, still needs inventory | ✅ | `ecosystem/fret-workspace` | `workspace.*` should own shell chrome, not `fret-ui`. |
 | `imui` and declarative share tokens | no facade-only styling vocabulary | ✅ decision locked | ✅ | `ecosystem/fret-imui`, `ecosystem/fret-ui-editor` | No `imui.editor.*`. Same widgets, same tokens, different syntax. |
-| Imgui-like preset | dense, low-ceremony visual preset for editor apps | ⚠️ first preset + proof surface landed, broader shell alignment still open | ✅ | adapter/preset layer | `EditorThemePresetV1::ImguiLikeDense` is now wired through the proof demo; this remains a skin/preset, not a separate component implementation. |
+| Imgui-like preset | dense, low-ceremony visual preset for editor apps | ⚠️ first preset + proof surface landed, broader shell alignment still open | ✅ | adapter/preset layer | `EditorThemePreset::ImguiLikeDense` is now wired through the proof demo; this remains a skin/preset, not a separate component implementation. |
 | Proof demos and gates | interaction feel is protected by proof surfaces and focused gates | ⚠️ authoring parity now has a passing proof demo + smoke/diag gates, broader matrix still expanding | ✅ | workstream-wide | `imui_editor_proof_demo` is now backed by both `imui_adapter_smoke.rs` and a launched diagnostics gate. A component is not really landed until its editor behavior is gated. |
 
 ## Summary decisions captured by this matrix

@@ -10,7 +10,7 @@ use super::{EditorThemePresetPicker, EditorThemePresetPickerOptions};
 use crate::primitives::EditorTokenKeys;
 use crate::test_support::WrappingTextServices;
 use crate::theme::{
-    EditorThemePresetV1, installed_editor_theme_preset_v1, reapply_installed_editor_theme_preset_v1,
+    EditorThemePreset, installed_editor_theme_preset, reapply_installed_editor_theme_preset,
 };
 
 #[test]
@@ -21,7 +21,7 @@ fn editor_theme_preset_picker_stamps_listbox_options_and_selected_state() {
     let mut services = WrappingTextServices;
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
-    let model = app.models_mut().insert(EditorThemePresetV1::ImguiLikeDense);
+    let model = app.models_mut().insert(EditorThemePreset::ImguiLikeDense);
 
     render_picker_frame(&mut ui, &mut app, &mut services, window, bounds, &model);
     ui.request_semantics_snapshot();
@@ -49,9 +49,9 @@ fn editor_theme_preset_picker_stamps_listbox_options_and_selected_state() {
 
 #[test]
 fn editor_theme_preset_picker_rows_show_density_status_labels() {
-    assert_eq!(EditorThemePresetV1::Default.picker_status_label(), "24px");
+    assert_eq!(EditorThemePreset::Default.picker_status_label(), "24px");
     assert_eq!(
-        EditorThemePresetV1::ImguiLikeDense.picker_status_label(),
+        EditorThemePreset::ImguiLikeDense.picker_status_label(),
         "22px"
     );
 }
@@ -64,13 +64,13 @@ fn editor_theme_preset_picker_click_updates_model_and_replays_reversible_preset(
     let mut services = WrappingTextServices;
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
-    let model = app.models_mut().insert(EditorThemePresetV1::Default);
+    let model = app.models_mut().insert(EditorThemePreset::Default);
 
     render_picker_frame(&mut ui, &mut app, &mut services, window, bounds, &model);
     pump_semantics(&mut ui, &mut app, &mut services, bounds);
     assert_eq!(
-        installed_editor_theme_preset_v1(&app),
-        Some(EditorThemePresetV1::Default)
+        installed_editor_theme_preset(&app),
+        Some(EditorThemePreset::Default)
     );
 
     click_test_id(
@@ -81,14 +81,14 @@ fn editor_theme_preset_picker_click_updates_model_and_replays_reversible_preset(
     );
     assert_eq!(
         app.models().get_copied(&model),
-        Some(EditorThemePresetV1::ImguiLikeDense)
+        Some(EditorThemePreset::ImguiLikeDense)
     );
 
     render_picker_frame(&mut ui, &mut app, &mut services, window, bounds, &model);
     pump_semantics(&mut ui, &mut app, &mut services, bounds);
     assert_eq!(
-        installed_editor_theme_preset_v1(&app),
-        Some(EditorThemePresetV1::ImguiLikeDense)
+        installed_editor_theme_preset(&app),
+        Some(EditorThemePreset::ImguiLikeDense)
     );
     assert_eq!(
         Theme::global(&app).metric_by_key(EditorTokenKeys::DENSITY_ROW_HEIGHT),
@@ -107,14 +107,14 @@ fn editor_theme_preset_picker_click_updates_model_and_replays_reversible_preset(
     );
     assert_eq!(
         app.models().get_copied(&model),
-        Some(EditorThemePresetV1::Default)
+        Some(EditorThemePreset::Default)
     );
 
     render_picker_frame(&mut ui, &mut app, &mut services, window, bounds, &model);
     pump_semantics(&mut ui, &mut app, &mut services, bounds);
     assert_eq!(
-        reapply_installed_editor_theme_preset_v1(&mut app),
-        Some(EditorThemePresetV1::Default)
+        reapply_installed_editor_theme_preset(&mut app),
+        Some(EditorThemePreset::Default)
     );
     assert_eq!(
         Theme::global(&app).metric_by_key(EditorTokenKeys::DENSITY_ROW_HEIGHT),
@@ -143,7 +143,7 @@ fn render_picker_frame(
     services: &mut WrappingTextServices,
     window: AppWindowId,
     bounds: Rect,
-    model: &Model<EditorThemePresetV1>,
+    model: &Model<EditorThemePreset>,
 ) {
     let model = model.clone();
     let root = declarative::render_root(

@@ -1,63 +1,46 @@
-use fret_app::{App, CommandId, Model};
+use fret_app::{App, Model};
 use fret_core::SemanticsRole;
 use fret_ui::element::AnyElement;
 use fret_ui::element::SemanticsProps;
 use fret_ui::{ElementContext, Invalidation};
 use fret_ui_shadcn::facade as shadcn;
-use fret_workspace::commands::CMD_WORKSPACE_TAB_CLOSE_PREFIX;
-use fret_workspace::{WorkspaceTab, WorkspaceTabStrip, WorkspaceTopBar};
+use fret_workspace::layout::WorkspaceWindowLayout;
+use fret_workspace::{WorkspaceTabStrip, WorkspaceTopBar};
 use std::sync::Arc;
 
 use super::text_roles;
-use crate::spec::{CMD_APP_SETTINGS, PAGE_INTRO, page_meta, page_spec};
+use crate::spec::{CMD_APP_SETTINGS, page_meta};
 
 pub(super) fn tab_strip_view(
     cx: &mut ElementContext<'_, App>,
     disabled: bool,
-    selected_page: &Model<Arc<str>>,
-    workspace_tabs: &Model<Vec<Arc<str>>>,
-    workspace_dirty_tabs: &Model<Vec<Arc<str>>>,
+    workspace_window_layout: &Model<WorkspaceWindowLayout>,
 ) -> AnyElement {
     cx.keyed("ui_gallery.tab_strip", |cx| {
         if disabled {
             return text_roles::chrome_readout_text(cx, "Tabs (disabled)");
         }
 
-        let selected = cx
-            .get_model_cloned(selected_page, Invalidation::Layout)
-            .unwrap_or_else(|| Arc::<str>::from(PAGE_INTRO));
-        let workspace_tab_ids = cx
-            .get_model_cloned(workspace_tabs, Invalidation::Layout)
-            .unwrap_or_default();
-        let workspace_dirty_ids = cx
-            .get_model_cloned(workspace_dirty_tabs, Invalidation::Layout)
-            .unwrap_or_default();
-
-        let tab_strip = WorkspaceTabStrip::new(selected.clone())
+        let workspace_layout = cx
+            .get_model_cloned(workspace_window_layout, Invalidation::Layout)
+            .unwrap_or_else(|| {
+                WorkspaceWindowLayout::new(
+                    super::UI_GALLERY_WORKSPACE_WINDOW_LAYOUT_ID,
+                    super::UI_GALLERY_WORKSPACE_PANE_ID,
+                )
+            });
+        let tab_strip = workspace_layout
+            .pane_tree
+            .find_pane(super::UI_GALLERY_WORKSPACE_PANE_ID)
+            .map(|pane| {
+                WorkspaceTabStrip::from_workspace_tabs(&pane.tabs, |tab_id| {
+                    Arc::<str>::from(page_meta(tab_id).0)
+                })
+            })
+            .unwrap_or_else(|| WorkspaceTabStrip::new_optional(None))
             .pane_id(super::UI_GALLERY_WORKSPACE_PANE_ID)
             .test_id_root("ui-gallery-workspace-tabstrip")
             .tab_test_id_prefix("ui-gallery-workspace-tab")
-            .tabs(workspace_tab_ids.iter().map(|tab_id| {
-                let (title, _origin) = page_meta(tab_id.as_ref());
-                let dirty = workspace_dirty_ids
-                    .iter()
-                    .any(|d| d.as_ref() == tab_id.as_ref());
-                WorkspaceTab::new(
-                    tab_id.clone(),
-                    title,
-                    page_spec(tab_id.as_ref())
-                        .map(|spec| CommandId::from(spec.command))
-                        .unwrap_or_else(|| {
-                            CommandId::new(format!("ui_gallery.nav.select.{}", tab_id.as_ref()))
-                        }),
-                )
-                .close_command(CommandId::new(format!(
-                    "{}{}",
-                    CMD_WORKSPACE_TAB_CLOSE_PREFIX,
-                    tab_id.as_ref()
-                )))
-                .dirty(dirty)
-            }))
             .into_element(cx);
         tab_strip
     })

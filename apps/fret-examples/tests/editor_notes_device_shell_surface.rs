@@ -5,7 +5,7 @@ fn editor_notes_device_shell_demo_keeps_shell_switch_explicit_and_reuses_inner_e
     for needle in [
         "let theme = cx.theme_snapshot();",
         "use fret::adaptive::{DeviceShellSwitchPolicy, device_shell_switch};",
-        "use fret::app::editor::{EditorThemePresetV1, InspectorTextFieldSnapshot};",
+        "use fret::app::editor::{EditorThemePreset, InspectorTextFieldSnapshot};",
         "use fret::app::LocalState;",
         "use fret::app::{AppElement, AppRenderContext, RenderContextAccess as _, text};",
         "use fret_ui_kit::IntoUiElementInExt as _;",
@@ -23,7 +23,7 @@ fn editor_notes_device_shell_demo_keeps_shell_switch_explicit_and_reuses_inner_e
         "editor_notes_demo::render_selection_panel(cx, selected)",
         "editor_notes_demo::render_center_panel(",
         "editor_notes_demo::render_inspector_panel(",
-        "theme: LocalState<EditorThemePresetV1>",
+        "theme: LocalState<EditorThemePreset>",
         "editor_notes_demo::editor_theme_preset_state(app)",
         "editor_notes_demo::editor_asset_paint_snapshot(cx, &desktop_asset)",
         "let desktop_notes_snapshot = snapshot.notes;",

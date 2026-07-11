@@ -94,9 +94,10 @@ one generic `AppShell` mental model.
   Templates, cookbook lessons, and ordinary demos may use centered cards, docs scaffolds, or
   responsive page wrappers, but those helpers are teaching surfaces local to the app/example, not
   stable framework contracts.
-- **Workspace shell** stays on `fret-workspace`.
-  UI Gallery, `workspace_shell_demo`, and other editor-grade shells should compose explicit
-  `fret_workspace::*` owners instead of routing that chrome back through `fret`.
+- **Workspace policy** stays on `fret-workspace`; ordinary startup stays app-facing.
+  Editor-grade shells compose pane/tab/focus policy and typed commands from `fret_workspace::*`,
+  then use `fret::workspace::WorkspaceApp` for command registration, menus, launch, frame
+  lifecycle, and diagnostics wiring.
 - **In-window menubar** is only an optional bridge.
   If an example needs one, it should import `fret::in_window_menubar::*` explicitly rather than
   treating it as a synonym for workspace shell ownership.
@@ -108,15 +109,28 @@ surfaces, not first-contact teaching surfaces.
 
 | Probe | Start from | What it proves | Do not copy first |
 | --- | --- | --- | --- |
-| Editor notes workbench | `apps/fret-examples/src/editor_notes_demo.rs` | `FretApp` + `View`, workspace rails, inspector content, text-field draft policy, theme setup | Raw `ModelStore` owner helpers before learning `LocalState` and typed actions |
-| Workspace shell / IDE-lite | `apps/fret-examples/src/workspace_shell_demo/` | Pane layout, tab policy, dirty-close flow, command routing, diagnostics ownership | `FnDriver`, raw `UiTree`, manual `UiFrameCx`, and diagnostics frame plumbing |
-| Data-heavy admin surface | `apps/fret-examples/src/datatable_demo.rs` | 10k-row table state, toolbar, pagination, sorting/selection output, debug ids | Manual table output/column/debug-id wiring when a recipe is enough |
+| Editor notes workbench | `apps/fret-examples/src/editor_notes_demo.rs` | `InspectorTextFieldBinding` over explicit `LocalState` handles, including clean/dirty, commit/cancel, focus, and semantic-label diagnostics | Lower-level draft-controller or raw-model ownership when the binding is sufficient |
+| Workspace shell / IDE-lite | `apps/fret-examples/src/workspace_shell_demo/` | `fret::workspace::WorkspaceApp`, typed `fret_workspace::commands::act` identities, dirty-close policy, command traces, keyboard focus, semantics, layout, and screenshots | The remaining app-specific overlay and virtual-list composition internals |
+| Data-heavy admin surface | `apps/fret-examples/src/datatable_demo.rs` | `DataTableRecipe` with caller-visible state/output/columns/row keys and stable debug-id behavior | Low-level headless table composition when the standard recipe is enough |
 | Node graph / canvas editor | `apps/fret-examples/src/node_graph_demo.rs` | Deep node-graph surface mounting, graph model setup, optional diagnostics hooks | Treating the current paint-oriented demo as proof of command/searcher authoring |
 
-For the current GPUI comparison and refactor register, see
+For the GPUI comparison baseline and implemented refactor, see
 [docs/audits/gpui-ergonomics-boundary-audit-2026-07.md](../audits/gpui-ergonomics-boundary-audit-2026-07.md).
-The temporary advanced/raw allowances for workspace shell and datatable probes are tracked by
-[docs/plans/2026-07-09-002-refactor-gpui-ergonomics-boundary-plan.md](../plans/2026-07-09-002-refactor-gpui-ergonomics-boundary-plan.md).
+`datatable_demo` is now a default-clean recipe probe. `workspace_shell_demo` remains explicitly
+advanced only for its residual app-specific policy internals; its launch, frame, typed-command,
+and diagnostics paths are no longer temporary raw allowances.
+
+Workspace evidence is intentionally split by owner: `ui-gallery-workspace-shell` validates shared
+chrome layout, semantics, keyboard focus, and command traces, while `workspace-shell-app-facing`
+is the real `WorkspaceApp` gate for its frame-stage trace, pane split/move behavior, and dirty-close
+lifecycle. The suite definition is reproducible evidence only after its diagnostics run succeeds.
+
+Copy the bounded public slices from
+[Authoring Golden Path - Second-hour canonical slices](../authoring-golden-path.md#second-hour-canonical-slices),
+then use the probe paths above for complete context. In particular, a production
+`WorkspaceWindowState` must persist every requested dirty document in
+`save_workspace_dirty_close` and return `true` only after that succeeds. The hook defaults to
+`false`, so `SaveAndClose` otherwise keeps the prompt open and the workspace layout unchanged.
 
 ## 1) In-tree Cookbook (small, focused lessons)
 

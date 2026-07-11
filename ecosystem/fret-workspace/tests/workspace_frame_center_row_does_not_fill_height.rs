@@ -59,5 +59,24 @@ fn workspace_frame_center_row_does_not_fill_height() {
             Length::Px(Px(0.0)),
             "expected center row to use explicit basis-zero flex-1 semantics"
         );
+
+        let center_slot = &center_row.children[0];
+        let ElementKind::Container(props) = &center_slot.kind else {
+            panic!("expected center row to wrap the center slot in a container");
+        };
+        assert_eq!(
+            props.layout.size.min_width,
+            Some(Length::Px(Px(0.0))),
+            "expected the center slot to opt out of the automatic content minimum"
+        );
+        assert!(
+            props.layout.flex.shrink > 0.0,
+            "expected the center slot to remain shrinkable"
+        );
+        assert_eq!(
+            props.layout.flex.basis,
+            Length::Px(Px(0.0)),
+            "expected the center slot to use explicit basis-zero flex-1 semantics"
+        );
     });
 }

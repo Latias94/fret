@@ -15,7 +15,7 @@ Exit criteria:
 
 Exit criteria:
 
-- [x] `EDITOR_THEME_PRESETS_V1` and preset labels exist.
+- [x] `EDITOR_THEME_PRESETS` and preset labels exist.
 - [x] Dense-to-default switching resets numeric scrub tokens.
 - [x] `EditorThemePresetPicker` exists as a declarative editor control.
 - [x] `fret-ui-editor::imui::editor_theme_preset_picker` stays a one-hop adapter.
@@ -36,6 +36,6 @@ Exit criteria:
 - [x] The canonical editor-notes inspector exposes the picker as
       `editor-notes-demo.inspector.theme-preset`.
 - [x] The device-shell variant reuses the same inspector content and preset model path.
-- [x] `fret-examples` preset parsing delegates to `EditorThemePresetV1::from_key`.
+- [x] `fret-examples` preset parsing delegates to `EditorThemePreset::from_key`.
 - [x] Workbench source-policy tests and `cargo check -p fret-demo --bin imui_editor_workbench_demo`
       pass with the picker mounted.

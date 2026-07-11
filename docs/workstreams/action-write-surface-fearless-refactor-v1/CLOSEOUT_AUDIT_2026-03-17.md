@@ -36,7 +36,7 @@ Default teaching surfaces:
 - `docs/README.md`
 - `docs/first-hour.md`
 - `docs/crate-usage-guide.md`
-- `docs/authoring-golden-path-v2.md`
+- `docs/authoring-golden-path.md`
 - `docs/examples/README.md`
 - `docs/examples/todo-app-golden-path.md`
 - `ecosystem/fret/README.md`
