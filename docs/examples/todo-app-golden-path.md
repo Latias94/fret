@@ -122,7 +122,12 @@ Dynamic lists should use stable keys:
 
 ## Minimal `Cargo.toml`
 
-This repo is not published to crates.io yet, so the examples below use workspace `path` dependencies.
+Fret 0.1.0 is published to crates.io. The example below still uses workspace `path` dependencies
+because this page follows current HEAD and can describe APIs newer than that release; it is an
+in-repository development manifest, not registry-consumer proof. A released CLI/scaffold/version
+pair must pass the registry-only matrix in the
+[external workbench validation plan](../plans/2026-07-12-001-refactor-external-workbench-validation-plan.md)
+before this page teaches it as the verified public path.
 
 ```toml
 [package]

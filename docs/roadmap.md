@@ -1,5 +1,18 @@
 # Fret Roadmap (Draft)
 
+## Active Priority: External Validation
+
+From 2026-07-12 through 2026-10-10, [`STRATEGY.md`](../STRATEGY.md) and the
+[external workbench validation plan](./plans/2026-07-12-001-refactor-external-workbench-validation-plan.md)
+control prioritization. The repository is closing its published release path, validating every
+public scaffold against crates.io, and maintaining one realistic workbench outside the monorepo
+before adding horizontal framework breadth.
+
+New crates, broad features, component families, and micro-ADRs are frozen unless release,
+consumer, regression, security, or hard-contract evidence requires them. The capability lists and
+workstream links below remain useful inventory, but they are not authorization to resume or start
+a lane during this window. Accepted ADRs remain contract authority; this priority changes work
+ordering, not the runtime contract by itself.
 
 ## Upstream references (non-normative)
 

@@ -1,5 +1,13 @@
 # Release-plz Adoption Analysis (Fret)
 
+> [!IMPORTANT]
+> This analysis preserves the 2026-04-09 release-plz adoption decision and its 52-crate,
+> zero-internal-issue snapshot. It is not a live HEAD report. On 2026-07-12, the same closure
+> checker reports 54 release-scope crates, 7 internal dependency issues, and 0 version-line
+> issues. Current closure, publication, and registry-consumer work is governed by
+> [`STRATEGY.md`](../../STRATEGY.md) and the
+> [external workbench validation plan](../plans/2026-07-12-001-refactor-external-workbench-validation-plan.md).
+
 ## Scope
 
 This note follows the official `release-plz` setup flow and maps it to the current Fret workspace state.

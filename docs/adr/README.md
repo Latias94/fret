@@ -24,6 +24,20 @@ Non-normative code references:
 - `Status: Proposed`: under active design; treat as a decision gate before scaling surface area (currently rare; prefer landing decisions as `Accepted` once locked).
 - `Status: Deferred`: intentionally out of framework scope for now.
 
+## Validation-Period ADR Policy
+
+The 2026-07-12 to 2026-10-10 strategy freezes micro-ADR growth. Add a numbered ADR during this
+window only when a release blocker, external-workbench finding, regression/security issue, or
+genuinely hard-to-change cross-crate contract requires it. Prefer amending or explicitly
+superseding an existing decision when that preserves one current contract.
+
+The [external workbench validation plan](../plans/2026-07-12-001-refactor-external-workbench-validation-plan.md)
+establishes a minimal active-decision registry in U1 and completes lifecycle, bidirectional
+supersession, conflict, and evidence gates in U7. Until those checked views land, this index and
+`IMPLEMENTATION_ALIGNMENT.md` remain the navigation and implementation-audit surfaces; neither the
+numeric index nor the backlog below should be read as current execution priority. See also
+[`STRATEGY.md`](../../STRATEGY.md).
+
 ## Decision Backlog (What Still Needs Locking)
 
 This section tracks "hard-to-change" decisions that are not fully locked yet, even if adjacent ADRs

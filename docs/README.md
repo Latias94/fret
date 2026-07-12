@@ -26,6 +26,15 @@ Default app-author surface to keep in your head:
 - first-contact state/identity: `LocalState<T>` for view-owned state, and
   `ui::for_each_keyed(...)` / `ui::for_each_keyed_with_cx(...)` for dynamic collections
 
+## Active Validation Lane
+
+From 2026-07-12 through 2026-10-10, the active repository priority is release closure and one
+separately maintained, independently versioned, crates.io-only workbench. Horizontal crate,
+feature, component-family, and micro-ADR expansion is frozen except for release, consumer,
+regression, security, or hard contract evidence. Read [`STRATEGY.md`](../STRATEGY.md) and the
+[external workbench validation plan](./plans/2026-07-12-001-refactor-external-workbench-validation-plan.md)
+before opening or resuming a capability lane.
+
 ## Command conventions (docs)
 
 Unless a document says otherwise:
@@ -62,8 +71,11 @@ Unless a document says otherwise:
 
 ## Sources of Truth
 
+- Product strategy and active 90-day validation gate: [`STRATEGY.md`](../STRATEGY.md) and
+  [the implementation plan](./plans/2026-07-12-001-refactor-external-workbench-validation-plan.md)
 - Product and domain glossary: [`CONTEXT.md`](../CONTEXT.md)
-- Progress: `docs/roadmap.md` and `docs/shadcn-declarative-progress.md`
+- Progress inventory: `docs/roadmap.md` and `docs/shadcn-declarative-progress.md` (subject to the
+  active strategy stop line)
 - Ecosystem surface maturity gates: [docs/ecosystem-surface-maturity.md](./ecosystem-surface-maturity.md)
 - Code editor app-author surface: [docs/code-editor.md](./code-editor.md)
 - Shadcn recipe focus + builder render closure (active maintenance lane for text-entry chrome and builder single-render discipline): `docs/workstreams/shadcn-recipe-focus-and-builder-render-closure-v1/DESIGN.md`, `docs/workstreams/shadcn-recipe-focus-and-builder-render-closure-v1/TODO.md`, and `docs/workstreams/shadcn-recipe-focus-and-builder-render-closure-v1/MILESTONES.md`

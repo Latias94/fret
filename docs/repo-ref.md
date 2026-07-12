@@ -60,7 +60,7 @@ As a baseline, the project tracks the following reference SHAs (local checkouts 
 - `repo-ref/ui` (shadcn/ui): `d07a7af8`
 - `repo-ref/vello`: `cc2dd70e`
 - `repo-ref/virtualizer`: `f9c72f7a`
-- `repo-ref/zed`: `f5945344cc`
+- `repo-ref/zed`: `717e1c0590`
 - `repo-ref/makepad`: `b40b9af49`
 - `repo-ref/winit`: `da622006`
 

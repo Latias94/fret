@@ -75,6 +75,18 @@ Upstream/reference links live closer to the code that uses them:
 
 The goal is to provide a smooth, general-purpose application framework that scales from app UIs to editor-grade UI without owning editor product domains.
 
+That general-purpose direction is an explicit product hypothesis, not a completed maturity claim.
+From 2026-07-12 through 2026-10-10, Fret is freezing horizontal capability expansion while it
+closes the published release path and validates one separately maintained, independently
+versioned, crates.io-only workbench:
+
+- [Fret strategy](./STRATEGY.md)
+- [External workbench validation plan](./docs/plans/2026-07-12-001-refactor-external-workbench-validation-plan.md)
+
+Passing this gate will establish an external engineering-consumption loop; it will not by itself
+prove independent market adoption or production maturity. Until the fixed decision gate, the
+Experimental warning and the general-purpose target both remain in force.
+
 ## Quick Start
 
 Need help setting up your toolchain or speeding up local builds? See [docs/setup.md](./docs/setup.md).

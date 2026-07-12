@@ -23,12 +23,28 @@ Non-goals:
 
 ## 1) Generate a runnable app (recommended: `simple-todo`)
 
-Public/product path (installed `fretboard`, or the repo-local equivalent below):
+Installed public/product command shape:
+
+```bash
+fretboard new simple-todo --name my-simple-todo
+cargo run --manifest-path my-simple-todo/Cargo.toml
+```
+
+Fret 0.1.0 and `fretboard` are on crates.io, but the complete registry-only scaffold matrix has not
+yet closed against a coherent post-0.1.0 release. Treat the installed command above as the target
+public contract, not as evidence that current HEAD, the published CLI, and every generated
+dependency are already aligned. That proof is tracked in the
+[external workbench validation plan](./plans/2026-07-12-001-refactor-external-workbench-validation-plan.md).
+
+Repo-checkout preflight of the same public command surface:
 
 ```bash
 cargo run -p fretboard -- new simple-todo --name my-simple-todo
 cargo run --manifest-path my-simple-todo/Cargo.toml
 ```
+
+This preflight exercises the public command spelling from the checkout; it does not substitute for
+installing the released CLI and resolving the generated project only from crates.io.
 
 Repo-local maintainer equivalent (writes under `local/` by default):
 
